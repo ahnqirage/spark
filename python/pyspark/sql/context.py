@@ -28,7 +28,7 @@ from pyspark.sql.session import _monkey_patch_RDD, SparkSession
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.readwriter import DataFrameReader
 from pyspark.sql.streaming import DataStreamReader
-from pyspark.sql.types import Row, StringType
+from pyspark.sql.types import IntegerType, Row, StringType
 from pyspark.sql.utils import install_exception_handler
 
 __all__ = ["SQLContext", "HiveContext", "UDFRegistration"]
@@ -73,7 +73,7 @@ class SQLContext(object):
         self._jsc = self._sc._jsc
         self._jvm = self._sc._jvm
         if sparkSession is None:
-            sparkSession = SparkSession(sparkContext)
+            sparkSession = SparkSession.builder.getOrCreate()
         if jsqlContext is None:
             jsqlContext = sparkSession._jwrapped
         self.sparkSession = sparkSession
@@ -185,22 +185,69 @@ class SQLContext(object):
         :param name: name of the UDF
         :param f: python function
         :param returnType: a :class:`pyspark.sql.types.DataType` object
+        :return: a wrapped :class:`UserDefinedFunction`
 
-        >>> sqlContext.registerFunction("stringLengthString", lambda x: len(x))
+        >>> strlen = sqlContext.registerFunction("stringLengthString", lambda x: len(x))
         >>> sqlContext.sql("SELECT stringLengthString('test')").collect()
         [Row(stringLengthString(test)=u'4')]
 
+        >>> sqlContext.sql("SELECT 'foo' AS text").select(strlen("text")).collect()
+        [Row(stringLengthString(text)=u'3')]
+
         >>> from pyspark.sql.types import IntegerType
-        >>> sqlContext.registerFunction("stringLengthInt", lambda x: len(x), IntegerType())
+        >>> _ = sqlContext.registerFunction("stringLengthInt", lambda x: len(x), IntegerType())
         >>> sqlContext.sql("SELECT stringLengthInt('test')").collect()
         [Row(stringLengthInt(test)=4)]
 
         >>> from pyspark.sql.types import IntegerType
-        >>> sqlContext.udf.register("stringLengthInt", lambda x: len(x), IntegerType())
+        >>> _ = sqlContext.udf.register("stringLengthInt", lambda x: len(x), IntegerType())
         >>> sqlContext.sql("SELECT stringLengthInt('test')").collect()
         [Row(stringLengthInt(test)=4)]
         """
-        self.sparkSession.catalog.registerFunction(name, f, returnType)
+        return self.sparkSession.catalog.registerFunction(name, f, returnType)
+
+    @ignore_unicode_prefix
+    @since(2.1)
+    def registerJavaFunction(self, name, javaClassName, returnType=None):
+        """Register a java UDF so it can be used in SQL statements.
+
+        In addition to a name and the function itself, the return type can be optionally specified.
+        When the return type is not specified we would infer it via reflection.
+        :param name:  name of the UDF
+        :param javaClassName: fully qualified name of java class
+        :param returnType: a :class:`pyspark.sql.types.DataType` object
+
+        >>> sqlContext.registerJavaFunction("javaStringLength",
+        ...   "test.org.apache.spark.sql.JavaStringLength", IntegerType())
+        >>> sqlContext.sql("SELECT javaStringLength('test')").collect()
+        [Row(UDF:javaStringLength(test)=4)]
+        >>> sqlContext.registerJavaFunction("javaStringLength2",
+        ...   "test.org.apache.spark.sql.JavaStringLength")
+        >>> sqlContext.sql("SELECT javaStringLength2('test')").collect()
+        [Row(UDF:javaStringLength2(test)=4)]
+
+        """
+        jdt = None
+        if returnType is not None:
+            jdt = self.sparkSession._jsparkSession.parseDataType(returnType.json())
+        self.sparkSession._jsparkSession.udf().registerJava(name, javaClassName, jdt)
+
+    @ignore_unicode_prefix
+    @since(2.3)
+    def registerJavaUDAF(self, name, javaClassName):
+        """Register a java UDAF so it can be used in SQL statements.
+
+        :param name:  name of the UDAF
+        :param javaClassName: fully qualified name of java class
+
+        >>> sqlContext.registerJavaUDAF("javaUDAF",
+        ...   "test.org.apache.spark.sql.MyDoubleAvg")
+        >>> df = sqlContext.createDataFrame([(1, "a"),(2, "b"), (3, "a")],["id", "name"])
+        >>> df.registerTempTable("df")
+        >>> sqlContext.sql("SELECT name, javaUDAF(id) as avg from df group by name").collect()
+        [Row(name=u'b', avg=102.0), Row(name=u'a', avg=102.0)]
+        """
+        self.sparkSession._jsparkSession.udf().registerJavaUDAF(name, javaClassName)
 
     # TODO(andrew): delete this once we refactor things to take in SparkSession
     def _inferSchema(self, rdd, samplingRatio=None):
@@ -215,7 +262,7 @@ class SQLContext(object):
 
     @since(1.3)
     @ignore_unicode_prefix
-    def createDataFrame(self, data, schema=None, samplingRatio=None):
+    def createDataFrame(self, data, schema=None, samplingRatio=None, verifySchema=True):
         """
         Creates a :class:`DataFrame` from an :class:`RDD`, a list or a :class:`pandas.DataFrame`.
 
@@ -245,6 +292,7 @@ class SQLContext(object):
             ``byte`` instead of ``tinyint`` for :class:`pyspark.sql.types.ByteType`.
             We can also use ``int`` as a short name for :class:`pyspark.sql.types.IntegerType`.
         :param samplingRatio: the sample ratio of rows used for inferring
+        :param verifySchema: verify data types of every row against schema.
         :return: :class:`DataFrame`
 
         .. versionchanged:: 2.0
@@ -252,6 +300,9 @@ class SQLContext(object):
            datatype string after 2.0.
            If it's not a :class:`pyspark.sql.types.StructType`, it will be wrapped into a
            :class:`pyspark.sql.types.StructType` and each record will also be wrapped into a tuple.
+
+        .. versionchanged:: 2.1
+           Added verifySchema.
 
         >>> l = [('Alice', 1)]
         >>> sqlContext.createDataFrame(l).collect()
@@ -300,7 +351,7 @@ class SQLContext(object):
             ...
         Py4JJavaError: ...
         """
-        return self.sparkSession.createDataFrame(data, schema, samplingRatio)
+        return self.sparkSession.createDataFrame(data, schema, samplingRatio, verifySchema)
 
     @since(1.3)
     def registerDataFrameAsTable(self, df, tableName):
@@ -355,7 +406,7 @@ class SQLContext(object):
 
     @since(1.0)
     def table(self, tableName):
-        """Returns the specified table as a :class:`DataFrame`.
+        """Returns the specified table or view as a :class:`DataFrame`.
 
         :return: :class:`DataFrame`
 
@@ -382,7 +433,7 @@ class SQLContext(object):
         >>> sqlContext.registerDataFrameAsTable(df, "table1")
         >>> df2 = sqlContext.tables()
         >>> df2.filter("tableName = 'table1'").first()
-        Row(tableName=u'table1', isTemporary=True)
+        Row(database=u'', tableName=u'table1', isTemporary=True)
         """
         if dbName is None:
             return DataFrame(self._ssql_ctx.tables(), self)
@@ -440,7 +491,7 @@ class SQLContext(object):
         Returns a :class:`DataStreamReader` that can be used to read data streams
         as a streaming :class:`DataFrame`.
 
-        .. note:: Experimental.
+        .. note:: Evolving.
 
         :return: :class:`DataStreamReader`
 
@@ -456,7 +507,7 @@ class SQLContext(object):
         """Returns a :class:`StreamingQueryManager` that allows managing all the
         :class:`StreamingQuery` StreamingQueries active on `this` context.
 
-        .. note:: Experimental.
+        .. note:: Evolving.
         """
         from pyspark.sql.streaming import StreamingQueryManager
         return StreamingQueryManager(self._ssql_ctx.streams())
@@ -516,6 +567,12 @@ class UDFRegistration(object):
 
     def register(self, name, f, returnType=StringType()):
         return self.sqlContext.registerFunction(name, f, returnType)
+
+    def registerJavaFunction(self, name, javaClassName, returnType=None):
+        self.sqlContext.registerJavaFunction(name, javaClassName, returnType)
+
+    def registerJavaUDAF(self, name, javaClassName):
+        self.sqlContext.registerJavaUDAF(name, javaClassName)
 
     register.__doc__ = SQLContext.registerFunction.__doc__
 
