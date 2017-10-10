@@ -17,23 +17,39 @@
 
 package org.apache.spark.sql.hive.orc
 
+import java.util.Locale
+
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
+import org.apache.spark.sql.internal.SQLConf
+
 /**
  * Options for the ORC data source.
  */
 private[orc] class OrcOptions(
-    @transient private val parameters: Map[String, String])
+    @transient private val parameters: CaseInsensitiveMap[String],
+    @transient private val sqlConf: SQLConf)
   extends Serializable {
 
   import OrcOptions._
 
+  def this(parameters: Map[String, String], sqlConf: SQLConf) =
+    this(CaseInsensitiveMap(parameters), sqlConf)
+
   /**
-   * Compression codec to use. By default snappy compression.
+   * Compression codec to use.
    * Acceptable values are defined in [[shortOrcCompressionCodecNames]].
    */
   val compressionCodec: String = {
-    val codecName = parameters.getOrElse("compression", "snappy").toLowerCase
+    // `compression`, `orc.compress`, and `spark.sql.orc.compression.codec` are
+    // in order of precedence from highest to lowest.
+    val orcCompressionConf = parameters.get(OrcRelation.ORC_COMPRESSION)
+    val codecName = parameters
+      .get("compression")
+      .orElse(orcCompressionConf)
+      .getOrElse(sqlConf.orcCompressionCodec)
+      .toLowerCase(Locale.ROOT)
     if (!shortOrcCompressionCodecNames.contains(codecName)) {
-      val availableCodecs = shortOrcCompressionCodecNames.keys.map(_.toLowerCase)
+      val availableCodecs = shortOrcCompressionCodecNames.keys.map(_.toLowerCase(Locale.ROOT))
       throw new IllegalArgumentException(s"Codec [$codecName] " +
         s"is not available. Available codecs are ${availableCodecs.mkString(", ")}.")
     }
