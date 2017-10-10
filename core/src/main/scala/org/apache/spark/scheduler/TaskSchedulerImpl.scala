@@ -32,12 +32,13 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config
 import org.apache.spark.scheduler.SchedulingMode.SchedulingMode
 import org.apache.spark.scheduler.TaskLocality.TaskLocality
+import org.apache.spark.scheduler.local.LocalSchedulerBackend
 import org.apache.spark.storage.BlockManagerId
 import org.apache.spark.util.{AccumulatorV2, ThreadUtils, Utils}
 
 /**
  * Schedules tasks for multiple types of clusters by acting through a SchedulerBackend.
- * It can also work with a local setup by using a `LocalSchedulerBackend` and setting
+ * It can also work with a local setup by using a [[LocalSchedulerBackend]] and setting
  * isLocal to true. It handles common logic, like determining a scheduling order across jobs, waking
  * up to launch speculative tasks, etc.
  *
@@ -289,6 +290,7 @@ private[spark] class TaskSchedulerImpl(
             taskIdToTaskSetManager(tid) = taskSet
             taskIdToExecutorId(tid) = execId
             executorIdToRunningTaskIds(execId).add(tid)
+            executorsByHost(host) += execId
             availableCpus(i) -= CPUS_PER_TASK
             assert(availableCpus(i) >= 0)
             launchedTask = true
@@ -315,11 +317,10 @@ private[spark] class TaskSchedulerImpl(
     // Also track if new executor is added
     var newExecAvail = false
     for (o <- offers) {
-      if (!hostToExecutors.contains(o.host)) {
-        hostToExecutors(o.host) = new HashSet[String]()
-      }
-      if (!executorIdToRunningTaskIds.contains(o.executorId)) {
-        hostToExecutors(o.host) += o.executorId
+      executorIdToHost(o.executorId) = o.host
+      executorIdToRunningTaskIds.getOrElseUpdate(o.executorId, HashSet[Long]())
+      if (!executorsByHost.contains(o.host)) {
+        executorsByHost(o.host) = new HashSet[String]()
         executorAdded(o.executorId, o.host)
         executorIdToHost(o.executorId) = o.host
         executorIdToRunningTaskIds(o.executorId) = HashSet[Long]()
@@ -645,14 +646,6 @@ private[spark] class TaskSchedulerImpl(
 
   def isExecutorBusy(execId: String): Boolean = synchronized {
     executorIdToRunningTaskIds.get(execId).exists(_.nonEmpty)
-  }
-
-  /**
-   * Get a snapshot of the currently blacklisted nodes for the entire application.  This is
-   * thread-safe -- it can be called without a lock on the TaskScheduler.
-   */
-  def nodeBlacklist(): scala.collection.immutable.Set[String] = {
-    blacklistTrackerOpt.map(_.nodeBlacklist()).getOrElse(scala.collection.immutable.Set())
   }
 
   // By default, rack is unknown

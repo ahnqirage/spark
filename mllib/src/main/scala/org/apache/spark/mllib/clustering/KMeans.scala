@@ -265,7 +265,18 @@ class KMeans private (
 
     val iterationStartTime = System.nanoTime()
 
-    instr.foreach(_.logNumFeatures(centers.head.vector.size))
+    instr.map(_.logNumFeatures(centers(0)(0).vector.size))
+
+    // Execute iterations of Lloyd's algorithm until all runs have converged
+    while (iteration < maxIterations && !activeRuns.isEmpty) {
+      type WeightedPoint = (Vector, Long)
+      def mergeContribs(x: WeightedPoint, y: WeightedPoint): WeightedPoint = {
+        axpy(1.0, x._1, y._1)
+        (y._1, x._2 + y._2)
+      }
+
+      val activeCenters = activeRuns.map(r => centers(r)).toArray
+      val costAccums = activeRuns.map(_ => sc.doubleAccumulator)
 
     // Execute iterations of Lloyd's algorithm until converged
     while (iteration < maxIterations && !converged) {
@@ -281,11 +292,13 @@ class KMeans private (
         val counts = Array.fill(thisCenters.length)(0L)
 
         points.foreach { point =>
-          val (bestCenter, cost) = KMeans.findClosest(thisCenters, point)
-          costAccum.add(cost)
-          val sum = sums(bestCenter)
-          axpy(1.0, point.vector, sum)
-          counts(bestCenter) += 1
+          (0 until runs).foreach { i =>
+            val (bestCenter, cost) = KMeans.findClosest(thisActiveCenters(i), point)
+            costAccums(i).add(cost)
+            val sum = sums(i)(bestCenter)
+            axpy(1.0, point.vector, sum)
+            counts(i)(bestCenter) += 1
+          }
         }
 
         counts.indices.filter(counts(_) > 0).map(j => (j, (sums(j), counts(j)))).iterator
@@ -378,7 +391,12 @@ class KMeans private (
 
       val chosen = data.zip(costs).mapPartitionsWithIndex { (index, pointCosts) =>
         val rand = new XORShiftRandom(seed ^ (step << 16) ^ index)
-        pointCosts.filter { case (_, c) => rand.nextDouble() < 2.0 * c * k / sumCosts }.map(_._1)
+        pointsWithCosts.flatMap { case (p, c) =>
+          val rs = (0 until runs).filter { r =>
+            rand.nextDouble() < 2.0 * c(r) * k / sumCosts(r)
+          }
+          if (rs.nonEmpty) Some((p, rs)) else None
+        }
       }.collect()
       newCenters = chosen.map(_.toDense)
       centers ++= newCenters

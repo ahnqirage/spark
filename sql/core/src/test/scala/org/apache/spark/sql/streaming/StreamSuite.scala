@@ -17,31 +17,17 @@
 
 package org.apache.spark.sql.streaming
 
-import java.io.{File, InterruptedIOException, IOException, UncheckedIOException}
-import java.nio.channels.ClosedByInterruptException
-import java.util.concurrent.{CountDownLatch, ExecutionException, TimeoutException, TimeUnit}
-
 import scala.reflect.ClassTag
 import scala.util.control.ControlThrowable
 
-import com.google.common.util.concurrent.UncheckedExecutionException
-import org.apache.commons.io.FileUtils
-import org.apache.hadoop.conf.Configuration
-
-import org.apache.spark.SparkContext
-import org.apache.spark.scheduler.{SparkListener, SparkListenerJobStart}
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.plans.logical.Range
 import org.apache.spark.sql.catalyst.streaming.InternalOutputModes
 import org.apache.spark.sql.execution.command.ExplainCommand
 import org.apache.spark.sql.execution.streaming._
-import org.apache.spark.sql.execution.streaming.state.{StateStore, StateStoreConf, StateStoreId, StateStoreProvider}
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.sources.StreamSourceProvider
-import org.apache.spark.sql.streaming.util.StreamManualClock
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
-import org.apache.spark.util.Utils
+import org.apache.spark.util.ManualClock
 
 class StreamSuite extends StreamTest {
 
@@ -203,6 +189,169 @@ class StreamSuite extends StreamTest {
       testStream(ds)()
     }
   }
+
+  test("minimize delay between batch construction and execution") {
+
+    // For each batch, we would retrieve new data's offsets and log them before we run the execution
+    // This checks whether the key of the offset log is the expected batch id
+    def CheckOffsetLogLatestBatchId(expectedId: Int): AssertOnQuery =
+      AssertOnQuery(_.offsetLog.getLatest().get._1 == expectedId,
+        s"offsetLog's latest should be $expectedId")
+
+    // For each batch, we would log the state change during the execution
+    // This checks whether the key of the state change log is the expected batch id
+    def CheckIncrementalExecutionCurrentBatchId(expectedId: Int): AssertOnQuery =
+      AssertOnQuery(_.lastExecution.asInstanceOf[IncrementalExecution].currentBatchId == expectedId,
+        s"lastExecution's currentBatchId should be $expectedId")
+
+    // For each batch, we would log the sink change after the execution
+    // This checks whether the key of the sink change log is the expected batch id
+    def CheckSinkLatestBatchId(expectedId: Int): AssertOnQuery =
+      AssertOnQuery(_.sink.asInstanceOf[MemorySink].latestBatchId.get == expectedId,
+        s"sink's lastBatchId should be $expectedId")
+
+    val inputData = MemoryStream[Int]
+    testStream(inputData.toDS())(
+      StartStream(ProcessingTime("10 seconds"), new StreamManualClock),
+
+      /* -- batch 0 ----------------------- */
+      // Add some data in batch 0
+      AddData(inputData, 1, 2, 3),
+      AdvanceManualClock(10 * 1000), // 10 seconds
+
+      /* -- batch 1 ----------------------- */
+      // Check the results of batch 0
+      CheckAnswer(1, 2, 3),
+      CheckIncrementalExecutionCurrentBatchId(0),
+      CheckOffsetLogLatestBatchId(0),
+      CheckSinkLatestBatchId(0),
+      // Add some data in batch 1
+      AddData(inputData, 4, 5, 6),
+      AdvanceManualClock(10 * 1000),
+
+      /* -- batch _ ----------------------- */
+      // Check the results of batch 1
+      CheckAnswer(1, 2, 3, 4, 5, 6),
+      CheckIncrementalExecutionCurrentBatchId(1),
+      CheckOffsetLogLatestBatchId(1),
+      CheckSinkLatestBatchId(1),
+
+      AdvanceManualClock(10 * 1000),
+      AdvanceManualClock(10 * 1000),
+      AdvanceManualClock(10 * 1000),
+
+      /* -- batch __ ---------------------- */
+      // Check the results of batch 1 again; this is to make sure that, when there's no new data,
+      // the currentId does not get logged (e.g. as 2) even if the clock has advanced many times
+      CheckAnswer(1, 2, 3, 4, 5, 6),
+      CheckIncrementalExecutionCurrentBatchId(1),
+      CheckOffsetLogLatestBatchId(1),
+      CheckSinkLatestBatchId(1),
+
+      /* Stop then restart the Stream  */
+      StopStream,
+      StartStream(ProcessingTime("10 seconds"), new StreamManualClock(60 * 1000)),
+
+      /* -- batch 1 rerun ----------------- */
+      // this batch 1 would re-run because the latest batch id logged in offset log is 1
+      AdvanceManualClock(10 * 1000),
+
+      /* -- batch 2 ----------------------- */
+      // Check the results of batch 1
+      CheckAnswer(1, 2, 3, 4, 5, 6),
+      CheckIncrementalExecutionCurrentBatchId(1),
+      CheckOffsetLogLatestBatchId(1),
+      CheckSinkLatestBatchId(1),
+      // Add some data in batch 2
+      AddData(inputData, 7, 8, 9),
+      AdvanceManualClock(10 * 1000),
+
+      /* -- batch 3 ----------------------- */
+      // Check the results of batch 2
+      CheckAnswer(1, 2, 3, 4, 5, 6, 7, 8, 9),
+      CheckIncrementalExecutionCurrentBatchId(2),
+      CheckOffsetLogLatestBatchId(2),
+      CheckSinkLatestBatchId(2))
+  }
+
+  test("insert an extraStrategy") {
+    try {
+      spark.experimental.extraStrategies = TestStrategy :: Nil
+
+      val inputData = MemoryStream[(String, Int)]
+      val df = inputData.toDS().map(_._1).toDF("a")
+
+      testStream(df)(
+        AddData(inputData, ("so slow", 1)),
+        CheckAnswer("so fast"))
+    } finally {
+      spark.experimental.extraStrategies = Nil
+    }
+  }
+
+  testQuietly("fatal errors from a source should be sent to the user") {
+    for (e <- Seq(
+      new VirtualMachineError {},
+      new ThreadDeath,
+      new LinkageError,
+      new ControlThrowable {}
+    )) {
+      val source = new Source {
+        override def getOffset: Option[Offset] = {
+          throw e
+        }
+
+        override def getBatch(start: Option[Offset], end: Offset): DataFrame = {
+          throw e
+        }
+
+        override def schema: StructType = StructType(Array(StructField("value", IntegerType)))
+
+        override def stop(): Unit = {}
+      }
+      val df = Dataset[Int](sqlContext.sparkSession, StreamingExecutionRelation(source))
+      testStream(df)(
+        ExpectFailure()(ClassTag(e.getClass))
+      )
+    }
+  }
+
+  test("output mode API in Scala") {
+    val o1 = OutputMode.Append
+    assert(o1 === InternalOutputModes.Append)
+    val o2 = OutputMode.Complete
+    assert(o2 === InternalOutputModes.Complete)
+  }
+
+  test("explain") {
+    val inputData = MemoryStream[String]
+    val df = inputData.toDS().map(_ + "foo")
+    // Test `explain` not throwing errors
+    df.explain()
+    val q = df.writeStream.queryName("memory_explain").format("memory").start()
+      .asInstanceOf[StreamExecution]
+    try {
+      assert("No physical plan. Waiting for data." === q.explainInternal(false))
+      assert("No physical plan. Waiting for data." === q.explainInternal(true))
+
+      inputData.addData("abc")
+      q.processAllAvailable()
+
+      val explainWithoutExtended = q.explainInternal(false)
+      // `extended = false` only displays the physical plan.
+      assert("LocalRelation".r.findAllMatchIn(explainWithoutExtended).size === 0)
+      assert("LocalTableScan".r.findAllMatchIn(explainWithoutExtended).size === 1)
+
+      val explainWithExtended = q.explainInternal(true)
+      // `extended = true` displays 3 logical plans (Parsed/Optimized/Optimized) and 1 physical
+      // plan.
+      assert("LocalRelation".r.findAllMatchIn(explainWithExtended).size === 3)
+      assert("LocalTableScan".r.findAllMatchIn(explainWithExtended).size === 1)
+    } finally {
+      q.stop()
+    }
+  }
+}
 
   test("minimize delay between batch construction and execution") {
 
@@ -659,16 +808,7 @@ class FakeDefaultSource extends FakeSource {
 
       override def getBatch(start: Option[Offset], end: Offset): DataFrame = {
         val startOffset = start.map(_.asInstanceOf[LongOffset].offset).getOrElse(-1L) + 1
-        val ds = new Dataset[java.lang.Long](
-          spark.sparkSession,
-          Range(
-            startOffset,
-            end.asInstanceOf[LongOffset].offset + 1,
-            1,
-            Some(spark.sparkSession.sparkContext.defaultParallelism),
-            isStreaming = true),
-          Encoders.LONG)
-        ds.toDF("a")
+        spark.range(startOffset, end.asInstanceOf[LongOffset].offset + 1).toDF("a")
       }
 
       override def stop() {}

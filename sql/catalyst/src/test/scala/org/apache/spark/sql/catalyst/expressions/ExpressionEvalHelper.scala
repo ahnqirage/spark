@@ -29,9 +29,8 @@ import org.apache.spark.sql.catalyst.analysis.ResolveTimeZone
 import org.apache.spark.sql.catalyst.expressions.codegen._
 import org.apache.spark.sql.catalyst.optimizer.SimpleTestOptimizer
 import org.apache.spark.sql.catalyst.plans.logical.{OneRowRelation, Project}
-import org.apache.spark.sql.catalyst.util.{ArrayData, MapData}
-import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.types._
+import org.apache.spark.sql.catalyst.util.MapData
+import org.apache.spark.sql.types.DataType
 import org.apache.spark.util.Utils
 
 /**
@@ -47,8 +46,7 @@ trait ExpressionEvalHelper extends GeneratorDrivenPropertyChecks {
   protected def checkEvaluation(
       expression: => Expression, expected: Any, inputRow: InternalRow = EmptyRow): Unit = {
     val serializer = new JavaSerializer(new SparkConf()).newInstance
-    val resolver = ResolveTimeZone(new SQLConf)
-    val expr = resolver.resolveTimeZones(serializer.deserialize(serializer.serialize(expression)))
+    val expr: Expression = serializer.deserialize(serializer.serialize(expression))
     val catalystValue = CatalystTypeConverters.convertToCatalyst(expected)
     checkEvaluationWithoutCodegen(expr, catalystValue, inputRow)
     checkEvaluationWithGeneratedMutableProjection(expr, catalystValue, inputRow)
@@ -68,22 +66,8 @@ trait ExpressionEvalHelper extends GeneratorDrivenPropertyChecks {
         java.util.Arrays.equals(result, expected)
       case (result: Double, expected: Spread[Double @unchecked]) =>
         expected.asInstanceOf[Spread[Double]].isWithin(result)
-      case (result: ArrayData, expected: ArrayData) =>
-        result.numElements == expected.numElements && {
-          val et = dataType.asInstanceOf[ArrayType].elementType
-          var isSame = true
-          var i = 0
-          while (isSame && i < result.numElements) {
-            isSame = checkResult(result.get(i, et), expected.get(i, et), et)
-            i += 1
-          }
-          isSame
-        }
       case (result: MapData, expected: MapData) =>
-        val kt = dataType.asInstanceOf[MapType].keyType
-        val vt = dataType.asInstanceOf[MapType].valueType
-        checkResult(result.keyArray, expected.keyArray, ArrayType(kt)) &&
-          checkResult(result.valueArray, expected.valueArray, ArrayType(vt))
+        result.keyArray() == expected.keyArray() && result.valueArray() == expected.valueArray()
       case (result: Double, expected: Double) =>
         if (expected.isNaN) result.isNaN else expected == result
       case (result: Float, expected: Float) =>

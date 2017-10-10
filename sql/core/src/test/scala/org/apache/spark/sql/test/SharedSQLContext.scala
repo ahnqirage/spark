@@ -17,7 +17,8 @@
 
 package org.apache.spark.sql.test
 
-import scala.concurrent.duration._
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.{SparkSession, SQLContext}
 
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually
@@ -52,17 +53,13 @@ trait SharedSQLContext extends SQLTestUtils with BeforeAndAfterEach with Eventua
    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
-  protected def createSparkSession: TestSparkSession = {
-    new TestSparkSession(sparkConf)
-  }
-
   /**
    * Initialize the [[TestSparkSession]].
    */
   protected override def beforeAll(): Unit = {
     SparkSession.sqlListener.set(null)
     if (_spark == null) {
-      _spark = createSparkSession
+      _spark = new TestSparkSession(sparkConf)
     }
     // Ensure we have initialized the context before calling parent code
     super.beforeAll()
@@ -72,25 +69,13 @@ trait SharedSQLContext extends SQLTestUtils with BeforeAndAfterEach with Eventua
    * Stop the underlying [[org.apache.spark.SparkContext]], if any.
    */
   protected override def afterAll(): Unit = {
-    super.afterAll()
-    if (_spark != null) {
-      _spark.sessionState.catalog.reset()
-      _spark.stop()
-      _spark = null
-    }
-  }
-
-  protected override def beforeEach(): Unit = {
-    super.beforeEach()
-    DebugFilesystem.clearOpenStreams()
-  }
-
-  protected override def afterEach(): Unit = {
-    super.afterEach()
-    // files can be closed from other threads, so wait a bit
-    // normally this doesn't take more than 1s
-    eventually(timeout(10.seconds)) {
-      DebugFilesystem.assertNoOpenStreams()
+    try {
+      if (_spark != null) {
+        _spark.stop()
+        _spark = null
+      }
+    } finally {
+      super.afterAll()
     }
   }
 }

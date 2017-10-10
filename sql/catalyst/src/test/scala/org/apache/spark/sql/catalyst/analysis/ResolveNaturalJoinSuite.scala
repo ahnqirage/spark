@@ -111,10 +111,10 @@ class ResolveNaturalJoinSuite extends AnalysisTest {
   test("using unresolved attribute") {
     assertAnalysisError(
       r1.join(r2, UsingJoin(Inner, Seq("d"))),
-      "USING column `d` cannot be resolved on the left side of the join" :: Nil)
+      "USING column `d` can not be resolved with the left join side" :: Nil)
     assertAnalysisError(
       r1.join(r2, UsingJoin(Inner, Seq("b"))),
-      "USING column `b` cannot be resolved on the right side of the join" :: Nil)
+      "USING column `b` can not be resolved with the right join side" :: Nil)
   }
 
   test("using join with a case sensitive analyzer") {
@@ -125,14 +125,7 @@ class ResolveNaturalJoinSuite extends AnalysisTest {
 
     assertAnalysisError(
       r1.join(r2, UsingJoin(Inner, Seq("A"))),
-      "USING column `A` cannot be resolved on the left side of the join" :: Nil)
-  }
-
-  test("using join on nested fields") {
-    assertAnalysisError(
-      r5.join(r6, UsingJoin(Inner, Seq("d.f1"))),
-      "USING column `d.f1` cannot be resolved on the left side of the join. " +
-        "The left-side columns: [d]" :: Nil)
+      "USING column `A` can not be resolved with the left join side" :: Nil)
   }
 
   test("using join with a case insensitive analyzer") {

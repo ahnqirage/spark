@@ -41,14 +41,17 @@ class AFTSurvivalRegressionSuite
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    datasetUnivariate = generateAFTInput(
-      1, Array(5.5), Array(0.8), 1000, 42, 1.0, 2.0, 2.0).toDF()
-    datasetMultivariate = generateAFTInput(
-      2, Array(0.9, -1.3), Array(0.7, 1.2), 1000, 42, 1.5, 2.5, 2.0).toDF()
-    datasetUnivariateScaled = sc.parallelize(
-      generateAFTInput(1, Array(5.5), Array(0.8), 1000, 42, 1.0, 2.0, 2.0)).map { x =>
-        AFTPoint(Vectors.dense(x.features(0) * 1.0E3), x.label, x.censor)
-      }.toDF()
+    datasetUnivariate = spark.createDataFrame(
+      sc.parallelize(generateAFTInput(
+        1, Array(5.5), Array(0.8), 1000, 42, 1.0, 2.0, 2.0)))
+    datasetMultivariate = spark.createDataFrame(
+      sc.parallelize(generateAFTInput(
+        2, Array(0.9, -1.3), Array(0.7, 1.2), 1000, 42, 1.5, 2.5, 2.0)))
+    datasetUnivariateScaled = spark.createDataFrame(
+      sc.parallelize(generateAFTInput(
+        1, Array(5.5), Array(0.8), 1000, 42, 1.0, 2.0, 2.0)).map { x =>
+          AFTPoint(Vectors.dense(x.features(0) * 1.0E3), x.label, x.censor)
+      })
   }
 
   /**
@@ -428,6 +431,18 @@ class AFTSurvivalRegressionSuite
     // should not throw an exception.
     val dataset = sc.parallelize(generateAFTInput(
       1, Array(5.5), Array(0.8), 2, 42, 1.0, 2.0, 2.0), numSlices = 3).toDF()
+    val trainer = new AFTSurvivalRegression()
+    trainer.fit(dataset)
+  }
+
+  test("SPARK-15892: Incorrectly merged AFTAggregator with zero total count") {
+    // This `dataset` will contain an empty partition because it has two rows but
+    // the parallelism is bigger than that. Because the issue was about `AFTAggregator`s
+    // being merged incorrectly when it has an empty partition, running the codes below
+    // should not throw an exception.
+    val dataset = spark.createDataFrame(
+      sc.parallelize(generateAFTInput(
+        1, Array(5.5), Array(0.8), 2, 42, 1.0, 2.0, 2.0), numSlices = 3))
     val trainer = new AFTSurvivalRegression()
     trainer.fit(dataset)
   }

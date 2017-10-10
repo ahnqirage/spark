@@ -29,11 +29,11 @@ import org.apache.spark.sql.{DataFrame, Dataset}
 
 class ClassifierSuite extends SparkFunSuite with MLlibTestSparkContext {
 
-  import testImplicits._
-
-  private def getTestData(labels: Seq[Double]): DataFrame = {
-    labels.map { label: Double => LabeledPoint(label, Vectors.dense(0.0)) }.toDF()
-  }
+  test("extractLabeledPoints") {
+    def getTestData(labels: Seq[Double]): DataFrame = {
+      val data = labels.map { label: Double => LabeledPoint(label, Vectors.dense(0.0)) }
+      spark.createDataFrame(data)
+    }
 
   test("extractLabeledPoints") {
     val c = new MockClassifier
@@ -71,6 +71,11 @@ class ClassifierSuite extends SparkFunSuite with MLlibTestSparkContext {
   }
 
   test("getNumClasses") {
+    def getTestData(labels: Seq[Double]): DataFrame = {
+      val data = labels.map { label: Double => LabeledPoint(label, Vectors.dense(0.0)) }
+      spark.createDataFrame(data)
+    }
+
     val c = new MockClassifier
     // Valid dataset
     val df0 = getTestData(Seq(0.0, 2.0, 1.0, 5.0))

@@ -91,15 +91,13 @@ class VectorizedHashMapGenerator(
        |    $generatedAggBufferSchema
        |
        |  public $generatedClassName() {
-       |    batchVectors = org.apache.spark.sql.execution.vectorized
-       |      .OnHeapColumnVector.allocateColumns(capacity, schema);
-       |    batch = new org.apache.spark.sql.execution.vectorized.ColumnarBatch(
-       |      schema, batchVectors, capacity);
-       |
-       |    bufferVectors = new org.apache.spark.sql.execution.vectorized
-       |      .OnHeapColumnVector[aggregateBufferSchema.fields().length];
-       |    for (int i = 0; i < aggregateBufferSchema.fields().length; i++) {
-       |      bufferVectors[i] = batchVectors[i + ${groupingKeys.length}];
+       |    batch = org.apache.spark.sql.execution.vectorized.ColumnarBatch.allocate(schema,
+       |      org.apache.spark.memory.MemoryMode.ON_HEAP, capacity);
+       |    // TODO: Possibly generate this projection in HashAggregate directly
+       |    aggregateBufferBatch = org.apache.spark.sql.execution.vectorized.ColumnarBatch.allocate(
+       |      aggregateBufferSchema, org.apache.spark.memory.MemoryMode.ON_HEAP, capacity);
+       |    for (int i = 0 ; i < aggregateBufferBatch.numCols(); i++) {
+       |       aggregateBufferBatch.setColumn(i, batch.column(i+${groupingKeys.length}));
        |    }
        |    // TODO: Possibly generate this projection in HashAggregate directly
        |    aggregateBufferBatch = new org.apache.spark.sql.execution.vectorized.ColumnarBatch(
@@ -234,5 +232,53 @@ class VectorizedHashMapGenerator(
        |  return batch.rowIterator();
        |}
      """.stripMargin
+  }
+
+  private def generateClose(): String = {
+    s"""
+       |public void close() {
+       |  batch.close();
+       |}
+     """.stripMargin
+  }
+
+  private def genComputeHash(
+      ctx: CodegenContext,
+      input: String,
+      dataType: DataType,
+      result: String): String = {
+    def hashInt(i: String): String = s"int $result = $i;"
+    def hashLong(l: String): String = s"long $result = $l;"
+    def hashBytes(b: String): String = {
+      val hash = ctx.freshName("hash")
+      val bytes = ctx.freshName("bytes")
+      s"""
+         |int $result = 0;
+         |byte[] $bytes = $b;
+         |for (int i = 0; i < $bytes.length; i++) {
+         |  ${genComputeHash(ctx, s"$bytes[i]", ByteType, hash)}
+         |  $result = ($result ^ (0x9e3779b9)) + $hash + ($result << 6) + ($result >>> 2);
+         |}
+       """.stripMargin
+    }
+
+    dataType match {
+      case BooleanType => hashInt(s"$input ? 1 : 0")
+      case ByteType | ShortType | IntegerType | DateType => hashInt(input)
+      case LongType | TimestampType => hashLong(input)
+      case FloatType => hashInt(s"Float.floatToIntBits($input)")
+      case DoubleType => hashLong(s"Double.doubleToLongBits($input)")
+      case d: DecimalType =>
+        if (d.precision <= Decimal.MAX_LONG_DIGITS) {
+          hashLong(s"$input.toUnscaledLong()")
+        } else {
+          val bytes = ctx.freshName("bytes")
+          s"""
+            final byte[] $bytes = $input.toJavaBigDecimal().unscaledValue().toByteArray();
+            ${hashBytes(bytes)}
+          """
+        }
+      case StringType => hashBytes(s"$input.getBytes()")
+    }
   }
 }

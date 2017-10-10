@@ -287,6 +287,10 @@ public final class UnsafeArrayData extends ArrayData {
     return map;
   }
 
+  // This `hashCode` computation could consume much processor time for large data.
+  // If the computation becomes a bottleneck, we can use a light-weight logic; the first fixed bytes
+  // are used to compute `hashCode` (See `Vector.hashCode`).
+  // The same issue exists in `UnsafeRow.hashCode`.
   @Override
   public void update(int ordinal, Object value) { throw new UnsupportedOperationException(); }
 

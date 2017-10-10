@@ -53,9 +53,9 @@ are calculated based on the mapped indices. This approach avoids the need to com
 term-to-index map, which can be expensive for a large corpus, but it suffers from potential hash 
 collisions, where different raw features may become the same term after hashing. To reduce the 
 chance of collision, we can increase the target feature dimension, i.e. the number of buckets 
-of the hash table. Since a simple modulo on the hashed value is used to determine the vector index,
-it is advisable to use a power of two as the feature dimension, otherwise the features will not
-be mapped evenly to the vector indices. The default feature dimension is `$2^{18} = 262,144$`.
+of the hash table. Since a simple modulo is used to transform the hash function to a column index, 
+it is advisable to use a power of two as the feature dimension, otherwise the features will 
+not be mapped evenly to the columns. The default feature dimension is `$2^{18} = 262,144$`.
 An optional binary toggle parameter controls term frequency counts. When set to true all nonzero
 frequency counts are set to 1. This is especially useful for discrete probabilistic models that
 model binary, rather than integer, counts.
@@ -65,7 +65,7 @@ model binary, rather than integer, counts.
 
 **IDF**: `IDF` is an `Estimator` which is fit on a dataset and produces an `IDFModel`.  The 
 `IDFModel` takes feature vectors (generally created from `HashingTF` or `CountVectorizer`) and 
-scales each feature. Intuitively, it down-weights features which appear frequently in a corpus.
+scales each column. Intuitively, it down-weights columns which appear frequently in a corpus.
 
 **Note:** `spark.ml` doesn't provide tools for text segmentation.
 We refer users to the [Stanford NLP Group](http://nlp.stanford.edu/) and 
@@ -448,8 +448,6 @@ for binarization. Feature values greater than the threshold are binarized to 1.0
 to or less than the threshold are binarized to 0.0. Both Vector and Double types are supported
 for `inputCol`.
 
-**Examples**
-
 <div class="codetabs">
 <div data-lang="scala" markdown="1">
 
@@ -586,7 +584,6 @@ for more details on the API.
 
 `StringIndexer` encodes a string column of labels to a column of label indices.
 The indices are in `[0, numLabels)`, ordered by label frequencies, so the most frequent label gets index `0`.
-The unseen labels will be put at index numLabels if user chooses to keep them.
 If the input column is numeric, we cast it to string and index the string
 values. When downstream pipeline components such as `Estimator` or
 `Transformer` make use of this string-indexed label, you must set the input
@@ -778,8 +775,6 @@ for more details on the API.
 ## OneHotEncoder
 
 [One-hot encoding](http://en.wikipedia.org/wiki/One-hot) maps a column of label indices to a column of binary vectors, with at most a single one-value. This encoding allows algorithms which expect continuous features, such as Logistic Regression, to use categorical features.
-
-**Examples**
 
 <div class="codetabs">
 <div data-lang="scala" markdown="1">
@@ -994,8 +989,6 @@ The rescaled value for a feature E is calculated as,
 For the case `$E_{max} == E_{min}$`, `$Rescaled(e_i) = 0.5 * (max + min)$`
 
 Note that since zero values will probably be transformed to non-zero values, output of the transformer will be `DenseVector` even for sparse input.
-
-**Examples**
 
 The following example demonstrates how to load a dataset in libsvm format and then rescale each feature to [0, 1].
 
@@ -1286,19 +1279,8 @@ for more details on the API.
 ## QuantileDiscretizer
 
 `QuantileDiscretizer` takes a column with continuous features and outputs a column with binned
-categorical features. The number of bins is set by the `numBuckets` parameter. It is possible
-that the number of buckets used will be smaller than this value, for example, if there are too few
-distinct values of the input to create enough distinct quantiles.
-
-NaN values:
-NaN values will be removed from the column during `QuantileDiscretizer` fitting. This will produce
-a `Bucketizer` model for making predictions. During the transformation, `Bucketizer`
-will raise an error when it finds NaN values in the dataset, but the user can also choose to either
-keep or remove NaN values within the dataset by setting `handleInvalid`. If the user chooses to keep
-NaN values, they will be handled specially and placed into their own bucket, for example, if 4 buckets
-are used, then non-NaN data will be put into buckets[0-3], but NaNs will be counted in a special bucket[4].
-
-Algorithm: The bin ranges are chosen using an approximate algorithm (see the documentation for
+categorical features. The number of bins is set by the `numBuckets` parameter.
+The bin ranges are chosen using an approximate algorithm (see the documentation for
 [approxQuantile](api/scala/index.html#org.apache.spark.sql.DataFrameStatFunctions) for a
 detailed description). The precision of the approximation can be controlled with the
 `relativeError` parameter. When set to zero, exact quantiles are calculated
@@ -1365,72 +1347,6 @@ for more details on the API.
 {% include_example python/ml/quantile_discretizer_example.py %}
 </div>
 
-</div>
-
-
-## Imputer
-
-The `Imputer` transformer completes missing values in a dataset, either using the mean or the 
-median of the columns in which the missing values are located. The input columns should be of
-`DoubleType` or `FloatType`. Currently `Imputer` does not support categorical features and possibly
-creates incorrect values for columns containing categorical features.
-
-**Note** all `null` values in the input columns are treated as missing, and so are also imputed.
-
-**Examples**
-
-Suppose that we have a DataFrame with the columns `a` and `b`:
-
-~~~
-      a     |      b      
-------------|-----------
-     1.0    | Double.NaN
-     2.0    | Double.NaN
- Double.NaN |     3.0   
-     4.0    |     4.0   
-     5.0    |     5.0   
-~~~
-
-In this example, Imputer will replace all occurrences of `Double.NaN` (the default for the missing value)
-with the mean (the default imputation strategy) computed from the other values in the corresponding columns.
-In this example, the surrogate values for columns `a` and `b` are 3.0 and 4.0 respectively. After
-transformation, the missing values in the output columns will be replaced by the surrogate value for
-the relevant column.
-
-~~~
-      a     |      b     | out_a | out_b   
-------------|------------|-------|-------
-     1.0    | Double.NaN |  1.0  |  4.0 
-     2.0    | Double.NaN |  2.0  |  4.0 
- Double.NaN |     3.0    |  3.0  |  3.0 
-     4.0    |     4.0    |  4.0  |  4.0
-     5.0    |     5.0    |  5.0  |  5.0 
-~~~
-
-<div class="codetabs">
-<div data-lang="scala" markdown="1">
-
-Refer to the [Imputer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Imputer)
-for more details on the API.
-
-{% include_example scala/org/apache/spark/examples/ml/ImputerExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [Imputer Java docs](api/java/org/apache/spark/ml/feature/Imputer.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaImputerExample.java %}
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [Imputer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.Imputer)
-for more details on the API.
-
-{% include_example python/ml/imputer_example.py %}
-</div>
 </div>
 
 # Feature Selectors

@@ -29,55 +29,6 @@ class ArrayBasedMapData(val keyArray: ArrayData, val valueArray: ArrayData) exte
   override def toString: String = {
     s"keys: $keyArray, values: $valueArray"
   }
-}
-
-object ArrayBasedMapData {
-  /**
-   * Creates a [[ArrayBasedMapData]] by applying the given converters over
-   * each (key -> value) pair of the input [[java.util.Map]]
-   *
-   * @param javaMap Input map
-   * @param keyConverter This function is applied over all the keys of the input map to
-   *                     obtain the output map's keys
-   * @param valueConverter This function is applied over all the values of the input map to
-   *                       obtain the output map's values
-   */
-  def apply(
-      javaMap: JavaMap[_, _],
-      keyConverter: (Any) => Any,
-      valueConverter: (Any) => Any): ArrayBasedMapData = {
-    import scala.language.existentials
-
-    val keys: Array[Any] = new Array[Any](javaMap.size())
-    val values: Array[Any] = new Array[Any](javaMap.size())
-
-    var i: Int = 0
-    val iterator = javaMap.entrySet().iterator()
-    while (iterator.hasNext) {
-      val entry = iterator.next()
-      keys(i) = keyConverter(entry.getKey)
-      values(i) = valueConverter(entry.getValue)
-      i += 1
-    }
-    ArrayBasedMapData(keys, values)
-  }
-
-  /**
-   * Creates a [[ArrayBasedMapData]] by applying the given converters over
-   * each (key -> value) pair of the input map
-   *
-   * @param map Input map
-   * @param keyConverter This function is applied over all the keys of the input map to
-   *                     obtain the output map's keys
-   * @param valueConverter This function is applied over all the values of the input map to
-   *                       obtain the output map's values
-   */
-  def apply(
-      map: scala.collection.Map[_, _],
-      keyConverter: (Any) => Any = identity,
-      valueConverter: (Any) => Any = identity): ArrayBasedMapData = {
-    ArrayBasedMapData(map.iterator, map.size, keyConverter, valueConverter)
-  }
 
   /**
    * Creates a [[ArrayBasedMapData]] by applying the given converters over

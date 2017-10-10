@@ -80,8 +80,6 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   lazy val sparkPlan: SparkPlan = {
     SparkSession.setActiveSession(sparkSession)
-    // TODO: We use next(), i.e. take the first plan returned by the planner, here for now,
-    //       but we will implement to choose the best plan.
     planner.plan(ReturnAnswer(optimizedPlan)).next()
   }
 
@@ -119,25 +117,28 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
    * `SparkSQLDriver` for CLI applications.
    */
   def hiveResultString(): Seq[String] = executedPlan match {
-    case ExecutedCommandExec(desc: DescribeTableCommand, _) =>
-      // If it is a describe command for a Hive table, we want to have the output format
-      // be similar with Hive.
-      desc.run(sparkSession).map {
-        case Row(name: String, dataType: String, comment) =>
-          Seq(name, dataType,
-            Option(comment.asInstanceOf[String]).getOrElse(""))
-            .map(s => String.format(s"%-20s", s))
-            .mkString("\t")
+    case ExecutedCommandExec(desc: DescribeTableCommand) =>
+      SQLExecution.withNewExecutionId(sparkSession, this) {
+        // If it is a describe command for a Hive table, we want to have the output format
+        // be similar with Hive.
+        desc.run(sparkSession).map {
+          case Row(name: String, dataType: String, comment) =>
+            Seq(name, dataType,
+              Option(comment.asInstanceOf[String]).getOrElse(""))
+              .map(s => String.format(s"%-20s", s))
+              .mkString("\t")
+        }
       }
-    // SHOW TABLES in Hive only output table names, while ours output database, table name, isTemp.
-    case command @ ExecutedCommandExec(s: ShowTablesCommand, _) if !s.isExtended =>
-      command.executeCollect().map(_.getString(1))
+    case command: ExecutedCommandExec =>
+      command.executeCollect().map(_.getString(0))
     case other =>
-      val result: Seq[Seq[Any]] = other.executeCollectPublic().map(_.toSeq).toSeq
-      // We need the types so we can output struct field names
-      val types = analyzed.output.map(_.dataType)
-      // Reformat to match hive tab delimited output.
-      result.map(_.zip(types).map(toHiveString)).map(_.mkString("\t"))
+      SQLExecution.withNewExecutionId(sparkSession, this) {
+        val result: Seq[Seq[Any]] = other.executeCollectPublic().map(_.toSeq).toSeq
+        // We need the types so we can output struct field names
+        val types = analyzed.output.map(_.dataType)
+        // Reformat to match hive tab delimited output.
+        result.map(_.zip(types).map(toHiveString)).map(_.mkString("\t")).toSeq
+      }
   }
 
   /** Formats a datum (based on the given data type) and returns the string representation. */
@@ -218,18 +219,6 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
        |${stringOrError(optimizedPlan.treeString(verbose = true))}
        |== Physical Plan ==
        |${stringOrError(executedPlan.treeString(verbose = true))}
-    """.stripMargin.trim
-  }
-
-  def stringWithStats: String = {
-    // trigger to compute stats for logical plans
-    optimizedPlan.stats
-
-    // only show optimized logical plan and physical plan
-    s"""== Optimized Logical Plan ==
-        |${stringOrError(optimizedPlan.treeString(verbose = true, addSuffix = true))}
-        |== Physical Plan ==
-        |${stringOrError(executedPlan.treeString(verbose = true))}
     """.stripMargin.trim
   }
 

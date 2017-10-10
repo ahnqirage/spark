@@ -71,21 +71,10 @@ case class UnresolvedInlineTable(
 /**
  * A table-valued function, e.g.
  * {{{
- *   select id from range(10);
- *
- *   // Assign alias names
- *   select t.a from range(10) t(a);
+ *   select * from range(10);
  * }}}
- *
- * @param functionName name of this table-value function
- * @param functionArgs list of function arguments
- * @param outputNames alias names of function output columns. If these names given, an analyzer
- *                    adds [[Project]] to rename the output columns.
  */
-case class UnresolvedTableValuedFunction(
-    functionName: String,
-    functionArgs: Seq[Expression],
-    outputNames: Seq[String])
+case class UnresolvedTableValuedFunction(functionName: String, functionArgs: Seq[Expression])
   extends LeafNode {
 
   override def output: Seq[Attribute] = Nil
@@ -458,24 +447,6 @@ case class UnresolvedDeserializer(deserializer: Expression, inputAttributes: Seq
 
 case class GetColumnByOrdinal(ordinal: Int, dataType: DataType) extends LeafExpression
   with Unevaluable with NonSQLExpression {
-  override def foldable: Boolean = throw new UnresolvedException(this, "foldable")
-  override def nullable: Boolean = throw new UnresolvedException(this, "nullable")
-  override lazy val resolved = false
-}
-
-/**
- * Represents unresolved ordinal used in order by or group by.
- *
- * For example:
- * {{{
- *   select a from table order by 1
- *   select a   from table group by 1
- * }}}
- * @param ordinal ordinal starts from 1, instead of 0
- */
-case class UnresolvedOrdinal(ordinal: Int)
-    extends LeafExpression with Unevaluable with NonSQLExpression {
-  override def dataType: DataType = throw new UnresolvedException(this, "dataType")
   override def foldable: Boolean = throw new UnresolvedException(this, "foldable")
   override def nullable: Boolean = throw new UnresolvedException(this, "nullable")
   override lazy val resolved = false

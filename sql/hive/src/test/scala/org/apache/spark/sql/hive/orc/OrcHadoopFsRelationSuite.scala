@@ -19,7 +19,7 @@ package org.apache.spark.sql.hive.orc
 
 import java.io.File
 
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.catalog.CatalogUtils
@@ -90,9 +90,9 @@ class OrcHadoopFsRelationSuite extends HadoopFsRelationTest {
         .orc(path)
 
       // Check if this is compressed as ZLIB.
-      val maybeOrcFile = new File(path).listFiles().find { f =>
-        !f.getName.startsWith("_") && f.getName.endsWith(".zlib.orc")
-      }
+      val conf = spark.sessionState.newHadoopConf()
+      val fs = FileSystem.getLocal(conf)
+      val maybeOrcFile = new File(path).listFiles().find(_.getName.endsWith(".zlib.orc"))
       assert(maybeOrcFile.isDefined)
       val orcFilePath = maybeOrcFile.get.toPath.toString
       val expectedCompressionKind =

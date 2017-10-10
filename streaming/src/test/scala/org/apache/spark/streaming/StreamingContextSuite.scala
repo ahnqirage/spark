@@ -18,7 +18,6 @@
 package org.apache.spark.streaming
 
 import java.io.{File, NotSerializableException}
-import java.util.Locale
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicInteger
 

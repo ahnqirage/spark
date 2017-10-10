@@ -60,7 +60,7 @@ object DataFrameExample {
     }
   }
 
-  def run(params: Params): Unit = {
+  def run(params: Params) {
     val spark = SparkSession
       .builder
       .appName(s"DataFrameExample with $params")

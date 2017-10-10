@@ -341,6 +341,15 @@ final class OneVsRest @Since("1.4.0") (
       }
     }
 
+    val weightColIsUsed = isDefined(weightCol) && $(weightCol).nonEmpty && {
+      getClassifier match {
+        case _: HasWeightCol => true
+        case c =>
+          logWarning(s"weightCol is ignored, as it is not supported by $c now.")
+          false
+      }
+    }
+
     val multiclassLabeled = if (weightColIsUsed) {
       dataset.select($(labelCol), $(featuresCol), $(weightCol))
     } else {

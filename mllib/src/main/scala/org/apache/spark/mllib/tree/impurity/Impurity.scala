@@ -17,8 +17,6 @@
 
 package org.apache.spark.mllib.tree.impurity
 
-import java.util.Locale
-
 import org.apache.spark.annotation.{DeveloperApi, Since}
 
 /**

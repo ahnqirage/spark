@@ -841,7 +841,7 @@ class SparkContext(object):
         >>> sc.parallelize([1, 2, 3, 4]).mapPartitions(func).collect()
         [100, 200, 300, 400]
         """
-        self._jsc.sc().addFile(path, recursive)
+        self._jsc.sc().addFile(path)
 
     def addPyFile(self, path):
         """
@@ -1011,6 +1011,11 @@ class SparkContext(object):
         else:
             raise RuntimeError("'spark.python.profile' configuration must be set "
                                "to 'true' to enable Python profile.")
+
+    def getConf(self):
+        conf = SparkConf()
+        conf.setAll(self._conf.getAll())
+        return conf
 
     def getConf(self):
         conf = SparkConf()

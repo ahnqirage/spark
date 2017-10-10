@@ -22,17 +22,16 @@ import scala.language.existentials
 import scala.util.Random
 import scala.util.control.Breaks._
 
-import org.apache.spark.{SparkException, SparkFunSuite}
-import org.apache.spark.ml.attribute.NominalAttribute
+import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.classification.LogisticRegressionSuite._
 import org.apache.spark.ml.feature.{Instance, LabeledPoint}
-import org.apache.spark.ml.linalg.{DenseMatrix, Matrices, Matrix, SparseMatrix, Vector, Vectors}
-import org.apache.spark.ml.param.{ParamMap, ParamsSuite}
+import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.util.MLlibTestSparkContext
-import org.apache.spark.sql.{Dataset, Row}
-import org.apache.spark.sql.functions.{col, lit, rand}
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.LongType
 
 class LogisticRegressionSuite
@@ -51,24 +50,7 @@ class LogisticRegressionSuite
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    smallBinaryDataset = generateLogisticInput(1.0, 1.0, nPoints = 100, seed = seed).toDF()
-
-    smallMultinomialDataset = {
-      val nPoints = 100
-      val coefficients = Array(
-        -0.57997, 0.912083, -0.371077,
-        -0.16624, -0.84355, -0.048509)
-
-      val xMean = Array(5.843, 3.057)
-      val xVariance = Array(0.6856, 0.1899)
-
-      val testData = generateMultinomialLogisticInput(
-        coefficients, xMean, xVariance, addIntercept = true, nPoints, seed)
-
-      val df = sc.parallelize(testData, 4).toDF()
-      df.cache()
-      df
-    }
+    dataset = spark.createDataFrame(generateLogisticInput(1.0, 1.0, nPoints = 100, seed = 42))
 
     binaryDataset = {
       val nPoints = 10000
@@ -112,9 +94,7 @@ class LogisticRegressionSuite
       val testData = generateMultinomialLogisticInput(
         coefficients, xMean, xVariance, addIntercept = true, nPoints, seed)
 
-      val df = sc.parallelize(testData, 4).toDF().withColumn("weight", lit(1.0))
-      df.cache()
-      df
+      spark.createDataFrame(sc.parallelize(testData, 4))
     }
   }
 
@@ -381,61 +361,9 @@ class LogisticRegressionSuite
     assert(model2.getProbabilityCol === "theProb")
   }
 
-  test("multinomial logistic regression: Predictor, Classifier methods") {
-    val sqlContext = smallMultinomialDataset.sqlContext
-    import sqlContext.implicits._
-    val mlr = new LogisticRegression().setFamily("multinomial")
-
-    val model = mlr.fit(smallMultinomialDataset)
-    assert(model.numClasses === 3)
-    val numFeatures = smallMultinomialDataset.select("features").first().getAs[Vector](0).size
-    assert(model.numFeatures === numFeatures)
-
-    val results = model.transform(smallMultinomialDataset)
-    // check that raw prediction is coefficients dot features + intercept
-    results.select("rawPrediction", "features").collect().foreach {
-      case Row(raw: Vector, features: Vector) =>
-        assert(raw.size === 3)
-        val margins = Array.tabulate(3) { k =>
-          var margin = 0.0
-          features.foreachActive { (index, value) =>
-            margin += value * model.coefficientMatrix(k, index)
-          }
-          margin += model.interceptVector(k)
-          margin
-        }
-        assert(raw ~== Vectors.dense(margins) relTol eps)
-    }
-
-    // Compare rawPrediction with probability
-    results.select("rawPrediction", "probability").collect().foreach {
-      case Row(raw: Vector, prob: Vector) =>
-        assert(raw.size === 3)
-        assert(prob.size === 3)
-        val max = raw.toArray.max
-        val subtract = if (max > 0) max else 0.0
-        val sum = raw.toArray.map(x => math.exp(x - subtract)).sum
-        val probFromRaw0 = math.exp(raw(0) - subtract) / sum
-        val probFromRaw1 = math.exp(raw(1) - subtract) / sum
-        assert(prob(0) ~== probFromRaw0 relTol eps)
-        assert(prob(1) ~== probFromRaw1 relTol eps)
-        assert(prob(2) ~== 1.0 - probFromRaw1 - probFromRaw0 relTol eps)
-    }
-
-    // Compare prediction with probability
-    results.select("prediction", "probability").collect().foreach {
-      case Row(pred: Double, prob: Vector) =>
-        val predFromProb = prob.toArray.zipWithIndex.maxBy(_._1)._2
-        assert(pred == predFromProb)
-    }
-
-    // force it to use raw2prediction
-    model.setRawPredictionCol("rawPrediction").setProbabilityCol("")
-    val resultsUsingRaw2Predict =
-      model.transform(smallMultinomialDataset).select("prediction").as[Double].collect()
-    resultsUsingRaw2Predict.zip(results.select("prediction").as[Double].collect()).foreach {
-      case (pred1, pred2) => assert(pred1 === pred2)
-    }
+  test("logistic regression: Predictor, Classifier methods") {
+    val spark = this.spark
+    val lr = new LogisticRegression
 
     // force it to use probability2prediction
     model.setRawPredictionCol("").setProbabilityCol("probability")
@@ -2427,6 +2355,21 @@ class LogisticRegressionSuite
     assert(mlorSummary.accuracy === mlorLongSummary.accuracy)
   }
 
+  test("evaluate with labels that are not doubles") {
+    // Evaluate a test set with Label that is a numeric type other than Double
+    val lr = new LogisticRegression()
+      .setMaxIter(1)
+      .setRegParam(1.0)
+    val model = lr.fit(dataset)
+    val summary = model.evaluate(dataset).asInstanceOf[BinaryLogisticRegressionSummary]
+
+    val longLabelData = dataset.select(col(model.getLabelCol).cast(LongType),
+      col(model.getFeaturesCol))
+    val longSummary = model.evaluate(longLabelData).asInstanceOf[BinaryLogisticRegressionSummary]
+
+    assert(summary.areaUnderROC ~== longSummary.areaUnderROC absTol 1E-10)
+  }
+
   test("statistics on training data") {
     // Test that loss is monotonically decreasing.
     val blor = new LogisticRegression()
@@ -2472,33 +2415,8 @@ class LogisticRegressionSuite
     }
   }
 
-  test("set family") {
-    val lr = new LogisticRegression().setMaxIter(1)
-    // don't set anything for binary classification
-    val model1 = lr.fit(binaryDataset)
-    assert(model1.coefficientMatrix.numRows === 1 && model1.coefficientMatrix.numCols === 4)
-    assert(model1.interceptVector.size === 1)
-
-    // set to multinomial for binary classification
-    val model2 = lr.setFamily("multinomial").fit(binaryDataset)
-    assert(model2.coefficientMatrix.numRows === 2 && model2.coefficientMatrix.numCols === 4)
-    assert(model2.interceptVector.size === 2)
-
-    // set to binary for binary classification
-    val model3 = lr.setFamily("binomial").fit(binaryDataset)
-    assert(model3.coefficientMatrix.numRows === 1 && model3.coefficientMatrix.numCols === 4)
-    assert(model3.interceptVector.size === 1)
-
-    // don't set anything for multiclass classification
-    val mlr = new LogisticRegression().setMaxIter(1)
-    val model4 = mlr.fit(multinomialDataset)
-    assert(model4.coefficientMatrix.numRows === 3 && model4.coefficientMatrix.numCols === 4)
-    assert(model4.interceptVector.size === 3)
-
-    // set to binary for multiclass classification
-    mlr.setFamily("binomial")
-    val thrown = intercept[IllegalArgumentException] {
-      mlr.fit(multinomialDataset)
+      (spark.createDataFrame(sc.parallelize(data1, 4)),
+        spark.createDataFrame(sc.parallelize(data2, 4)))
     }
     assert(thrown.getMessage.contains("Binomial family only supports 1 or 2 outcome classes"))
 
@@ -2872,20 +2790,5 @@ object LogisticRegressionSuite {
 
     val testData = (0 until nPoints).map(i => LabeledPoint(y(i), x(i)))
     testData
-  }
-
-  /**
-   * When no regularization is applied, the multinomial coefficients lack identifiability
-   * because we do not use a pivot class. We can add any constant value to the coefficients
-   * and get the same likelihood. If fitting under bound constrained optimization, we don't
-   * choose the mean centered coefficients like what we do for unbound problems, since they
-   * may out of the bounds. We use this function to check whether two coefficients are equivalent.
-   */
-  def checkCoefficientsEquivalent(coefficients1: Matrix, coefficients2: Matrix): Unit = {
-    coefficients1.colIter.zip(coefficients2.colIter).foreach { case (col1: Vector, col2: Vector) =>
-      (col1.asBreeze - col2.asBreeze).toArray.toSeq.sliding(2).foreach {
-        case Seq(v1, v2) => assert(v1 ~= v2 absTol 1E-3)
-      }
-    }
   }
 }

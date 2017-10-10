@@ -38,8 +38,8 @@ import org.apache.spark.sql.functions._
 
 
 /**
- * <a href="http://en.wikipedia.org/wiki/Decision_tree_learning">Decision tree</a>
- * learning algorithm for regression.
+ * [[http://en.wikipedia.org/wiki/Decision_tree_learning Decision tree]] learning algorithm
+ * for regression.
  * It supports both continuous and categorical features.
  */
 @Since("1.4.0")
@@ -150,8 +150,7 @@ object DecisionTreeRegressor extends DefaultParamsReadable[DecisionTreeRegressor
 }
 
 /**
- * <a href="http://en.wikipedia.org/wiki/Decision_tree_learning">
- * Decision tree (Wikipedia)</a> model for regression.
+ * [[http://en.wikipedia.org/wiki/Decision_tree_learning Decision tree]] model for regression.
  * It supports both continuous and categorical features.
  * @param rootNode  Root of the decision tree
  */

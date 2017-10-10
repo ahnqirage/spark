@@ -121,6 +121,20 @@ private[spark] class FairSchedulableBuilder(val rootPool: Pool, conf: SparkConf)
     for (poolNode <- (xml \\ POOLS_PROPERTY)) {
 
       val poolName = (poolNode \ POOL_NAME_PROPERTY).text
+      var schedulingMode = DEFAULT_SCHEDULING_MODE
+      var minShare = DEFAULT_MINIMUM_SHARE
+      var weight = DEFAULT_WEIGHT
+
+      val xmlSchedulingMode = (poolNode \ SCHEDULING_MODE_PROPERTY).text
+      if (xmlSchedulingMode != "") {
+        try {
+          schedulingMode = SchedulingMode.withName(xmlSchedulingMode)
+        } catch {
+          case e: NoSuchElementException =>
+            logWarning(s"Unsupported schedulingMode: $xmlSchedulingMode, " +
+              s"using the default schedulingMode: $schedulingMode")
+        }
+      }
 
       val schedulingMode = getSchedulingModeValue(poolNode, poolName,
         DEFAULT_SCHEDULING_MODE, fileName)

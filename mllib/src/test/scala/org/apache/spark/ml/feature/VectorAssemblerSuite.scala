@@ -59,7 +59,7 @@ class VectorAssemblerSuite
   }
 
   test("VectorAssembler") {
-    val df = Seq(
+    val df = spark.createDataFrame(Seq(
       (0, 0.0, Vectors.dense(1.0, 2.0), "a", Vectors.sparse(2, Array(1), Array(3.0)), 10L)
     ).toDF("id", "x", "y", "name", "z", "n")
     val assembler = new VectorAssembler()
@@ -72,17 +72,14 @@ class VectorAssemblerSuite
   }
 
   test("transform should throw an exception in case of unsupported type") {
-    val df = Seq(("a", "b", "c")).toDF("a", "b", "c")
+    val df = spark.createDataFrame(Seq(("a", "b", "c"))).toDF("a", "b", "c")
     val assembler = new VectorAssembler()
       .setInputCols(Array("a", "b", "c"))
       .setOutputCol("features")
     val thrown = intercept[IllegalArgumentException] {
       assembler.transform(df)
     }
-    assert(thrown.getMessage contains
-      "Data type StringType of column a is not supported.\n" +
-      "Data type StringType of column b is not supported.\n" +
-      "Data type StringType of column c is not supported.")
+    assert(thrown.getMessage contains "Data type StringType is not supported")
   }
 
   test("ML attributes") {
@@ -92,7 +89,7 @@ class VectorAssemblerSuite
       NominalAttribute.defaultAttr.withName("gender").withValues("male", "female"),
       NumericAttribute.defaultAttr.withName("salary")))
     val row = (1.0, 0.5, 1, Vectors.dense(1.0, 1000.0), Vectors.sparse(2, Array(1), Array(2.0)))
-    val df = Seq(row).toDF("browser", "hour", "count", "user", "ad")
+    val df = spark.createDataFrame(Seq(row)).toDF("browser", "hour", "count", "user", "ad")
       .select(
         col("browser").as("browser", browser.toMetadata()),
         col("hour").as("hour", hour.toMetadata()),

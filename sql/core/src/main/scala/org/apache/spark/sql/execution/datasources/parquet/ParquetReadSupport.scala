@@ -48,7 +48,7 @@ import org.apache.spark.sql.types._
  * Due to this reason, we no longer rely on [[ReadContext]] to pass requested schema from [[init()]]
  * to [[prepareForRead()]], but use a private `var` for simplicity.
  */
-private[parquet] class ParquetReadSupport extends ReadSupport[UnsafeRow] with Logging {
+private[parquet] class ParquetReadSupport extends ReadSupport[InternalRow] with Logging {
   private var catalystRequestedSchema: StructType = _
 
   /**
@@ -94,8 +94,7 @@ private[parquet] class ParquetReadSupport extends ReadSupport[UnsafeRow] with Lo
 
     new ParquetRecordMaterializer(
       parquetRequestedSchema,
-      ParquetReadSupport.expandUDT(catalystRequestedSchema),
-      new ParquetSchemaConverter(conf))
+      ParquetReadSupport.expandUDT(catalystRequestedSchema))
   }
 }
 
@@ -110,14 +109,10 @@ private[parquet] object ParquetReadSupport {
    */
   def clipParquetSchema(parquetSchema: MessageType, catalystSchema: StructType): MessageType = {
     val clippedParquetFields = clipParquetGroupFields(parquetSchema.asGroupType(), catalystSchema)
-    if (clippedParquetFields.isEmpty) {
-      ParquetSchemaConverter.EMPTY_MESSAGE
-    } else {
-      Types
-        .buildMessage()
-        .addFields(clippedParquetFields: _*)
-        .named(ParquetSchemaConverter.SPARK_PARQUET_SCHEMA_NAME)
-    }
+    Types
+      .buildMessage()
+      .addFields(clippedParquetFields: _*)
+      .named(ParquetSchemaConverter.SPARK_PARQUET_SCHEMA_NAME)
   }
 
   private def clipParquetType(parquetType: Type, catalystType: DataType): Type = {

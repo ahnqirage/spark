@@ -31,6 +31,7 @@ import static org.junit.Assert.*;
 import org.apache.spark.SharedSparkSession;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.mllib.linalg.Matrix;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
@@ -39,7 +40,7 @@ public class JavaLDASuite extends SharedSparkSession {
   @Override
   public void setUp() throws IOException {
     super.setUp();
-    List<Tuple2<Long, Vector>> tinyCorpus = new ArrayList<>();
+    ArrayList<Tuple2<Long, Vector>> tinyCorpus = new ArrayList<>();
     for (int i = 0; i < LDASuite.tinyCorpus().length; i++) {
       tinyCorpus.add(new Tuple2<>((Long) LDASuite.tinyCorpus()[i]._1(),
         LDASuite.tinyCorpus()[i]._2()));
@@ -107,8 +108,12 @@ public class JavaLDASuite extends SharedSparkSession {
     JavaPairRDD<Long, Vector> topicDistributions = model.javaTopicDistributions();
     // SPARK-5562. since the topicDistribution returns the distribution of the non empty docs
     // over topics. Compare it against nonEmptyCorpus instead of corpus
-    JavaPairRDD<Long, Vector> nonEmptyCorpus =
-        corpus.filter(tuple2 -> Vectors.norm(tuple2._2(), 1.0) != 0.0);
+    JavaPairRDD<Long, Vector> nonEmptyCorpus = corpus.filter(
+      new Function<Tuple2<Long, Vector>, Boolean>() {
+        public Boolean call(Tuple2<Long, Vector> tuple2) {
+          return Vectors.norm(tuple2._2(), 1.0) != 0.0;
+        }
+      });
     assertEquals(topicDistributions.count(), nonEmptyCorpus.count());
 
     // Check: javaTopTopicsPerDocuments

@@ -17,9 +17,7 @@
 
 package org.apache.spark.sql.streaming
 
-import java.util.UUID
-
-import org.apache.spark.annotation.InterfaceStability
+import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -27,38 +25,26 @@ import org.apache.spark.sql.SparkSession
  * All these methods are thread-safe.
  * @since 2.0.0
  */
-@InterfaceStability.Evolving
+@Experimental
 trait StreamingQuery {
 
   /**
-   * Returns the user-specified name of the query, or null if not specified.
-   * This name can be specified in the `org.apache.spark.sql.streaming.DataStreamWriter`
-   * as `dataframe.writeStream.queryName("query").start()`.
-   * This name, if set, must be unique across all active queries.
-   *
+   * Returns the name of the query. This name is unique across all active queries. This can be
+   * set in the [[org.apache.spark.sql.DataStreamWriter DataStreamWriter]] as
+   * `dataframe.writeStream.queryName("query").start()`.
    * @since 2.0.0
    */
   def name: String
 
   /**
-   * Returns the unique id of this query that persists across restarts from checkpoint data.
-   * That is, this id is generated when a query is started for the first time, and
-   * will be the same every time it is restarted from checkpoint data. Also see [[runId]].
-   *
-   * @since 2.1.0
+   * Returns the unique id of this query. This id is automatically generated and is unique across
+   * all queries that have been started in the current process.
+   * @since 2.0.0
    */
-  def id: UUID
+  def id: Long
 
   /**
-   * Returns the unique id of this run of the query. That is, every start/restart of a query will
-   * generated a unique runId. Therefore, every time a query is restarted from
-   * checkpoint, it will have the same [[id]] but different [[runId]]s.
-   */
-  def runId: UUID
-
-  /**
-   * Returns the `SparkSession` associated with `this`.
-   *
+   * Returns the [[SparkSession]] associated with `this`.
    * @since 2.0.0
    */
   def sparkSession: SparkSession
@@ -78,6 +64,12 @@ trait StreamingQuery {
 
   /**
    * Returns the current status of the query.
+   * @since 2.0.2
+   */
+  def status: StreamingQueryStatus
+
+  /**
+   * Returns the current status of the query.
    *
    * @since 2.0.2
    */
@@ -90,14 +82,15 @@ trait StreamingQuery {
    *
    * @since 2.1.0
    */
-  def recentProgress: Array[StreamingQueryProgress]
+  @deprecated("use status.sourceStatuses", "2.0.2")
+  def sourceStatuses: Array[SourceStatus]
 
   /**
-   * Returns the most recent [[StreamingQueryProgress]] update of this streaming query.
-   *
-   * @since 2.1.0
+   * Returns current status of the sink.
+   * @since 2.0.0
    */
-  def lastProgress: StreamingQueryProgress
+  @deprecated("use status.sinkStatus", "2.0.2")
+  def sinkStatus: SinkStatus
 
   /**
    * Waits for the termination of `this` query, either by `query.stop()` or by an exception.
@@ -107,7 +100,7 @@ trait StreamingQuery {
    * immediately (if the query was terminated by `stop()`), or throw the exception
    * immediately (if the query has terminated with exception).
    *
-   * @throws StreamingQueryException if the query has terminated with an exception.
+   * @throws StreamingQueryException, if `this` query has terminated with an exception.
    *
    * @since 2.0.0
    */
@@ -124,7 +117,7 @@ trait StreamingQuery {
    * `true` immediately (if the query was terminated by `stop()`), or throw the exception
    * immediately (if the query has terminated with exception).
    *
-   * @throws StreamingQueryException if the query has terminated with an exception
+   * @throws StreamingQueryException, if `this` query has terminated with an exception
    *
    * @since 2.0.0
    */

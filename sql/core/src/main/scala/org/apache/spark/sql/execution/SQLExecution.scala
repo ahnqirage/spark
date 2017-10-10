@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.execution.ui.{SparkListenerSQLExecutionEnd, SparkListenerSQLExecutionStart}
+import org.apache.spark.sql.execution.ui.{SparkListenerSQLExecutionEnd,
+  SparkListenerSQLExecutionStart}
 
 object SQLExecution {
 
@@ -61,20 +62,24 @@ object SQLExecution {
       queryExecution: QueryExecution)(body: => T): T = {
     val sc = sparkSession.sparkContext
     val oldExecutionId = sc.getLocalProperty(EXECUTION_ID_KEY)
-    val executionId = SQLExecution.nextExecutionId
-    sc.setLocalProperty(EXECUTION_ID_KEY, executionId.toString)
-    executionIdToQueryExecution.put(executionId, queryExecution)
-    try {
-      // sparkContext.getCallSite() would first try to pick up any call site that was previously
-      // set, then fall back to Utils.getCallSite(); call Utils.getCallSite() directly on
-      // streaming queries would give us call site like "run at <unknown>:0"
-      val callSite = sparkSession.sparkContext.getCallSite()
+    if (oldExecutionId == null) {
+      val executionId = SQLExecution.nextExecutionId
+      sc.setLocalProperty(EXECUTION_ID_KEY, executionId.toString)
+      val r = try {
+        // sparkContext.getCallSite() would first try to pick up any call site that was previously
+        // set, then fall back to Utils.getCallSite(); call Utils.getCallSite() directly on
+        // streaming queries would give us call site like "run at <unknown>:0"
+        val callSite = sparkSession.sparkContext.getCallSite()
 
-      sparkSession.sparkContext.listenerBus.post(SparkListenerSQLExecutionStart(
-        executionId, callSite.shortForm, callSite.longForm, queryExecution.toString,
-        SparkPlanInfo.fromSparkPlan(queryExecution.executedPlan), System.currentTimeMillis()))
-      try {
-        body
+        sparkSession.sparkContext.listenerBus.post(SparkListenerSQLExecutionStart(
+          executionId, callSite.shortForm, callSite.longForm, queryExecution.toString,
+          SparkPlanInfo.fromSparkPlan(queryExecution.executedPlan), System.currentTimeMillis()))
+        try {
+          body
+        } finally {
+          sparkSession.sparkContext.listenerBus.post(SparkListenerSQLExecutionEnd(
+            executionId, System.currentTimeMillis()))
+        }
       } finally {
         sparkSession.sparkContext.listenerBus.post(SparkListenerSQLExecutionEnd(
           executionId, System.currentTimeMillis()))

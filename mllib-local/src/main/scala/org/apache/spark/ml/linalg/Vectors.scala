@@ -136,21 +136,7 @@ sealed trait Vector extends Serializable {
    * Converts this vector to a sparse vector with all explicit zeros removed.
    */
   @Since("2.0.0")
-  def toSparse: SparseVector = toSparseWithSize(numNonzeros)
-
-  /**
-   * Converts this vector to a sparse vector with all explicit zeros removed when the size is known.
-   * This method is used to avoid re-computing the number of non-zero elements when it is
-   * already known. This method should only be called after computing the number of non-zero
-   * elements via [[numNonzeros]]. e.g.
-   * {{{
-   *   val nnz = numNonzeros
-   *   val sv = toSparse(nnz)
-   * }}}
-   *
-   * If `nnz` is under-specified, a [[java.lang.ArrayIndexOutOfBoundsException]] is thrown.
-   */
-  private[linalg] def toSparseWithSize(nnz: Int): SparseVector
+  def toSparse: SparseVector
 
   /**
    * Converts this vector to a dense vector.
@@ -563,25 +549,11 @@ class SparseVector @Since("2.0.0") (
     @Since("2.0.0") val indices: Array[Int],
     @Since("2.0.0") val values: Array[Double]) extends Vector {
 
-  // validate the data
-  {
-    require(size >= 0, "The size of the requested sparse vector must be greater than 0.")
-    require(indices.length == values.length, "Sparse vectors require that the dimension of the" +
-      s" indices match the dimension of the values. You provided ${indices.length} indices and " +
-      s" ${values.length} values.")
-    require(indices.length <= size, s"You provided ${indices.length} indices and values, " +
-      s"which exceeds the specified vector size ${size}.")
-
-    if (indices.nonEmpty) {
-      require(indices(0) >= 0, s"Found negative index: ${indices(0)}.")
-    }
-    var prev = -1
-    indices.foreach { i =>
-      require(prev < i, s"Index $i follows $prev and is not strictly increasing")
-      prev = i
-    }
-    require(prev < size, s"Index $prev out of bounds for vector of size $size")
-  }
+  require(indices.length == values.length, "Sparse vectors require that the dimension of the" +
+    s" indices match the dimension of the values. You provided ${indices.length} indices and " +
+    s" ${values.length} values.")
+  require(indices.length <= size, s"You provided ${indices.length} indices and values, " +
+    s"which exceeds the specified vector size ${size}.")
 
   override def toString: String =
     s"($size,${indices.mkString("[", ",", "]")},${values.mkString("[", ",", "]")})"

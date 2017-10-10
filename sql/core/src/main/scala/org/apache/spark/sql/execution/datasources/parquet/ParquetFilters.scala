@@ -24,10 +24,18 @@ import org.apache.parquet.io.api.Binary
 import org.apache.spark.sql.sources
 import org.apache.spark.sql.types._
 
-/**
- * Some utility function to convert Spark data source filters to Parquet filters.
- */
-private[parquet] object ParquetFilters {
+object ParquetFilters {
+  case class SetInFilter[T <: Comparable[T]](
+    valueSet: Set[T]) extends UserDefinedPredicate[T] with Serializable {
+
+    override def keep(value: T): Boolean = {
+      value != null && valueSet.contains(value)
+    }
+
+    override def canDrop(statistics: Statistics[T]): Boolean = false
+
+    override def inverseCanDrop(statistics: Statistics[T]): Boolean = false
+  }
 
   private val makeEq: PartialFunction[DataType, (String, Any) => FilterPredicate] = {
     case BooleanType =>
@@ -158,8 +166,11 @@ private[parquet] object ParquetFilters {
       // Here we don't flatten the fields in the nested schema but just look up through
       // root fields. Currently, accessing to nested fields does not push down filters
       // and it does not support to create filters for them.
-      fields.map(f => f.name -> f.dataType).toMap
-    case _ => Map.empty[String, DataType]
+      fields.filter { f =>
+        !f.metadata.contains(StructType.metadataKeyForOptionalField) ||
+          !f.metadata.getBoolean(StructType.metadataKeyForOptionalField)
+      }.map(f => f.name -> f.dataType)
+    case _ => Array.empty[(String, DataType)]
   }
 
   /**

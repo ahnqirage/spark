@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.Future
 
+import scala.concurrent.Future
+
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.deploy.{ApplicationDescription, Command}
 import org.apache.spark.deploy.client.{StandaloneAppClient, StandaloneAppClientListener}
@@ -43,7 +45,7 @@ private[spark] class StandaloneSchedulerBackend(
   with Logging {
 
   private var client: StandaloneAppClient = null
-  private val stopping = new AtomicBoolean(false)
+  private var stopping = false
   private val launcherBackend = new LauncherBackend() {
     override protected def onStopRequest(): Unit = stop(SparkAppHandle.State.KILLED)
   }
@@ -110,8 +112,8 @@ private[spark] class StandaloneSchedulerBackend(
       } else {
         None
       }
-    val appDesc = ApplicationDescription(sc.appName, maxCores, sc.executorMemory, command,
-      webUrl, sc.eventLogDir, sc.eventLogCodec, coresPerExecutor, initialExecutorLimit)
+    val appDesc = new ApplicationDescription(sc.appName, maxCores, sc.executorMemory, command,
+      appUIAddress, sc.eventLogDir, sc.eventLogCodec, coresPerExecutor, initialExecutorLimit)
     client = new StandaloneAppClient(sc.env.rpcEnv, masters, appDesc, this, conf)
     client.start()
     launcherBackend.setState(SparkAppHandle.State.SUBMITTED)

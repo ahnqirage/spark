@@ -344,7 +344,8 @@ class UnsafeFixedWidthAggregationMapSuite
       groupKeySchema,
       taskMemoryManager,
       128, // initial capacity
-      pageSize
+      pageSize,
+      false // disable perf metrics
     )
 
     val rand = new Random(42)

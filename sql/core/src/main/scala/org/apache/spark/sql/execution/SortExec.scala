@@ -23,7 +23,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
-import org.apache.spark.sql.catalyst.plans.physical._
+import org.apache.spark.sql.catalyst.plans.physical.{Distribution, OrderedDistribution, UnspecifiedDistribution}
 import org.apache.spark.sql.execution.metric.SQLMetrics
 
 /**
@@ -160,7 +160,7 @@ case class SortExec(
     s"""
        | if ($needToSort) {
        |   long $spillSizeBefore = $metrics.memoryBytesSpilled();
-       |   $addToSorterFuncName();
+       |   $addToSorter();
        |   $sortedIterator = $sorterVariable.sort();
        |   $sortTime.add($sorterVariable.getSortTimeNanos() / 1000000);
        |   $peakMemory.add($sorterVariable.getPeakMemoryUsage());

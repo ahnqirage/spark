@@ -24,7 +24,6 @@ import org.scalatest.{BeforeAndAfter, PrivateMethodTester}
 
 import org.apache.spark.{SecurityManager, SparkConf, SparkFunSuite}
 import org.apache.spark.deploy.master.MasterSource
-import org.apache.spark.internal.config._
 import org.apache.spark.metrics.source.{Source, StaticSources}
 
 class MetricsSystemSuite extends SparkFunSuite with BeforeAndAfter with PrivateMethodTester{

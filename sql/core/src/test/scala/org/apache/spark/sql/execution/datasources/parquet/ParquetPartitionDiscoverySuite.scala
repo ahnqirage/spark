@@ -32,10 +32,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.catalog.ExternalCatalogUtils
 import org.apache.spark.sql.catalyst.expressions.Literal
-import org.apache.spark.sql.catalyst.util.DateTimeUtils
-import org.apache.spark.sql.execution.datasources._
-import org.apache.spark.sql.execution.datasources.{PartitionPath => Partition}
-import org.apache.spark.sql.execution.streaming.MemoryStream
+import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation, PartitionDirectory => Partition, PartitioningUtils, PartitionSpec}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSQLContext
@@ -219,18 +216,18 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
     // when the basePaths is the same as the path to a leaf directory
     val partitionSpec1: Option[PartitionValues] = parsePartition(
       path = new Path("file://path/a=10"),
+      defaultPartitionName = defaultPartitionName,
       typeInference = true,
-      basePaths = Set(new Path("file://path/a=10")),
-      timeZone = timeZone)._1
+      basePaths = Set(new Path("file://path/a=10")))._1
 
     assert(partitionSpec1.isEmpty)
 
     // when the basePaths is the path to a base directory of leaf directories
     val partitionSpec2: Option[PartitionValues] = parsePartition(
       path = new Path("file://path/a=10"),
+      defaultPartitionName = defaultPartitionName,
       typeInference = true,
-      basePaths = Set(new Path("file://path")),
-      timeZone = timeZone)._1
+      basePaths = Set(new Path("file://path")))._1
 
     assert(partitionSpec2 ==
       Option(PartitionValues(
@@ -477,8 +474,7 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
       assert(partDf.schema.map(_.name) === Seq("intField", "stringField"))
 
       path.listFiles().foreach { f =>
-        if (!f.getName.startsWith("_") &&
-            f.getName.toLowerCase(Locale.ROOT).endsWith(".parquet")) {
+        if (f.getName.toLowerCase().endsWith(".parquet")) {
           // when the input is a path to a parquet file
           val df = spark.read.parquet(f.getCanonicalPath)
           assert(df.schema.map(_.name) === Seq("intField", "stringField"))
@@ -486,8 +482,7 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
       }
 
       path.listFiles().foreach { f =>
-        if (!f.getName.startsWith("_") &&
-            f.getName.toLowerCase(Locale.ROOT).endsWith(".parquet")) {
+        if (f.getName.toLowerCase().endsWith(".parquet")) {
           // when the input is a path to a parquet file but `basePath` is overridden to
           // the base path containing partitioning directories
           val df = spark
@@ -710,56 +705,6 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
       val fields = schema.map(f => Column(f.name).cast(f.dataType))
       checkAnswer(spark.read.load(dir.toString).select(fields: _*), row)
     }
-
-    withTempPath { dir =>
-      df.write.option(DateTimeUtils.TIMEZONE_OPTION, "GMT")
-        .format("parquet").partitionBy(partitionColumns.map(_.name): _*).save(dir.toString)
-      val fields = schema.map(f => Column(f.name).cast(f.dataType))
-      checkAnswer(spark.read.option(DateTimeUtils.TIMEZONE_OPTION, "GMT")
-        .load(dir.toString).select(fields: _*), row)
-    }
-  }
-
-  test("Various inferred partition value types") {
-    val row =
-      Row(
-        Long.MaxValue,
-        4.5,
-        new java.math.BigDecimal(new BigInteger("1" * 20)),
-        java.sql.Date.valueOf("2015-05-23"),
-        java.sql.Timestamp.valueOf("1990-02-24 12:00:30"),
-        "This is a string, /[]?=:",
-        "This is not a partition column")
-
-    val partitionColumnTypes =
-      Seq(
-        LongType,
-        DoubleType,
-        DecimalType(20, 0),
-        DateType,
-        TimestampType,
-        StringType)
-
-    val partitionColumns = partitionColumnTypes.zipWithIndex.map {
-      case (t, index) => StructField(s"p_$index", t)
-    }
-
-    val schema = StructType(partitionColumns :+ StructField(s"i", StringType))
-    val df = spark.createDataFrame(sparkContext.parallelize(row :: Nil), schema)
-
-    withTempPath { dir =>
-      df.write.format("parquet").partitionBy(partitionColumns.map(_.name): _*).save(dir.toString)
-      val fields = schema.map(f => Column(f.name))
-      checkAnswer(spark.read.load(dir.toString).select(fields: _*), row)
-    }
-
-    withTempPath { dir =>
-      df.write.option(DateTimeUtils.TIMEZONE_OPTION, "GMT")
-        .format("parquet").partitionBy(partitionColumns.map(_.name): _*).save(dir.toString)
-      val fields = schema.map(f => Column(f.name))
-      checkAnswer(spark.read.option(DateTimeUtils.TIMEZONE_OPTION, "GMT")
-        .load(dir.toString).select(fields: _*), row)
-    }
   }
 
   test("SPARK-8037: Ignores files whose name starts with dot") {
@@ -972,10 +917,7 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
     withTempPath { dir =>
       val path = dir.getCanonicalPath
 
-      withSQLConf(
-          ParquetOutputFormat.ENABLE_JOB_SUMMARY -> "true",
-          "spark.sql.sources.commitProtocolClass" ->
-            classOf[SQLHadoopMapReduceCommitProtocol].getCanonicalName) {
+      withSQLConf(ParquetOutputFormat.ENABLE_JOB_SUMMARY -> "true") {
         spark.range(3).write.parquet(s"$path/p0=0/p1=0")
       }
 
@@ -1010,29 +952,6 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
         Row(1, 0, 0),
         Row(2, 0, 0)
       ))
-    }
-  }
-
-  test("SPARK-18108 Parquet reader fails when data column types conflict with partition ones") {
-    withSQLConf(SQLConf.PARQUET_VECTORIZED_READER_ENABLED.key -> "true") {
-      withTempPath { dir =>
-        val path = dir.getCanonicalPath
-        val df = Seq((1L, 2.0)).toDF("a", "b")
-        df.write.parquet(s"$path/a=1")
-        checkAnswer(spark.read.parquet(s"$path"), Seq(Row(1, 2.0)))
-      }
-    }
-  }
-
-  test("SPARK-22109: Resolve type conflicts between strings and timestamps in partition column") {
-    val df = Seq(
-      (1, "2015-01-01 00:00:00"),
-      (2, "2014-01-01 00:00:00"),
-      (3, "blah")).toDF("i", "str")
-
-    withTempPath { path =>
-      df.write.format("parquet").partitionBy("str").save(path.getAbsolutePath)
-      checkAnswer(spark.read.load(path.getAbsolutePath), df)
     }
   }
 }

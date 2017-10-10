@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # $example on$
     splits = [-float("inf"), -0.5, 0.0, 0.5, float("inf")]
 
-    data = [(-999.9,), (-0.5,), (-0.3,), (0.0,), (0.2,), (999.9,)]
+    data = [(-0.5,), (-0.3,), (0.0,), (0.2,)]
     dataFrame = spark.createDataFrame(data, ["features"])
 
     bucketizer = Bucketizer(splits=splits, inputCol="features", outputCol="bucketedFeatures")

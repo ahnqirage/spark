@@ -59,24 +59,6 @@ case class ReusedExchangeExec(override val output: Seq[Attribute], child: Exchan
   override protected[sql] def doExecuteBroadcast[T](): broadcast.Broadcast[T] = {
     child.executeBroadcast()
   }
-
-  // `ReusedExchangeExec` can have distinct set of output attribute ids from its child, we need
-  // to update the attribute ids in `outputPartitioning` and `outputOrdering`.
-  private lazy val updateAttr: Expression => Expression = {
-    val originalAttrToNewAttr = AttributeMap(child.output.zip(output))
-    e => e.transform {
-      case attr: Attribute => originalAttrToNewAttr.getOrElse(attr, attr)
-    }
-  }
-
-  override def outputPartitioning: Partitioning = child.outputPartitioning match {
-    case h: HashPartitioning => h.copy(expressions = h.expressions.map(updateAttr))
-    case other => other
-  }
-
-  override def outputOrdering: Seq[SortOrder] = {
-    child.outputOrdering.map(updateAttr(_).asInstanceOf[SortOrder])
-  }
 }
 
 /**

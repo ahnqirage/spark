@@ -37,8 +37,7 @@ import org.apache.spark.sql.functions._
 
 
 /**
- * <a href="http://en.wikipedia.org/wiki/Random_forest">Random Forest</a>
- * learning algorithm for regression.
+ * [[http://en.wikipedia.org/wiki/Random_forest  Random Forest]] learning algorithm for regression.
  * It supports both continuous and categorical features.
  */
 @Since("1.4.0")
@@ -157,7 +156,7 @@ object RandomForestRegressor extends DefaultParamsReadable[RandomForestRegressor
 }
 
 /**
- * <a href="http://en.wikipedia.org/wiki/Random_forest">Random Forest</a> model for regression.
+ * [[http://en.wikipedia.org/wiki/Random_forest  Random Forest]] model for regression.
  * It supports both continuous and categorical features.
  *
  * @param _trees  Decision trees in the ensemble.

@@ -17,10 +17,8 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import org.apache.spark.sql.catalyst.analysis.{FunctionAlreadyExistsException, NoSuchDatabaseException, NoSuchFunctionException, NoSuchTableException}
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.util.ListenerBus
+import org.apache.spark.sql.catalyst.analysis.{FunctionAlreadyExistsException, NoSuchDatabaseException, NoSuchFunctionException}
+
 
 /**
  * Interface for the system catalog (of functions, partitions, tables, and databases).
@@ -38,12 +36,6 @@ abstract class ExternalCatalog
   protected def requireDbExists(db: String): Unit = {
     if (!databaseExists(db)) {
       throw new NoSuchDatabaseException(db)
-    }
-  }
-
-  protected def requireTableExists(db: String, table: String): Unit = {
-    if (!tableExists(db, table)) {
-      throw new NoSuchTableException(db = db, table = table)
     }
   }
 

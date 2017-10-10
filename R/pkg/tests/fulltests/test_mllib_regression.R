@@ -19,8 +19,8 @@ library(testthat)
 
 context("MLlib regression algorithms, except for tree-based algorithms")
 
-# Tests for MLlib regression algorithms in SparkR
-sparkSession <- sparkR.session(master = sparkRTestMaster, enableHiveSupport = FALSE)
+# Tests for MLlib functions in SparkR
+sparkSession <- sparkR.session()
 
 test_that("formula of spark.glm", {
   training <- suppressWarnings(createDataFrame(iris))
@@ -76,24 +76,6 @@ test_that("spark.glm and predict", {
   model <- glm(y ~ x, family = Gamma, df)
   out <- capture.output(print(summary(model)))
   expect_true(any(grepl("Dispersion parameter for gamma family", out)))
-
-  # tweedie family
-  model <- spark.glm(training, Sepal_Width ~ Sepal_Length + Species,
-                     family = "tweedie", var.power = 1.2, link.power = 0.0)
-  prediction <- predict(model, training)
-  expect_equal(typeof(take(select(prediction, "prediction"), 1)$prediction), "double")
-  vals <- collect(select(prediction, "prediction"))
-
-  # manual calculation of the R predicted values to avoid dependence on statmod
-  #' library(statmod)
-  #' rModel <- glm(Sepal.Width ~ Sepal.Length + Species, data = iris,
-  #'             family = tweedie(var.power = 1.2, link.power = 0.0))
-  #' print(coef(rModel))
-
-  rCoef <- c(0.6455409, 0.1169143, -0.3224752, -0.3282174)
-  rVals <- exp(as.numeric(model.matrix(Sepal.Width ~ Sepal.Length + Species,
-                                       data = iris) %*% rCoef))
-  expect_true(all(abs(rVals - vals) < 1e-5), rVals - vals)
 
   # Test stats::predict is working
   x <- rnorm(15)
@@ -375,69 +357,97 @@ test_that("glm save/load", {
   unlink(modelPath)
 })
 
-test_that("spark.glm and glm with string encoding", {
-  t <- as.data.frame(Titanic, stringsAsFactors = FALSE)
-  df <- createDataFrame(t)
+test_that("spark.kmeans", {
+  newIris <- iris
+  newIris$Species <- NULL
+  training <- suppressWarnings(createDataFrame(newIris))
 
-  # base R
-  rm <- stats::glm(Freq ~ Sex + Age, family = "gaussian", data = t)
-  # spark.glm with default stringIndexerOrderType = "frequencyDesc"
-  sm0 <- spark.glm(df, Freq ~ Sex + Age, family = "gaussian")
-  # spark.glm with stringIndexerOrderType = "alphabetDesc"
-  sm1 <- spark.glm(df, Freq ~ Sex + Age, family = "gaussian",
-                   stringIndexerOrderType = "alphabetDesc")
-  # glm with stringIndexerOrderType = "alphabetDesc"
-  sm2 <- glm(Freq ~ Sex + Age, family = "gaussian", data = df,
-                stringIndexerOrderType = "alphabetDesc")
+  take(training, 1)
 
-  rStats <- summary(rm)
-  rCoefs <- rStats$coefficients
-  sStats <- lapply(list(sm0, sm1, sm2), summary)
-  # order by coefficient size since column rendering may be different
-  o <- order(rCoefs[, 1])
+  model <- spark.kmeans(data = training, ~ ., k = 2, maxIter = 10, initMode = "random")
+  sample <- take(select(predict(model, training), "prediction"), 1)
+  expect_equal(typeof(sample$prediction), "integer")
+  expect_equal(sample$prediction, 1)
 
-  # default encoding does not produce same results as R
-  expect_false(all(abs(rCoefs[o, ] - sStats[[1]]$coefficients[o, ]) < 1e-4))
+  # Test stats::kmeans is working
+  statsModel <- kmeans(x = newIris, centers = 2)
+  expect_equal(sort(unique(statsModel$cluster)), c(1, 2))
 
-  # all estimates should be the same as R with stringIndexerOrderType = "alphabetDesc"
-  test <- lapply(sStats[2:3], function(stats) {
-    expect_true(all(abs(rCoefs[o, ] - stats$coefficients[o, ]) < 1e-4))
-    expect_equal(stats$dispersion, rStats$dispersion)
-    expect_equal(stats$null.deviance, rStats$null.deviance)
-    expect_equal(stats$deviance, rStats$deviance)
-    expect_equal(stats$df.null, rStats$df.null)
-    expect_equal(stats$df.residual, rStats$df.residual)
-    expect_equal(stats$aic, rStats$aic)
-  })
+  # Test fitted works on KMeans
+  fitted.model <- fitted(model)
+  expect_equal(sort(collect(distinct(select(fitted.model, "prediction")))$prediction), c(0, 1))
 
-  # fitted values should be equal regardless of string encoding
-  rVals <- predict(rm, t)
-  test <- lapply(list(sm0, sm1, sm2), function(sm) {
-    vals <- collect(select(predict(sm, df), "prediction"))
-    expect_true(all(abs(rVals - vals) < 1e-6), rVals - vals)
-  })
+  # Test summary works on KMeans
+  summary.model <- summary(model)
+  cluster <- summary.model$cluster
+  expect_equal(sort(collect(distinct(select(cluster, "prediction")))$prediction), c(0, 1))
+
+  # Test model save/load
+  modelPath <- tempfile(pattern = "spark-kmeans", fileext = ".tmp")
+  write.ml(model, modelPath)
+  expect_error(write.ml(model, modelPath))
+  write.ml(model, modelPath, overwrite = TRUE)
+  model2 <- read.ml(modelPath)
+  summary2 <- summary(model2)
+  expect_equal(sort(unlist(summary.model$size)), sort(unlist(summary2$size)))
+  expect_equal(summary.model$coefficients, summary2$coefficients)
+  expect_true(!summary.model$is.loaded)
+  expect_true(summary2$is.loaded)
+
+  unlink(modelPath)
 })
 
-test_that("spark.isoreg", {
-  label <- c(7.0, 5.0, 3.0, 5.0, 1.0)
-  feature <- c(0.0, 1.0, 2.0, 3.0, 4.0)
-  weight <- c(1.0, 1.0, 1.0, 1.0, 1.0)
-  data <- as.data.frame(cbind(label, feature, weight))
-  df <- createDataFrame(data)
+test_that("spark.naiveBayes", {
+  # R code to reproduce the result.
+  # We do not support instance weights yet. So we ignore the frequencies.
+  #
+  #' library(e1071)
+  #' t <- as.data.frame(Titanic)
+  #' t1 <- t[t$Freq > 0, -5]
+  #' m <- naiveBayes(Survived ~ ., data = t1)
+  #' m
+  #' predict(m, t1)
+  #
+  # -- output of 'm'
+  #
+  # A-priori probabilities:
+  # Y
+  #        No       Yes
+  # 0.4166667 0.5833333
+  #
+  # Conditional probabilities:
+  #      Class
+  # Y           1st       2nd       3rd      Crew
+  #   No  0.2000000 0.2000000 0.4000000 0.2000000
+  #   Yes 0.2857143 0.2857143 0.2857143 0.1428571
+  #
+  #      Sex
+  # Y     Male Female
+  #   No   0.5    0.5
+  #   Yes  0.5    0.5
+  #
+  #      Age
+  # Y         Child     Adult
+  #   No  0.2000000 0.8000000
+  #   Yes 0.4285714 0.5714286
+  #
+  # -- output of 'predict(m, t1)'
+  #
+  # Yes Yes Yes Yes No  No  Yes Yes No  No  Yes Yes Yes Yes Yes Yes Yes Yes No  No  Yes Yes No  No
+  #
 
-  model <- spark.isoreg(df, label ~ feature, isotonic = FALSE,
-                        weightCol = "weight")
-  # only allow one variable on the right hand side of the formula
-  expect_error(model2 <- spark.isoreg(df, ~., isotonic = FALSE))
-  result <- summary(model)
-  expect_equal(result$predictions, list(7, 5, 4, 4, 1))
-
-  # Test model prediction
-  predict_data <- list(list(-2.0), list(-1.0), list(0.5),
-                       list(0.75), list(1.0), list(2.0), list(9.0))
-  predict_df <- createDataFrame(predict_data, c("feature"))
-  predict_result <- collect(select(predict(model, predict_df), "prediction"))
-  expect_equal(predict_result$prediction, c(7.0, 7.0, 6.0, 5.5, 5.0, 4.0, 1.0))
+  t <- as.data.frame(Titanic)
+  t1 <- t[t$Freq > 0, -5]
+  df <- suppressWarnings(createDataFrame(t1))
+  m <- spark.naiveBayes(df, Survived ~ ., smoothing = 0.0)
+  s <- summary(m)
+  expect_equal(as.double(s$apriori[1, "Yes"]), 0.5833333, tolerance = 1e-6)
+  expect_equal(sum(s$apriori), 1)
+  expect_equal(as.double(s$tables["Yes", "Age_Adult"]), 0.5714286, tolerance = 1e-6)
+  p <- collect(select(predict(m, df), "prediction"))
+  expect_equal(p$prediction, c("Yes", "Yes", "Yes", "Yes", "No", "No", "Yes", "Yes", "No", "No",
+                               "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "No", "No",
+                               "Yes", "Yes", "No", "No"))
 
   # Test model save/load
   if (windows_with_hadoop()) {
@@ -511,7 +521,7 @@ test_that("spark.survreg", {
                  x = c(0, 2, 1, 1, 1, 0, 0), sex = c(0, 0, 0, 0, 1, 1, 1))
     expect_error(
       model <- survival::survreg(formula = survival::Surv(time, status) ~ x + sex, data = rData),
-                                 NA)
+      NA)
     expect_equal(predict(model, rData)[[1]], 3.724591, tolerance = 1e-4)
 
     # Test stringIndexerOrderType

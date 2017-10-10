@@ -105,21 +105,6 @@ public class ExternalShuffleBlockResolver {
       Executor directoryCleaner) throws IOException {
     this.conf = conf;
     this.registeredExecutorFile = registeredExecutorFile;
-    String indexCacheSize = conf.get("spark.shuffle.service.index.cache.size", "100m");
-    CacheLoader<File, ShuffleIndexInformation> indexCacheLoader =
-        new CacheLoader<File, ShuffleIndexInformation>() {
-          public ShuffleIndexInformation load(File file) throws IOException {
-            return new ShuffleIndexInformation(file);
-          }
-        };
-    shuffleIndexCache = CacheBuilder.newBuilder()
-      .maximumWeight(JavaUtils.byteStringAsBytes(indexCacheSize))
-      .weigher(new Weigher<File, ShuffleIndexInformation>() {
-        public int weigh(File file, ShuffleIndexInformation indexInfo) {
-          return indexInfo.getSize();
-        }
-      })
-      .build(indexCacheLoader);
     db = LevelDBProvider.initLevelDB(this.registeredExecutorFile, CURRENT_VERSION, mapper);
     if (db != null) {
       executors = reloadRegisteredExecutors(db);

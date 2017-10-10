@@ -65,22 +65,20 @@ class TextSocketStreamSuite extends StreamTest with SharedSQLContext with Before
       while (source.getOffset.isEmpty) {
         Thread.sleep(10)
       }
-      withSQLConf("spark.sql.streaming.unsupportedOperationCheck" -> "false") {
-        val offset1 = source.getOffset.get
-        val batch1 = source.getBatch(None, offset1)
-        assert(batch1.as[String].collect().toSeq === Seq("hello"))
+      val offset1 = source.getOffset.get
+      val batch1 = source.getBatch(None, offset1)
+      assert(batch1.as[String].collect().toSeq === Seq("hello"))
 
-        serverThread.enqueue("world")
-        while (source.getOffset.get === offset1) {
-          Thread.sleep(10)
-        }
-        val offset2 = source.getOffset.get
-        val batch2 = source.getBatch(Some(offset1), offset2)
-        assert(batch2.as[String].collect().toSeq === Seq("world"))
-
-        val both = source.getBatch(None, offset2)
-        assert(both.as[String].collect().sorted.toSeq === Seq("hello", "world"))
+      serverThread.enqueue("world")
+      while (source.getOffset.get === offset1) {
+        Thread.sleep(10)
       }
+      val offset2 = source.getOffset.get
+      val batch2 = source.getBatch(Some(offset1), offset2)
+      assert(batch2.as[String].collect().toSeq === Seq("world"))
+
+      val both = source.getBatch(None, offset2)
+      assert(both.as[String].collect().sorted.toSeq === Seq("hello", "world"))
 
       // Try stopping the source to make sure this does not block forever.
       source.stop()
@@ -106,24 +104,22 @@ class TextSocketStreamSuite extends StreamTest with SharedSQLContext with Before
       while (source.getOffset.isEmpty) {
         Thread.sleep(10)
       }
-      withSQLConf("spark.sql.streaming.unsupportedOperationCheck" -> "false") {
-        val offset1 = source.getOffset.get
-        val batch1 = source.getBatch(None, offset1)
-        val batch1Seq = batch1.as[(String, Timestamp)].collect().toSeq
-        assert(batch1Seq.map(_._1) === Seq("hello"))
-        val batch1Stamp = batch1Seq(0)._2
+      val offset1 = source.getOffset.get
+      val batch1 = source.getBatch(None, offset1)
+      val batch1Seq = batch1.as[(String, Timestamp)].collect().toSeq
+      assert(batch1Seq.map(_._1) === Seq("hello"))
+      val batch1Stamp = batch1Seq(0)._2
 
-        serverThread.enqueue("world")
-        while (source.getOffset.get === offset1) {
-          Thread.sleep(10)
-        }
-        val offset2 = source.getOffset.get
-        val batch2 = source.getBatch(Some(offset1), offset2)
-        val batch2Seq = batch2.as[(String, Timestamp)].collect().toSeq
-        assert(batch2Seq.map(_._1) === Seq("world"))
-        val batch2Stamp = batch2Seq(0)._2
-        assert(!batch2Stamp.before(batch1Stamp))
+      serverThread.enqueue("world")
+      while (source.getOffset.get === offset1) {
+        Thread.sleep(10)
       }
+      val offset2 = source.getOffset.get
+      val batch2 = source.getBatch(Some(offset1), offset2)
+      val batch2Seq = batch2.as[(String, Timestamp)].collect().toSeq
+      assert(batch2Seq.map(_._1) === Seq("world"))
+      val batch2Stamp = batch2Seq(0)._2
+      assert(!batch2Stamp.before(batch1Stamp))
 
       // Try stopping the source to make sure this does not block forever.
       source.stop()
@@ -152,21 +148,6 @@ class TextSocketStreamSuite extends StreamTest with SharedSQLContext with Before
     }
   }
 
-  test("user-specified schema given") {
-    val provider = new TextSocketSourceProvider
-    val userSpecifiedSchema = StructType(
-      StructField("name", StringType) ::
-      StructField("area", StringType) :: Nil)
-    val exception = intercept[AnalysisException] {
-      provider.sourceSchema(
-        sqlContext, Some(userSpecifiedSchema),
-        "",
-        Map("host" -> "localhost", "port" -> "1234"))
-    }
-    assert(exception.getMessage.contains(
-      "socket source does not support a user-specified schema"))
-  }
-
   test("no server up") {
     val provider = new TextSocketSourceProvider
     val parameters = Map("host" -> "localhost", "port" -> "0")
@@ -188,14 +169,12 @@ class TextSocketStreamSuite extends StreamTest with SharedSQLContext with Before
       while (source.getOffset.isEmpty) {
         Thread.sleep(10)
       }
-      withSQLConf("spark.sql.streaming.unsupportedOperationCheck" -> "false") {
-        val batch = source.getBatch(None, source.getOffset.get).as[String]
-        batch.collect()
-        val numRowsMetric =
-          batch.queryExecution.executedPlan.collectLeaves().head.metrics.get("numOutputRows")
-        assert(numRowsMetric.nonEmpty)
-        assert(numRowsMetric.get.value === 1)
-      }
+      val batch = source.getBatch(None, source.getOffset.get).as[String]
+      batch.collect()
+      val numRowsMetric =
+        batch.queryExecution.executedPlan.collectLeaves().head.metrics.get("numOutputRows")
+      assert(numRowsMetric.nonEmpty)
+      assert(numRowsMetric.get.value === 1)
       source.stop()
       source = null
     }

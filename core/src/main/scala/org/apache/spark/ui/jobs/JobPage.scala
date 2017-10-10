@@ -77,7 +77,7 @@ private[ui] class JobPage(parent: JobsTab) extends WebUIPage("job") {
          |  'content': '<div class="job-timeline-content" data-toggle="tooltip"' +
          |   'data-placement="top" data-html="true"' +
          |   'data-title="${jsEscapedName} (Stage ${stageId}.${attemptId})<br>' +
-         |   'Status: ${status.toUpperCase(Locale.ROOT)}<br>' +
+         |   'Status: ${status.toUpperCase}<br>' +
          |   'Submitted: ${UIUtils.formatDate(new Date(submissionTime))}' +
          |   '${
                  if (status != "running") {

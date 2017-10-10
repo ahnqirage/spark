@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql
 
-import java.io.Closeable
+import java.beans.Introspector
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.JavaConverters._
@@ -25,9 +25,10 @@ import scala.reflect.runtime.universe.TypeTag
 import scala.util.control.NonFatal
 
 import org.apache.spark.{SPARK_VERSION, SparkConf, SparkContext}
-import org.apache.spark.annotation.{DeveloperApi, Experimental, InterfaceStability}
+import org.apache.spark.annotation.{DeveloperApi, Experimental}
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.internal.Logging
+import org.apache.spark.internal.config.CATALOG_IMPLEMENTATION
 import org.apache.spark.rdd.RDD
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.catalog.Catalog
@@ -38,11 +39,10 @@ import org.apache.spark.sql.catalyst.plans.logical.{LocalRelation, Range}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.ui.SQLListener
-import org.apache.spark.sql.internal._
-import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
+import org.apache.spark.sql.internal.{CatalogImpl, SessionState, SharedState}
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.streaming._
-import org.apache.spark.sql.types.{DataType, StructType}
+import org.apache.spark.sql.types.{DataType, LongType, StructType}
 import org.apache.spark.sql.util.ExecutionListenerManager
 import org.apache.spark.util.Utils
 
@@ -60,18 +60,12 @@ import org.apache.spark.util.Utils
  * The builder can also be used to create a new session:
  *
  * {{{
- *   SparkSession.builder
+ *   SparkSession.builder()
  *     .master("local")
  *     .appName("Word Count")
  *     .config("spark.some.config.option", "some-value")
  *     .getOrCreate()
  * }}}
- *
- * @param sparkContext The Spark context associated with this Spark session.
- * @param existingSharedState If supplied, use the existing shared state
- *                            instead of creating a new one.
- * @param parentSessionState If supplied, inherit all session state (i.e. temporary
- *                            views, SQL config, UDFs etc) from parent.
  */
 @InterfaceStability.Stable
 class SparkSession private(
@@ -82,15 +76,10 @@ class SparkSession private(
   extends Serializable with Closeable with Logging { self =>
 
   private[sql] def this(sc: SparkContext) {
-    this(sc, None, None, new SparkSessionExtensions)
+    this(sc, None)
   }
 
   sparkContext.assertNotStopped()
-
-  // If there is no active SparkSession, uses the default SQL conf. Otherwise, use the session's.
-  SQLConf.setSQLConfGetter(() => {
-    SparkSession.getActiveSession.map(_.sessionState.conf).getOrElse(SQLConf.getFallbackConf)
-  })
 
   /**
    * The version of Spark on which this application is running.
@@ -113,8 +102,11 @@ class SparkSession private(
    */
   @InterfaceStability.Unstable
   @transient
-  lazy val sharedState: SharedState = {
-    existingSharedState.getOrElse(new SharedState(sparkContext))
+  private[sql] lazy val sharedState: SharedState = {
+    existingSharedState.getOrElse(
+      SparkSession.reflect[SharedState, SparkContext](
+        SparkSession.sharedStateClassName(sparkContext.conf),
+        sparkContext))
   }
 
   /**
@@ -134,16 +126,10 @@ class SparkSession private(
    */
   @InterfaceStability.Unstable
   @transient
-  lazy val sessionState: SessionState = {
-    parentSessionState
-      .map(_.clone(this))
-      .getOrElse {
-        val state = SparkSession.instantiateSessionState(
-          SparkSession.sessionStateClassName(sparkContext.conf),
-          self)
-        initialSessionOptions.foreach { case (k, v) => state.conf.setConfString(k, v) }
-        state
-      }
+  private[sql] lazy val sessionState: SessionState = {
+    SparkSession.reflect[SessionState, SparkSession](
+      SparkSession.sessionStateClassName(sparkContext.conf),
+      self)
   }
 
   /**
@@ -189,6 +175,9 @@ class SparkSession private(
 
   /**
    * A collection of methods for registering user-defined functions (UDF).
+   * Note that the user-defined functions must be deterministic. Due to optimization,
+   * duplicate invocations may be eliminated or the function may even be invoked more times than
+   * it is present in the query.
    *
    * The following example registers a Scala closure as UDF:
    * {{{
@@ -202,23 +191,18 @@ class SparkSession private(
    *       DataTypes.StringType);
    * }}}
    *
-   * @note The user-defined functions must be deterministic. Due to optimization,
-   * duplicate invocations may be eliminated or the function may even be invoked more times than
-   * it is present in the query.
-   *
    * @since 2.0.0
    */
   def udf: UDFRegistration = sessionState.udfRegistration
 
   /**
    * :: Experimental ::
-   * Returns a `StreamingQueryManager` that allows managing all the
-   * `StreamingQuery`s active on `this`.
+   * Returns a [[StreamingQueryManager]] that allows managing all the
+   * [[StreamingQuery StreamingQueries]] active on `this`.
    *
    * @since 2.0.0
    */
   @Experimental
-  @InterfaceStability.Unstable
   def streams: StreamingQueryManager = sessionState.streamingQueryManager
 
   /**
@@ -260,7 +244,7 @@ class SparkSession private(
    * --------------------------------- */
 
   /**
-   * Returns a `DataFrame` with no rows or columns.
+   * Returns a [[DataFrame]] with no rows or columns.
    *
    * @since 2.0.0
    */
@@ -276,7 +260,6 @@ class SparkSession private(
    * @return 2.0.0
    */
   @Experimental
-  @InterfaceStability.Evolving
   def emptyDataset[T: Encoder]: Dataset[T] = {
     val encoder = implicitly[Encoder[T]]
     new Dataset(self, LocalRelation(encoder.schema.toAttributes), encoder)
@@ -284,7 +267,7 @@ class SparkSession private(
 
   /**
    * :: Experimental ::
-   * Creates a `DataFrame` from an RDD of Product (e.g. case classes, tuples).
+   * Creates a [[DataFrame]] from an RDD of Product (e.g. case classes, tuples).
    *
    * @since 2.0.0
    */
@@ -292,8 +275,10 @@ class SparkSession private(
   @InterfaceStability.Evolving
   def createDataFrame[A <: Product : TypeTag](rdd: RDD[A]): DataFrame = {
     SparkSession.setActiveSession(this)
-    val encoder = Encoders.product[A]
-    Dataset.ofRows(self, ExternalRDD(rdd, self)(encoder))
+    val schema = ScalaReflection.schemaFor[A].dataType.asInstanceOf[StructType]
+    val attributeSeq = schema.toAttributes
+    val rowRDD = RDDConversions.productToRowRdd(rdd, schema.map(_.dataType))
+    Dataset.ofRows(self, LogicalRDD(attributeSeq, rowRDD)(self))
   }
 
   /**
@@ -350,7 +335,7 @@ class SparkSession private(
 
   /**
    * :: DeveloperApi ::
-   * Creates a `DataFrame` from a `JavaRDD` containing [[Row]]s using the given schema.
+   * Creates a [[DataFrame]] from a [[JavaRDD]] containing [[Row]]s using the given schema.
    * It is important to make sure that the structure of every [[Row]] of the provided RDD matches
    * the provided schema. Otherwise, there will be runtime exception.
    *
@@ -364,7 +349,7 @@ class SparkSession private(
 
   /**
    * :: DeveloperApi ::
-   * Creates a `DataFrame` from a `java.util.List` containing [[Row]]s using the given schema.
+   * Creates a [[DataFrame]] from a [[java.util.List]] containing [[Row]]s using the given schema.
    * It is important to make sure that the structure of every [[Row]] of the provided List matches
    * the provided schema. Otherwise, there will be runtime exception.
    *
@@ -461,7 +446,6 @@ class SparkSession private(
    * @since 2.0.0
    */
   @Experimental
-  @InterfaceStability.Evolving
   def createDataset[T : Encoder](data: Seq[T]): Dataset[T] = {
     val enc = encoderFor[T]
     val attributes = enc.schema.toAttributes
@@ -480,14 +464,13 @@ class SparkSession private(
    * @since 2.0.0
    */
   @Experimental
-  @InterfaceStability.Evolving
   def createDataset[T : Encoder](data: RDD[T]): Dataset[T] = {
     Dataset[T](self, ExternalRDD(data, self))
   }
 
   /**
    * :: Experimental ::
-   * Creates a [[Dataset]] from a `java.util.List` of a given type. This method requires an
+   * Creates a [[Dataset]] from a [[java.util.List]] of a given type. This method requires an
    * encoder (to convert a JVM object of type `T` to and from the internal Spark SQL representation)
    * that is generally created automatically through implicits from a `SparkSession`, or can be
    * created explicitly by calling static methods on [[Encoders]].
@@ -502,14 +485,13 @@ class SparkSession private(
    * @since 2.0.0
    */
   @Experimental
-  @InterfaceStability.Evolving
   def createDataset[T : Encoder](data: java.util.List[T]): Dataset[T] = {
     createDataset(data.asScala)
   }
 
   /**
    * :: Experimental ::
-   * Creates a [[Dataset]] with a single `LongType` column named `id`, containing elements
+   * Creates a [[Dataset]] with a single [[LongType]] column named `id`, containing elements
    * in a range from 0 to `end` (exclusive) with step value 1.
    *
    * @since 2.0.0
@@ -520,7 +502,7 @@ class SparkSession private(
 
   /**
    * :: Experimental ::
-   * Creates a [[Dataset]] with a single `LongType` column named `id`, containing elements
+   * Creates a [[Dataset]] with a single [[LongType]] column named `id`, containing elements
    * in a range from `start` to `end` (exclusive) with step value 1.
    *
    * @since 2.0.0
@@ -533,7 +515,7 @@ class SparkSession private(
 
   /**
    * :: Experimental ::
-   * Creates a [[Dataset]] with a single `LongType` column named `id`, containing elements
+   * Creates a [[Dataset]] with a single [[LongType]] column named `id`, containing elements
    * in a range from `start` to `end` (exclusive) with a step value.
    *
    * @since 2.0.0
@@ -546,7 +528,7 @@ class SparkSession private(
 
   /**
    * :: Experimental ::
-   * Creates a [[Dataset]] with a single `LongType` column named `id`, containing elements
+   * Creates a [[Dataset]] with a single [[LongType]] column named `id`, containing elements
    * in a range from `start` to `end` (exclusive) with a step value, with partition number
    * specified.
    *
@@ -609,11 +591,6 @@ class SparkSession private(
   /**
    * Returns the specified table/view as a `DataFrame`.
    *
-   * @param tableName is either a qualified or unqualified name that designates a table or view.
-   *                  If a database is specified, it identifies the table/view from the database.
-   *                  Otherwise, it first attempts to find a temporary view with the given name
-   *                  and then match the table/view from the current database.
-   *                  Note that, the global temporary view database is also valid here.
    * @since 2.0.0
    */
   def table(tableName: String): DataFrame = {
@@ -640,7 +617,7 @@ class SparkSession private(
 
   /**
    * Returns a [[DataFrameReader]] that can be used to read non-streaming data in as a
-   * `DataFrame`.
+   * [[DataFrame]].
    * {{{
    *   sparkSession.read.parquet("/path/to/file.parquet")
    *   sparkSession.read.schema(schema).json("/path/to/file.json")
@@ -651,7 +628,8 @@ class SparkSession private(
   def read: DataFrameReader = new DataFrameReader(self)
 
   /**
-   * Returns a `DataStreamReader` that can be used to read streaming data in as a `DataFrame`.
+   * :: Experimental ::
+   * Returns a [[DataStreamReader]] that can be used to read streaming data in as a [[DataFrame]].
    * {{{
    *   sparkSession.readStream.parquet("/path/to/directory/of/parquet/files")
    *   sparkSession.readStream.schema(schema).json("/path/to/directory/of/json/files")
@@ -659,24 +637,9 @@ class SparkSession private(
    *
    * @since 2.0.0
    */
-  @InterfaceStability.Evolving
+  @Experimental
   def readStream: DataStreamReader = new DataStreamReader(self)
 
-  /**
-   * Executes some code block and prints to stdout the time taken to execute the block. This is
-   * available in Scala only and is used primarily for interactive testing and debugging.
-   *
-   * @since 2.1.0
-   */
-  def time[T](f: => T): T = {
-    val start = System.nanoTime()
-    val ret = f
-    val end = System.nanoTime()
-    // scalastyle:off println
-    println(s"Time taken: ${(end - start) / 1000 / 1000} ms")
-    // scalastyle:on println
-    ret
-  }
 
   // scalastyle:off
   // Disable style checker so "implicits" object can start with lowercase i
@@ -700,20 +663,13 @@ class SparkSession private(
   // scalastyle:on
 
   /**
-   * Stop the underlying `SparkContext`.
+   * Stop the underlying [[SparkContext]].
    *
    * @since 2.0.0
    */
   def stop(): Unit = {
     sparkContext.stop()
   }
-
-  /**
-   * Synonym for `stop()`.
-   *
-   * @since 2.1.0
-   */
-  override def close(): Unit = stop()
 
   /**
    * Parses the data type in our internal string representation. The data type string should
@@ -765,10 +721,243 @@ object SparkSession {
   /**
    * Builder for [[SparkSession]].
    */
-  @InterfaceStability.Stable
   class Builder extends Logging {
 
     private[this] val options = new scala.collection.mutable.HashMap[String, String]
+
+    private[this] var userSuppliedContext: Option[SparkContext] = None
+
+    private[spark] def sparkContext(sparkContext: SparkContext): Builder = synchronized {
+      userSuppliedContext = Option(sparkContext)
+      this
+    }
+
+    /**
+     * Sets a name for the application, which will be shown in the Spark web UI.
+     * If no application name is set, a randomly generated name will be used.
+     *
+     * @since 2.0.0
+     */
+    def appName(name: String): Builder = config("spark.app.name", name)
+
+    /**
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both [[SparkConf]] and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
+    def config(key: String, value: String): Builder = synchronized {
+      options += key -> value
+      this
+    }
+
+    /**
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both [[SparkConf]] and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
+    def config(key: String, value: Long): Builder = synchronized {
+      options += key -> value.toString
+      this
+    }
+
+    /**
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both [[SparkConf]] and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
+    def config(key: String, value: Double): Builder = synchronized {
+      options += key -> value.toString
+      this
+    }
+
+    /**
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both [[SparkConf]] and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
+    def config(key: String, value: Boolean): Builder = synchronized {
+      options += key -> value.toString
+      this
+    }
+
+    /**
+     * Sets a list of config options based on the given [[SparkConf]].
+     *
+     * @since 2.0.0
+     */
+    def config(conf: SparkConf): Builder = synchronized {
+      conf.getAll.foreach { case (k, v) => options += k -> v }
+      this
+    }
+
+    /**
+     * Sets the Spark master URL to connect to, such as "local" to run locally, "local[4]" to
+     * run locally with 4 cores, or "spark://master:7077" to run on a Spark standalone cluster.
+     *
+     * @since 2.0.0
+     */
+    def master(master: String): Builder = config("spark.master", master)
+
+    /**
+     * Enables Hive support, including connectivity to a persistent Hive metastore, support for
+     * Hive serdes, and Hive user-defined functions.
+     *
+     * @since 2.0.0
+     */
+    def enableHiveSupport(): Builder = synchronized {
+      if (hiveClassesArePresent) {
+        config(CATALOG_IMPLEMENTATION.key, "hive")
+      } else {
+        throw new IllegalArgumentException(
+          "Unable to instantiate SparkSession with Hive support because " +
+            "Hive classes are not found.")
+      }
+    }
+
+    /**
+     * Gets an existing [[SparkSession]] or, if there is no existing one, creates a new
+     * one based on the options set in this builder.
+     *
+     * This method first checks whether there is a valid thread-local SparkSession,
+     * and if yes, return that one. It then checks whether there is a valid global
+     * default SparkSession, and if yes, return that one. If no valid global default
+     * SparkSession exists, the method creates a new SparkSession and assigns the
+     * newly created SparkSession as the global default.
+     *
+     * In case an existing SparkSession is returned, the config options specified in
+     * this builder will be applied to the existing SparkSession.
+     *
+     * @since 2.0.0
+     */
+    def getOrCreate(): SparkSession = synchronized {
+      // Get the session from current thread's active session.
+      var session = activeThreadSession.get()
+      if ((session ne null) && !session.sparkContext.isStopped) {
+        options.foreach { case (k, v) => session.conf.set(k, v) }
+        if (options.nonEmpty) {
+          logWarning("Using an existing SparkSession; some configuration may not take effect.")
+        }
+        return session
+      }
+
+      // Global synchronization so we will only set the default session once.
+      SparkSession.synchronized {
+        // If the current thread does not have an active session, get it from the global session.
+        session = defaultSession.get()
+        if ((session ne null) && !session.sparkContext.isStopped) {
+          options.foreach { case (k, v) => session.conf.set(k, v) }
+          if (options.nonEmpty) {
+            logWarning("Using an existing SparkSession; some configuration may not take effect.")
+          }
+          return session
+        }
+
+        // No active nor global default session. Create a new one.
+        val sparkContext = userSuppliedContext.getOrElse {
+          // set app name if not given
+          val randomAppName = java.util.UUID.randomUUID().toString
+          val sparkConf = new SparkConf()
+          options.foreach { case (k, v) => sparkConf.set(k, v) }
+          if (!sparkConf.contains("spark.app.name")) {
+            sparkConf.setAppName(randomAppName)
+          }
+          val sc = SparkContext.getOrCreate(sparkConf)
+          // maybe this is an existing SparkContext, update its SparkConf which maybe used
+          // by SparkSession
+          options.foreach { case (k, v) => sc.conf.set(k, v) }
+          if (!sc.conf.contains("spark.app.name")) {
+            sc.conf.setAppName(randomAppName)
+          }
+          sc
+        }
+        session = new SparkSession(sparkContext)
+        options.foreach { case (k, v) => session.conf.set(k, v) }
+        defaultSession.set(session)
+
+        // Register a successfully instantiated context to the singleton. This should be at the
+        // end of the class definition so that the singleton is updated only if there is no
+        // exception in the construction of the instance.
+        sparkContext.addSparkListener(new SparkListener {
+          override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
+            defaultSession.set(null)
+            sqlListener.set(null)
+          }
+        })
+      }
+
+      return session
+    }
+  }
+
+  /**
+   * Creates a [[SparkSession.Builder]] for constructing a [[SparkSession]].
+   *
+   * @since 2.0.0
+   */
+  def builder(): Builder = new Builder
+
+  /**
+   * Changes the SparkSession that will be returned in this thread and its children when
+   * SparkSession.getOrCreate() is called. This can be used to ensure that a given thread receives
+   * a SparkSession with an isolated session, instead of the global (first created) context.
+   *
+   * @since 2.0.0
+   */
+  def setActiveSession(session: SparkSession): Unit = {
+    activeThreadSession.set(session)
+  }
+
+  /**
+   * Clears the active SparkSession for current thread. Subsequent calls to getOrCreate will
+   * return the first created context instead of a thread-local override.
+   *
+   * @since 2.0.0
+   */
+  def clearActiveSession(): Unit = {
+    activeThreadSession.remove()
+  }
+
+  /**
+   * Sets the default SparkSession that is returned by the builder.
+   *
+   * @since 2.0.0
+   */
+  def setDefaultSession(session: SparkSession): Unit = {
+    defaultSession.set(session)
+  }
+
+  /**
+   * Clears the default SparkSession that is returned by the builder.
+   *
+   * @since 2.0.0
+   */
+  def clearDefaultSession(): Unit = {
+    defaultSession.set(null)
+  }
+
+  private[sql] def getActiveSession: Option[SparkSession] = Option(activeThreadSession.get)
+
+  private[sql] def getDefaultSession: Option[SparkSession] = Option(defaultSession.get)
+
+  /** A global SQL listener used for the SQL UI. */
+  private[sql] val sqlListener = new AtomicReference[SQLListener]()
+
+  ////////////////////////////////////////////////////////////////////////////////////////
+  // Private methods from now on
+  ////////////////////////////////////////////////////////////////////////////////////////
+
+  /** The active SparkSession for the current thread. */
+  private val activeThreadSession = new InheritableThreadLocal[SparkSession]
+
+  /** Reference to the root SparkSession. */
+  private val defaultSession = new AtomicReference[SparkSession]
+
+  private val HIVE_SHARED_STATE_CLASS_NAME = "org.apache.spark.sql.hive.HiveSharedState"
+  private val HIVE_SESSION_STATE_CLASS_NAME = "org.apache.spark.sql.hive.HiveSessionState"
 
     private[this] val extensions = new SparkSessionExtensions
 

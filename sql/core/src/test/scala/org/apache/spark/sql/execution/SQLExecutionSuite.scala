@@ -20,7 +20,6 @@ package org.apache.spark.sql.execution
 import java.util.Properties
 
 import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite}
-import org.apache.spark.scheduler.{SparkListener, SparkListenerJobStart}
 import org.apache.spark.sql.SparkSession
 
 class SQLExecutionSuite extends SparkFunSuite {

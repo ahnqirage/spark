@@ -53,8 +53,7 @@ abstract class ParquetSchemaTest extends ParquetTest with SharedSQLContext {
       parquetSchema: String,
       binaryAsString: Boolean,
       int96AsTimestamp: Boolean,
-      writeLegacyParquetFormat: Boolean,
-      int64AsTimestampMillis: Boolean = false): Unit = {
+      writeLegacyParquetFormat: Boolean): Unit = {
     val converter = new ParquetSchemaConverter(
       assumeBinaryIsString = binaryAsString,
       assumeInt96IsTimestamp = int96AsTimestamp,
@@ -79,8 +78,7 @@ abstract class ParquetSchemaTest extends ParquetTest with SharedSQLContext {
       parquetSchema: String,
       binaryAsString: Boolean,
       int96AsTimestamp: Boolean,
-      writeLegacyParquetFormat: Boolean,
-      int64AsTimestampMillis: Boolean = false): Unit = {
+      writeLegacyParquetFormat: Boolean): Unit = {
     val converter = new ParquetSchemaConverter(
       assumeBinaryIsString = binaryAsString,
       assumeInt96IsTimestamp = int96AsTimestamp,
@@ -373,6 +371,88 @@ class ParquetSchemaSuite extends ParquetSchemaTest {
       assert(a.dataType === b.dataType)
       assert(a.nullable === b.nullable)
     }
+  }
+
+  test("merge with metastore schema") {
+    // Field type conflict resolution
+    assertResult(
+      StructType(Seq(
+        StructField("lowerCase", StringType),
+        StructField("UPPERCase", DoubleType, nullable = false)))) {
+
+      ParquetFileFormat.mergeMetastoreParquetSchema(
+        StructType(Seq(
+          StructField("lowercase", StringType),
+          StructField("uppercase", DoubleType, nullable = false))),
+
+        StructType(Seq(
+          StructField("lowerCase", BinaryType),
+          StructField("UPPERCase", IntegerType, nullable = true))))
+    }
+
+    // MetaStore schema is subset of parquet schema
+    assertResult(
+      StructType(Seq(
+        StructField("UPPERCase", DoubleType, nullable = false)))) {
+
+      ParquetFileFormat.mergeMetastoreParquetSchema(
+        StructType(Seq(
+          StructField("uppercase", DoubleType, nullable = false))),
+
+        StructType(Seq(
+          StructField("lowerCase", BinaryType),
+          StructField("UPPERCase", IntegerType, nullable = true))))
+    }
+
+    // Metastore schema contains additional non-nullable fields.
+    assert(intercept[Throwable] {
+      ParquetFileFormat.mergeMetastoreParquetSchema(
+        StructType(Seq(
+          StructField("uppercase", DoubleType, nullable = false),
+          StructField("lowerCase", BinaryType, nullable = false))),
+
+        StructType(Seq(
+          StructField("UPPERCase", IntegerType, nullable = true))))
+    }.getMessage.contains("detected conflicting schemas"))
+
+    // Conflicting non-nullable field names
+    intercept[Throwable] {
+      ParquetFileFormat.mergeMetastoreParquetSchema(
+        StructType(Seq(StructField("lower", StringType, nullable = false))),
+        StructType(Seq(StructField("lowerCase", BinaryType))))
+    }
+  }
+
+  test("merge missing nullable fields from Metastore schema") {
+    // Standard case: Metastore schema contains additional nullable fields not present
+    // in the Parquet file schema.
+    assertResult(
+      StructType(Seq(
+        StructField("firstField", StringType, nullable = true),
+        StructField("secondField", StringType, nullable = true),
+        StructField("thirdfield", StringType, nullable = true)))) {
+      ParquetFileFormat.mergeMetastoreParquetSchema(
+        StructType(Seq(
+          StructField("firstfield", StringType, nullable = true),
+          StructField("secondfield", StringType, nullable = true),
+          StructField("thirdfield", StringType, nullable = true))),
+        StructType(Seq(
+          StructField("firstField", StringType, nullable = true),
+          StructField("secondField", StringType, nullable = true))))
+    }
+
+    // Merge should fail if the Metastore contains any additional fields that are not
+    // nullable.
+    assert(intercept[Throwable] {
+      ParquetFileFormat.mergeMetastoreParquetSchema(
+        StructType(Seq(
+          StructField("firstfield", StringType, nullable = true),
+          StructField("secondfield", StringType, nullable = true),
+          StructField("thirdfield", StringType, nullable = false))),
+        StructType(Seq(
+          StructField("firstField", StringType, nullable = true),
+          StructField("secondField", StringType, nullable = true))))
+    }.getMessage.contains("detected conflicting schemas"))
   }
 
   test("schema merging failure error message") {
@@ -999,6 +1079,7 @@ class ParquetSchemaSuite extends ParquetSchemaTest {
       catalystSchema: StructType,
       expectedSchema: MessageType): Unit = {
     test(s"Clipping - $testName") {
+      val expected = MessageTypeParser.parseMessageType(expectedSchema)
       val actual = ParquetReadSupport.clipParquetSchema(
         MessageTypeParser.parseMessageType(parquetSchema), catalystSchema)
 

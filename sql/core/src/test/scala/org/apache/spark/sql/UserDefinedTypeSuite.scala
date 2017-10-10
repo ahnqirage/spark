@@ -221,7 +221,8 @@ class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetT
       StructField("vec", new UDT.MyDenseVectorUDT, false)
     ))
 
-    val jsonRDD = spark.read.schema(schema).json(data.toDS())
+    val stringRDD = sparkContext.parallelize(data)
+    val jsonRDD = spark.read.schema(schema).json(stringRDD)
     checkAnswer(
       jsonRDD,
       Row(1, new UDT.MyDenseVector(Array(1.1, 2.2, 3.3, 4.4))) ::
@@ -241,7 +242,8 @@ class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetT
       StructField("vec", new UDT.MyDenseVectorUDT, false)
     ))
 
-    val jsonDataset = spark.read.schema(schema).json(data.toDS())
+    val stringRDD = sparkContext.parallelize(data)
+    val jsonDataset = spark.read.schema(schema).json(stringRDD)
       .as[(Int, UDT.MyDenseVector)]
     checkDataset(
       jsonDataset,
@@ -267,41 +269,5 @@ class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetT
   test("SPARK-15658: Analysis exception if Dataset.map returns UDT object") {
     // call `collect` to make sure this query can pass analysis.
     pointsRDD.as[MyLabeledPoint].map(_.copy(label = 2.0)).collect()
-  }
-
-  test("SPARK-19311: UDFs disregard UDT type hierarchy") {
-    UDTRegistration.register(classOf[IExampleBaseType].getName,
-      classOf[ExampleBaseTypeUDT].getName)
-    UDTRegistration.register(classOf[IExampleSubType].getName,
-      classOf[ExampleSubTypeUDT].getName)
-
-    // UDF that returns a base class object
-    sqlContext.udf.register("doUDF", (param: Int) => {
-      new ExampleBaseClass(param)
-    }: IExampleBaseType)
-
-    // UDF that returns a derived class object
-    sqlContext.udf.register("doSubTypeUDF", (param: Int) => {
-      new ExampleSubClass(param)
-    }: IExampleSubType)
-
-    // UDF that takes a base class object as parameter
-    sqlContext.udf.register("doOtherUDF", (obj: IExampleBaseType) => {
-      obj.field
-    }: Int)
-
-    // this worked already before the fix SPARK-19311:
-    // return type of doUDF equals parameter type of doOtherUDF
-    sql("SELECT doOtherUDF(doUDF(41))")
-
-    // this one passes only with the fix SPARK-19311:
-    // return type of doSubUDF is a subtype of the parameter type of doOtherUDF
-    sql("SELECT doOtherUDF(doSubTypeUDF(42))")
-  }
-
-  test("except on UDT") {
-    checkAnswer(
-      pointsRDD.except(pointsRDD2),
-      Seq(Row(0.0, new UDT.MyDenseVector(Array(0.2, 2.0)))))
   }
 }

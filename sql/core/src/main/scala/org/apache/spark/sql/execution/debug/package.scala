@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeFormatter, CodegenContext, ExprCode}
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 import org.apache.spark.sql.catalyst.trees.TreeNodeRef
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.util.{AccumulatorV2, LongAccumulator}
 
 /**
@@ -66,26 +67,6 @@ package object debug {
       output += s"${code}\n"
     }
     output
-  }
-
-  /**
-   * Get WholeStageCodegenExec subtrees and the codegen in a query plan
-   *
-   * @param plan the query plan for codegen
-   * @return Sequence of WholeStageCodegen subtrees and corresponding codegen
-   */
-  def codegenStringSeq(plan: SparkPlan): Seq[(String, String)] = {
-    val codegenSubtrees = new collection.mutable.HashSet[WholeStageCodegenExec]()
-    plan transform {
-      case s: WholeStageCodegenExec =>
-        codegenSubtrees += s
-        s
-      case s => s
-    }
-    codegenSubtrees.toSeq.map { subtree =>
-      val (_, source) = subtree.doCodeGen()
-      (subtree.toString, CodeFormatter.format(source))
-    }
   }
 
   /**

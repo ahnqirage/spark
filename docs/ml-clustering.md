@@ -86,14 +86,6 @@ Refer to the [Python API docs](api/python/pyspark.ml.html#pyspark.ml.clustering.
 
 {% include_example python/ml/kmeans_example.py %}
 </div>
-
-<div data-lang="r" markdown="1">
-
-Refer to the [R API docs](api/R/spark.kmeans.html) for more details.
-
-{% include_example r/ml/kmeans.R %}
-</div>
-
 </div>
 
 ## Latent Dirichlet allocation (LDA)
@@ -126,14 +118,6 @@ Refer to the [Python API docs](api/python/pyspark.ml.html#pyspark.ml.clustering.
 
 {% include_example python/ml/lda_example.py %}
 </div>
-
-<div data-lang="r" markdown="1">
-
-Refer to the [R API docs](api/R/spark.lda.html) for more details.
-
-{% include_example r/ml/lda.R %}
-</div>
-
 </div>
 
 ## Bisecting k-means
@@ -146,7 +130,7 @@ Bisecting K-means can often be much faster than regular K-means, but it will gen
 
 `BisectingKMeans` is implemented as an `Estimator` and generates a `BisectingKMeansModel` as the base model.
 
-**Examples**
+### Example
 
 <div class="codetabs">
 
@@ -166,13 +150,6 @@ Refer to the [Java API docs](api/java/org/apache/spark/ml/clustering/BisectingKM
 Refer to the [Python API docs](api/python/pyspark.ml.html#pyspark.ml.clustering.BisectingKMeans) for more details.
 
 {% include_example python/ml/bisecting_k_means_example.py %}
-</div>
-
-<div data-lang="r" markdown="1">
-
-Refer to the [R API docs](api/R/spark.bisectingKmeans.html) for more details. 
-
-{% include_example r/ml/bisectingKmeans.R %}
 </div>
 </div>
 
@@ -235,7 +212,7 @@ model.
   </tbody>
 </table>
 
-**Examples**
+### Example
 
 <div class="codetabs">
 
@@ -256,12 +233,4 @@ Refer to the [Python API docs](api/python/pyspark.ml.html#pyspark.ml.clustering.
 
 {% include_example python/ml/gaussian_mixture_example.py %}
 </div>
-
-<div data-lang="r" markdown="1">
-
-Refer to the [R API docs](api/R/spark.gaussianMixture.html) for more details.
-
-{% include_example r/ml/gaussianMixture.R %}
-</div>
-
 </div>

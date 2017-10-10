@@ -25,7 +25,52 @@ import org.apache.spark.sql.types.{DataType, StructType}
 abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanType] {
   self: PlanType =>
 
-  def conf: SQLConf = SQLConf.get
+  def output: Seq[Attribute]
+
+  /**
+   * Extracts the relevant constraints from a given set of constraints based on the attributes that
+   * appear in the [[outputSet]].
+   */
+  protected def getRelevantConstraints(constraints: Set[Expression]): Set[Expression] = {
+    constraints
+      .union(inferAdditionalConstraints(constraints))
+      .union(constructIsNotNullConstraints(constraints))
+      .filter(constraint =>
+        constraint.references.nonEmpty && constraint.references.subsetOf(outputSet) &&
+          constraint.deterministic)
+  }
+
+  /**
+   * Infers a set of `isNotNull` constraints from null intolerant expressions as well as
+   * non-nullable attributes. For e.g., if an expression is of the form (`a > 5`), this
+   * returns a constraint of the form `isNotNull(a)`
+   */
+  private def constructIsNotNullConstraints(constraints: Set[Expression]): Set[Expression] = {
+    // First, we propagate constraints from the null intolerant expressions.
+    var isNotNullConstraints: Set[Expression] = constraints.flatMap(inferIsNotNullConstraints)
+
+    // Second, we infer additional constraints from non-nullable attributes that are part of the
+    // operator's output
+    val nonNullableAttributes = output.filterNot(_.nullable)
+    isNotNullConstraints ++= nonNullableAttributes.map(IsNotNull).toSet
+
+    isNotNullConstraints -- constraints
+  }
+
+  /**
+   * Infer the Attribute-specific IsNotNull constraints from the null intolerant child expressions
+   * of constraints.
+   */
+  private def inferIsNotNullConstraints(constraint: Expression): Seq[Expression] =
+    constraint match {
+      // When the root is IsNotNull, we can push IsNotNull through the child null intolerant
+      // expressions
+      case IsNotNull(expr) => scanNullIntolerantAttribute(expr).map(IsNotNull(_))
+      // Constraints always return true for all the inputs. That means, null will never be returned.
+      // Thus, we can infer `IsNotNull(constraint)`, and also push IsNotNull through the child
+      // null intolerant expressions.
+      case _ => scanNullIntolerantAttribute(constraint).map(IsNotNull(_))
+    }
 
   /**
    * Recursively explores the expressions which are null intolerant and returns all attributes
@@ -37,12 +82,11 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
     case _ => Seq.empty[Attribute]
   }
 
-  // Collect aliases from expressions of the whole tree rooted by the current QueryPlan node, so
-  // we may avoid producing recursive constraints.
-  private lazy val aliasMap: AttributeMap[Expression] = AttributeMap(
-    expressions.collect {
+  // Collect aliases from expressions, so we may avoid producing recursive constraints.
+  private lazy val aliasMap = AttributeMap(
+    (expressions ++ children.flatMap(_.expressions)).collect {
       case a: Alias => (a.toAttribute, a.child)
-    } ++ children.flatMap(_.aliasMap))
+    })
 
   /**
    * Infers an additional set of constraints from a given set of equality constraints.
@@ -211,7 +255,31 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
    * @param rule the rule to be applied to every expression in this operator.
    */
   def transformExpressionsDown(rule: PartialFunction[Expression, Expression]): this.type = {
-    mapExpressions(_.transformDown(rule))
+    var changed = false
+
+    @inline def transformExpressionDown(e: Expression): Expression = {
+      val newE = e.transformDown(rule)
+      if (newE.fastEquals(e)) {
+        e
+      } else {
+        changed = true
+        newE
+      }
+    }
+
+    def recursiveTransform(arg: Any): AnyRef = arg match {
+      case e: Expression => transformExpressionDown(e)
+      case Some(e: Expression) => Some(transformExpressionDown(e))
+      case m: Map[_, _] => m
+      case d: DataType => d // Avoid unpacking Structs
+      case seq: Traversable[_] => seq.map(recursiveTransform)
+      case other: AnyRef => other
+      case null => null
+    }
+
+    val newArgs = mapProductIterator(recursiveTransform)
+
+    if (changed) makeCopy(newArgs).asInstanceOf[this.type] else this
   }
 
   /**
@@ -313,7 +381,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
     })
   }
 
-  override def innerChildren: Seq[QueryPlan[_]] = subqueries
+  override protected def innerChildren: Seq[QueryPlan[_]] = subqueries
 
   /**
    * Returns a plan where a best effort attempt has been made to transform `this` in a way
@@ -373,26 +441,16 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
    * All the attributes that are used for this plan.
    */
   lazy val allAttributes: AttributeSeq = children.flatMap(_.output)
-}
 
-object QueryPlan extends PredicateHelper {
-  /**
-   * Normalize the exprIds in the given expression, by updating the exprId in `AttributeReference`
-   * with its referenced ordinal from input attributes. It's similar to `BindReferences` but we
-   * do not use `BindReferences` here as the plan may take the expression as a parameter with type
-   * `Attribute`, and replace it with `BoundReference` will cause error.
-   */
-  def normalizeExprId[T <: Expression](e: T, input: AttributeSeq): T = {
-    e.transformUp {
-      case s: SubqueryExpression => s.canonicalize(input)
-      case ar: AttributeReference =>
-        val ordinal = input.indexOf(ar.exprId)
-        if (ordinal == -1) {
-          ar
-        } else {
-          ar.withExprId(ExprId(ordinal))
-        }
-    }.canonicalized.asInstanceOf[T]
+  private def cleanExpression(e: Expression): Expression = e match {
+    case a: Alias =>
+      // As the root of the expression, Alias will always take an arbitrary exprId, we need
+      // to erase that for equality testing.
+      val cleanedExprId =
+        Alias(a.child, a.name)(ExprId(-1), a.qualifier, isGenerated = a.isGenerated)
+      BindReferences.bindReference(cleanedExprId, allAttributes, allowFailures = true)
+    case other =>
+      BindReferences.bindReference(other, allAttributes, allowFailures = true)
   }
 
   /**
@@ -406,5 +464,12 @@ object QueryPlan extends PredicateHelper {
     } else {
       Nil
     }
+
+    mapProductIterator {
+      case s: Option[_] => s.map(cleanArg)
+      case s: Seq[_] => s.map(cleanArg)
+      case m: Map[_, _] => m.mapValues(cleanArg)
+      case other => cleanArg(other)
+    }.toSeq
   }
 }

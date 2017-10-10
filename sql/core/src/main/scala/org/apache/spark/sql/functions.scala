@@ -1046,8 +1046,7 @@ object functions {
    * @since 1.5.0
    */
   def broadcast[T](df: Dataset[T]): Dataset[T] = {
-    Dataset[T](df.sparkSession,
-      ResolvedHint(df.logicalPlan, HintInfo(isBroadcastable = Option(true))))(df.exprEnc)
+    Dataset[T](df.sparkSession, BroadcastHint(df.logicalPlan))(df.exprEnc)
   }
 
   /**
@@ -2334,15 +2333,6 @@ object functions {
   def ltrim(e: Column): Column = withExpr {StringTrimLeft(e.expr) }
 
   /**
-   * Trim the specified character string from left end for the specified string column.
-   * @group string_funcs
-   * @since 2.3.0
-   */
-  def ltrim(e: Column, trimString: String): Column = withExpr {
-    StringTrimLeft(e.expr, Literal(trimString))
-  }
-
-  /**
    * Extract a specific group matched by a Java regex, from the specified string column.
    * If the regex did not match, or the specified group did not match, an empty string is returned.
    *
@@ -2839,14 +2829,14 @@ object functions {
    * @param timeColumn The column or the expression to use as the timestamp for windowing by time.
    *                   The time column must be of TimestampType.
    * @param windowDuration A string specifying the width of the window, e.g. `10 minutes`,
-   *                       `1 second`. Check `org.apache.spark.unsafe.types.CalendarInterval` for
+   *                       `1 second`. Check [[org.apache.spark.unsafe.types.CalendarInterval]] for
    *                       valid duration identifiers. Note that the duration is a fixed length of
    *                       time, and does not vary over time according to a calendar. For example,
    *                       `1 day` always means 86,400,000 milliseconds, not a calendar day.
    * @param slideDuration A string specifying the sliding interval of the window, e.g. `1 minute`.
    *                      A new window will be generated every `slideDuration`. Must be less than
    *                      or equal to the `windowDuration`. Check
-   *                      `org.apache.spark.unsafe.types.CalendarInterval` for valid duration
+   *                      [[org.apache.spark.unsafe.types.CalendarInterval]] for valid duration
    *                      identifiers. This duration is likewise absolute, and does not vary
     *                     according to a calendar.
    * @param startTime The offset with respect to 1970-01-01 00:00:00 UTC with which to start
@@ -2895,14 +2885,14 @@ object functions {
    * @param timeColumn The column or the expression to use as the timestamp for windowing by time.
    *                   The time column must be of TimestampType.
    * @param windowDuration A string specifying the width of the window, e.g. `10 minutes`,
-   *                       `1 second`. Check `org.apache.spark.unsafe.types.CalendarInterval` for
+   *                       `1 second`. Check [[org.apache.spark.unsafe.types.CalendarInterval]] for
    *                       valid duration identifiers. Note that the duration is a fixed length of
    *                       time, and does not vary over time according to a calendar. For example,
    *                       `1 day` always means 86,400,000 milliseconds, not a calendar day.
    * @param slideDuration A string specifying the sliding interval of the window, e.g. `1 minute`.
    *                      A new window will be generated every `slideDuration`. Must be less than
    *                      or equal to the `windowDuration`. Check
-   *                      `org.apache.spark.unsafe.types.CalendarInterval` for valid duration
+   *                      [[org.apache.spark.unsafe.types.CalendarInterval]] for valid duration
    *                      identifiers. This duration is likewise absolute, and does not vary
    *                     according to a calendar.
    *
@@ -2972,30 +2962,12 @@ object functions {
   def explode(e: Column): Column = withExpr { Explode(e.expr) }
 
   /**
-   * Creates a new row for each element in the given array or map column.
-   * Unlike explode, if the array/map is null or empty then null is produced.
-   *
-   * @group collection_funcs
-   * @since 2.2.0
-   */
-  def explode_outer(e: Column): Column = withExpr { GeneratorOuter(Explode(e.expr)) }
-
-  /**
    * Creates a new row for each element with position in the given array or map column.
    *
    * @group collection_funcs
    * @since 2.1.0
    */
   def posexplode(e: Column): Column = withExpr { PosExplode(e.expr) }
-
-  /**
-   * Creates a new row for each element with position in the given array or map column.
-   * Unlike posexplode, if the array/map is null or empty then the row (null, null) is produced.
-   *
-   * @group collection_funcs
-   * @since 2.2.0
-   */
-  def posexplode_outer(e: Column): Column = withExpr { GeneratorOuter(PosExplode(e.expr)) }
 
   /**
    * Extracts json object from a json string based on json path specified, and returns json string

@@ -189,7 +189,7 @@ public class JavaDataFrameSuite {
     for (int i = 0; i < d.length(); i++) {
       Assert.assertEquals(bean.getD().get(i), d.apply(i));
     }
-    // Java.math.BigInteger is equivalent to Spark Decimal(38,0)
+    // Java.math.BigInteger is equavient to Spark Decimal(38,0)
     Assert.assertEquals(new BigDecimal(bean.getE()), first.getDecimal(4));
   }
 
@@ -281,7 +281,7 @@ public class JavaDataFrameSuite {
   @Test
   public void testSampleBy() {
     Dataset<Row> df = spark.range(0, 100, 1, 2).select(col("id").mod(3).as("key"));
-    Dataset<Row> sampled = df.stat().sampleBy("key", ImmutableMap.of(0, 0.1, 1, 0.2), 0L);
+    Dataset<Row> sampled = df.stat().<Integer>sampleBy("key", ImmutableMap.of(0, 0.1, 1, 0.2), 0L);
     List<Row> actual = sampled.groupBy("key").count().orderBy("key").collectAsList();
     Assert.assertEquals(0, actual.get(0).getLong(0));
     Assert.assertTrue(0 <= actual.get(0).getLong(1) && actual.get(0).getLong(1) <= 8);

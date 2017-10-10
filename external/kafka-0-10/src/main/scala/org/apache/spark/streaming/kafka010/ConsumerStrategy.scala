@@ -17,8 +17,7 @@
 
 package org.apache.spark.streaming.kafka010
 
-import java.{lang => jl, util => ju}
-import java.util.Locale
+import java.{ lang => jl, util => ju }
 
 import scala.collection.JavaConverters._
 
@@ -94,8 +93,7 @@ private case class Subscribe[K, V](
       // but cant seek to a position before poll, because poll is what gets subscription partitions
       // So, poll, suppress the first exception, then seek
       val aor = kafkaParams.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
-      val shouldSuppress =
-        aor != null && aor.asInstanceOf[String].toUpperCase(Locale.ROOT) == "NONE"
+      val shouldSuppress = aor != null && aor.asInstanceOf[String].toUpperCase == "NONE"
       try {
         consumer.poll(0)
       } catch {
@@ -147,8 +145,7 @@ private case class SubscribePattern[K, V](
     if (!toSeek.isEmpty) {
       // work around KAFKA-3370 when reset is none, see explanation in Subscribe above
       val aor = kafkaParams.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)
-      val shouldSuppress =
-        aor != null && aor.asInstanceOf[String].toUpperCase(Locale.ROOT) == "NONE"
+      val shouldSuppress = aor != null && aor.asInstanceOf[String].toUpperCase == "NONE"
       try {
         consumer.poll(0)
       } catch {

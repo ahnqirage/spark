@@ -17,8 +17,6 @@
 package org.apache.spark.examples.sql.hive
 
 // $example on:spark_hive$
-import java.io.File
-
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
 // $example off:spark_hive$
@@ -40,7 +38,7 @@ object SparkHiveExample {
 
     // $example on:spark_hive$
     // warehouseLocation points to the default location for managed databases and tables
-    val warehouseLocation = new File("spark-warehouse").getAbsolutePath
+    val warehouseLocation = "spark-warehouse"
 
     val spark = SparkSession
       .builder()
@@ -52,7 +50,7 @@ object SparkHiveExample {
     import spark.implicits._
     import spark.sql
 
-    sql("CREATE TABLE IF NOT EXISTS src (key INT, value STRING) USING hive")
+    sql("CREATE TABLE IF NOT EXISTS src (key INT, value STRING)")
     sql("LOAD DATA LOCAL INPATH 'examples/src/main/resources/kv1.txt' INTO TABLE src")
 
     // Queries are expressed in HiveQL
@@ -76,7 +74,7 @@ object SparkHiveExample {
     // The results of SQL queries are themselves DataFrames and support all normal functions.
     val sqlDF = sql("SELECT key, value FROM src WHERE key < 10 ORDER BY key")
 
-    // The items in DataFrames are of type Row, which allows you to access each column by ordinal.
+    // The items in DaraFrames are of type Row, which allows you to access each column by ordinal.
     val stringsDS = sqlDF.map {
       case Row(key: Int, value: String) => s"Key: $key, Value: $value"
     }

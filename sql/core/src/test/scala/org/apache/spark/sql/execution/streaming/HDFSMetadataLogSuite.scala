@@ -57,7 +57,7 @@ class HDFSMetadataLogSuite extends SparkFunSuite with SharedSQLContext {
     }
   }
 
-  test("HDFSMetadataLog: basic") {
+  testWithUninterruptibleThread("HDFSMetadataLog: basic") {
     withTempDir { temp =>
       val dir = new File(temp, "dir") // use non-existent directory to test whether log make the dir
       val metadataLog = new HDFSMetadataLog[String](spark, dir.getAbsolutePath)
@@ -82,19 +82,20 @@ class HDFSMetadataLogSuite extends SparkFunSuite with SharedSQLContext {
     }
   }
 
-  testQuietly("HDFSMetadataLog: fallback from FileContext to FileSystem") {
+  testWithUninterruptibleThread(
+    "HDFSMetadataLog: fallback from FileContext to FileSystem", quietly = true) {
     spark.conf.set(
       s"fs.$scheme.impl",
       classOf[FakeFileSystem].getName)
     withTempDir { temp =>
-      val metadataLog = new HDFSMetadataLog[String](spark, s"$scheme://${temp.toURI.getPath}")
+      val metadataLog = new HDFSMetadataLog[String](spark, s"$scheme://$temp")
       assert(metadataLog.add(0, "batch0"))
       assert(metadataLog.getLatest() === Some(0 -> "batch0"))
       assert(metadataLog.get(0) === Some("batch0"))
       assert(metadataLog.get(None, Some(0)) === Array(0 -> "batch0"))
 
 
-      val metadataLog2 = new HDFSMetadataLog[String](spark, s"$scheme://${temp.toURI.getPath}")
+      val metadataLog2 = new HDFSMetadataLog[String](spark, s"$scheme://$temp")
       assert(metadataLog2.get(0) === Some("batch0"))
       assert(metadataLog2.getLatest() === Some(0 -> "batch0"))
       assert(metadataLog2.get(None, Some(0)) === Array(0 -> "batch0"))
@@ -102,7 +103,7 @@ class HDFSMetadataLogSuite extends SparkFunSuite with SharedSQLContext {
     }
   }
 
-  test("HDFSMetadataLog: purge") {
+  testWithUninterruptibleThread("HDFSMetadataLog: purge") {
     withTempDir { temp =>
       val metadataLog = new HDFSMetadataLog[String](spark, temp.getAbsolutePath)
       assert(metadataLog.add(0, "batch0"))
@@ -118,43 +119,10 @@ class HDFSMetadataLogSuite extends SparkFunSuite with SharedSQLContext {
       assert(metadataLog.get(1).isEmpty)
       assert(metadataLog.get(2).isDefined)
       assert(metadataLog.getLatest().get._1 == 2)
-
-      // There should be exactly one file, called "2", in the metadata directory.
-      // This check also tests for regressions of SPARK-17475
-      val allFiles = new File(metadataLog.metadataPath.toString).listFiles().toSeq
-      assert(allFiles.size == 1)
-      assert(allFiles(0).getName() == "2")
     }
   }
 
-  test("HDFSMetadataLog: parseVersion") {
-    withTempDir { dir =>
-      val metadataLog = new HDFSMetadataLog[String](spark, dir.getAbsolutePath)
-      def assertLogFileMalformed(func: => Int): Unit = {
-        val e = intercept[IllegalStateException] { func }
-        assert(e.getMessage.contains(s"Log file was malformed: failed to read correct log version"))
-      }
-      assertLogFileMalformed { metadataLog.parseVersion("", 100) }
-      assertLogFileMalformed { metadataLog.parseVersion("xyz", 100) }
-      assertLogFileMalformed { metadataLog.parseVersion("v10.x", 100) }
-      assertLogFileMalformed { metadataLog.parseVersion("10", 100) }
-      assertLogFileMalformed { metadataLog.parseVersion("v0", 100) }
-      assertLogFileMalformed { metadataLog.parseVersion("v-10", 100) }
-
-      assert(metadataLog.parseVersion("v10", 10) === 10)
-      assert(metadataLog.parseVersion("v10", 100) === 10)
-
-      val e = intercept[IllegalStateException] { metadataLog.parseVersion("v200", 100) }
-      Seq(
-        "maximum supported log version is v100, but encountered v200",
-        "produced by a newer version of Spark and cannot be read by this version"
-      ).foreach { message =>
-        assert(e.getMessage.contains(message))
-      }
-    }
-  }
-
-  test("HDFSMetadataLog: restart") {
+  testWithUninterruptibleThread("HDFSMetadataLog: restart") {
     withTempDir { temp =>
       val metadataLog = new HDFSMetadataLog[String](spark, temp.getAbsolutePath)
       assert(metadataLog.add(0, "batch0"))

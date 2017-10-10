@@ -23,8 +23,9 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, LazilyGeneratedOrdering}
 import org.apache.spark.sql.catalyst.plans.physical._
-import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
+import org.apache.spark.sql.execution.exchange.ShuffleExchange
 import org.apache.spark.util.Utils
+
 
 /**
  * Take the first `limit` elements and collect them to a single partition.
@@ -40,7 +41,7 @@ case class CollectLimitExec(limit: Int, child: SparkPlan) extends UnaryExecNode 
   protected override def doExecute(): RDD[InternalRow] = {
     val locallyLimited = child.execute().mapPartitionsInternal(_.take(limit))
     val shuffled = new ShuffledRowRDD(
-      ShuffleExchangeExec.prepareShuffleDependency(
+      ShuffleExchange.prepareShuffleDependency(
         locallyLimited, child.output, SinglePartition, serializer))
     shuffled.mapPartitionsInternal(_.take(limit))
   }

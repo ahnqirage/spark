@@ -81,8 +81,6 @@ object ALSExample {
     // Generate top 10 user recommendations for each movie
     val movieRecs = model.recommendForAllItems(10)
     // $example off$
-    userRecs.show()
-    movieRecs.show()
 
     spark.stop()
   }

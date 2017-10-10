@@ -24,6 +24,7 @@ from pyspark.ml.common import _py2java
 from pyspark.ml.param import Params, Param, TypeConverters
 from pyspark.ml.param.shared import HasSeed
 from pyspark.sql.functions import rand
+from pyspark.ml.common import inherit_doc, _py2java
 
 __all__ = ['ParamGridBuilder', 'CrossValidator', 'CrossValidatorModel', 'TrainValidationSplit',
            'TrainValidationSplitModel']
@@ -622,55 +623,6 @@ class TrainValidationSplitModel(Model, ValidatorParams, MLReadable, MLWritable):
         bestModel = self.bestModel.copy(extra)
         validationMetrics = list(self.validationMetrics)
         return TrainValidationSplitModel(bestModel, validationMetrics)
-
-    @since("2.3.0")
-    def write(self):
-        """Returns an MLWriter instance for this ML instance."""
-        return JavaMLWriter(self)
-
-    @classmethod
-    @since("2.3.0")
-    def read(cls):
-        """Returns an MLReader instance for this class."""
-        return JavaMLReader(cls)
-
-    @classmethod
-    def _from_java(cls, java_stage):
-        """
-        Given a Java TrainValidationSplitModel, create and return a Python wrapper of it.
-        Used for ML persistence.
-        """
-
-        # Load information from java_stage to the instance.
-        bestModel = JavaParams._from_java(java_stage.bestModel())
-        estimator, epms, evaluator = super(TrainValidationSplitModel,
-                                           cls)._from_java_impl(java_stage)
-        # Create a new instance of this stage.
-        py_stage = cls(bestModel=bestModel).setEstimator(estimator)
-        py_stage = py_stage.setEstimatorParamMaps(epms).setEvaluator(evaluator)
-
-        py_stage._resetUid(java_stage.uid())
-        return py_stage
-
-    def _to_java(self):
-        """
-        Transfer this instance to a Java TrainValidationSplitModel. Used for ML persistence.
-        :return: Java object equivalent to this instance.
-        """
-
-        sc = SparkContext._active_spark_context
-        # TODO: persst validation metrics as well
-        _java_obj = JavaParams._new_java_obj(
-            "org.apache.spark.ml.tuning.TrainValidationSplitModel",
-            self.uid,
-            self.bestModel._to_java(),
-            _py2java(sc, []))
-        estimator, epms, evaluator = super(TrainValidationSplitModel, self)._to_java_impl()
-
-        _java_obj.set("evaluator", evaluator)
-        _java_obj.set("estimator", estimator)
-        _java_obj.set("estimatorParamMaps", epms)
-        return _java_obj
 
 
 if __name__ == "__main__":

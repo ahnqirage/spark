@@ -30,7 +30,6 @@ private[history] class HistoryPage(parent: HistoryServer) extends WebUIPage("") 
     val requestedIncomplete =
       Option(UIUtils.stripXSS(request.getParameter("showIncomplete"))).getOrElse("false").toBoolean
 
-    val allAppsSize = parent.getApplicationList().count(_.completed != requestedIncomplete)
     val eventLogsUnderProcessCount = parent.getEventLogsUnderProcess()
     val lastUpdatedTime = parent.getLastUpdatedTime()
     val providerConfig = parent.getProviderConfig()
@@ -58,10 +57,9 @@ private[history] class HistoryPage(parent: HistoryServer) extends WebUIPage("") 
             {
             if (allAppsSize > 0) {
               <script src={UIUtils.prependBaseUri("/static/dataTables.rowsGroup.js")}></script> ++
-                <div id="history-summary" class="row-fluid"></div> ++
-                <script src={UIUtils.prependBaseUri("/static/utils.js")}></script> ++
-                <script src={UIUtils.prependBaseUri("/static/historypage.js")}></script> ++
-                <script>setAppLimit({parent.maxApplications})</script>
+              <div id="history-summary" class="span12 pagination"></div> ++
+              <script src={UIUtils.prependBaseUri("/static/historypage.js")}> </script> ++
+              <script>setAppLimit({parent.maxApplications})</script>
             } else if (requestedIncomplete) {
               <h4>No incomplete applications found!</h4>
             } else if (eventLogsUnderProcessCount > 0) {

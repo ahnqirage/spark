@@ -20,10 +20,7 @@ package org.apache.spark.sql.execution.columnar
 import java.nio.charset.StandardCharsets
 import java.sql.{Date, Timestamp}
 
-import org.apache.spark.sql.{DataFrame, QueryTest, Row}
-import org.apache.spark.sql.catalyst.expressions.AttributeSet
-import org.apache.spark.sql.catalyst.plans.physical.HashPartitioning
-import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{QueryTest, Row}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.SQLTestData._
@@ -126,7 +123,7 @@ class InMemoryColumnarQuerySuite extends QueryTest with SharedSQLContext {
       .toDF().createOrReplaceTempView("sizeTst")
     spark.catalog.cacheTable("sizeTst")
     assert(
-      spark.table("sizeTst").queryExecution.analyzed.stats.sizeInBytes >
+      spark.table("sizeTst").queryExecution.analyzed.statistics.sizeInBytes >
         spark.conf.get(SQLConf.AUTO_BROADCASTJOIN_THRESHOLD))
   }
 
@@ -332,101 +329,4 @@ class InMemoryColumnarQuerySuite extends QueryTest with SharedSQLContext {
     assert(cached.batchStats.value === expectedAnswer.size * INT.defaultSize)
   }
 
-  test("access primitive-type columns in CachedBatch without whole stage codegen") {
-    // whole stage codegen is not applied to a row with more than WHOLESTAGE_MAX_NUM_FIELDS fields
-    withSQLConf(SQLConf.WHOLESTAGE_MAX_NUM_FIELDS.key -> "2") {
-      val data = Seq(null, true, 1.toByte, 3.toShort, 7, 15.toLong,
-        31.25.toFloat, 63.75, new Date(127), new Timestamp(255000000L), null)
-      val dataTypes = Seq(NullType, BooleanType, ByteType, ShortType, IntegerType, LongType,
-        FloatType, DoubleType, DateType, TimestampType, IntegerType)
-      val schemas = dataTypes.zipWithIndex.map { case (dataType, index) =>
-        StructField(s"col$index", dataType, true)
-      }
-      val rdd = sparkContext.makeRDD(Seq(Row.fromSeq(data)))
-      val df = spark.createDataFrame(rdd, StructType(schemas))
-      val row = df.persist.take(1).apply(0)
-      checkAnswer(df, row)
-    }
-  }
-
-  test("access decimal/string-type columns in CachedBatch without whole stage codegen") {
-    withSQLConf(SQLConf.WHOLESTAGE_MAX_NUM_FIELDS.key -> "2") {
-      val data = Seq(BigDecimal(Long.MaxValue.toString + ".12345"),
-        new java.math.BigDecimal("1234567890.12345"),
-        new java.math.BigDecimal("1.23456"),
-        "test123"
-      )
-      val schemas = Seq(
-        StructField("col0", DecimalType(25, 5), true),
-        StructField("col1", DecimalType(15, 5), true),
-        StructField("col2", DecimalType(6, 5), true),
-        StructField("col3", StringType, true)
-      )
-      val rdd = sparkContext.makeRDD(Seq(Row.fromSeq(data)))
-      val df = spark.createDataFrame(rdd, StructType(schemas))
-      val row = df.persist.take(1).apply(0)
-      checkAnswer(df, row)
-    }
-  }
-
-  test("access non-primitive-type columns in CachedBatch without whole stage codegen") {
-    withSQLConf(SQLConf.WHOLESTAGE_MAX_NUM_FIELDS.key -> "2") {
-      val data = Seq((1 to 10).toArray,
-        Array(Array(10, 11), Array(100, 111, 123)),
-        Map("key1" -> 111, "key2" -> 222),
-        Row(1.25.toFloat, Seq(true, false, null))
-      )
-      val struct = StructType(StructField("f1", FloatType, false) ::
-        StructField("f2", ArrayType(BooleanType), true) :: Nil)
-      val schemas = Seq(
-        StructField("col0", ArrayType(IntegerType), true),
-        StructField("col1", ArrayType(ArrayType(IntegerType)), true),
-        StructField("col2", MapType(StringType, IntegerType), true),
-        StructField("col3", struct, true)
-      )
-      val rdd = sparkContext.makeRDD(Seq(Row.fromSeq(data)))
-      val df = spark.createDataFrame(rdd, StructType(schemas))
-      val row = df.persist.take(1).apply(0)
-      checkAnswer(df, row)
-    }
-  }
-
-  test("InMemoryTableScanExec should return correct output ordering and partitioning") {
-    val df1 = Seq((0, 0), (1, 1)).toDF
-      .repartition(col("_1")).sortWithinPartitions(col("_1")).persist
-    val df2 = Seq((0, 0), (1, 1)).toDF
-      .repartition(col("_1")).sortWithinPartitions(col("_1")).persist
-
-    // Because two cached dataframes have the same logical plan, this is a self-join actually.
-    // So we force one of in-memory relation to alias its output. Then we can test if original and
-    // aliased in-memory relations have correct ordering and partitioning.
-    val joined = df1.joinWith(df2, df1("_1") === df2("_1"))
-
-    val inMemoryScans = joined.queryExecution.executedPlan.collect {
-      case m: InMemoryTableScanExec => m
-    }
-    inMemoryScans.foreach { inMemoryScan =>
-      val sortedAttrs = AttributeSet(inMemoryScan.outputOrdering.flatMap(_.references))
-      assert(sortedAttrs.subsetOf(inMemoryScan.outputSet))
-
-      val partitionedAttrs =
-        inMemoryScan.outputPartitioning.asInstanceOf[HashPartitioning].references
-      assert(partitionedAttrs.subsetOf(inMemoryScan.outputSet))
-    }
-  }
-
-  test("SPARK-20356: pruned InMemoryTableScanExec should have correct ordering and partitioning") {
-    withSQLConf("spark.sql.shuffle.partitions" -> "200") {
-      val df1 = Seq(("a", 1), ("b", 1), ("c", 2)).toDF("item", "group")
-      val df2 = Seq(("a", 1), ("b", 2), ("c", 3)).toDF("item", "id")
-      val df3 = df1.join(df2, Seq("item")).select($"id", $"group".as("item")).distinct()
-
-      df3.unpersist()
-      val agg_without_cache = df3.groupBy($"item").count()
-
-      df3.cache()
-      val agg_with_cache = df3.groupBy($"item").count()
-      checkAnswer(agg_without_cache, agg_with_cache)
-    }
-  }
 }

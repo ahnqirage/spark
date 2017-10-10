@@ -25,7 +25,6 @@ import org.mockito.Mockito.mock
 import org.apache.spark._
 import org.apache.spark.LocalSparkContext._
 import org.apache.spark.executor.TaskMetrics
-import org.apache.spark.internal.config
 import org.apache.spark.rdd.RDD
 import org.apache.spark.scheduler._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -395,7 +394,7 @@ class SQLListenerSuite extends SparkFunSuite with SharedSQLContext with JsonTest
     }
     // Listener tracks only SQL metrics, not other accumulators
     assert(trackedAccums.size === 1)
-    assert(trackedAccums.head === ((sqlMetricInfo.id, sqlMetricInfo.update.get)))
+    assert(trackedAccums.head === (sqlMetricInfo.id, sqlMetricInfo.update.get))
   }
 
   test("driver side SQL metrics") {
@@ -421,6 +420,45 @@ class SQLListenerSuite extends SparkFunSuite with SharedSQLContext with JsonTest
     val driverUpdates = listener.getCompletedExecutions.head.driverAccumUpdates
     assert(driverUpdates.size == 1)
     assert(driverUpdates(physicalPlan.longMetric("dummy").id) == expectedAccumValue)
+  }
+
+  test("roundtripping SparkListenerDriverAccumUpdates through JsonProtocol (SPARK-18462)") {
+    val event = SparkListenerDriverAccumUpdates(1L, Seq((2L, 3L)))
+    val json = JsonProtocol.sparkEventToJson(event)
+    assertValidDataInJson(json,
+      parse("""
+        |{
+        |  "Event": "org.apache.spark.sql.execution.ui.SparkListenerDriverAccumUpdates",
+        |  "executionId": 1,
+        |  "accumUpdates": [[2,3]]
+        |}
+      """.stripMargin))
+    JsonProtocol.sparkEventFromJson(json) match {
+      case SparkListenerDriverAccumUpdates(executionId, accums) =>
+        assert(executionId == 1L)
+        accums.foreach { case (a, b) =>
+          assert(a == 2L)
+          assert(b == 3L)
+        }
+    }
+
+    // Test a case where the numbers in the JSON can only fit in longs:
+    val longJson = parse(
+      """
+        |{
+        |  "Event": "org.apache.spark.sql.execution.ui.SparkListenerDriverAccumUpdates",
+        |  "executionId": 4294967294,
+        |  "accumUpdates": [[4294967294,3]]
+        |}
+      """.stripMargin)
+    JsonProtocol.sparkEventFromJson(longJson) match {
+      case SparkListenerDriverAccumUpdates(executionId, accums) =>
+        assert(executionId == 4294967294L)
+        accums.foreach { case (a, b) =>
+          assert(a == 4294967294L)
+          assert(b == 3L)
+        }
+    }
   }
 
   test("roundtripping SparkListenerDriverAccumUpdates through JsonProtocol (SPARK-18462)") {
@@ -488,6 +526,27 @@ private case class MyPlan(sc: SparkContext, expectedValue: Long) extends LeafExe
 }
 
 
+/**
+ * A dummy [[org.apache.spark.sql.execution.SparkPlan]] that updates a [[SQLMetrics]]
+ * on the driver.
+ */
+private case class MyPlan(sc: SparkContext, expectedValue: Long) extends LeafExecNode {
+  override def sparkContext: SparkContext = sc
+  override def output: Seq[Attribute] = Seq()
+
+  override val metrics: Map[String, SQLMetric] = Map(
+    "dummy" -> SQLMetrics.createMetric(sc, "dummy"))
+
+  override def doExecute(): RDD[InternalRow] = {
+    longMetric("dummy") += expectedValue
+    sc.listenerBus.post(SparkListenerDriverAccumUpdates(
+      sc.getLocalProperty(SQLExecution.EXECUTION_ID_KEY).toLong,
+      metrics.values.map(m => m.id -> m.value).toSeq))
+    sc.emptyRDD
+  }
+}
+
+
 class SQLListenerMemoryLeakSuite extends SparkFunSuite {
 
   test("no memory leak") {
@@ -497,7 +556,8 @@ class SQLListenerMemoryLeakSuite extends SparkFunSuite {
         .setAppName("test")
         .set(config.MAX_TASK_FAILURES, 1) // Don't retry the tasks to run this test quickly
         .set("spark.sql.ui.retainedExecutions", "50") // Set it to 50 to run this test quickly
-      withSpark(new SparkContext(conf)) { sc =>
+      val sc = new SparkContext(conf)
+      try {
         SparkSession.sqlListener.set(null)
         val spark = new SparkSession(sc)
         import spark.implicits._
@@ -522,6 +582,8 @@ class SQLListenerMemoryLeakSuite extends SparkFunSuite {
         assert(spark.sharedState.listener.executionIdToData.size <= 100)
         assert(spark.sharedState.listener.jobIdToExecutionId.size <= 100)
         assert(spark.sharedState.listener.stageIdToStageMetrics.size <= 100)
+      } finally {
+        sc.stop()
       }
     }
   }

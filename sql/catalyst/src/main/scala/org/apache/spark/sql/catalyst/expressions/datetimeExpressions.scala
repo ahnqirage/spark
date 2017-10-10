@@ -584,12 +584,8 @@ abstract class UnixTime
   override def nullable: Boolean = true
 
   private lazy val constFormat: UTF8String = right.eval().asInstanceOf[UTF8String]
-  private lazy val formatter: DateFormat =
-    try {
-      DateTimeUtils.newDateFormat(constFormat.toString, timeZone)
-    } catch {
-      case NonFatal(_) => null
-    }
+  private lazy val formatter: SimpleDateFormat =
+    Try(new SimpleDateFormat(constFormat.toString)).getOrElse(null)
 
   override def eval(input: InternalRow): Any = {
     val t = left.eval(input)
@@ -605,12 +601,8 @@ abstract class UnixTime
           if (constFormat == null || formatter == null) {
             null
           } else {
-            try {
-              formatter.parse(
-                t.asInstanceOf[UTF8String].toString).getTime / 1000L
-            } catch {
-              case NonFatal(_) => null
-            }
+            Try(formatter.parse(
+              t.asInstanceOf[UTF8String].toString).getTime / 1000L).getOrElse(null)
           }
         case StringType =>
           val f = right.eval(input)
@@ -632,11 +624,11 @@ abstract class UnixTime
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     left.dataType match {
       case StringType if right.foldable =>
-        val df = classOf[DateFormat].getName
+        val sdf = classOf[SimpleDateFormat].getName
         if (formatter == null) {
           ExprCode("", "true", ctx.defaultValue(dataType))
         } else {
-          val formatterName = ctx.addReferenceObj("formatter", formatter, df)
+          val formatterName = ctx.addReferenceObj("formatter", formatter, sdf)
           val eval1 = left.genCode(ctx)
           ev.copy(code = s"""
             ${eval1.code}
@@ -656,8 +648,8 @@ abstract class UnixTime
         nullSafeCodeGen(ctx, ev, (string, format) => {
           s"""
             try {
-              ${ev.value} = $dtu.newDateFormat($format.toString(), $tz)
-                .parse($string.toString()).getTime() / 1000L;
+              ${ev.value} =
+                (new $sdf($format.toString())).parse($string.toString()).getTime() / 1000L;
             } catch (java.lang.IllegalArgumentException e) {
               ${ev.isNull} = true;
             } catch (java.text.ParseException e) {
@@ -726,12 +718,8 @@ case class FromUnixTime(sec: Expression, format: Expression, timeZoneId: Option[
     copy(timeZoneId = Option(timeZoneId))
 
   private lazy val constFormat: UTF8String = right.eval().asInstanceOf[UTF8String]
-  private lazy val formatter: DateFormat =
-    try {
-      DateTimeUtils.newDateFormat(constFormat.toString, timeZone)
-    } catch {
-      case NonFatal(_) => null
-    }
+  private lazy val formatter: SimpleDateFormat =
+    Try(new SimpleDateFormat(constFormat.toString)).getOrElse(null)
 
   override def eval(input: InternalRow): Any = {
     val time = left.eval(input)
@@ -742,12 +730,8 @@ case class FromUnixTime(sec: Expression, format: Expression, timeZoneId: Option[
         if (constFormat == null || formatter == null) {
           null
         } else {
-          try {
-            UTF8String.fromString(formatter.format(
-              new java.util.Date(time.asInstanceOf[Long] * 1000L)))
-          } catch {
-            case NonFatal(_) => null
-          }
+          Try(UTF8String.fromString(formatter.format(
+            new java.util.Date(time.asInstanceOf[Long] * 1000L)))).getOrElse(null)
         }
       } else {
         val f = format.eval(input)
@@ -771,7 +755,7 @@ case class FromUnixTime(sec: Expression, format: Expression, timeZoneId: Option[
       if (formatter == null) {
         ExprCode("", "true", "(UTF8String) null")
       } else {
-        val formatterName = ctx.addReferenceObj("formatter", formatter, df)
+        val formatterName = ctx.addReferenceObj("formatter", formatter, sdf)
         val t = left.genCode(ctx)
         ev.copy(code = s"""
           ${t.code}
@@ -977,9 +961,8 @@ case class FromUTCTimestamp(left: Expression, right: Expression)
         val tzTerm = ctx.freshName("tz")
         val utcTerm = ctx.freshName("utc")
         val tzClass = classOf[TimeZone].getName
-        val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
-        ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $dtu.getTimeZone("$tz");""")
-        ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $dtu.getTimeZone("UTC");""")
+        ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $tzClass.getTimeZone("$tz");""")
+        ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $tzClass.getTimeZone("UTC");""")
         val eval = left.genCode(ctx)
         ev.copy(code = s"""
            |${eval.code}
@@ -1153,9 +1136,8 @@ case class ToUTCTimestamp(left: Expression, right: Expression)
         val tzTerm = ctx.freshName("tz")
         val utcTerm = ctx.freshName("utc")
         val tzClass = classOf[TimeZone].getName
-        val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
-        ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $dtu.getTimeZone("$tz");""")
-        ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $dtu.getTimeZone("UTC");""")
+        ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $tzClass.getTimeZone("$tz");""")
+        ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $tzClass.getTimeZone("UTC");""")
         val eval = left.genCode(ctx)
         ev.copy(code = s"""
            |${eval.code}

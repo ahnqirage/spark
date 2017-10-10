@@ -96,7 +96,10 @@ public class ExternalShuffleClient extends ShuffleClient {
     logger.debug("External shuffle fetch from {}:{} (executor id {})", host, port, execId);
     try {
       RetryingBlockFetcher.BlockFetchStarter blockFetchStarter =
-          (blockIds1, listener1) -> {
+        new RetryingBlockFetcher.BlockFetchStarter() {
+          @Override
+          public void createAndStart(String[] blockIds, BlockFetchingListener listener)
+              throws IOException, InterruptedException {
             TransportClient client = clientFactory.createClient(host, port);
             new OneForOneBlockFetcher(client, appId, execId,
               blockIds1, listener1, conf, tempShuffleFileManager).start();

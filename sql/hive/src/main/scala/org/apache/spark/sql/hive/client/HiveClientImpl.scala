@@ -21,20 +21,18 @@ import java.io.{File, PrintStream}
 import java.util.Locale
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.language.reflectiveCalls
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.common.StatsSetupConst
 import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.conf.HiveConf.ConfVars
 import org.apache.hadoop.hive.metastore.{TableType => HiveTableType}
-import org.apache.hadoop.hive.metastore.api.{Database => HiveDatabase, FieldSchema, Order}
+import org.apache.hadoop.hive.metastore.api.{Database => HiveDatabase, FieldSchema}
 import org.apache.hadoop.hive.metastore.api.{SerDeInfo, StorageDescriptor}
 import org.apache.hadoop.hive.ql.Driver
 import org.apache.hadoop.hive.ql.metadata.{Hive, Partition => HivePartition, Table => HiveTable}
-import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.HIVE_COLUMN_ORDER_ASC
 import org.apache.hadoop.hive.ql.processors._
 import org.apache.hadoop.hive.ql.session.SessionState
 
@@ -51,9 +49,6 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.parser.{CatalystSqlParser, ParseException}
 import org.apache.spark.sql.execution.QueryExecutionException
 import org.apache.spark.sql.execution.command.DDLUtils
-import org.apache.spark.sql.hive.HiveExternalCatalog
-import org.apache.spark.sql.hive.client.HiveClientImpl._
-import org.apache.spark.sql.types._
 import org.apache.spark.util.{CircularBuffer, Utils}
 
 /**
@@ -108,37 +103,86 @@ private[hive] class HiveClientImpl(
   // Create an internal session state for this HiveClientImpl.
   val state: SessionState = {
     val original = Thread.currentThread().getContextClassLoader
-    if (clientLoader.isolationOn) {
-      // Switch to the initClassLoader.
-      Thread.currentThread().setContextClassLoader(initClassLoader)
-      // Set up kerberos credentials for UserGroupInformation.loginUser within current class loader
-      if (sparkConf.contains("spark.yarn.principal") && sparkConf.contains("spark.yarn.keytab")) {
-        val principal = sparkConf.get("spark.yarn.principal")
-        val keytab = sparkConf.get("spark.yarn.keytab")
-        SparkHadoopUtil.get.loginUserFromKeytab(principal, keytab)
+    // Switch to the initClassLoader.
+    Thread.currentThread().setContextClassLoader(initClassLoader)
+
+    // Set up kerberos credentials for UserGroupInformation.loginUser within
+    // current class loader
+    if (sparkConf.contains("spark.yarn.principal") && sparkConf.contains("spark.yarn.keytab")) {
+      val principalName = sparkConf.get("spark.yarn.principal")
+      val keytabFileName = sparkConf.get("spark.yarn.keytab")
+      if (!new File(keytabFileName).exists()) {
+        throw new SparkException(s"Keytab file: ${keytabFileName}" +
+          " specified in spark.yarn.keytab does not exist")
+      } else {
+        logInfo("Attempting to login to Kerberos" +
+          s" using principal: ${principalName} and keytab: ${keytabFileName}")
+        UserGroupInformation.loginUserFromKeytab(principalName, keytabFileName)
       }
       try {
         newState()
       } finally {
         Thread.currentThread().setContextClassLoader(original)
       }
-    } else {
-      // Isolation off means we detect a CliSessionState instance in current thread.
-      // 1: Inside the spark project, we have already started a CliSessionState in
-      // `SparkSQLCLIDriver`, which contains configurations from command lines. Later, we call
-      // `SparkSQLEnv.init()` there, which would new a hive client again. so we should keep those
-      // configurations and reuse the existing instance of `CliSessionState`. In this case,
-      // SessionState.get will always return a CliSessionState.
-      // 2: In another case, a user app may start a CliSessionState outside spark project with built
-      // in hive jars, which will turn off isolation, if SessionSate.detachSession is
-      // called to remove the current state after that, hive client created later will initialize
-      // its own state by newState()
-      val ret = SessionState.get
-      if (ret != null) {
-        // hive.metastore.warehouse.dir is determined in SharedState after the CliSessionState
-        // instance constructed, we need to follow that change here.
-        Option(hadoopConf.get(ConfVars.METASTOREWAREHOUSE.varname)).foreach { dir =>
-          ret.getConf.setVar(ConfVars.METASTOREWAREHOUSE, dir)
+      found
+    }
+
+    val ret = try {
+      // originState will be created if not exists, will never be null
+      val originalState = SessionState.get()
+      if (isCliSessionState(originalState)) {
+        // In `SparkSQLCLIDriver`, we have already started a `CliSessionState`,
+        // which contains information like configurations from command line. Later
+        // we call `SparkSQLEnv.init()` there, which would run into this part again.
+        // so we should keep `conf` and reuse the existing instance of `CliSessionState`.
+        originalState
+      } else {
+        val hiveConf = new HiveConf(classOf[SessionState])
+        // 1: we set all confs in the hadoopConf to this hiveConf.
+        // This hadoopConf contains user settings in Hadoop's core-site.xml file
+        // and Hive's hive-site.xml file. Note, we load hive-site.xml file manually in
+        // SharedState and put settings in this hadoopConf instead of relying on HiveConf
+        // to load user settings. Otherwise, HiveConf's initialize method will override
+        // settings in the hadoopConf. This issue only shows up when spark.sql.hive.metastore.jars
+        // is not set to builtin. When spark.sql.hive.metastore.jars is builtin, the classpath
+        // has hive-site.xml. So, HiveConf will use that to override its default values.
+        hadoopConf.iterator().asScala.foreach { entry =>
+          val key = entry.getKey
+          val value = entry.getValue
+          if (key.toLowerCase.contains("password")) {
+            logDebug(s"Applying Hadoop and Hive config to Hive Conf: $key=xxx")
+          } else {
+            logDebug(s"Applying Hadoop and Hive config to Hive Conf: $key=$value")
+          }
+          hiveConf.set(key, value)
+        }
+        // HiveConf is a Hadoop Configuration, which has a field of classLoader and
+        // the initial value will be the current thread's context class loader
+        // (i.e. initClassLoader at here).
+        // We call initialConf.setClassLoader(initClassLoader) at here to make
+        // this action explicit.
+        hiveConf.setClassLoader(initClassLoader)
+        // 2: we set all spark confs to this hiveConf.
+        sparkConf.getAll.foreach { case (k, v) =>
+          if (k.toLowerCase.contains("password")) {
+            logDebug(s"Applying Spark config to Hive Conf: $k=xxx")
+          } else {
+            logDebug(s"Applying Spark config to Hive Conf: $k=$v")
+          }
+          hiveConf.set(k, v)
+        }
+        // 3: we set all entries in config to this hiveConf.
+        extraConfig.foreach { case (k, v) =>
+          if (k.toLowerCase.contains("password")) {
+            logDebug(s"Applying extra config to HiveConf: $k=xxx")
+          } else {
+            logDebug(s"Applying extra config to HiveConf: $k=$v")
+          }
+          hiveConf.set(k, v)
+        }
+        val state = new SessionState(hiveConf)
+        if (clientLoader.cachedHive != null) {
+          Hive.set(clientLoader.cachedHive.asInstanceOf[Hive])
         }
         ret
       } else {
@@ -311,7 +355,7 @@ private[hive] class HiveClientImpl(
       new HiveDatabase(
         database.name,
         database.description,
-        CatalogUtils.URIToString(database.locationUri),
+        database.locationUri,
         Option(database.properties).map(_.asJava).orNull),
         ignoreIfExists)
   }
@@ -329,7 +373,7 @@ private[hive] class HiveClientImpl(
       new HiveDatabase(
         database.name,
         database.description,
-        CatalogUtils.URIToString(database.locationUri),
+        database.locationUri,
         Option(database.properties).map(_.asJava).orNull))
   }
 
@@ -338,21 +382,13 @@ private[hive] class HiveClientImpl(
       CatalogDatabase(
         name = d.getName,
         description = d.getDescription,
-        locationUri = CatalogUtils.stringToURI(d.getLocationUri),
+        locationUri = d.getLocationUri,
         properties = Option(d.getParameters).map(_.asScala.toMap).orNull)
-    }.getOrElse(throw new NoSuchDatabaseException(dbName))
-  }
-
-  override def databaseExists(dbName: String): Boolean = withHiveState {
-    client.databaseExists(dbName)
+    }
   }
 
   override def listDatabases(pattern: String): Seq[String] = withHiveState {
     client.getDatabasesByPattern(pattern).asScala
-  }
-
-  override def tableExists(dbName: String, tableName: String): Boolean = withHiveState {
-    Option(client.getTable(dbName, tableName, false /* do not throw exception */)).nonEmpty
   }
 
   override def getTableOption(
@@ -364,28 +400,9 @@ private[hive] class HiveClientImpl(
       // partition columns are part of the schema
       val cols = h.getCols.asScala.map(fromHiveColumn)
       val partCols = h.getPartCols.asScala.map(fromHiveColumn)
-      val schema = StructType(cols ++ partCols)
+      val schema = h.getCols.asScala.map(fromHiveColumn) ++ partCols
 
-      val bucketSpec = if (h.getNumBuckets > 0) {
-        val sortColumnOrders = h.getSortCols.asScala
-        // Currently Spark only supports columns to be sorted in ascending order
-        // but Hive can support both ascending and descending order. If all the columns
-        // are sorted in ascending order, only then propagate the sortedness information
-        // to downstream processing / optimizations in Spark
-        // TODO: In future we can have Spark support columns sorted in descending order
-        val allAscendingSorted = sortColumnOrders.forall(_.getOrder == HIVE_COLUMN_ORDER_ASC)
-
-        val sortColumnNames = if (allAscendingSorted) {
-          sortColumnOrders.map(_.getCol)
-        } else {
-          Seq.empty
-        }
-        Option(BucketSpec(h.getNumBuckets, h.getBucketCols.asScala, sortColumnNames))
-      } else {
-        None
-      }
-
-      // Skew spec and storage handler can't be mapped to CatalogTable (yet)
+      // Skew spec, storage handler, and bucketing info can't be mapped to CatalogTable (yet)
       val unsupportedFeatures = ArrayBuffer.empty[String]
 
       if (!h.getSkewedColNames.isEmpty) {
@@ -396,54 +413,11 @@ private[hive] class HiveClientImpl(
         unsupportedFeatures += "storage handler"
       }
 
-      if (h.getTableType == HiveTableType.VIRTUAL_VIEW && partCols.nonEmpty) {
-        unsupportedFeatures += "partitioned view"
+      if (!h.getBucketCols.isEmpty) {
+        unsupportedFeatures += "bucketing"
       }
 
       val properties = Option(h.getParameters).map(_.asScala.toMap).orNull
-
-      // Hive-generated Statistics are also recorded in ignoredProperties
-      val ignoredProperties = scala.collection.mutable.Map.empty[String, String]
-      for (key <- HiveStatisticsProperties; value <- properties.get(key)) {
-        ignoredProperties += key -> value
-      }
-
-      val excludedTableProperties = HiveStatisticsProperties ++ Set(
-        // The property value of "comment" is moved to the dedicated field "comment"
-        "comment",
-        // For EXTERNAL_TABLE, the table properties has a particular field "EXTERNAL". This is added
-        // in the function toHiveTable.
-        "EXTERNAL"
-      )
-
-      val filteredProperties = properties.filterNot {
-        case (key, _) => excludedTableProperties.contains(key)
-      }
-      val comment = properties.get("comment")
-
-      // Here we are reading statistics from Hive.
-      // Note that this statistics could be overridden by Spark's statistics if that's available.
-      val totalSize = properties.get(StatsSetupConst.TOTAL_SIZE).map(BigInt(_))
-      val rawDataSize = properties.get(StatsSetupConst.RAW_DATA_SIZE).map(BigInt(_))
-      val rowCount = properties.get(StatsSetupConst.ROW_COUNT).map(BigInt(_)).filter(_ >= 0)
-      // TODO: check if this estimate is valid for tables after partition pruning.
-      // NOTE: getting `totalSize` directly from params is kind of hacky, but this should be
-      // relatively cheap if parameters for the table are populated into the metastore.
-      // Currently, only totalSize, rawDataSize, and rowCount are used to build the field `stats`
-      // TODO: stats should include all the other two fields (`numFiles` and `numPartitions`).
-      // (see StatsSetupConst in Hive)
-      val stats =
-        // When table is external, `totalSize` is always zero, which will influence join strategy
-        // so when `totalSize` is zero, use `rawDataSize` instead. When `rawDataSize` is also zero,
-        // return None. Later, we will use the other ways to estimate the statistics.
-        if (totalSize.isDefined && totalSize.get > 0L) {
-          Some(CatalogStatistics(sizeInBytes = totalSize.get, rowCount = rowCount))
-        } else if (rawDataSize.isDefined && rawDataSize.get > 0) {
-          Some(CatalogStatistics(sizeInBytes = rawDataSize.get, rowCount = rowCount))
-        } else {
-          // TODO: still fill the rowCount even if sizeInBytes is empty. Might break anything?
-          None
-        }
 
       CatalogTable(
         identifier = TableIdentifier(h.getTableName, Option(h.getDbName)),
@@ -456,41 +430,41 @@ private[hive] class HiveClientImpl(
         },
         schema = schema,
         partitionColumnNames = partCols.map(_.name),
-        // If the table is written by Spark, we will put bucketing information in table properties,
-        // and will always overwrite the bucket spec in hive metastore by the bucketing information
-        // in table properties. This means, if we have bucket spec in both hive metastore and
-        // table properties, we will trust the one in table properties.
-        bucketSpec = bucketSpec,
-        owner = Option(h.getOwner).getOrElse(""),
+        sortColumnNames = Seq(), // TODO: populate this
+        bucketColumnNames = h.getBucketCols.asScala,
+        numBuckets = h.getNumBuckets,
+        owner = h.getOwner,
         createTime = h.getTTable.getCreateTime.toLong * 1000,
         lastAccessTime = h.getLastAccessTime.toLong * 1000,
         storage = CatalogStorageFormat(
-          locationUri = shim.getDataLocation(h).map(CatalogUtils.stringToURI),
-          // To avoid ClassNotFound exception, we try our best to not get the format class, but get
-          // the class name directly. However, for non-native tables, there is no interface to get
-          // the format class name, so we may still throw ClassNotFound in this case.
-          inputFormat = Option(h.getTTable.getSd.getInputFormat).orElse {
-            Option(h.getStorageHandler).map(_.getInputFormatClass.getName)
+          locationUri = shim.getDataLocation(h).filterNot { _ =>
+            // SPARK-15269: Persisted data source tables always store the location URI as a SerDe
+            // property named "path" instead of standard Hive `dataLocation`, because Hive only
+            // allows directory paths as location URIs while Spark SQL data source tables also
+            // allows file paths. So the standard Hive `dataLocation` is meaningless for Spark SQL
+            // data source tables.
+            DDLUtils.isDatasourceTable(properties) &&
+              h.getTableType == HiveTableType.EXTERNAL_TABLE &&
+              // Spark SQL may also save external data source in Hive compatible format when
+              // possible, so that these tables can be directly accessed by Hive. For these tables,
+              // `dataLocation` is still necessary. Here we also check for input format class
+              // because only these Hive compatible tables set this field.
+              h.getInputFormatClass == null
           },
-          outputFormat = Option(h.getTTable.getSd.getOutputFormat).orElse {
-            Option(h.getStorageHandler).map(_.getOutputFormatClass.getName)
-          },
+          inputFormat = Option(h.getInputFormatClass).map(_.getName),
+          outputFormat = Option(h.getOutputFormatClass).map(_.getName),
           serde = Option(h.getSerializationLib),
           compressed = h.getTTable.getSd.isCompressed,
-          properties = Option(h.getTTable.getSd.getSerdeInfo.getParameters)
+          serdeProperties = Option(h.getTTable.getSd.getSerdeInfo.getParameters)
             .map(_.asScala.toMap).orNull
         ),
         // For EXTERNAL_TABLE, the table properties has a particular field "EXTERNAL". This is added
         // in the function toHiveTable.
-        properties = filteredProperties,
-        stats = stats,
-        comment = comment,
-        // In older versions of Spark(before 2.2.0), we expand the view original text and store
-        // that into `viewExpandedText`, and that should be used in view resolution. So we get
-        // `viewExpandedText` instead of `viewOriginalText` for viewText here.
+        properties = properties.filter(kv => kv._1 != "comment" && kv._1 != "EXTERNAL"),
+        comment = properties.get("comment"),
+        viewOriginalText = Option(h.getViewOriginalText),
         viewText = Option(h.getViewExpandedText),
-        unsupportedFeatures = unsupportedFeatures,
-        ignoredProperties = ignoredProperties.toMap)
+        unsupportedFeatures = unsupportedFeatures)
     }
   }
 
@@ -541,7 +515,6 @@ private[hive] class HiveClientImpl(
     // do the check at first and collect all the matching partitions
     val matchingParts =
       specs.flatMap { s =>
-        assert(s.values.forall(_.nonEmpty), s"partition spec '$s' is invalid")
         // The provided spec here can be a partial spec, i.e. it will match all partitions
         // whose specs are supersets of this partial spec. E.g. If a table has partitions
         // (b='1', c='1') and (b='1', c='2'), a partial spec of (b='1') will match both.
@@ -556,7 +529,8 @@ private[hive] class HiveClientImpl(
     var droppedParts = ArrayBuffer.empty[java.util.List[String]]
     matchingParts.foreach { partition =>
       try {
-        shim.dropPartition(client, db, table, partition, !retainData, purge)
+        val deleteData = true
+        client.dropPartition(db, table, partition, deleteData)
       } catch {
         case e: Exception =>
           val remainingParts = matchingParts.toBuffer -- droppedParts
@@ -882,10 +856,19 @@ private[hive] object HiveClientImpl {
     Utils.classForName(name)
       .asInstanceOf[Class[_ <: org.apache.hadoop.hive.ql.io.HiveOutputFormat[_, _]]]
 
-  /**
-   * Converts the native table metadata representation format CatalogTable to Hive's Table.
-   */
-  def toHiveTable(table: CatalogTable, userName: Option[String] = None): HiveTable = {
+  private def toHiveColumn(c: CatalogColumn): FieldSchema = {
+    new FieldSchema(c.name, c.dataType, c.comment.orNull)
+  }
+
+  private def fromHiveColumn(hc: FieldSchema): CatalogColumn = {
+    new CatalogColumn(
+      name = hc.getName,
+      dataType = hc.getType,
+      nullable = true,
+      comment = Option(hc.getComment))
+  }
+
+  private def toHiveTable(table: CatalogTable): HiveTable = {
     val hiveTable = new HiveTable(table.database, table.identifier.table)
     // For EXTERNAL_TABLE, we also need to set EXTERNAL field in the table properties.
     // Otherwise, Hive metastore will change the table to a MANAGED_TABLE.
@@ -937,30 +920,7 @@ private[hive] object HiveClientImpl {
       hiveTable.setViewExpandedText(t)
     }
 
-    table.bucketSpec match {
-      case Some(bucketSpec) if DDLUtils.isHiveTable(table) =>
-        hiveTable.setNumBuckets(bucketSpec.numBuckets)
-        hiveTable.setBucketCols(bucketSpec.bucketColumnNames.toList.asJava)
-
-        if (bucketSpec.sortColumnNames.nonEmpty) {
-          hiveTable.setSortCols(
-            bucketSpec.sortColumnNames
-              .map(col => new Order(col, HIVE_COLUMN_ORDER_ASC))
-              .toList
-              .asJava
-          )
-        }
-      case _ =>
-    }
-
-    hiveTable
-  }
-
-  /**
-   * Converts the native partition metadata representation format CatalogTablePartition to
-   * Hive's Partition.
-   */
-  def toHivePartition(
+  private def toHivePartition(
       p: CatalogTablePartition,
       ht: HiveTable): HivePartition = {
     val tpart = new org.apache.hadoop.hive.metastore.api.Partition
@@ -972,17 +932,16 @@ private[hive] object HiveClientImpl {
     }
     val storageDesc = new StorageDescriptor
     val serdeInfo = new SerDeInfo
-    p.storage.locationUri.map(CatalogUtils.URIToString(_)).foreach(storageDesc.setLocation)
+    p.storage.locationUri.foreach(storageDesc.setLocation)
     p.storage.inputFormat.foreach(storageDesc.setInputFormat)
     p.storage.outputFormat.foreach(storageDesc.setOutputFormat)
     p.storage.serde.foreach(serdeInfo.setSerializationLib)
-    serdeInfo.setParameters(p.storage.properties.asJava)
+    serdeInfo.setParameters(p.storage.serdeProperties.asJava)
     storageDesc.setSerdeInfo(serdeInfo)
     tpart.setDbName(ht.getDbName)
     tpart.setTableName(ht.getTableName)
     tpart.setValues(partValues.asJava)
     tpart.setSd(storageDesc)
-    tpart.setParameters(mutable.Map(p.parameters.toSeq: _*).asJava)
     new HivePartition(ht, tpart)
   }
 
@@ -999,19 +958,9 @@ private[hive] object HiveClientImpl {
         outputFormat = Option(apiPartition.getSd.getOutputFormat),
         serde = Option(apiPartition.getSd.getSerdeInfo.getSerializationLib),
         compressed = apiPartition.getSd.isCompressed,
-        properties = Option(apiPartition.getSd.getSerdeInfo.getParameters)
+        serdeProperties = Option(apiPartition.getSd.getSerdeInfo.getParameters)
           .map(_.asScala.toMap).orNull),
         parameters =
           if (hp.getParameters() != null) hp.getParameters().asScala.toMap else Map.empty)
   }
-
-  // Below is the key of table properties for storing Hive-generated statistics
-  private val HiveStatisticsProperties = Set(
-    StatsSetupConst.COLUMN_STATS_ACCURATE,
-    StatsSetupConst.NUM_FILES,
-    StatsSetupConst.NUM_PARTITIONS,
-    StatsSetupConst.ROW_COUNT,
-    StatsSetupConst.RAW_DATA_SIZE,
-    StatsSetupConst.TOTAL_SIZE
-  )
 }

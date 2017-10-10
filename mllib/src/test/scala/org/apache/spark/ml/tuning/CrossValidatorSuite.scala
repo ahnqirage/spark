@@ -19,12 +19,12 @@ package org.apache.spark.ml.tuning
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.{Estimator, Model, Pipeline}
-import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel, OneVsRest}
+import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel}
 import org.apache.spark.ml.classification.LogisticRegressionSuite.generateLogisticInput
-import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
+import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature.HashingTF
 import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.param.{ParamMap, ParamPair}
 import org.apache.spark.ml.param.shared.HasInputCol
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
@@ -41,7 +41,8 @@ class CrossValidatorSuite
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    dataset = sc.parallelize(generateLogisticInput(1.0, 1.0, 100, 42), 2).toDF()
+    dataset = spark.createDataFrame(
+      sc.parallelize(generateLogisticInput(1.0, 1.0, 100, 42), 2))
   }
 
   test("cross validation with logistic regression") {
@@ -67,10 +68,9 @@ class CrossValidatorSuite
   }
 
   test("cross validation with linear regression") {
-    val dataset = sc.parallelize(
-      LinearDataGenerator.generateLinearInput(
-        6.3, Array(4.7, 7.2), Array(0.9, -1.3), Array(0.7, 1.2), 100, 42, 0.1), 2)
-      .map(_.asML).toDF()
+    val dataset = spark.createDataFrame(
+      sc.parallelize(LinearDataGenerator.generateLinearInput(
+        6.3, Array(4.7, 7.2), Array(0.9, -1.3), Array(0.7, 1.2), 100, 42, 0.1), 2).map(_.asML))
 
     val trainer = new LinearRegression().setSolver("l-bfgs")
     val lrParamMaps = new ParamGridBuilder()
@@ -167,7 +167,6 @@ class CrossValidatorSuite
     assert(cv.uid === cv2.uid)
     assert(cv.getNumFolds === cv2.getNumFolds)
     assert(cv.getSeed === cv2.getSeed)
-    assert(cv.getParallelism === cv2.getParallelism)
 
     assert(cv2.getEvaluator.isInstanceOf[BinaryClassificationEvaluator])
     val evaluator2 = cv2.getEvaluator.asInstanceOf[BinaryClassificationEvaluator]

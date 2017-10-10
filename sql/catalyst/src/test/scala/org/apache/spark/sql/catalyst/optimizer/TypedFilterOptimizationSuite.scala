@@ -57,19 +57,9 @@ class TypedFilterOptimizationSuite extends PlanTest {
     comparePlans(optimized, expected)
   }
 
-  test("filter after serialize with different object types") {
-    val input = LocalRelation('_1.int, '_2.int)
-    val f = (i: OtherTuple) => i._1 > 0
-
-    val query = input
-      .deserialize[(Int, Int)]
-      .serialize[(Int, Int)]
-      .filter(f).analyze
-    val optimized = Optimize.execute(query)
-    comparePlans(optimized, query)
-  }
-
-  test("filter before deserialize with the same object type") {
+  // TODO: Remove this after we completely fix SPARK-15632 by adding optimization rules
+  // for typed filters.
+  ignore("embed deserializer in typed filter condition if there is only one filter") {
     val input = LocalRelation('_1.int, '_2.int)
     val f = (i: (Int, Int)) => i._1 > 0
 
@@ -80,10 +70,9 @@ class TypedFilterOptimizationSuite extends PlanTest {
 
     val optimized = Optimize.execute(query)
 
-    val expected = input
-      .deserialize[(Int, Int)]
-      .where(callFunction(f, BooleanType, 'obj))
-      .serialize[(Int, Int)].analyze
+    val deserializer = UnresolvedDeserializer(encoderFor[(Int, Int)].deserializer)
+    val condition = callFunction(f, BooleanType, deserializer)
+    val expected = input.where(condition).select('_1.as("_1"), '_2.as("_2")).analyze
 
     comparePlans(optimized, expected)
   }

@@ -134,6 +134,8 @@ class ConstraintPropagationSuite extends SparkFunSuite with PlanTest {
     verifyConstraints(aliasedRelation.analyze.constraints,
       ExpressionSet(Seq(resolveColumn(aliasedRelation.analyze, "x") > 10,
         IsNotNull(resolveColumn(aliasedRelation.analyze, "x")),
+        resolveColumn(aliasedRelation.analyze, "b") <=> resolveColumn(aliasedRelation.analyze, "y"),
+        resolveColumn(aliasedRelation.analyze, "z") <=> resolveColumn(aliasedRelation.analyze, "x"),
         resolveColumn(aliasedRelation.analyze, "z") > 10,
         IsNotNull(resolveColumn(aliasedRelation.analyze, "z")))))
 
@@ -313,12 +315,11 @@ class ConstraintPropagationSuite extends SparkFunSuite with PlanTest {
     verifyConstraints(
       tr.where(('a.attr * 'b.attr + 100) === 'c.attr && 'd / 10 === 'e).analyze.constraints,
       ExpressionSet(Seq(
-        castWithTimeZone(resolveColumn(tr, "a"), LongType) * resolveColumn(tr, "b") +
-          castWithTimeZone(100, LongType) ===
-            castWithTimeZone(resolveColumn(tr, "c"), LongType),
-        castWithTimeZone(resolveColumn(tr, "d"), DoubleType) /
-          castWithTimeZone(10, DoubleType) ===
-            castWithTimeZone(resolveColumn(tr, "e"), DoubleType),
+        Cast(resolveColumn(tr, "a"), LongType) * resolveColumn(tr, "b") + Cast(100, LongType) ===
+          Cast(resolveColumn(tr, "c"), LongType),
+        Cast(resolveColumn(tr, "d"), DoubleType) /
+          Cast(10, DoubleType) ===
+            Cast(resolveColumn(tr, "e"), DoubleType),
         IsNotNull(resolveColumn(tr, "a")),
         IsNotNull(resolveColumn(tr, "b")),
         IsNotNull(resolveColumn(tr, "c")),
@@ -328,12 +329,11 @@ class ConstraintPropagationSuite extends SparkFunSuite with PlanTest {
     verifyConstraints(
       tr.where(('a.attr * 'b.attr - 10) >= 'c.attr && 'd / 10 < 'e).analyze.constraints,
       ExpressionSet(Seq(
-        castWithTimeZone(resolveColumn(tr, "a"), LongType) * resolveColumn(tr, "b") -
-          castWithTimeZone(10, LongType) >=
-            castWithTimeZone(resolveColumn(tr, "c"), LongType),
-        castWithTimeZone(resolveColumn(tr, "d"), DoubleType) /
-          castWithTimeZone(10, DoubleType) <
-            castWithTimeZone(resolveColumn(tr, "e"), DoubleType),
+        Cast(resolveColumn(tr, "a"), LongType) * resolveColumn(tr, "b") - Cast(10, LongType) >=
+          Cast(resolveColumn(tr, "c"), LongType),
+        Cast(resolveColumn(tr, "d"), DoubleType) /
+          Cast(10, DoubleType) <
+            Cast(resolveColumn(tr, "e"), DoubleType),
         IsNotNull(resolveColumn(tr, "a")),
         IsNotNull(resolveColumn(tr, "b")),
         IsNotNull(resolveColumn(tr, "c")),
@@ -395,29 +395,5 @@ class ConstraintPropagationSuite extends SparkFunSuite with PlanTest {
       ExpressionSet(Seq(resolveColumn(tr, "a") =!= resolveColumn(tr, "c"),
         IsNotNull(resolveColumn(tr, "a")),
         IsNotNull(resolveColumn(tr, "c")))))
-  }
-
-  test("enable/disable constraint propagation") {
-    val tr = LocalRelation('a.int, 'b.string, 'c.int)
-    val filterRelation = tr.where('a.attr > 10)
-
-    withSQLConf(SQLConf.CONSTRAINT_PROPAGATION_ENABLED.key -> "true") {
-      assert(filterRelation.analyze.constraints.nonEmpty)
-    }
-
-    withSQLConf(SQLConf.CONSTRAINT_PROPAGATION_ENABLED.key -> "false") {
-      assert(filterRelation.analyze.constraints.isEmpty)
-    }
-
-    val aliasedRelation = tr.where('c.attr > 10 && 'a.attr < 5)
-      .groupBy('a, 'c, 'b)('a, 'c.as("c1"), count('a).as("a3")).select('c1, 'a, 'a3)
-
-    withSQLConf(SQLConf.CONSTRAINT_PROPAGATION_ENABLED.key -> "true") {
-      assert(aliasedRelation.analyze.constraints.nonEmpty)
-    }
-
-    withSQLConf(SQLConf.CONSTRAINT_PROPAGATION_ENABLED.key -> "false") {
-      assert(aliasedRelation.analyze.constraints.isEmpty)
-    }
   }
 }

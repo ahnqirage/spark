@@ -228,6 +228,13 @@ To use a custom metrics.properties for the application master and executors, upd
   </td>
 </tr>
 <tr>
+  <td><code>spark.executor.memory</code></td>
+  <td>1g</td>
+  <td>
+    Amount of memory to use per executor process (e.g. <code>2g</code>, <code>8g</code>).
+  </td>
+</tr>
+<tr>
  <td><code>spark.yarn.executor.memoryOverhead</code></td>
   <td>executorMemory * 0.10, with minimum of 384 </td>
   <td>
@@ -482,68 +489,28 @@ Hadoop services issue *hadoop tokens* to grant access to the services and data.
 Clients must first acquire tokens for the services they will access and pass them along with their
 application as it is launched in the YARN cluster.
 
-For a Spark application to interact with any of the Hadoop filesystem (for example hdfs, webhdfs, etc), HBase and Hive, it must acquire the relevant tokens
+For a Spark application to interact with HDFS, HBase and Hive, it must acquire the relevant tokens
 using the Kerberos credentials of the user launching the application
 —that is, the principal whose identity will become that of the launched Spark application.
 
 This is normally done at launch time: in a secure cluster Spark will automatically obtain a
-token for the cluster's default Hadoop filesystem, and potentially for HBase and Hive.
+token for the cluster's HDFS filesystem, and potentially for HBase and Hive.
 
 An HBase token will be obtained if HBase is in on classpath, the HBase configuration declares
 the application is secure (i.e. `hbase-site.xml` sets `hbase.security.authentication` to `kerberos`),
-and `spark.security.credentials.hbase.enabled` is not set to `false`.
+and `spark.yarn.security.tokens.hbase.enabled` is not set to `false`.
 
 Similarly, a Hive token will be obtained if Hive is on the classpath, its configuration
 includes a URI of the metadata store in `"hive.metastore.uris`, and
-`spark.security.credentials.hive.enabled` is not set to `false`.
+`spark.yarn.security.tokens.hive.enabled` is not set to `false`.
 
-If an application needs to interact with other secure Hadoop filesystems, then
+If an application needs to interact with other secure HDFS clusters, then
 the tokens needed to access these clusters must be explicitly requested at
-launch time. This is done by listing them in the `spark.yarn.access.hadoopFileSystems` property.
+launch time. This is done by listing them in the `spark.yarn.access.namenodes` property.
 
 ```
-spark.yarn.access.hadoopFileSystems hdfs://ireland.example.org:8020/,webhdfs://frankfurt.example.org:50070/
+spark.yarn.access.namenodes hdfs://ireland.example.org:8020/,hdfs://frankfurt.example.org:8020/
 ```
-
-Spark supports integrating with other security-aware services through Java Services mechanism (see
-`java.util.ServiceLoader`). To do that, implementations of `org.apache.spark.deploy.yarn.security.ServiceCredentialProvider`
-should be available to Spark by listing their names in the corresponding file in the jar's
-`META-INF/services` directory. These plug-ins can be disabled by setting
-`spark.security.credentials.{service}.enabled` to `false`, where `{service}` is the name of
-credential provider.
-
-## Configuring the External Shuffle Service
-
-To start the Spark Shuffle Service on each `NodeManager` in your YARN cluster, follow these
-instructions:
-
-1. Build Spark with the [YARN profile](building-spark.html). Skip this step if you are using a
-pre-packaged distribution.
-1. Locate the `spark-<version>-yarn-shuffle.jar`. This should be under
-`$SPARK_HOME/common/network-yarn/target/scala-<version>` if you are building Spark yourself, and under
-`yarn` if you are using a distribution.
-1. Add this jar to the classpath of all `NodeManager`s in your cluster.
-1. In the `yarn-site.xml` on each node, add `spark_shuffle` to `yarn.nodemanager.aux-services`,
-then set `yarn.nodemanager.aux-services.spark_shuffle.class` to
-`org.apache.spark.network.yarn.YarnShuffleService`.
-1. Increase `NodeManager's` heap size by setting `YARN_HEAPSIZE` (1000 by default) in `etc/hadoop/yarn-env.sh`
-to avoid garbage collection issues during shuffle.
-1. Restart all `NodeManager`s in your cluster.
-
-The following extra configuration options are available when the shuffle service is running on YARN:
-
-<table class="table">
-<tr><th>Property Name</th><th>Default</th><th>Meaning</th></tr>
-<tr>
-  <td><code>spark.yarn.shuffle.stopOnFailure</code></td>
-  <td><code>false</code></td>
-  <td>
-    Whether to stop the NodeManager when there's a failure in the Spark Shuffle Service's
-    initialization. This prevents application failures caused by running containers on
-    NodeManagers where the Spark Shuffle Service is not running.
-  </td>
-</tr>
-</table>
 
 ## Launching your application with Apache Oozie
 
@@ -561,8 +528,8 @@ For Spark applications, the Oozie workflow must be set up for Oozie to request a
 the application needs, including:
 
 - The YARN resource manager.
-- The local Hadoop filesystem.
-- Any remote Hadoop filesystems used as a source or destination of I/O.
+- The local HDFS filesystem.
+- Any remote HDFS filesystems used as a source or destination of I/O.
 - Hive —if used.
 - HBase —if used.
 - The YARN timeline server, if the application interacts with this.
@@ -573,11 +540,11 @@ the Spark configuration must be set to disable token collection for the services
 The Spark configuration must include the lines:
 
 ```
-spark.security.credentials.hive.enabled   false
-spark.security.credentials.hbase.enabled  false
+spark.yarn.security.tokens.hive.enabled   false
+spark.yarn.security.tokens.hbase.enabled  false
 ```
 
-The configuration option `spark.yarn.access.hadoopFileSystems` must be unset.
+The configuration option `spark.yarn.access.namenodes` must be unset.
 
 ## Troubleshooting Kerberos
 
@@ -606,18 +573,3 @@ spark.yarn.am.extraJavaOptions -Dsun.security.krb5.debug=true -Dsun.security.spn
 
 Finally, if the log level for `org.apache.spark.deploy.yarn.Client` is set to `DEBUG`, the log
 will include a list of all tokens obtained, and their expiry details
-
-## Using the Spark History Server to replace the Spark Web UI
-
-It is possible to use the Spark History Server application page as the tracking URL for running
-applications when the application UI is disabled. This may be desirable on secure clusters, or to
-reduce the memory usage of the Spark driver. To set up tracking through the Spark History Server,
-do the following:
-
-- On the application side, set <code>spark.yarn.historyServer.allowTracking=true</code> in Spark's
-  configuration. This will tell Spark to use the history server's URL as the tracking URL if
-  the application's UI is disabled.
-- On the Spark History Server, add <code>org.apache.spark.deploy.yarn.YarnProxyRedirectFilter</code>
-  to the list of filters in the <code>spark.ui.filters</code> configuration.
-
-Be aware that the history server information may not be up-to-date with the application's state.

@@ -187,14 +187,14 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
 
     getAllPrefLocs(prev)
 
-    // gets all the preferred locations of the previous RDD and splits them into partitions
+    // gets all the preffered locations of the previous RDD and splits them into partitions
     // with preferred locations and ones without
-    def getAllPrefLocs(prev: RDD[_]): Unit = {
+    def getAllPrefLocs(prev: RDD[_]) {
       val tmpPartsWithLocs = mutable.LinkedHashMap[Partition, Seq[String]]()
       // first get the locations for each partition, only do this once since it can be expensive
       prev.partitions.foreach(p => {
           val locs = currPrefLocs(p, prev)
-          if (locs.nonEmpty) {
+          if (locs.size > 0) {
             tmpPartsWithLocs.put(p, locs)
           } else {
             partsWithoutLocs += p
@@ -202,13 +202,13 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
         }
       )
       // convert it into an array of host to partition
-      for (x <- 0 to 2) {
-        tmpPartsWithLocs.foreach { parts =>
+      (0 to 2).map(x =>
+        tmpPartsWithLocs.foreach(parts => {
           val p = parts._1
           val locs = parts._2
           if (locs.size > x) partsWithLocs += ((locs(x), p))
-        }
-      }
+        } )
+      )
     }
   }
 
@@ -269,7 +269,7 @@ private class DefaultPartitionCoalescer(val balanceSlack: Double = 0.10)
     tries = 0
     // if we don't have enough partition groups, create duplicates
     while (numCreated < targetLen) {
-      val (nxt_replica, nxt_part) = partitionLocs.partsWithLocs(tries)
+      var (nxt_replica, nxt_part) = partitionLocs.partsWithLocs(tries)
       tries += 1
       val pgroup = new PartitionGroup(Some(nxt_replica))
       groupArr += pgroup

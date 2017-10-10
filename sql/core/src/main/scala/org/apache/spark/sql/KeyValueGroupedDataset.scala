@@ -27,7 +27,6 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.streaming.InternalOutputModes
 import org.apache.spark.sql.execution.QueryExecution
 import org.apache.spark.sql.expressions.ReduceAggregator
-import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout, OutputMode}
 
 /**
  * :: Experimental ::
@@ -67,48 +66,6 @@ class KeyValueGroupedDataset[K, V] private[sql](
       queryExecution,
       dataAttributes,
       groupingAttributes)
-
-  /**
-   * Returns a new [[KeyValueGroupedDataset]] where the given function `func` has been applied
-   * to the data. The grouping key is unchanged by this.
-   *
-   * {{{
-   *   // Create values grouped by key from a Dataset[(K, V)]
-   *   ds.groupByKey(_._1).mapValues(_._2) // Scala
-   * }}}
-   *
-   * @since 2.1.0
-   */
-  def mapValues[W : Encoder](func: V => W): KeyValueGroupedDataset[K, W] = {
-    val withNewData = AppendColumns(func, dataAttributes, logicalPlan)
-    val projected = Project(withNewData.newColumns ++ groupingAttributes, withNewData)
-    val executed = sparkSession.sessionState.executePlan(projected)
-
-    new KeyValueGroupedDataset(
-      encoderFor[K],
-      encoderFor[W],
-      executed,
-      withNewData.newColumns,
-      groupingAttributes)
-  }
-
-  /**
-   * Returns a new [[KeyValueGroupedDataset]] where the given function `func` has been applied
-   * to the data. The grouping key is unchanged by this.
-   *
-   * {{{
-   *   // Create Integer values grouped by String key from a Dataset<Tuple2<String, Integer>>
-   *   Dataset<Tuple2<String, Integer>> ds = ...;
-   *   KeyValueGroupedDataset<String, Integer> grouped =
-   *     ds.groupByKey(t -> t._1, Encoders.STRING()).mapValues(t -> t._2, Encoders.INT());
-   * }}}
-   *
-   * @since 2.1.0
-   */
-  def mapValues[W](func: MapFunction[V, W], encoder: Encoder[W]): KeyValueGroupedDataset[K, W] = {
-    implicit val uEnc = encoder
-    mapValues { (v: V) => func.call(v) }
-  }
 
   /**
    * Returns a [[Dataset]] that contains each unique key. This is equivalent to doing mapping
@@ -457,7 +414,7 @@ class KeyValueGroupedDataset[K, V] private[sql](
   protected def aggUntyped(columns: TypedColumn[_, _]*): Dataset[_] = {
     val encoders = columns.map(_.encoder)
     val namedColumns =
-      columns.map(_.withInputType(vExprEnc, dataAttributes).named)
+      columns.map(_.withInputType(vExprEnc.deserializer, dataAttributes).named)
     val keyColumn = if (kExprEnc.flat) {
       assert(groupingAttributes.length == 1)
       groupingAttributes.head

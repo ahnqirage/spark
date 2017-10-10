@@ -41,9 +41,6 @@ case class ShuffleExchangeExec(
     child: SparkPlan,
     @transient coordinator: Option[ExchangeCoordinator]) extends Exchange {
 
-  // NOTE: coordinator can be null after serialization/deserialization,
-  //       e.g. it can be null on the Executor side
-
   override lazy val metrics = Map(
     "dataSize" -> SQLMetrics.createSizeMetric(sparkContext, "data size"))
 
@@ -85,7 +82,7 @@ case class ShuffleExchangeExec(
    */
   private[exchange] def prepareShuffleDependency()
     : ShuffleDependency[Int, InternalRow, InternalRow] = {
-    ShuffleExchangeExec.prepareShuffleDependency(
+    ShuffleExchange.prepareShuffleDependency(
       child.execute(), child.output, newPartitioning, serializer)
   }
 
@@ -130,9 +127,9 @@ case class ShuffleExchangeExec(
   }
 }
 
-object ShuffleExchangeExec {
-  def apply(newPartitioning: Partitioning, child: SparkPlan): ShuffleExchangeExec = {
-    ShuffleExchangeExec(newPartitioning, child, coordinator = Option.empty[ExchangeCoordinator])
+object ShuffleExchange {
+  def apply(newPartitioning: Partitioning, child: SparkPlan): ShuffleExchange = {
+    ShuffleExchange(newPartitioning, child, coordinator = Option.empty[ExchangeCoordinator])
   }
 
   /**

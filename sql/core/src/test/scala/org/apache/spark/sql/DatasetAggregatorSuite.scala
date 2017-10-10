@@ -134,19 +134,6 @@ object NullResultAgg extends Aggregator[AggData, AggData, AggData] {
   override def outputEncoder: Encoder[AggData] = Encoders.product[AggData]
 }
 
-case class ComplexAggData(d1: AggData, d2: AggData)
-
-object VeryComplexResultAgg extends Aggregator[Row, String, ComplexAggData] {
-  override def zero: String = ""
-  override def reduce(buffer: String, input: Row): String = buffer + input.getString(1)
-  override def merge(b1: String, b2: String): String = b1 + b2
-  override def finish(reduction: String): ComplexAggData = {
-    ComplexAggData(AggData(reduction.length, reduction), AggData(reduction.length, reduction))
-  }
-  override def bufferEncoder: Encoder[String] = Encoders.STRING
-  override def outputEncoder: Encoder[ComplexAggData] = Encoders.product[ComplexAggData]
-}
-
 
 class DatasetAggregatorSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
@@ -315,22 +302,5 @@ class DatasetAggregatorSuite extends QueryTest with SharedSQLContext {
   test("SPARK-16100: use Map as the buffer type of Aggregator") {
     val ds = Seq(1, 2, 3).toDS()
     checkDataset(ds.select(MapTypeBufferAgg.toColumn), 1)
-  }
-
-  test("SPARK-15204 improve nullability inference for Aggregator") {
-    val ds1 = Seq(1, 3, 2, 5).toDS()
-    assert(ds1.select(typed.sum((i: Int) => i)).schema.head.nullable === false)
-    val ds2 = Seq(AggData(1, "a"), AggData(2, "a")).toDS()
-    assert(ds2.select(SeqAgg.toColumn).schema.head.nullable === true)
-    val ds3 = sql("SELECT 'Some String' AS b, 1279869254 AS a").as[AggData]
-    assert(ds3.select(NameAgg.toColumn).schema.head.nullable === true)
-  }
-
-  test("SPARK-18147: very complex aggregator result type") {
-    val df = Seq(1 -> "a", 2 -> "b", 2 -> "c").toDF("i", "j")
-
-    checkAnswer(
-      df.groupBy($"i").agg(VeryComplexResultAgg.toColumn),
-      Row(1, Row(Row(1, "a"), Row(1, "a"))) :: Row(2, Row(Row(2, "bc"), Row(2, "bc"))) :: Nil)
   }
 }

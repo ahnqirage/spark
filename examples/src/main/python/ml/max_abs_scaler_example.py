@@ -30,11 +30,7 @@ if __name__ == "__main__":
         .getOrCreate()
 
     # $example on$
-    dataFrame = spark.createDataFrame([
-        (0, Vectors.dense([1.0, 0.1, -8.0]),),
-        (1, Vectors.dense([2.0, 1.0, -4.0]),),
-        (2, Vectors.dense([4.0, 10.0, 8.0]),)
-    ], ["id", "features"])
+    dataFrame = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
 
     scaler = MaxAbsScaler(inputCol="features", outputCol="scaledFeatures")
 

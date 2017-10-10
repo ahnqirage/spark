@@ -84,6 +84,6 @@ case class ProcessingTimeExecutor(processingTime: ProcessingTime, clock: Clock =
    * an interval of `100 ms`, `nextBatchTime(nextBatchTime(0)) = 200` rather than `0`).
    */
   def nextBatchTime(now: Long): Long = {
-    if (intervalMs == 0) now else now / intervalMs * intervalMs + intervalMs
+    now / intervalMs * intervalMs + intervalMs
   }
 }

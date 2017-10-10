@@ -36,6 +36,8 @@ import org.apache.hive.service.auth.PlainSaslHelper
 import org.apache.hive.service.cli.{FetchOrientation, FetchType, GetInfoType}
 import org.apache.hive.service.cli.thrift.TCLIService.Client
 import org.apache.hive.service.cli.thrift.ThriftCLIServiceClient
+import org.apache.hive.service.cli.FetchOrientation
+import org.apache.hive.service.cli.FetchType
 import org.apache.thrift.protocol.TBinaryProtocol
 import org.apache.thrift.transport.TSocket
 import org.scalatest.BeforeAndAfterAll
@@ -96,8 +98,9 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
       val user = System.getProperty("user.name")
       val sessionHandle = client.openSession(user, "")
 
-      withJdbcStatement("test_16563") { statement =>
+      withJdbcStatement { statement =>
         val queries = Seq(
+          "DROP TABLE IF EXISTS test_16563",
           "CREATE TABLE test_16563(key INT, val STRING)",
           s"LOAD DATA LOCAL INPATH '${TestData.smallKv}' OVERWRITE INTO TABLE test_16563")
 
@@ -131,6 +134,7 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
 
           rows_first.numRows()
         }
+        statement.executeQuery("DROP TABLE IF EXISTS test_16563")
       }
     }
   }

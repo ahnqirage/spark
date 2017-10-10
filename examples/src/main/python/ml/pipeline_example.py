@@ -38,8 +38,7 @@ if __name__ == "__main__":
         (0, "a b c d e spark", 1.0),
         (1, "b d", 0.0),
         (2, "spark f g h", 1.0),
-        (3, "hadoop mapreduce", 0.0)
-    ], ["id", "text", "label"])
+        (3, "hadoop mapreduce", 0.0)], ["id", "text", "label"])
 
     # Configure an ML pipeline, which consists of three stages: tokenizer, hashingTF, and lr.
     tokenizer = Tokenizer(inputCol="text", outputCol="words")
@@ -54,9 +53,8 @@ if __name__ == "__main__":
     test = spark.createDataFrame([
         (4, "spark i j k"),
         (5, "l m n"),
-        (6, "spark hadoop spark"),
-        (7, "apache hadoop")
-    ], ["id", "text"])
+        (6, "mapreduce spark"),
+        (7, "apache hadoop")], ["id", "text"])
 
     # Make predictions on test documents and print columns of interest.
     prediction = model.transform(test)

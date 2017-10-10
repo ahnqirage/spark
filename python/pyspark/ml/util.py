@@ -29,7 +29,6 @@ if sys.version > '3':
 
 from pyspark import SparkContext, since
 from pyspark.ml.common import inherit_doc
-from pyspark.sql import SparkSession
 
 
 def _jvm():

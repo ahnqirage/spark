@@ -317,7 +317,7 @@ private[spark] class BlockManager(
   def reregister(): Unit = {
     // TODO: We might need to rate limit re-registering.
     logInfo(s"BlockManager $blockManagerId re-registering with master")
-    master.registerBlockManager(blockManagerId, maxOnHeapMemory, maxOffHeapMemory, slaveEndpoint)
+    master.registerBlockManager(blockManagerId, maxMemory, slaveEndpoint)
     reportAllBlocks()
   }
 
@@ -363,8 +363,7 @@ private[spark] class BlockManager(
       shuffleManager.shuffleBlockResolver.getBlockData(blockId.asInstanceOf[ShuffleBlockId])
     } else {
       getLocalBytes(blockId) match {
-        case Some(blockData) =>
-          new BlockManagerManagedBuffer(blockInfoManager, blockId, blockData, true)
+        case Some(buffer) => new BlockManagerManagedBuffer(blockInfoManager, blockId, buffer)
         case None =>
           // If this block manager receives a request for a block that it doesn't have then it's
           // likely that the master has outdated block statuses for this block. Therefore, we send
@@ -544,7 +543,7 @@ private[spark] class BlockManager(
             }
           }
           val ci = CompletionIterator[Any, Iterator[Any]](iterToReturn, {
-            releaseLockAndDispose(blockId, diskData, taskAttemptId)
+            releaseLock(blockId, taskAttemptId)
           })
           Some(new BlockResult(ci, DataReadMethod.Disk, info.size))
         } else {
@@ -593,8 +592,8 @@ private[spark] class BlockManager(
         diskStore.getBytes(blockId)
       } else if (level.useMemory && memoryStore.contains(blockId)) {
         // The block was not found on disk, so serialize an in-memory copy:
-        new ByteBufferBlockData(serializerManager.dataSerializeWithExplicitClassTag(
-          blockId, memoryStore.getValues(blockId).get, info.classTag), true)
+        serializerManager.dataSerializeWithExplicitClassTag(
+          blockId, memoryStore.getValues(blockId).get, info.classTag)
       } else {
         handleLocalReadFailure(blockId)
       }
@@ -999,16 +998,11 @@ private[spark] class BlockManager(
         logWarning(s"Putting block $blockId failed")
       }
       res
-    } catch {
-      // Since removeBlockInternal may throw exception,
-      // we should print exception first to show root cause.
-      case NonFatal(e) =>
-        logWarning(s"Putting block $blockId failed due to exception $e.")
-        throw e
     } finally {
       // This cleanup is performed in a finally block rather than a `catch` to avoid having to
       // catch and properly re-throw InterruptedException.
       if (exceptionWasThrown) {
+        logWarning(s"Putting block $blockId failed due to an exception")
         // If an exception was thrown then it's possible that the code in `putBody` has already
         // notified the master about the availability of this block, so we need to send an update
         // to remove this block location.
@@ -1126,7 +1120,7 @@ private[spark] class BlockManager(
           try {
             replicate(blockId, bytesToReplicate, level, remoteClassTag)
           } finally {
-            bytesToReplicate.dispose()
+            bytesToReplicate.unmap()
           }
           logDebug("Put block %s remotely took %s"
             .format(blockId, Utils.getUsedTimeMs(remoteStartTime)))
@@ -1288,50 +1282,48 @@ private[spark] class BlockManager(
       deserialized = level.deserialized,
       replication = 1)
 
-    val numPeersToReplicateTo = level.replication - 1
-    val startTime = System.nanoTime
-
-    val peersReplicatedTo = mutable.HashSet.empty ++ existingReplicas
-    val peersFailedToReplicateTo = mutable.HashSet.empty[BlockManagerId]
-    var numFailures = 0
-
-    val initialPeers = getPeers(false).filterNot(existingReplicas.contains)
-
-    var peersForReplication = blockReplicationPolicy.prioritize(
-      blockManagerId,
-      initialPeers,
-      peersReplicatedTo,
-      blockId,
-      numPeersToReplicateTo)
-
-    while(numFailures <= maxReplicationFailures &&
-      !peersForReplication.isEmpty &&
-      peersReplicatedTo.size < numPeersToReplicateTo) {
-      val peer = peersForReplication.head
-      try {
-        val onePeerStartTime = System.nanoTime
-        logTrace(s"Trying to replicate $blockId of ${data.size} bytes to $peer")
-        blockTransferService.uploadBlockSync(
-          peer.host,
-          peer.port,
-          peer.executorId,
-          blockId,
-          new BlockManagerManagedBuffer(blockInfoManager, blockId, data, false),
-          tLevel,
-          classTag)
-        logTrace(s"Replicated $blockId of ${data.size} bytes to $peer" +
-          s" in ${(System.nanoTime - onePeerStartTime).toDouble / 1e6} ms")
-        peersForReplication = peersForReplication.tail
-        peersReplicatedTo += peer
-      } catch {
-        case NonFatal(e) =>
-          logWarning(s"Failed to replicate $blockId to $peer, failure #$numFailures", e)
-          peersFailedToReplicateTo += peer
-          // we have a failed replication, so we get the list of peers again
-          // we don't want peers we have already replicated to and the ones that
-          // have failed previously
-          val filteredPeers = getPeers(true).filter { p =>
-            !peersFailedToReplicateTo.contains(p) && !peersReplicatedTo.contains(p)
+    // One by one choose a random peer and try uploading the block to it
+    // If replication fails (e.g., target peer is down), force the list of cached peers
+    // to be re-fetched from driver and then pick another random peer for replication. Also
+    // temporarily black list the peer for which replication failed.
+    //
+    // This selection of a peer and replication is continued in a loop until one of the
+    // following 3 conditions is fulfilled:
+    // (i) specified number of peers have been replicated to
+    // (ii) too many failures in replicating to peers
+    // (iii) no peer left to replicate to
+    //
+    while (!done) {
+      getRandomPeer() match {
+        case Some(peer) =>
+          try {
+            val onePeerStartTime = System.currentTimeMillis
+            logTrace(s"Trying to replicate $blockId of ${data.size} bytes to $peer")
+            blockTransferService.uploadBlockSync(
+              peer.host,
+              peer.port,
+              peer.executorId,
+              blockId,
+              new NettyManagedBuffer(data.toNetty),
+              tLevel,
+              classTag)
+            logTrace(s"Replicated $blockId of ${data.size} bytes to $peer in %s ms"
+              .format(System.currentTimeMillis - onePeerStartTime))
+            peersReplicatedTo += peer
+            peersForReplication -= peer
+            replicationFailed = false
+            if (peersReplicatedTo.size == numPeersToReplicateTo) {
+              done = true  // specified number of peers have been replicated to
+            }
+          } catch {
+            case NonFatal(e) =>
+              logWarning(s"Failed to replicate $blockId to $peer, failure #$failures", e)
+              failures += 1
+              replicationFailed = true
+              peersFailedToReplicateTo += peer
+              if (failures > maxReplicationFailures) { // too many failures in replicating to peers
+                done = true
+              }
           }
 
           numFailures += 1
@@ -1489,10 +1481,8 @@ private[spark] class BlockManager(
   }
 
   private def addUpdatedBlockStatusToTaskMetrics(blockId: BlockId, status: BlockStatus): Unit = {
-    if (conf.get(config.TASK_METRICS_TRACK_UPDATED_BLOCK_STATUSES)) {
-      Option(TaskContext.get()).foreach { c =>
-        c.taskMetrics().incUpdatedBlockStatuses(blockId -> status)
-      }
+    Option(TaskContext.get()).foreach { c =>
+      c.taskMetrics().incUpdatedBlockStatuses(blockId -> status)
     }
   }
 

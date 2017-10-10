@@ -34,7 +34,8 @@ case class BroadcastNestedLoopJoinExec(
     right: SparkPlan,
     buildSide: BuildSide,
     joinType: JoinType,
-    condition: Option[Expression]) extends BinaryExecNode {
+    condition: Option[Expression],
+    withinBroadcastThreshold: Boolean = true) extends BinaryExecNode {
 
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
@@ -52,7 +53,7 @@ case class BroadcastNestedLoopJoinExec(
       UnspecifiedDistribution :: BroadcastDistribution(IdentityBroadcastMode) :: Nil
   }
 
-  private[this] def genResultProjection: UnsafeProjection = joinType match {
+  private[this] def genResultProjection: InternalRow => InternalRow = joinType match {
     case LeftExistence(j) =>
       UnsafeProjection.create(output, output)
     case other =>
@@ -205,14 +206,14 @@ case class BroadcastNestedLoopJoinExec(
       val joinedRow = new JoinedRow
 
       if (condition.isDefined) {
-        val resultRow = new GenericInternalRow(Array[Any](null))
+        val resultRow = new GenericMutableRow(Array[Any](null))
         streamedIter.map { row =>
           val result = buildRows.exists(r => boundCondition(joinedRow(row, r)))
           resultRow.setBoolean(0, result)
           joinedRow(row, resultRow)
         }
       } else {
-        val resultRow = new GenericInternalRow(Array[Any](buildRows.nonEmpty))
+        val resultRow = new GenericMutableRow(Array[Any](buildRows.nonEmpty))
         streamedIter.map { row =>
           joinedRow(row, resultRow)
         }
@@ -337,6 +338,15 @@ case class BroadcastNestedLoopJoinExec(
       matchedStreamRows,
       sparkContext.makeRDD(notMatchedBroadcastRows)
     )
+  }
+
+  protected override def doPrepare(): Unit = {
+    if (!withinBroadcastThreshold && !sqlContext.conf.crossJoinEnabled) {
+      throw new AnalysisException("Both sides of this join are outside the broadcasting " +
+        "threshold and computing it could be prohibitively expensive. To explicitly enable it, " +
+        s"please set ${SQLConf.CROSS_JOINS_ENABLED.key} = true")
+    }
+    super.doPrepare()
   }
 
   protected override def doExecute(): RDD[InternalRow] = {

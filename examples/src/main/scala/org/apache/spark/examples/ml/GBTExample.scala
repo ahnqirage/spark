@@ -134,14 +134,14 @@ object GBTExample {
     }
   }
 
-  def run(params: Params): Unit = {
+  def run(params: Params) {
     val spark = SparkSession
       .builder
       .appName(s"GBTExample with $params")
       .getOrCreate()
 
     params.checkpointDir.foreach(spark.sparkContext.setCheckpointDir)
-    val algo = params.algo.toLowerCase(Locale.ROOT)
+    val algo = params.algo.toLowerCase
 
     println(s"GBTExample with parameters:\n$params")
 

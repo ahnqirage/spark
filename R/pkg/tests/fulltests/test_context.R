@@ -21,10 +21,10 @@ test_that("Check masked functions", {
   # Check that we are not masking any new function from base, stats, testthat unexpectedly
   # NOTE: We should avoid adding entries to *namesOfMaskedCompletely* as masked functions make it
   # hard for users to use base R functions. Please check when in doubt.
-  namesOfMaskedCompletely <- c("cov", "filter", "sample", "not")
+  namesOfMaskedCompletely <- c("cov", "filter", "sample")
   namesOfMasked <- c("describe", "cov", "filter", "lag", "na.omit", "predict", "sd", "var",
                      "colnames", "colnames<-", "intersect", "rank", "rbind", "sample", "subset",
-                     "summary", "transform", "drop", "window", "as.data.frame", "union", "not")
+                     "summary", "transform", "drop", "window", "as.data.frame", "union")
   if (as.numeric(R.version$major) >= 3 && as.numeric(R.version$minor) >= 3) {
     namesOfMasked <- c("endsWith", "startsWith", namesOfMasked)
   }
@@ -56,29 +56,33 @@ test_that("Check masked functions", {
 
 test_that("repeatedly starting and stopping SparkR", {
   for (i in 1:4) {
-    sc <- suppressWarnings(sparkR.init(master = sparkRTestMaster))
+    sc <- suppressWarnings(sparkR.init())
     rdd <- parallelize(sc, 1:20, 2L)
     expect_equal(countRDD(rdd), 20)
     suppressWarnings(sparkR.stop())
   }
 })
 
-test_that("repeatedly starting and stopping SparkSession", {
-  for (i in 1:4) {
-    sparkR.session(master = sparkRTestMaster, enableHiveSupport = FALSE)
-    df <- createDataFrame(data.frame(dummy = 1:i))
-    expect_equal(count(df), i)
-    sparkR.session.stop()
-  }
-})
+# Does not work consistently even with Hive off
+# nolint start
+# test_that("repeatedly starting and stopping SparkR", {
+#   for (i in 1:4) {
+#     sparkR.session(enableHiveSupport = FALSE)
+#     df <- createDataFrame(data.frame(dummy=1:i))
+#     expect_equal(count(df), i)
+#     sparkR.session.stop()
+#     Sys.sleep(5) # Need more time to shutdown Hive metastore
+#   }
+# })
+# nolint end
 
 test_that("rdd GC across sparkR.stop", {
-  sc <- sparkR.sparkContext(master = sparkRTestMaster) # sc should get id 0
+  sc <- sparkR.sparkContext() # sc should get id 0
   rdd1 <- parallelize(sc, 1:20, 2L) # rdd1 should get id 1
   rdd2 <- parallelize(sc, 1:10, 2L) # rdd2 should get id 2
   sparkR.session.stop()
 
-  sc <- sparkR.sparkContext(master = sparkRTestMaster) # sc should get id 0 again
+  sc <- sparkR.sparkContext() # sc should get id 0 again
 
   # GC rdd1 before creating rdd3 and rdd2 after
   rm(rdd1)
@@ -96,11 +100,10 @@ test_that("rdd GC across sparkR.stop", {
 })
 
 test_that("job group functions can be called", {
-  sc <- sparkR.sparkContext(master = sparkRTestMaster)
+  sc <- sparkR.sparkContext()
   setJobGroup("groupId", "job description", TRUE)
   cancelJobGroup("groupId")
   clearJobGroup()
-  setJobDescription("job description")
 
   suppressWarnings(setJobGroup(sc, "groupId", "job description", TRUE))
   suppressWarnings(cancelJobGroup(sc, "groupId"))
@@ -109,7 +112,7 @@ test_that("job group functions can be called", {
 })
 
 test_that("utility function can be called", {
-  sparkR.sparkContext(master = sparkRTestMaster)
+  sparkR.sparkContext()
   setLogLevel("ERROR")
   sparkR.session.stop()
 })
@@ -162,50 +165,8 @@ test_that("sparkJars sparkPackages as comma-separated strings", {
 })
 
 test_that("spark.lapply should perform simple transforms", {
-  sparkR.sparkContext(master = sparkRTestMaster)
+  sc <- sparkR.sparkContext()
   doubled <- spark.lapply(1:10, function(x) { 2 * x })
   expect_equal(doubled, as.list(2 * 1:10))
-  sparkR.session.stop()
-})
-
-test_that("add and get file to be downloaded with Spark job on every node", {
-  sparkR.sparkContext(master = sparkRTestMaster)
-  # Test add file.
-  path <- tempfile(pattern = "hello", fileext = ".txt")
-  filename <- basename(path)
-  words <- "Hello World!"
-  writeLines(words, path)
-  spark.addFile(path)
-  download_path <- spark.getSparkFiles(filename)
-  expect_equal(readLines(download_path), words)
-
-  # Test spark.getSparkFiles works well on executors.
-  seq <- seq(from = 1, to = 10, length.out = 5)
-  f <- function(seq) { spark.getSparkFiles(filename) }
-  results <- spark.lapply(seq, f)
-  for (i in 1:5) { expect_equal(basename(results[[i]]), filename) }
-
-  unlink(path)
-
-  # Test add directory recursively.
-  path <- paste0(tempdir(), "/", "recursive_dir")
-  dir.create(path)
-  dir_name <- basename(path)
-  path1 <- paste0(path, "/", "hello.txt")
-  file.create(path1)
-  sub_path <- paste0(path, "/", "sub_hello")
-  dir.create(sub_path)
-  path2 <- paste0(sub_path, "/", "sub_hello.txt")
-  file.create(path2)
-  words <- "Hello World!"
-  sub_words <- "Sub Hello World!"
-  writeLines(words, path1)
-  writeLines(sub_words, path2)
-  spark.addFile(path, recursive = TRUE)
-  download_path1 <- spark.getSparkFiles(paste0(dir_name, "/", "hello.txt"))
-  expect_equal(readLines(download_path1), words)
-  download_path2 <- spark.getSparkFiles(paste0(dir_name, "/", "sub_hello/sub_hello.txt"))
-  expect_equal(readLines(download_path2), sub_words)
-  unlink(path, recursive = TRUE)
   sparkR.session.stop()
 })

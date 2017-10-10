@@ -18,6 +18,8 @@
 package org.apache.spark.sql.execution.datasources.csv
 
 import java.math.BigDecimal
+import java.text.NumberFormat
+import java.util.Locale
 
 import scala.util.control.Exception._
 
@@ -117,6 +119,7 @@ private[csv] object CSVInferSchema {
     } else {
       tryParseDecimal(field, options)
     }
+    decimalTry.getOrElse(tryParseDouble(field, options))
   }
 
   private def tryParseDecimal(field: String, options: CSVOptions): DataType = {
@@ -215,6 +218,104 @@ private[csv] object CSVInferSchema {
         Some(DoubleType)
       } else {
         Some(DecimalType(range + scale, scale))
+      }
+
+    case _ => None
+  }
+}
+
+private[csv] object CSVTypeCast {
+
+  /**
+   * Casts given string datum to specified type.
+   * Currently we do not support complex types (ArrayType, MapType, StructType).
+   *
+   * For string types, this is simply the datum. For other types.
+   * For other nullable types, this is null if the string datum is empty.
+   *
+   * @param datum string value
+   * @param castType SparkSQL type
+   */
+  def castTo(
+      datum: String,
+      castType: DataType,
+      nullable: Boolean = true,
+      options: CSVOptions = CSVOptions()): Any = {
+
+    if (nullable && datum == options.nullValue) {
+      null
+    } else {
+      castType match {
+        case _: ByteType => datum.toByte
+        case _: ShortType => datum.toShort
+        case _: IntegerType => datum.toInt
+        case _: LongType => datum.toLong
+        case _: FloatType =>
+          datum match {
+            case options.nanValue => Float.NaN
+            case options.negativeInf => Float.NegativeInfinity
+            case options.positiveInf => Float.PositiveInfinity
+            case _ =>
+              Try(datum.toFloat)
+                .getOrElse(NumberFormat.getInstance(Locale.getDefault).parse(datum).floatValue())
+          }
+        case _: DoubleType =>
+          datum match {
+            case options.nanValue => Double.NaN
+            case options.negativeInf => Double.NegativeInfinity
+            case options.positiveInf => Double.PositiveInfinity
+            case _ =>
+              Try(datum.toDouble)
+                .getOrElse(NumberFormat.getInstance(Locale.getDefault).parse(datum).doubleValue())
+          }
+        case _: BooleanType => datum.toBoolean
+        case dt: DecimalType =>
+          val value = new BigDecimal(datum.replaceAll(",", ""))
+          Decimal(value, dt.precision, dt.scale)
+        case _: TimestampType =>
+          // This one will lose microseconds parts.
+          // See https://issues.apache.org/jira/browse/SPARK-10681.
+          Try(options.timestampFormat.parse(datum).getTime * 1000L)
+            .getOrElse {
+              // If it fails to parse, then tries the way used in 2.0 and 1.x for backwards
+              // compatibility.
+              DateTimeUtils.stringToTime(datum).getTime * 1000L
+            }
+        case _: DateType =>
+          // This one will lose microseconds parts.
+          // See https://issues.apache.org/jira/browse/SPARK-10681.x
+          Try(DateTimeUtils.millisToDays(options.dateFormat.parse(datum).getTime))
+            .getOrElse {
+              // If it fails to parse, then tries the way used in 2.0 and 1.x for backwards
+              // compatibility.
+              DateTimeUtils.millisToDays(DateTimeUtils.stringToTime(datum).getTime)
+            }
+        case _: StringType => UTF8String.fromString(datum)
+        case udt: UserDefinedType[_] => castTo(datum, udt.sqlType, nullable, options)
+        case _ => throw new RuntimeException(s"Unsupported type: ${castType.typeName}")
+      }
+    }
+  }
+
+  /**
+   * Helper method that converts string representation of a character to actual character.
+   * It handles some Java escaped strings and throws exception if given string is longer than one
+   * character.
+   */
+  @throws[IllegalArgumentException]
+  def toChar(str: String): Char = {
+    if (str.charAt(0) == '\\') {
+      str.charAt(1)
+      match {
+        case 't' => '\t'
+        case 'r' => '\r'
+        case 'b' => '\b'
+        case 'f' => '\f'
+        case '\"' => '\"' // In case user changes quote char and uses \" as delimiter in options
+        case '\'' => '\''
+        case 'u' if str == """\u0000""" => '\u0000'
+        case _ =>
+          throw new IllegalArgumentException(s"Unsupported special character for delimiter: $str")
       }
 
     case _ => None

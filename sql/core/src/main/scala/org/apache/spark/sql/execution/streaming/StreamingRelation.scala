@@ -18,11 +18,9 @@
 package org.apache.spark.sql.execution.streaming
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.logical.LeafNode
-import org.apache.spark.sql.catalyst.plans.logical.Statistics
 import org.apache.spark.sql.execution.LeafExecNode
 import org.apache.spark.sql.execution.datasources.DataSource
 
@@ -65,6 +63,17 @@ case class StreamingExecutionRelation(
   override def computeStats(): Statistics = Statistics(
     sizeInBytes = BigInt(session.sessionState.conf.defaultSizeInBytes)
   )
+}
+
+/**
+ * A dummy physical plan for [[StreamingRelation]] to support
+ * [[org.apache.spark.sql.Dataset.explain]]
+ */
+case class StreamingRelationExec(sourceName: String, output: Seq[Attribute]) extends LeafExecNode {
+  override def toString: String = sourceName
+  override protected def doExecute(): RDD[InternalRow] = {
+    throw new UnsupportedOperationException("StreamingRelationExec cannot be executed")
+  }
 }
 
 /**

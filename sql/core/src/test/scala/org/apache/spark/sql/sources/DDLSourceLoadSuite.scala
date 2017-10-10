@@ -25,8 +25,8 @@ import org.apache.spark.sql.types._
 // please note that the META-INF/services had to be modified for the test directory for this to work
 class DDLSourceLoadSuite extends DataSourceTest with SharedSQLContext {
 
-  test("data sources with the same name - internal data sources") {
-    val e = intercept[AnalysisException] {
+  test("data sources with the same name") {
+    intercept[RuntimeException] {
       spark.read.format("Fluet da Bomb").load()
     }
     assert(e.getMessage.contains("Multiple sources found for Fluet da Bomb"))
@@ -45,13 +45,13 @@ class DDLSourceLoadSuite extends DataSourceTest with SharedSQLContext {
   }
 
   test("load data source from format alias") {
-    assert(spark.read.format("gathering quorum").load().schema ==
-      StructType(Seq(StructField("stringType", StringType, nullable = false))))
+    spark.read.format("gathering quorum").load().schema ==
+      StructType(Seq(StructField("stringType", StringType, nullable = false)))
   }
 
   test("specify full classname with duplicate formats") {
-    assert(spark.read.format("org.apache.spark.sql.sources.FakeSourceOne")
-      .load().schema == StructType(Seq(StructField("stringType", StringType, nullable = false))))
+    spark.read.format("org.apache.spark.sql.sources.FakeSourceOne")
+      .load().schema == StructType(Seq(StructField("stringType", StringType, nullable = false)))
   }
 
   test("should fail to load ORC without Hive Support") {

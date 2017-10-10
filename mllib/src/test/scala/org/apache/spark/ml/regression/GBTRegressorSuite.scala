@@ -77,7 +77,7 @@ class GBTRegressorSuite extends SparkFunSuite with MLlibTestSparkContext
   }
 
   test("GBTRegressor behaves reasonably on toy data") {
-    val df = Seq(
+    val df = spark.createDataFrame(Seq(
       LabeledPoint(10, Vectors.dense(1, 2, 3, 4)),
       LabeledPoint(-5, Vectors.dense(6, 3, 2, 1)),
       LabeledPoint(11, Vectors.dense(2, 2, 3, 4)),
@@ -103,7 +103,7 @@ class GBTRegressorSuite extends SparkFunSuite with MLlibTestSparkContext
     val path = tempDir.toURI.toString
     sc.setCheckpointDir(path)
 
-    val df = data.toDF()
+    val df = spark.createDataFrame(data)
     val gbt = new GBTRegressor()
       .setMaxDepth(2)
       .setMaxIter(5)

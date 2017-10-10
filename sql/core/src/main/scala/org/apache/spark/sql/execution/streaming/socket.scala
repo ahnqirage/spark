@@ -21,7 +21,7 @@ import java.io.{BufferedReader, InputStreamReader, IOException}
 import java.net.Socket
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.util.{Calendar, Locale}
+import java.util.Calendar
 import javax.annotation.concurrent.GuardedBy
 
 import scala.collection.mutable.ListBuffer
@@ -29,17 +29,15 @@ import scala.util.{Failure, Success, Try}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.{DataSourceRegister, StreamSourceProvider}
 import org.apache.spark.sql.types.{StringType, StructField, StructType, TimestampType}
-import org.apache.spark.unsafe.types.UTF8String
 
 
 object TextSocketSource {
   val SCHEMA_REGULAR = StructType(StructField("value", StringType) :: Nil)
   val SCHEMA_TIMESTAMP = StructType(StructField("value", StringType) ::
     StructField("timestamp", TimestampType) :: Nil)
-  val DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+  val DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 }
 
 /**
@@ -48,8 +46,8 @@ object TextSocketSource {
  * support for fault recovery and keeping all of the text read in memory forever.
  */
 class TextSocketSource(host: String, port: Int, includeTimestamp: Boolean, sqlContext: SQLContext)
-  extends Source with Logging {
-
+  extends Source with Logging
+{
   @GuardedBy("this")
   private var socket: Socket = null
 
@@ -118,8 +116,8 @@ class TextSocketSource(host: String, port: Int, includeTimestamp: Boolean, sqlCo
   /** Returns the data that is between the offsets (`start`, `end`]. */
   override def getBatch(start: Option[Offset], end: Offset): DataFrame = synchronized {
     val startOrdinal =
-      start.flatMap(LongOffset.convert).getOrElse(LongOffset(-1)).offset.toInt + 1
-    val endOrdinal = LongOffset.convert(end).getOrElse(LongOffset(-1)).offset.toInt + 1
+      start.map(_.asInstanceOf[LongOffset]).getOrElse(LongOffset(-1)).offset.toInt + 1
+    val endOrdinal = end.asInstanceOf[LongOffset].offset.toInt + 1
 
     // Internal buffer only holds the batches after lastOffsetCommitted
     val rawList = synchronized {
@@ -128,26 +126,34 @@ class TextSocketSource(host: String, port: Int, includeTimestamp: Boolean, sqlCo
       batches.slice(sliceStart, sliceEnd)
     }
 
-    val rdd = sqlContext.sparkContext
-      .parallelize(rawList)
-      .map { case (v, ts) => InternalRow(UTF8String.fromString(v), ts.getTime) }
-    sqlContext.internalCreateDataFrame(rdd, schema, isStreaming = true)
+    import sqlContext.implicits._
+    val rawBatch = sqlContext.createDataset(rawList)
+
+    // Underlying MemoryStream has schema (String, Timestamp); strip out the timestamp
+    // if requested.
+    if (includeTimestamp) {
+      rawBatch.toDF("value", "timestamp")
+    } else {
+      // Strip out timestamp
+      rawBatch.select("_1").toDF("value")
+    }
   }
 
   override def commit(end: Offset): Unit = synchronized {
-    val newOffset = LongOffset.convert(end).getOrElse(
+    if (end.isInstanceOf[LongOffset]) {
+      val newOffset = end.asInstanceOf[LongOffset]
+      val offsetDiff = (newOffset.offset - lastOffsetCommitted.offset).toInt
+
+      if (offsetDiff < 0) {
+        sys.error(s"Offsets committed out of order: $lastOffsetCommitted followed by $end")
+      }
+
+      batches.trimStart(offsetDiff)
+      lastOffsetCommitted = newOffset
+    } else {
       sys.error(s"TextSocketStream.commit() received an offset ($end) that did not " +
         s"originate with an instance of this class")
-    )
-
-    val offsetDiff = (newOffset.offset - lastOffsetCommitted.offset).toInt
-
-    if (offsetDiff < 0) {
-      sys.error(s"Offsets committed out of order: $lastOffsetCommitted followed by $end")
     }
-
-    batches.trimStart(offsetDiff)
-    lastOffsetCommitted = newOffset
   }
 
   /** Stop this source. */
@@ -163,8 +169,6 @@ class TextSocketSource(host: String, port: Int, includeTimestamp: Boolean, sqlCo
       socket = null
     }
   }
-
-  override def toString: String = s"TextSocketSource[host: $host, port: $port]"
 }
 
 class TextSocketSourceProvider extends StreamSourceProvider with DataSourceRegister with Logging {
@@ -190,17 +194,13 @@ class TextSocketSourceProvider extends StreamSourceProvider with DataSourceRegis
     if (!parameters.contains("port")) {
       throw new AnalysisException("Set a port to read from with option(\"port\", ...).")
     }
-    if (schema.nonEmpty) {
-      throw new AnalysisException("The socket source does not support a user-specified schema.")
-    }
-
-    val sourceSchema =
+    val schema =
       if (parseIncludeTimestamp(parameters)) {
         TextSocketSource.SCHEMA_TIMESTAMP
       } else {
         TextSocketSource.SCHEMA_REGULAR
       }
-    ("textSocket", sourceSchema)
+    ("textSocket", schema)
   }
 
   override def createSource(

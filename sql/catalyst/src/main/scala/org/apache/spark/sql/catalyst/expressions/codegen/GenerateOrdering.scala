@@ -124,7 +124,7 @@ object GenerateOrdering extends CodeGenerator[Seq[SortOrder], Ordering[InternalR
       """
     }
 
-    val code = ctx.splitExpressions(
+    ctx.splitExpressions(
       expressions = comparisons,
       funcName = "compare",
       arguments = Seq(("InternalRow", "a"), ("InternalRow", "b")),
@@ -147,12 +147,6 @@ object GenerateOrdering extends CodeGenerator[Seq[SortOrder], Ordering[InternalR
           """
         }.mkString
       })
-    // make sure INPUT_ROW is declared even if splitExpressions
-    // returns an inlined block
-    s"""
-       |InternalRow ${ctx.INPUT_ROW} = null;
-       |$code
-     """.stripMargin
   }
 
   protected def create(ordering: Seq[SortOrder]): BaseOrdering = {

@@ -503,19 +503,6 @@ class UISeleniumSuite extends SparkFunSuite with WebBrowser with Matchers with B
       sc.parallelize(1 to 10).map{x => Thread.sleep(10000); x}.countAsync()
       eventually(timeout(5 seconds), interval(50 milliseconds)) {
         val url = new URL(
-          sc.ui.get.webUrl.stripSuffix("/") + "/stages/stage/kill/?id=0")
-        // SPARK-6846: should be POST only but YARN AM doesn't proxy POST
-        TestUtils.httpResponseCode(url, "GET") should be (200)
-        TestUtils.httpResponseCode(url, "POST") should be (200)
-      }
-    }
-  }
-
-  test("kill job POST/GET response is correct") {
-    withSpark(newSparkContext(killEnabled = true)) { sc =>
-      sc.parallelize(1 to 10).map{x => Thread.sleep(10000); x}.countAsync()
-      eventually(timeout(5 seconds), interval(50 milliseconds)) {
-        val url = new URL(
           sc.ui.get.webUrl.stripSuffix("/") + "/jobs/job/kill/?id=0")
         // SPARK-6846: should be POST only but YARN AM doesn't proxy POST
         TestUtils.httpResponseCode(url, "GET") should be (200)

@@ -39,8 +39,14 @@ public class JavaIsotonicRegressionExample {
       jsc.sc(), "data/mllib/sample_isotonic_regression_libsvm_data.txt").toJavaRDD();
 
     // Create label, feature, weight tuples from input data with weight set to default value 1.0.
-    JavaRDD<Tuple3<Double, Double, Double>> parsedData = data.map(point ->
-      new Tuple3<>(point.label(), point.features().apply(0), 1.0));
+    JavaRDD<Tuple3<Double, Double, Double>> parsedData = data.map(
+      new Function<LabeledPoint, Tuple3<Double, Double, Double>>() {
+        public Tuple3<Double, Double, Double> call(LabeledPoint point) {
+          return new Tuple3<>(new Double(point.label()),
+            new Double(point.features().apply(0)), 1.0);
+        }
+      }
+    );
 
     // Split data into training (60%) and test (40%) sets.
     JavaRDD<Tuple3<Double, Double, Double>>[] splits =
@@ -50,7 +56,8 @@ public class JavaIsotonicRegressionExample {
 
     // Create isotonic regression model from training data.
     // Isotonic parameter defaults to true so it is only shown for demonstration
-    IsotonicRegressionModel model = new IsotonicRegression().setIsotonic(true).run(training);
+    final IsotonicRegressionModel model =
+      new IsotonicRegression().setIsotonic(true).run(training);
 
     // Create tuples of predicted and real labels.
     JavaPairRDD<Double, Double> predictionAndLabel = test.mapToPair(point ->

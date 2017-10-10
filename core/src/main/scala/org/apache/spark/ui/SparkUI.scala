@@ -131,12 +131,6 @@ private[spark] class SparkUI private (
   def getApplicationInfo(appId: String): Option[ApplicationInfo] = {
     getApplicationInfoList.find(_.id == appId)
   }
-
-  def getStreamingJobProgressListener: Option[SparkListener] = streamingJobProgressListener
-
-  def setStreamingJobProgressListener(sparkListener: SparkListener): Unit = {
-    streamingJobProgressListener = Option(sparkListener)
-  }
 }
 
 private[spark] abstract class SparkUITab(parent: SparkUI, prefix: String)

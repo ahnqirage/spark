@@ -25,7 +25,7 @@ import scala.reflect.ClassTag
 
 import org.scalatest.concurrent.Eventually.eventually
 
-import org.apache.spark.{HashPartitioner, SparkConf, SparkException}
+import org.apache.spark.{SparkConf, SparkException}
 import org.apache.spark.rdd.{BlockRDD, RDD}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.dstream.{DStream, WindowedDStream}

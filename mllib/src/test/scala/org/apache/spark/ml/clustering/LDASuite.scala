@@ -142,8 +142,8 @@ class LDASuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRead
       new LDA().setTopicConcentration(-1.1)
     }
 
-    val dummyDF = Seq((1, Vectors.dense(1.0, 2.0))).toDF("id", "features")
-
+    val dummyDF = spark.createDataFrame(Seq(
+      (1, Vectors.dense(1.0, 2.0)))).toDF("id", "features")
     // validate parameters
     lda.transformSchema(dummyDF.schema)
     lda.setDocConcentration(1.1)

@@ -49,20 +49,6 @@ class MasterWebUI(
     attachHandler(createRedirectHandler(
       "/driver/kill", "/", masterPage.handleDriverKillRequest, httpMethods = Set("POST")))
   }
-
-  def addProxy(): Unit = {
-    val handler = createProxyHandler(idToUiAddress)
-    attachHandler(handler)
-  }
-
-  def idToUiAddress(id: String): Option[String] = {
-    val state = masterEndpointRef.askSync[MasterStateResponse](RequestMasterState)
-    val maybeWorkerUiAddress = state.workers.find(_.id == id).map(_.webUiAddress)
-    val maybeAppUiAddress = state.activeApps.find(_.id == id).map(_.desc.appUiUrl)
-
-    maybeWorkerUiAddress.orElse(maybeAppUiAddress)
-  }
-
 }
 
 private[master] object MasterWebUI {

@@ -89,6 +89,8 @@ private[state] class HDFSBackedStateStoreProvider extends StateStoreProvider wit
     private val newVersion = version + 1
     private val tempDeltaFile = new Path(baseDir, s"temp-${Random.nextLong}")
     private lazy val tempDeltaFileStream = compressStream(fs.create(tempDeltaFile, true))
+    private val allUpdates = new java.util.HashMap[UnsafeRow, StoreUpdate]()
+
     @volatile private var state: STATE = UPDATING
     @volatile private var finalDeltaFile: Path = null
 
@@ -100,17 +102,47 @@ private[state] class HDFSBackedStateStoreProvider extends StateStoreProvider wit
 
     override def put(key: UnsafeRow, value: UnsafeRow): Unit = {
       verify(state == UPDATING, "Cannot put after already committed or aborted")
-      val keyCopy = key.copy()
-      val valueCopy = value.copy()
-      mapToUpdate.put(keyCopy, valueCopy)
-      writeUpdateToDeltaFile(tempDeltaFileStream, keyCopy, valueCopy)
+
+      val isNewKey = !mapToUpdate.containsKey(key)
+      mapToUpdate.put(key, value)
+
+      Option(allUpdates.get(key)) match {
+        case Some(ValueAdded(_, _)) =>
+          // Value did not exist in previous version and was added already, keep it marked as added
+          allUpdates.put(key, ValueAdded(key, value))
+        case Some(ValueUpdated(_, _)) | Some(KeyRemoved(_)) =>
+          // Value existed in previous version and updated/removed, mark it as updated
+          allUpdates.put(key, ValueUpdated(key, value))
+        case None =>
+          // There was no prior update, so mark this as added or updated according to its presence
+          // in previous version.
+          val update = if (isNewKey) ValueAdded(key, value) else ValueUpdated(key, value)
+          allUpdates.put(key, update)
+      }
+      writeToDeltaFile(tempDeltaFileStream, ValueUpdated(key, value))
     }
 
     override def remove(key: UnsafeRow): Unit = {
       verify(state == UPDATING, "Cannot remove after already committed or aborted")
-      val prevValue = mapToUpdate.remove(key)
-      if (prevValue != null) {
-        writeRemoveToDeltaFile(tempDeltaFileStream, key)
+
+      val keyIter = mapToUpdate.keySet().iterator()
+      while (keyIter.hasNext) {
+        val key = keyIter.next
+        if (condition(key)) {
+          keyIter.remove()
+
+          Option(allUpdates.get(key)) match {
+            case Some(ValueUpdated(_, _)) | None =>
+              // Value existed in previous version and maybe was updated, mark removed
+              allUpdates.put(key, KeyRemoved(key))
+            case Some(ValueAdded(_, _)) =>
+              // Value did not exist in previous version and was added, should not appear in updates
+              allUpdates.remove(key)
+            case Some(KeyRemoved(_)) =>
+              // Remove already in update map, no need to change
+          }
+          writeToDeltaFile(tempDeltaFileStream, KeyRemoved(key))
+        }
       }
     }
 
@@ -176,6 +208,8 @@ private[state] class HDFSBackedStateStoreProvider extends StateStoreProvider wit
       StateStoreMetrics(mapToUpdate.size(), SizeEstimator.estimate(mapToUpdate), Map.empty)
     }
 
+    override def numKeys(): Long = mapToUpdate.size()
+
     /**
      * Whether all updates have been committed
      */
@@ -184,7 +218,7 @@ private[state] class HDFSBackedStateStoreProvider extends StateStoreProvider wit
     }
 
     override def toString(): String = {
-      s"HDFSStateStore[id=(op=${id.operatorId},part=${id.partitionId}),dir=$baseDir]"
+      s"HDFSStateStore[id = (op=${id.operatorId}, part=${id.partitionId}), dir = $baseDir]"
     }
   }
 
@@ -237,8 +271,7 @@ private[state] class HDFSBackedStateStoreProvider extends StateStoreProvider wit
   }
 
   override def toString(): String = {
-    s"HDFSStateStoreProvider[" +
-      s"id = (op=${stateStoreId.operatorId},part=${stateStoreId.partitionId}),dir = $baseDir]"
+    s"HDFSStateStoreProvider[id = (op=${id.operatorId}, part=${id.partitionId}), dir = $baseDir]"
   }
 
   /* Internal fields and methods */

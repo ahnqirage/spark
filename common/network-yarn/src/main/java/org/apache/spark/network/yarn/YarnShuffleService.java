@@ -29,7 +29,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -85,11 +84,6 @@ public class YarnShuffleService extends AuxiliaryService {
   private static final String RECOVERY_FILE_NAME = "registeredExecutors.ldb";
   private static final String SECRETS_RECOVERY_FILE_NAME = "sparkShuffleRecovery.ldb";
 
-  // Whether failure during service initialization should stop the NM.
-  @VisibleForTesting
-  static final String STOP_ON_FAILURE_KEY = "spark.yarn.shuffle.stopOnFailure";
-  private static final boolean DEFAULT_STOP_ON_FAILURE = false;
-
   // just for testing when you want to find an open port
   @VisibleForTesting
   static int boundPort = -1;
@@ -112,10 +106,6 @@ public class YarnShuffleService extends AuxiliaryService {
   private TransportServer shuffleServer = null;
 
   private Configuration _conf = null;
-
-  // The recovery path used to shuffle service recovery
-  @VisibleForTesting
-  Path _recoveryPath = null;
 
   // Handles registering executors and opening shuffle blocks
   @VisibleForTesting
@@ -150,10 +140,8 @@ public class YarnShuffleService extends AuxiliaryService {
    * Start the shuffle server with the given configuration.
    */
   @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    _conf = conf;
-
-    boolean stopOnFailure = conf.getBoolean(STOP_ON_FAILURE_KEY, DEFAULT_STOP_ON_FAILURE);
+  protected void serviceInit(Configuration conf) {
+     _conf = conf;
 
     try {
       // In case this NM was killed while there were running spark applications, we need to restore
@@ -161,23 +149,18 @@ public class YarnShuffleService extends AuxiliaryService {
       // If we don't find one, then we choose a file to use to save the state next time.  Even if
       // an application was stopped while the NM was down, we expect yarn to call stopApplication()
       // when it comes back
-      if (_recoveryPath != null) {
-        registeredExecutorFile = initRecoveryDb(RECOVERY_FILE_NAME);
-      }
+      registeredExecutorFile = findRecoveryDb(RECOVERY_FILE_NAME);
 
       TransportConf transportConf = new TransportConf("shuffle", new HadoopConfigProvider(conf));
-      blockHandler = new ExternalShuffleBlockHandler(transportConf, registeredExecutorFile);
+        blockHandler = new ExternalShuffleBlockHandler(transportConf, registeredExecutorFile);
 
       // If authentication is enabled, set up the shuffle server to use a
       // special RPC handler that filters out unauthenticated fetch requests
-      List<TransportServerBootstrap> bootstraps = Lists.newArrayList();
       boolean authEnabled = conf.getBoolean(SPARK_AUTHENTICATE_KEY, DEFAULT_SPARK_AUTHENTICATE);
+      List<TransportServerBootstrap> bootstraps = Lists.newArrayList();
       if (authEnabled) {
-        secretManager = new ShuffleSecretManager();
-        if (_recoveryPath != null) {
-          loadSecretsFromDb();
-        }
-        bootstraps.add(new AuthServerBootstrap(transportConf, secretManager));
+        createSecretManager();
+        bootstraps.add(new SaslServerBootstrap(transportConf, secretManager));
       }
 
       int port = conf.getInt(
@@ -200,12 +183,13 @@ public class YarnShuffleService extends AuxiliaryService {
     }
   }
 
-  private void loadSecretsFromDb() throws IOException {
-    secretsFile = initRecoveryDb(SECRETS_RECOVERY_FILE_NAME);
+  private void createSecretManager() throws IOException {
+    secretManager = new ShuffleSecretManager();
+    secretsFile = findRecoveryDb(SECRETS_RECOVERY_FILE_NAME);
 
     // Make sure this is protected in case its not in the NM recovery dir
     FileSystem fs = FileSystem.getLocal(_conf);
-    fs.mkdirs(new Path(secretsFile.getPath()), new FsPermission((short) 0700));
+    fs.mkdirs(new Path(secretsFile.getPath()), new FsPermission((short)0700));
 
     db = LevelDBProvider.initLevelDB(secretsFile, CURRENT_VERSION, mapper);
     logger.info("Recovery location is: " + secretsFile.getPath());
@@ -295,6 +279,17 @@ public class YarnShuffleService extends AuxiliaryService {
     logger.info("Stopping container {}", containerId);
   }
 
+  private File findRecoveryDb(String fileName) {
+    String[] localDirs = _conf.getTrimmedStrings("yarn.nodemanager.local-dirs");
+    for (String dir: localDirs) {
+      File f = new File(new Path(dir).toUri().getPath(), fileName);
+      if (f.exists()) {
+        return f;
+      }
+    }
+    return new File(new Path(localDirs[0]).toUri().getPath(), fileName);
+  }
+
   /**
    * Close the shuffle server to clean up any associated state.
    */
@@ -319,73 +314,6 @@ public class YarnShuffleService extends AuxiliaryService {
   @Override
   public ByteBuffer getMetaData() {
     return ByteBuffer.allocate(0);
-  }
-
-  /**
-   * Set the recovery path for shuffle service recovery when NM is restarted. This will be call
-   * by NM if NM recovery is enabled.
-   */
-  @Override
-  public void setRecoveryPath(Path recoveryPath) {
-    _recoveryPath = recoveryPath;
-  }
-
-  /**
-   * Get the path specific to this auxiliary service to use for recovery.
-   */
-  protected Path getRecoveryPath(String fileName) {
-    return _recoveryPath;
-  }
-
-  /**
-   * Figure out the recovery path and handle moving the DB if YARN NM recovery gets enabled
-   * and DB exists in the local dir of NM by old version of shuffle service.
-   */
-  protected File initRecoveryDb(String dbName) {
-    if (_recoveryPath != null) {
-        File recoveryFile = new File(_recoveryPath.toUri().getPath(), dbName);
-        if (recoveryFile.exists()) {
-          return recoveryFile;
-        }
-    }
-
-    // db doesn't exist in recovery path go check local dirs for it
-    String[] localDirs = _conf.getTrimmedStrings("yarn.nodemanager.local-dirs");
-    for (String dir : localDirs) {
-      File f = new File(new Path(dir).toUri().getPath(), dbName);
-      if (f.exists()) {
-        if (_recoveryPath == null) {
-          // If NM recovery is not enabled, we should specify the recovery path using NM local
-          // dirs, which is compatible with the old code.
-          _recoveryPath = new Path(dir);
-          return f;
-        } else {
-          // If the recovery path is set then either NM recovery is enabled or another recovery
-          // DB has been initialized. If NM recovery is enabled and had set the recovery path
-          // make sure to move all DBs to the recovery path from the old NM local dirs.
-          // If another DB was initialized first just make sure all the DBs are in the same
-          // location.
-          Path newLoc = new Path(_recoveryPath, dbName);
-          Path copyFrom = new Path(f.toURI());
-          if (!newLoc.equals(copyFrom)) {
-            logger.info("Moving " + copyFrom + " to: " + newLoc);
-            try {
-              // The move here needs to handle moving non-empty directories across NFS mounts
-              FileSystem fs = FileSystem.getLocal(_conf);
-              fs.rename(copyFrom, newLoc);
-            } catch (Exception e) {
-              // Fail to move recovery file to new path, just continue on with new DB location
-              logger.error("Failed to move recovery file {} to the path {}",
-                dbName, _recoveryPath.toString(), e);
-            }
-          }
-          return new File(newLoc.toUri().getPath());
-        }
-        return new File(newLoc.toUri().getPath());
-      }
-    }
-
-    return new File(_recoveryPath.toUri().getPath(), dbName);
   }
 
   /**

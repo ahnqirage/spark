@@ -17,8 +17,7 @@
 
 package org.apache.spark.util
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataOutput, DataOutputStream, File,
-  FileOutputStream, PrintStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, FileOutputStream, PrintStream}
 import java.lang.{Double => JDouble, Float => JFloat}
 import java.net.{BindException, ServerSocket, URI}
 import java.nio.{ByteBuffer, ByteOrder}
@@ -427,9 +426,6 @@ class UtilsSuite extends SparkFunSuite with ResetSystemProperties with Logging {
     assert(iterator.toArray === Array(
       (0, -1L + Int.MaxValue), (1, 0L + Int.MaxValue), (2, 1L + Int.MaxValue)
     ))
-    intercept[IllegalArgumentException] {
-      Utils.getIteratorZipWithIndex(Iterator(0, 1, 2), -1L)
-    }
   }
 
   test("doesDirectoryContainFilesNewerThan") {
@@ -869,15 +865,6 @@ class UtilsSuite extends SparkFunSuite with ResetSystemProperties with Logging {
         .set("spark.executor.instances", "1")) === 3)
   }
 
-  test("Set Spark CallerContext") {
-    val context = "test"
-    new CallerContext(context).setCurrentContext()
-    if (CallerContext.callerContextSupported) {
-      val callerContext = Utils.classForName("org.apache.hadoop.ipc.CallerContext")
-      assert(s"SPARK_$context" ===
-        callerContext.getMethod("getCurrent").invoke(null).toString)
-    }
-  }
 
   test("encodeFileNameToURIRawPath") {
     assert(Utils.encodeFileNameToURIRawPath("abc") === "abc")
@@ -999,115 +986,5 @@ class UtilsSuite extends SparkFunSuite with ResetSystemProperties with Logging {
     val pValue = chi.chiSquareTest(expected, observed)
 
     assert(pValue > threshold)
-  }
-
-  test("redact sensitive information") {
-    val sparkConf = new SparkConf
-
-    // Set some secret keys
-    val secretKeys = Seq(
-      "spark.executorEnv.HADOOP_CREDSTORE_PASSWORD",
-      "spark.my.password",
-      "spark.my.sECreT")
-    secretKeys.foreach { key => sparkConf.set(key, "sensitive_value") }
-    // Set a non-secret key
-    sparkConf.set("spark.regular.property", "regular_value")
-    // Set a property with a regular key but secret in the value
-    sparkConf.set("spark.sensitive.property", "has_secret_in_value")
-
-    // Redact sensitive information
-    val redactedConf = Utils.redact(sparkConf, sparkConf.getAll).toMap
-
-    // Assert that secret information got redacted while the regular property remained the same
-    secretKeys.foreach { key => assert(redactedConf(key) === Utils.REDACTION_REPLACEMENT_TEXT) }
-    assert(redactedConf("spark.regular.property") === "regular_value")
-    assert(redactedConf("spark.sensitive.property") === Utils.REDACTION_REPLACEMENT_TEXT)
-
-  }
-
-  test("tryWithSafeFinally") {
-    var e = new Error("Block0")
-    val finallyBlockError = new Error("Finally Block")
-    var isErrorOccurred = false
-    // if the try and finally blocks throw different exception instances
-    try {
-      Utils.tryWithSafeFinally { throw e }(finallyBlock = { throw finallyBlockError })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.head == finallyBlockError)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try and finally blocks throw the same exception instance then it should not
-    // try to add to suppressed and get IllegalArgumentException
-    e = new Error("Block1")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinally { throw e }(finallyBlock = { throw e })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try throws the exception and finally doesn't throw exception
-    e = new Error("Block2")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinally { throw e }(finallyBlock = {})
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try and finally block don't throw exception
-    Utils.tryWithSafeFinally {}(finallyBlock = {})
-  }
-
-  test("tryWithSafeFinallyAndFailureCallbacks") {
-    var e = new Error("Block0")
-    val catchBlockError = new Error("Catch Block")
-    val finallyBlockError = new Error("Finally Block")
-    var isErrorOccurred = false
-    TaskContext.setTaskContext(TaskContext.empty())
-    // if the try, catch and finally blocks throw different exception instances
-    try {
-      Utils.tryWithSafeFinallyAndFailureCallbacks { throw e }(
-        catchBlock = { throw catchBlockError }, finallyBlock = { throw finallyBlockError })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.head == catchBlockError)
-        assert(t.getSuppressed.last == finallyBlockError)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try, catch and finally blocks throw the same exception instance then it should not
-    // try to add to suppressed and get IllegalArgumentException
-    e = new Error("Block1")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinallyAndFailureCallbacks { throw e }(catchBlock = { throw e },
-        finallyBlock = { throw e })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try throws the exception, catch and finally don't throw exceptions
-    e = new Error("Block2")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinallyAndFailureCallbacks { throw e }(catchBlock = {}, finallyBlock = {})
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try, catch and finally blocks don't throw exceptions
-    Utils.tryWithSafeFinallyAndFailureCallbacks {}(catchBlock = {}, finallyBlock = {})
-    TaskContext.unset
   }
 }

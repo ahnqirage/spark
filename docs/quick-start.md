@@ -33,8 +33,8 @@ or Python. Start it by running the following in the Spark directory:
 Spark's primary abstraction is a distributed collection of items called a Dataset. Datasets can be created from Hadoop InputFormats (such as HDFS files) or by transforming other Datasets. Let's make a new Dataset from the text of the README file in the Spark source directory:
 
 {% highlight scala %}
-scala> val textFile = spark.read.textFile("README.md")
-textFile: org.apache.spark.sql.Dataset[String] = [value: string]
+scala> val textFile = sc.textFile("README.md")
+textFile: org.apache.spark.rdd.RDD[String] = README.md MapPartitionsRDD[1] at textFile at <console>:25
 {% endhighlight %}
 
 You can get values from Dataset directly, by calling some actions, or transform the Dataset to get a new one. For more details, please read the _[API doc](api/scala/index.html#org.apache.spark.sql.Dataset)_.
@@ -51,7 +51,7 @@ Now let's transform this Dataset to a new one. We call `filter` to return a new 
 
 {% highlight scala %}
 scala> val linesWithSpark = textFile.filter(line => line.contains("Spark"))
-linesWithSpark: org.apache.spark.sql.Dataset[String] = [value: string]
+linesWithSpark: org.apache.spark.rdd.RDD[String] = MapPartitionsRDD[2] at filter at <console>:27
 {% endhighlight %}
 
 We can chain together transformations and actions:
@@ -128,8 +128,8 @@ res5: Int = 15
 One common data flow pattern is MapReduce, as popularized by Hadoop. Spark can implement MapReduce flows easily:
 
 {% highlight scala %}
-scala> val wordCounts = textFile.flatMap(line => line.split(" ")).groupByKey(identity).count()
-wordCounts: org.apache.spark.sql.Dataset[(String, Long)] = [value: string, count(1): bigint]
+scala> val wordCounts = textFile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey((a, b) => a + b)
+wordCounts: org.apache.spark.rdd.RDD[(String, Int)] = ShuffledRDD[8] at reduceByKey at <console>:28
 {% endhighlight %}
 
 Here, we call `flatMap` to transform a Dataset of lines to a Dataset of words, and then combine `groupByKey` and `count` to compute the per-word counts in the file as a Dataset of (String, Long) pairs. To collect the word counts in our shell, we can call `collect`:
@@ -174,7 +174,7 @@ Spark also supports pulling data sets into a cluster-wide in-memory cache. This 
 
 {% highlight scala %}
 scala> linesWithSpark.cache()
-res7: linesWithSpark.type = [value: string]
+res7: linesWithSpark.type = MapPartitionsRDD[2] at filter at <console>:27
 
 scala> linesWithSpark.count()
 res8: Long = 15
@@ -231,7 +231,7 @@ object SimpleApp {
     val numAs = logData.filter(line => line.contains("a")).count()
     val numBs = logData.filter(line => line.contains("b")).count()
     println(s"Lines with a: $numAs, Lines with b: $numBs")
-    spark.stop()
+    sc.stop()
   }
 }
 {% endhighlight %}
@@ -246,8 +246,8 @@ we initialize a SparkSession as part of the program.
 
 We call `SparkSession.builder` to construct a [[SparkSession]], then set the application name, and finally call `getOrCreate` to get the [[SparkSession]] instance.
 
-Our application depends on the Spark API, so we'll also include an sbt configuration file,
-`build.sbt`, which explains that Spark is a dependency. This file also adds a repository that
+Our application depends on the Spark API, so we'll also include an sbt configuration file, 
+`build.sbt`, which explains that Spark is a dependency. This file also adds a repository that 
 Spark depends on:
 
 {% highlight scala %}
@@ -309,8 +309,8 @@ public class SimpleApp {
     long numBs = logData.filter(s -> s.contains("b")).count();
 
     System.out.println("Lines with a: " + numAs + ", lines with b: " + numBs);
-
-    spark.stop();
+    
+    sc.stop();
   }
 }
 {% endhighlight %}
@@ -398,7 +398,7 @@ numBs = logData.filter(logData.value.contains('b')).count()
 
 print("Lines with a: %i, lines with b: %i" % (numAs, numBs))
 
-spark.stop()
+sc.stop()
 {% endhighlight %}
 
 

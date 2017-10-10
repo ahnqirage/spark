@@ -24,9 +24,6 @@ CREATE OR REPLACE TEMPORARY VIEW t1 AS SELECT * FROM VALUES (97) as t1(int_col1)
 
 CREATE OR REPLACE TEMPORARY VIEW t2 AS SELECT * FROM VALUES (0) as t2(int_col1);
 
--- Set the cross join enabled flag for the LEFT JOIN test since there's no join condition.
--- Ultimately the join should be optimized away.
-set spark.sql.crossJoin.enabled = true;
 SELECT *
 FROM (
 SELECT
@@ -34,6 +31,6 @@ SELECT
     FROM t1
     LEFT JOIN t2 ON false
 ) t where (t.int_col) is not null;
-set spark.sql.crossJoin.enabled = false;
+
 
 

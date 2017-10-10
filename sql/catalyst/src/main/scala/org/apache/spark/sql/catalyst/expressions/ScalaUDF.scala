@@ -24,6 +24,7 @@ import org.apache.spark.sql.types.DataType
 
 /**
  * User-defined function.
+ * Note that the user-defined functions must be deterministic.
  * @param function  The user defined scala function to run.
  *                  Note that if you use primitive parameters, you are not able to check if it is
  *                  null or not, and the UDF will return null for you if the primitive input is
@@ -1009,7 +1010,7 @@ case class ScalaUDF(
     // Generate codes used to convert the returned value of user-defined functions to Catalyst type
     val catalystConverterTerm = ctx.freshName("catalystConverter")
     ctx.addMutableState(converterClassName, catalystConverterTerm,
-      s"$catalystConverterTerm = ($converterClassName)$typeConvertersClassName" +
+      s"this.$catalystConverterTerm = ($converterClassName)$typeConvertersClassName" +
         s".createToCatalystConverter($scalaUDF.dataType());")
 
     val resultTerm = ctx.freshName("result")
@@ -1023,7 +1024,7 @@ case class ScalaUDF(
 
     val funcTerm = ctx.freshName("udf")
     ctx.addMutableState(funcClassName, funcTerm,
-      s"$funcTerm = ($funcClassName)$scalaUDF.userDefinedFunc();")
+      s"this.$funcTerm = ($funcClassName)$scalaUDF.userDefinedFunc();")
 
     // codegen for children expressions
     val evals = children.map(_.genCode(ctx))

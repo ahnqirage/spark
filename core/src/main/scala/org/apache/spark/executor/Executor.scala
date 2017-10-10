@@ -23,7 +23,7 @@ import java.lang.management.ManagementFactory
 import java.net.{URI, URL}
 import java.nio.ByteBuffer
 import java.util.Properties
-import java.util.concurrent._
+import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import javax.annotation.concurrent.GuardedBy
 
 import scala.collection.JavaConverters._
@@ -177,7 +177,7 @@ private[spark] class Executor(
     threadPool.execute(tr)
   }
 
-  def killTask(taskId: Long, interruptThread: Boolean, reason: String): Unit = {
+  def killTask(taskId: Long, interruptThread: Boolean): Unit = {
     val taskRunner = runningTasks.get(taskId)
     if (taskRunner != null) {
       if (taskReaperEnabled) {
@@ -187,8 +187,7 @@ private[spark] class Executor(
             case Some(existingReaper) => interruptThread && !existingReaper.interruptThread
           }
           if (shouldCreateReaper) {
-            val taskReaper = new TaskReaper(
-              taskRunner, interruptThread = interruptThread, reason = reason)
+            val taskReaper = new TaskReaper(taskRunner, interruptThread = interruptThread)
             taskReaperForTask(taskId) = taskReaper
             Some(taskReaper)
           } else {
@@ -198,7 +197,7 @@ private[spark] class Executor(
         // Execute the TaskReaper from outside of the synchronized block.
         maybeNewTaskReaper.foreach(taskReaperPool.execute)
       } else {
-        taskRunner.kill(interruptThread = interruptThread, reason = reason)
+        taskRunner.kill(interruptThread = interruptThread)
       }
     }
   }
@@ -209,9 +208,8 @@ private[spark] class Executor(
    * tasks instead of taking the JVM down.
    * @param interruptThread whether to interrupt the task thread
    */
-  def killAllTasks(interruptThread: Boolean, reason: String) : Unit = {
-    runningTasks.keys().asScala.foreach(t =>
-      killTask(t, interruptThread = interruptThread, reason = reason))
+  def killAllTasks(interruptThread: Boolean) : Unit = {
+    runningTasks.keys().asScala.foreach(t => killTask(t, interruptThread = interruptThread))
   }
 
   def stop(): Unit = {
@@ -234,12 +232,10 @@ private[spark] class Executor(
       private val taskDescription: TaskDescription)
     extends Runnable {
 
-    val taskId = taskDescription.taskId
     val threadName = s"Executor task launch worker for task $taskId"
-    private val taskName = taskDescription.name
 
-    /** If specified, this task has been killed and this option contains the reason. */
-    @volatile private var reasonIfKilled: Option[String] = None
+    /** Whether this task has been killed. */
+    @volatile private var killed = false
 
     @volatile private var threadId: Long = -1
 
@@ -266,7 +262,7 @@ private[spark] class Executor(
       if (task != null) {
         synchronized {
           if (!finished) {
-            task.kill(interruptThread, reason)
+            task.kill(interruptThread)
           }
         }
       }
@@ -290,7 +286,6 @@ private[spark] class Executor(
     override def run(): Unit = {
       threadId = Thread.currentThread.getId
       Thread.currentThread.setName(threadName)
-      val threadMXBean = ManagementFactory.getThreadMXBean
       val taskMemoryManager = new TaskMemoryManager(env.memoryManager, taskId)
       val deserializeStartTime = System.currentTimeMillis()
       val deserializeStartCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
@@ -439,37 +434,20 @@ private[spark] class Executor(
         execBackend.statusUpdate(taskId, TaskState.FINISHED, serializedResult)
 
       } catch {
-        case t: Throwable if hasFetchFailure && !Utils.isFatalError(t) =>
-          val reason = task.context.fetchFailed.get.toTaskFailedReason
-          if (!t.isInstanceOf[FetchFailedException]) {
-            // there was a fetch failure in the task, but some user code wrapped that exception
-            // and threw something else.  Regardless, we treat it as a fetch failure.
-            val fetchFailedCls = classOf[FetchFailedException].getName
-            logWarning(s"TID ${taskId} encountered a ${fetchFailedCls} and " +
-              s"failed, but the ${fetchFailedCls} was hidden by another " +
-              s"exception.  Spark is handling this like a fetch failure and ignoring the " +
-              s"other exception: $t")
-          }
+        case ffe: FetchFailedException =>
+          val reason = ffe.toTaskEndReason
           setTaskFinishedAndClearInterruptStatus()
           execBackend.statusUpdate(taskId, TaskState.FAILED, ser.serialize(reason))
 
-        case t: TaskKilledException =>
-          logInfo(s"Executor killed $taskName (TID $taskId), reason: ${t.reason}")
+        case _: TaskKilledException | _: InterruptedException if task.killed =>
+          logInfo(s"Executor killed $taskName (TID $taskId)")
           setTaskFinishedAndClearInterruptStatus()
-          execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(TaskKilled(t.reason)))
-
-        case _: InterruptedException | NonFatal(_) if
-            task != null && task.reasonIfKilled.isDefined =>
-          val killReason = task.reasonIfKilled.getOrElse("unknown reason")
-          logInfo(s"Executor interrupted and killed $taskName (TID $taskId), reason: $killReason")
-          setTaskFinishedAndClearInterruptStatus()
-          execBackend.statusUpdate(
-            taskId, TaskState.KILLED, ser.serialize(TaskKilled(killReason)))
+          execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(TaskKilled))
 
         case CausedBy(cDE: CommitDeniedException) =>
-          val reason = cDE.toTaskCommitDeniedReason
+          val reason = cDE.toTaskEndReason
           setTaskFinishedAndClearInterruptStatus()
-          execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(reason))
+          execBackend.statusUpdate(taskId, TaskState.FAILED, ser.serialize(reason))
 
         case t: Throwable =>
           // Attempt to exit cleanly by informing the driver of our failure.
@@ -477,38 +455,33 @@ private[spark] class Executor(
           // the default uncaught exception handler, which will terminate the Executor.
           logError(s"Exception in $taskName (TID $taskId)", t)
 
-          // SPARK-20904: Do not report failure to driver if if happened during shut down. Because
-          // libraries may set up shutdown hooks that race with running tasks during shutdown,
-          // spurious failures may occur and can result in improper accounting in the driver (e.g.
-          // the task failure would not be ignored if the shutdown happened because of premption,
-          // instead of an app issue).
-          if (!ShutdownHookManager.inShutdown()) {
-            // Collect latest accumulator values to report back to the driver
-            val accums: Seq[AccumulatorV2[_, _]] =
-              if (task != null) {
-                task.metrics.setExecutorRunTime(System.currentTimeMillis() - taskStart)
-                task.metrics.setJvmGCTime(computeTotalGcTime() - startGCTime)
-                task.collectAccumulatorUpdates(taskFailed = true)
-              } else {
-                Seq.empty
-              }
+          // Collect latest accumulator values to report back to the driver
+          val accums: Seq[AccumulatorV2[_, _]] =
+            if (task != null) {
+              task.metrics.setExecutorRunTime(System.currentTimeMillis() - taskStart)
+              task.metrics.setJvmGCTime(computeTotalGcTime() - startGCTime)
+              task.collectAccumulatorUpdates(taskFailed = true)
+            } else {
+              Seq.empty
+            }
 
-            val accUpdates = accums.map(acc => acc.toInfo(Some(acc.value), None))
+          val accUpdates = accums.map(acc => acc.toInfo(Some(acc.value), None))
 
-            val serializedTaskEndReason = {
-              try {
-                ser.serialize(new ExceptionFailure(t, accUpdates).withAccums(accums))
-              } catch {
-                case _: NotSerializableException =>
-                  // t is not serializable so just send the stacktrace
-                  ser.serialize(new ExceptionFailure(t, accUpdates, false).withAccums(accums))
-              }
+          val serializedTaskEndReason = {
+            try {
+              ser.serialize(new ExceptionFailure(t, accUpdates).withAccums(accums))
+            } catch {
+              case _: NotSerializableException =>
+                // t is not serializable so just send the stacktrace
+                ser.serialize(new ExceptionFailure(t, accUpdates, false).withAccums(accums))
             }
             setTaskFinishedAndClearInterruptStatus()
             execBackend.statusUpdate(taskId, TaskState.FAILED, serializedTaskEndReason)
           } else {
             logInfo("Not reporting error to driver during JVM shutdown.")
           }
+          setTaskFinishedAndClearInterruptStatus()
+          execBackend.statusUpdate(taskId, TaskState.FAILED, serializedTaskEndReason)
 
           // Don't forcibly exit unless the exception was inherently fatal, to avoid
           // stopping other tasks unnecessarily.
@@ -574,6 +547,117 @@ private[spark] class Executor(
         // attempt would be a no-op and if interruptThread = true then it may not be safe or
         // effective to interrupt multiple times:
         taskRunner.kill(interruptThread = interruptThread, reason = reason)
+        // Monitor the killed task until it exits. The synchronization logic here is complicated
+        // because we don't want to synchronize on the taskRunner while possibly taking a thread
+        // dump, but we also need to be careful to avoid races between checking whether the task
+        // has finished and wait()ing for it to finish.
+        var finished: Boolean = false
+        while (!finished && !timeoutExceeded()) {
+          taskRunner.synchronized {
+            // We need to synchronize on the TaskRunner while checking whether the task has
+            // finished in order to avoid a race where the task is marked as finished right after
+            // we check and before we call wait().
+            if (taskRunner.isFinished) {
+              finished = true
+            } else {
+              taskRunner.wait(killPollingIntervalMs)
+            }
+          }
+          if (taskRunner.isFinished) {
+            finished = true
+          } else {
+            logWarning(s"Killed task $taskId is still running after $elapsedTimeMs ms")
+            if (takeThreadDump) {
+              try {
+                Utils.getThreadDumpForThread(taskRunner.getThreadId).foreach { thread =>
+                  if (thread.threadName == taskRunner.threadName) {
+                    logWarning(s"Thread dump from task $taskId:\n${thread.stackTrace}")
+                  }
+                }
+              } catch {
+                case NonFatal(e) =>
+                  logWarning("Exception thrown while obtaining thread dump: ", e)
+              }
+            }
+          }
+        }
+
+        if (!taskRunner.isFinished && timeoutExceeded()) {
+          if (isLocal) {
+            logError(s"Killed task $taskId could not be stopped within $killTimeoutMs ms; " +
+              "not killing JVM because we are running in local mode.")
+          } else {
+            // In non-local-mode, the exception thrown here will bubble up to the uncaught exception
+            // handler and cause the executor JVM to exit.
+            throw new SparkException(
+              s"Killing executor JVM because killed task $taskId could not be stopped within " +
+                s"$killTimeoutMs ms.")
+          }
+        }
+      } finally {
+        // Clean up entries in the taskReaperForTask map.
+        taskReaperForTask.synchronized {
+          taskReaperForTask.get(taskId).foreach { taskReaperInMap =>
+            if (taskReaperInMap eq this) {
+              taskReaperForTask.remove(taskId)
+            } else {
+              // This must have been a TaskReaper where interruptThread == false where a subsequent
+              // killTask() call for the same task had interruptThread == true and overwrote the
+              // map entry.
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Supervises the killing / cancellation of a task by sending the interrupted flag, optionally
+   * sending a Thread.interrupt(), and monitoring the task until it finishes.
+   *
+   * Spark's current task cancellation / task killing mechanism is "best effort" because some tasks
+   * may not be interruptable or may not respond to their "killed" flags being set. If a significant
+   * fraction of a cluster's task slots are occupied by tasks that have been marked as killed but
+   * remain running then this can lead to a situation where new jobs and tasks are starved of
+   * resources that are being used by these zombie tasks.
+   *
+   * The TaskReaper was introduced in SPARK-18761 as a mechanism to monitor and clean up zombie
+   * tasks. For backwards-compatibility / backportability this component is disabled by default
+   * and must be explicitly enabled by setting `spark.task.reaper.enabled=true`.
+   *
+   * A TaskReaper is created for a particular task when that task is killed / cancelled. Typically
+   * a task will have only one TaskReaper, but it's possible for a task to have up to two reapers
+   * in case kill is called twice with different values for the `interrupt` parameter.
+   *
+   * Once created, a TaskReaper will run until its supervised task has finished running. If the
+   * TaskReaper has not been configured to kill the JVM after a timeout (i.e. if
+   * `spark.task.reaper.killTimeout < 0`) then this implies that the TaskReaper may run indefinitely
+   * if the supervised task never exits.
+   */
+  private class TaskReaper(
+      taskRunner: TaskRunner,
+      val interruptThread: Boolean)
+    extends Runnable {
+
+    private[this] val taskId: Long = taskRunner.taskId
+
+    private[this] val killPollingIntervalMs: Long =
+      conf.getTimeAsMs("spark.task.reaper.pollingInterval", "10s")
+
+    private[this] val killTimeoutMs: Long = conf.getTimeAsMs("spark.task.reaper.killTimeout", "-1")
+
+    private[this] val takeThreadDump: Boolean =
+      conf.getBoolean("spark.task.reaper.threadDump", true)
+
+    override def run(): Unit = {
+      val startTimeMs = System.currentTimeMillis()
+      def elapsedTimeMs = System.currentTimeMillis() - startTimeMs
+      def timeoutExceeded(): Boolean = killTimeoutMs > 0 && elapsedTimeMs > killTimeoutMs
+      try {
+        // Only attempt to kill the task once. If interruptThread = false then a second kill
+        // attempt would be a no-op and if interruptThread = true then it may not be safe or
+        // effective to interrupt multiple times:
+        taskRunner.kill(interruptThread = interruptThread)
         // Monitor the killed task until it exits. The synchronization logic here is complicated
         // because we don't want to synchronize on the taskRunner while possibly taking a thread
         // dump, but we also need to be careful to avoid races between checking whether the task

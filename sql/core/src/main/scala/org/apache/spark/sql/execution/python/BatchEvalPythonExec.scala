@@ -32,28 +32,92 @@ import org.apache.spark.sql.types.{StructField, StructType}
  * A physical plan that evaluates a [[PythonUDF]]
  */
 case class BatchEvalPythonExec(udfs: Seq[PythonUDF], output: Seq[Attribute], child: SparkPlan)
-  extends EvalPythonExec(udfs, output, child) {
+  extends SparkPlan {
 
-  protected override def evaluate(
-      funcs: Seq[ChainedPythonFunctions],
-      bufferSize: Int,
-      reuseWorker: Boolean,
-      argOffsets: Array[Array[Int]],
-      iter: Iterator[InternalRow],
-      schema: StructType,
-      context: TaskContext): Iterator[InternalRow] = {
-    EvaluatePython.registerPicklers()  // register pickler for Row
+  def children: Seq[SparkPlan] = child :: Nil
 
-    val dataTypes = schema.map(_.dataType)
-    val needConversion = dataTypes.exists(EvaluatePython.needConversionInPython)
+  override def producedAttributes: AttributeSet = AttributeSet(output.drop(child.output.length))
 
-    // enable memo iff we serialize the row with schema (schema and class should be memorized)
-    val pickle = new Pickler(needConversion)
-    // Input iterator to Python: input rows are grouped so we send them in batches to Python.
-    // For each row, add it to the queue.
-    val inputIterator = iter.map { row =>
-      if (needConversion) {
-        EvaluatePython.toJava(row, schema)
+  private def collectFunctions(udf: PythonUDF): (ChainedPythonFunctions, Seq[Expression]) = {
+    udf.children match {
+      case Seq(u: PythonUDF) =>
+        val (chained, children) = collectFunctions(u)
+        (ChainedPythonFunctions(chained.funcs ++ Seq(udf.func)), children)
+      case children =>
+        // There should not be any other UDFs, or the children can't be evaluated directly.
+        assert(children.forall(_.find(_.isInstanceOf[PythonUDF]).isEmpty))
+        (ChainedPythonFunctions(Seq(udf.func)), udf.children)
+    }
+  }
+
+  protected override def doExecute(): RDD[InternalRow] = {
+    val inputRDD = child.execute().map(_.copy())
+    val bufferSize = inputRDD.conf.getInt("spark.buffer.size", 65536)
+    val reuseWorker = inputRDD.conf.getBoolean("spark.python.worker.reuse", defaultValue = true)
+
+    inputRDD.mapPartitions { iter =>
+      EvaluatePython.registerPicklers()  // register pickler for Row
+
+      // The queue used to buffer input rows so we can drain it to
+      // combine input with output from Python.
+      val queue = new java.util.concurrent.ConcurrentLinkedQueue[InternalRow]()
+
+      val (pyFuncs, inputs) = udfs.map(collectFunctions).unzip
+
+      // flatten all the arguments
+      val allInputs = new ArrayBuffer[Expression]
+      val dataTypes = new ArrayBuffer[DataType]
+      val argOffsets = inputs.map { input =>
+        input.map { e =>
+          if (allInputs.exists(_.semanticEquals(e))) {
+            allInputs.indexWhere(_.semanticEquals(e))
+          } else {
+            allInputs += e
+            dataTypes += e.dataType
+            allInputs.length - 1
+          }
+        }.toArray
+      }.toArray
+      val projection = newMutableProjection(allInputs, child.output)
+      val schema = StructType(dataTypes.map(dt => StructField("", dt)))
+      val needConversion = dataTypes.exists(EvaluatePython.needConversionInPython)
+
+      // enable memo iff we serialize the row with schema (schema and class should be memorized)
+      val pickle = new Pickler(needConversion)
+      // Input iterator to Python: input rows are grouped so we send them in batches to Python.
+      // For each row, add it to the queue.
+      val inputIterator = iter.grouped(100).map { inputRows =>
+        val toBePickled = inputRows.map { inputRow =>
+          queue.add(inputRow)
+          val row = projection(inputRow)
+          if (needConversion) {
+            EvaluatePython.toJava(row, schema)
+          } else {
+            // fast path for these types that does not need conversion in Python
+            val fields = new Array[Any](row.numFields)
+            var i = 0
+            while (i < row.numFields) {
+              val dt = dataTypes(i)
+              fields(i) = EvaluatePython.toJava(row.get(i, dt), dt)
+              i += 1
+            }
+            fields
+          }
+        }.toArray
+        pickle.dumps(toBePickled)
+      }
+
+      val context = TaskContext.get()
+
+      // Output iterator for results from Python.
+      val outputIterator = new PythonRunner(pyFuncs, bufferSize, reuseWorker, true, argOffsets)
+        .compute(inputIterator, context.partitionId(), context)
+
+      val unpickle = new Unpickler
+      val mutableRow = new GenericMutableRow(1)
+      val joined = new JoinedRow
+      val resultType = if (udfs.length == 1) {
+        udfs.head.dataType
       } else {
         // fast path for these types that does not need conversion in Python
         val fields = new Array[Any](row.numFields)

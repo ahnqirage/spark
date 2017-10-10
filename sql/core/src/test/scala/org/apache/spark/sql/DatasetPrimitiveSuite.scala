@@ -149,7 +149,7 @@ class DatasetPrimitiveSuite extends QueryTest with SharedSQLContext {
   test("foreachPartition") {
     val ds = Seq(1, 2, 3).toDS()
     val acc = sparkContext.longAccumulator
-    ds.foreachPartition((it: Iterator[Int]) => it.foreach(acc.add(_)))
+    ds.foreachPartition(_.foreach(acc.add(_)))
     assert(acc.value == 6)
   }
 

@@ -19,6 +19,7 @@ package org.apache.spark.ui.exec
 
 import javax.servlet.http.HttpServletRequest
 
+import scala.util.Try
 import scala.xml.Node
 
 import org.apache.spark.status.api.v1.{ExecutorSummary, MemoryMetrics}
@@ -50,42 +51,145 @@ private[ui] class ExecutorsPage(
     threadDumpEnabled: Boolean)
   extends WebUIPage("") {
 
+  // a safe String to Int for sorting ids (converts non-numeric Strings to -1)
+  private def idStrToInt(str: String) : Int = Try(str.toInt).getOrElse(-1)
+
   def render(request: HttpServletRequest): Seq[Node] = {
-    val content =
-      <div>
-        {
-          <div>
-            <span class="expand-additional-metrics">
-              <span class="expand-additional-metrics-arrow arrow-closed"></span>
-              <a>Show Additional Metrics</a>
+    val (activeExecutorInfo, deadExecutorInfo) = listener.synchronized {
+      // The follow codes should be protected by `listener` to make sure no executors will be
+      // removed before we query their status. See SPARK-12784.
+      val _activeExecutorInfo = {
+        for (statusId <- 0 until listener.activeStorageStatusList.size)
+          yield ExecutorsPage.getExecInfo(listener, statusId, isActive = true)
+      }
+      val _deadExecutorInfo = {
+        for (statusId <- 0 until listener.deadStorageStatusList.size)
+          yield ExecutorsPage.getExecInfo(listener, statusId, isActive = false)
+      }
+      (_activeExecutorInfo, _deadExecutorInfo)
+    }
+
+    val execInfo = activeExecutorInfo ++ deadExecutorInfo
+    implicit val idOrder = Ordering[Int].on((s: String) => idStrToInt(s)).reverse
+    val execInfoSorted = execInfo.sortBy(_.id)
+    val logsExist = execInfo.filter(_.executorLogs.nonEmpty).nonEmpty
+
+    val execTable = {
+      <table class={UIUtils.TABLE_CLASS_STRIPED_SORTABLE}>
+        <thead>
+          <th class="sorttable_numeric">Executor ID</th>
+          <th>Address</th>
+          <th>Status</th>
+          <th>RDD Blocks</th>
+          <th><span data-toggle="tooltip" title={ToolTips.STORAGE_MEMORY}>Storage Memory</span></th>
+          <th>Disk Used</th>
+          <th>Cores</th>
+          <th>Active Tasks</th>
+          <th>Failed Tasks</th>
+          <th>Complete Tasks</th>
+          <th>Total Tasks</th>
+          <th><span data-toggle="tooltip" title={ToolTips.TASK_TIME}>Task Time (GC Time)</span></th>
+          <th><span data-toggle="tooltip" title={ToolTips.INPUT}>Input</span></th>
+          <th><span data-toggle="tooltip" title={ToolTips.SHUFFLE_READ}>Shuffle Read</span></th>
+          <th>
+            <!-- Place the shuffle write tooltip on the left (rather than the default position
+              of on top) because the shuffle write column is the last column on the right side and
+              the tooltip is wider than the column, so it doesn't fit on top. -->
+            <span data-toggle="tooltip" data-placement="left" title={ToolTips.SHUFFLE_WRITE}>
+              Shuffle Write
             </span>
-            <div class="additional-metrics collapsed">
-              <ul>
-                <li>
-                  <input type="checkbox" id="select-all-metrics"/>
-                  <span class="additional-metric-title"><em>(De)select All</em></span>
-                </li>
-                <li>
-                  <span data-toggle="tooltip"
-                        title={ExecutorsPage.ON_HEAP_MEMORY_TOOLTIP} data-placement="right">
-                    <input type="checkbox" name="on_heap_memory"/>
-                    <span class="additional-metric-title">On Heap Storage Memory</span>
-                  </span>
-                </li>
-                <li>
-                  <span data-toggle="tooltip"
-                        title={ExecutorsPage.OFF_HEAP_MEMORY_TOOLTIP} data-placement="right">
-                    <input type="checkbox" name="off_heap_memory"/>
-                    <span class="additional-metric-title">Off Heap Storage Memory</span>
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </div> ++
-          <div id="active-executors" class="span12 pagination"></div> ++
-          <script src={UIUtils.prependBaseUri("/static/utils.js")}></script> ++
-          <script src={UIUtils.prependBaseUri("/static/executorspage.js")}></script> ++
-          <script>setThreadDumpEnabled({threadDumpEnabled})</script>
+          </th>
+          {if (logsExist) <th class="sorttable_nosort">Logs</th> else Seq.empty}
+          {if (threadDumpEnabled) <th class="sorttable_nosort">Thread Dump</th> else Seq.empty}
+        </thead>
+        <tbody>
+          {execInfoSorted.map(execRow(_, logsExist))}
+        </tbody>
+      </table>
+    }
+
+    val content =
+      <div class="row">
+        <div class="span12">
+          <h4>Summary</h4>
+          {execSummary(activeExecutorInfo, deadExecutorInfo)}
+        </div>
+      </div>
+      <div class = "row">
+        <div class="span12">
+          <h4>Executors</h4>
+          {execTable}
+        </div>
+      </div>;
+
+    UIUtils.headerSparkPage("Executors", content, parent)
+  }
+
+  /** Render an HTML row representing an executor */
+  private def execRow(info: ExecutorSummary, logsExist: Boolean): Seq[Node] = {
+    val maximumMemory = info.maxMemory
+    val memoryUsed = info.memoryUsed
+    val diskUsed = info.diskUsed
+    val executorStatus =
+      if (info.isActive) {
+        "Active"
+      } else {
+        "Dead"
+      }
+
+    <tr>
+      <td sorttable_customkey={idStrToInt(info.id).toString}>{info.id}</td>
+      <td>{info.hostPort}</td>
+      <td sorttable_customkey={executorStatus.toString}>
+        {executorStatus}
+      </td>
+      <td>{info.rddBlocks}</td>
+      <td sorttable_customkey={memoryUsed.toString}>
+        {Utils.bytesToString(memoryUsed)} /
+        {Utils.bytesToString(maximumMemory)}
+      </td>
+      <td sorttable_customkey={diskUsed.toString}>
+        {Utils.bytesToString(diskUsed)}
+      </td>
+      <td>{info.totalCores}</td>
+      {taskData(info.maxTasks, info.activeTasks, info.failedTasks, info.completedTasks,
+      info.totalTasks, info.totalDuration, info.totalGCTime)}
+      <td sorttable_customkey={info.totalInputBytes.toString}>
+        {Utils.bytesToString(info.totalInputBytes)}
+      </td>
+      <td sorttable_customkey={info.totalShuffleRead.toString}>
+        {Utils.bytesToString(info.totalShuffleRead)}
+      </td>
+      <td sorttable_customkey={info.totalShuffleWrite.toString}>
+        {Utils.bytesToString(info.totalShuffleWrite)}
+      </td>
+      {
+        if (logsExist) {
+          <td>
+            {
+              info.executorLogs.map { case (logName, logUrl) =>
+                <div>
+                  <a href={logUrl}>
+                    {logName}
+                  </a>
+                </div>
+              }
+            }
+          </td>
+        }
+      }
+      {
+        if (threadDumpEnabled) {
+          if (info.isActive) {
+            val encodedId = URLEncoder.encode(info.id, "UTF-8")
+            <td>
+              <a href={s"threadDump/?executorId=${encodedId}"}>Thread Dump</a>
+            </td>
+          } else {
+            <td> </td>
+          }
+        } else {
+          Seq.empty
         }
       </div>
 

@@ -147,12 +147,35 @@ public final class JavaRecoverableNetworkWordCount {
         } else {
           return true;
         }
-      }).collect().toString();
-      String output = "Counts at time " + time + " " + counts;
-      System.out.println(output);
-      System.out.println("Dropped " + droppedWordsCounter.value() + " word(s) totally");
-      System.out.println("Appending to " + outputFile.getAbsolutePath());
-      Files.append(output + "\n", outputFile, Charset.defaultCharset());
+      });
+
+    wordCounts.foreachRDD(new VoidFunction2<JavaPairRDD<String, Integer>, Time>() {
+      @Override
+      public void call(JavaPairRDD<String, Integer> rdd, Time time) throws IOException {
+        // Get or register the blacklist Broadcast
+        final Broadcast<List<String>> blacklist =
+            JavaWordBlacklist.getInstance(new JavaSparkContext(rdd.context()));
+        // Get or register the droppedWordsCounter Accumulator
+        final LongAccumulator droppedWordsCounter =
+            JavaDroppedWordsCounter.getInstance(new JavaSparkContext(rdd.context()));
+        // Use blacklist to drop words and use droppedWordsCounter to count them
+        String counts = rdd.filter(new Function<Tuple2<String, Integer>, Boolean>() {
+          @Override
+          public Boolean call(Tuple2<String, Integer> wordCount) {
+            if (blacklist.value().contains(wordCount._1())) {
+              droppedWordsCounter.add(wordCount._2());
+              return false;
+            } else {
+              return true;
+            }
+          }
+        }).collect().toString();
+        String output = "Counts at time " + time + " " + counts;
+        System.out.println(output);
+        System.out.println("Dropped " + droppedWordsCounter.value() + " word(s) totally");
+        System.out.println("Appending to " + outputFile.getAbsolutePath());
+        Files.append(output + "\n", outputFile, Charset.defaultCharset());
+      }
     });
 
     return ssc;

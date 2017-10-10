@@ -63,7 +63,7 @@ private[feature] trait PCAParams extends Params with HasInputCol with HasOutputC
 }
 
 /**
- * PCA trains a model to project vectors to a lower dimensional space of the top `PCA!.k`
+ * PCA trains a model to project vectors to a lower dimensional space of the top [[PCA!.k]]
  * principal components.
  */
 @Since("1.5.0")
@@ -206,8 +206,11 @@ object PCAModel extends MLReadable[PCAModel] {
     override def load(path: String): PCAModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
 
+      val versionRegex = "([0-9]+)\\.(.+)".r
+      val versionRegex(major, _) = metadata.sparkVersion
+
       val dataPath = new Path(path, "data").toString
-      val model = if (majorVersion(metadata.sparkVersion) >= 2) {
+      val model = if (major.toInt >= 2) {
         val Row(pc: DenseMatrix, explainedVariance: DenseVector) =
           sparkSession.read.parquet(dataPath)
             .select("pc", "explainedVariance")

@@ -373,6 +373,7 @@ class LocalLDAModel private[spark] (
    */
   private[spark] def getTopicDistributionMethod(sc: SparkContext): Vector => Vector = {
     val expElogbeta = exp(LDAUtils.dirichletExpectation(topicsMatrix.asBreeze.toDenseMatrix.t).t)
+    val expElogbetaBc = sc.broadcast(expElogbeta)
     val docConcentrationBrz = this.docConcentration.asBreeze
     val gammaShape = this.gammaShape
     val k = this.k
@@ -748,7 +749,7 @@ class DistributedLDAModel private[clustering] (
         if (isTermVertex(vertex)) {
           val N_wk = vertex._2
           val smoothed_N_wk: TopicCounts = N_wk + (eta - 1.0)
-          val phi_wk: TopicCounts = smoothed_N_wk /:/ smoothed_N_k
+          val phi_wk: TopicCounts = smoothed_N_wk :/ smoothed_N_k
           sumPrior + (eta - 1.0) * sum(phi_wk.map(math.log))
         } else {
           val N_kj = vertex._2

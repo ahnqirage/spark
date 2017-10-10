@@ -226,8 +226,6 @@ private[spark] class ApplicationMaster(
         "APPMASTER", sparkConf.get(APP_CALLER_CONTEXT),
         Option(appAttemptId.getApplicationId.toString), attemptID).setCurrentContext()
 
-      logInfo("ApplicationAttemptId: " + appAttemptId)
-
       // This shutdown hook should run *after* the SparkContext is shut down.
       val priority = ShutdownHookManager.SPARK_CONTEXT_SHUTDOWN_PRIORITY - 1
       ShutdownHookManager.addShutdownHook(priority) { () =>

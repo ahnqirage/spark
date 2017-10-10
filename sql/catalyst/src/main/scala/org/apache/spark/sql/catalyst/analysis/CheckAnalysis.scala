@@ -18,11 +18,10 @@
 package org.apache.spark.sql.catalyst.analysis
 
 import org.apache.spark.sql.AnalysisException
+import org.apache.spark.sql.catalyst.catalog.SimpleCatalogRelation
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.SubExprUtils._
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.optimizer.BooleanSimplification
-import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.types._
 
@@ -54,8 +53,6 @@ trait CheckAnalysis extends PredicateHelper {
   protected def mapColumnInSetOperation(plan: LogicalPlan): Option[Attribute] = plan match {
     case _: Intersect | _: Except | _: Distinct =>
       plan.output.find(a => hasMapType(a.dataType))
-    case d: Deduplicate =>
-      d.keys.find(a => hasMapType(a.dataType))
     case _ => None
   }
 
@@ -129,62 +126,51 @@ trait CheckAnalysis extends PredicateHelper {
                 failAnalysis(s"Window specification $s is not valid because $m")
               case None => w
             }
-
-          case s @ ScalarSubquery(query, conditions, _) =>
-            checkAnalysis(query)
-
+          case s @ ScalarSubquery(query, conditions, _)
             // If no correlation, the output must be exactly one column
-            if (conditions.isEmpty && query.output.size != 1) {
+            if (conditions.isEmpty && query.output.size != 1) =>
               failAnalysis(
                 s"Scalar subquery must return only one column, but got ${query.output.size}")
-            } else if (conditions.nonEmpty) {
-              def checkAggregate(agg: Aggregate): Unit = {
-                // Make sure correlated scalar subqueries contain one row for every outer row by
-                // enforcing that they are aggregates containing exactly one aggregate expression.
-                // The analyzer has already checked that subquery contained only one output column,
-                // and added all the grouping expressions to the aggregate.
-                val aggregates = agg.expressions.flatMap(_.collect {
-                  case a: AggregateExpression => a
-                })
-                if (aggregates.isEmpty) {
-                  failAnalysis("The output of a correlated scalar subquery must be aggregated")
-                }
 
-                // SPARK-18504/SPARK-18814: Block cases where GROUP BY columns
-                // are not part of the correlated columns.
-                val groupByCols = AttributeSet(agg.groupingExpressions.flatMap(_.references))
-                // Collect the local references from the correlated predicate in the subquery.
-                val subqueryColumns = getCorrelatedPredicates(query).flatMap(_.references)
-                  .filterNot(conditions.flatMap(_.references).contains)
-                val correlatedCols = AttributeSet(subqueryColumns)
-                val invalidCols = groupByCols -- correlatedCols
-                // GROUP BY columns must be a subset of columns in the predicates
-                if (invalidCols.nonEmpty) {
-                  failAnalysis(
-                    "A GROUP BY clause in a scalar correlated subquery " +
-                      "cannot contain non-correlated columns: " +
-                      invalidCols.mkString(","))
-                }
+          case s @ ScalarSubquery(query, conditions, _) if conditions.nonEmpty =>
+            def checkAggregate(agg: Aggregate): Unit = {
+              // Make sure correlated scalar subqueries contain one row for every outer row by
+              // enforcing that they are aggregates which contain exactly one aggregate expressions.
+              // The analyzer has already checked that subquery contained only one output column,
+              // and added all the grouping expressions to the aggregate.
+              val aggregates = agg.expressions.flatMap(_.collect {
+                case a: AggregateExpression => a
+              })
+              if (aggregates.isEmpty) {
+                failAnalysis("The output of a correlated scalar subquery must be aggregated")
               }
 
-              // Skip subquery aliases added by the Analyzer.
-              // For projects, do the necessary mapping and skip to its child.
-              def cleanQuery(p: LogicalPlan): LogicalPlan = p match {
-                case s: SubqueryAlias => cleanQuery(s.child)
-                case p: Project => cleanQuery(p.child)
-                case child => child
-              }
-
-              cleanQuery(query) match {
-                case a: Aggregate => checkAggregate(a)
-                case Filter(_, a: Aggregate) => checkAggregate(a)
-                case fail => failAnalysis(s"Correlated scalar subqueries must be Aggregated: $fail")
+              // SPARK-18504: block cases where GROUP BY columns
+              // are not part of the correlated columns
+              val groupByCols = ExpressionSet.apply(agg.groupingExpressions.flatMap(_.references))
+              val predicateCols = ExpressionSet.apply(conditions.flatMap(_.references))
+              val invalidCols = groupByCols.diff(predicateCols)
+              // GROUP BY columns must be a subset of columns in the predicates
+              if (invalidCols.nonEmpty) {
+                failAnalysis(
+                  "a GROUP BY clause in a scalar correlated subquery " +
+                    "cannot contain non-correlated columns: " +
+                    invalidCols.mkString(","))
               }
             }
-            s
 
-          case s: SubqueryExpression =>
-            checkSubqueryExpression(operator, s)
+            // Skip projects and subquery aliases added by the Analyzer and the SQLBuilder.
+            def cleanQuery(p: LogicalPlan): LogicalPlan = p match {
+              case SubqueryAlias(_, child) => cleanQuery(child)
+              case Project(_, child) => cleanQuery(child)
+              case child => child
+            }
+
+            cleanQuery(query) match {
+              case a: Aggregate => checkAggregate(a)
+              case Filter(_, a: Aggregate) => checkAggregate(a)
+              case fail => failAnalysis(s"Correlated scalar subqueries must be Aggregated: $fail")
+            }
             s
         }
 
@@ -204,9 +190,14 @@ trait CheckAnalysis extends PredicateHelper {
               s"filter expression '${f.condition.sql}' " +
                 s"of type ${f.condition.dataType.simpleString} is not a boolean.")
 
-          case Filter(condition, _) if hasNullAwarePredicateWithinNot(condition) =>
-            failAnalysis("Null-aware predicate sub-queries cannot be used in nested " +
-              s"conditions: $condition")
+          case Filter(condition, _) =>
+            splitConjunctivePredicates(condition).foreach {
+              case _: PredicateSubquery | Not(_: PredicateSubquery) =>
+              case e if PredicateSubquery.hasNullAwarePredicateWithinNot(e) =>
+                failAnalysis(s"Null-aware predicate sub-queries cannot be used in nested" +
+                  s" conditions: $e")
+              case e =>
+            }
 
           case j @ Join(_, _, _, Some(condition)) if condition.dataType != BooleanType =>
             failAnalysis(
@@ -288,9 +279,29 @@ trait CheckAnalysis extends PredicateHelper {
               }
             }
 
+          case s @ SetOperation(left, right) if left.output.length != right.output.length =>
+            failAnalysis(
+              s"${s.nodeName} can only be performed on tables with the same number of columns, " +
+                s"but the left table has ${left.output.length} columns and the right has " +
+                s"${right.output.length}")
+
+          case s: Union if s.children.exists(_.output.length != s.children.head.output.length) =>
+            val firstError = s.children.find(_.output.length != s.children.head.output.length).get
+            failAnalysis(
+              s"Unions can only be performed on tables with the same number of columns, " +
+                s"but one table has '${firstError.output.length}' columns and another table has " +
+                s"'${s.children.head.output.length}' columns")
+
           case GlobalLimit(limitExpr, _) => checkLimitClause(limitExpr)
 
           case LocalLimit(limitExpr, _) => checkLimitClause(limitExpr)
+
+          case p if p.expressions.exists(ScalarSubquery.hasCorrelatedScalarSubquery) =>
+            p match {
+              case _: Filter | _: Aggregate | _: Project => // Ok
+              case other => failAnalysis(
+                s"Correlated scalar sub-queries can only be used in a Filter/Aggregate/Project: $p")
+            }
 
           case _: Union | _: SetOperation if operator.children.length > 1 =>
             def dataTypes(plan: LogicalPlan): Seq[DataType] = plan.output.map(_.dataType)
@@ -367,6 +378,44 @@ trait CheckAnalysis extends PredicateHelper {
                  |$plan
                  |Conflicting attributes: ${conflictingAttributes.mkString(",")}
                """.stripMargin)
+
+          case s: SimpleCatalogRelation =>
+            failAnalysis(
+              s"""
+                 |Hive support is required to select over the following tables:
+                 |${s.catalogTable.identifier}
+               """.stripMargin)
+
+          // TODO: We need to consolidate this kind of checks for InsertIntoTable
+          // with the rule of PreWriteCheck defined in extendedCheckRules.
+          case InsertIntoTable(s: SimpleCatalogRelation, _, _, _, _) =>
+            failAnalysis(
+              s"""
+                 |Hive support is required to insert into the following tables:
+                 |${s.catalogTable.identifier}
+               """.stripMargin)
+
+          case InsertIntoTable(t, _, _, _, _)
+            if !t.isInstanceOf[LeafNode] ||
+              t.isInstanceOf[Range] ||
+              t == OneRowRelation ||
+              t.isInstanceOf[LocalRelation] =>
+            failAnalysis(s"Inserting into an RDD-based table is not allowed.")
+
+          case i @ InsertIntoTable(table, partitions, query, _, _) =>
+            val numStaticPartitions = partitions.values.count(_.isDefined)
+            if (table.output.size != (query.output.size + numStaticPartitions)) {
+              failAnalysis(
+                s"$table requires that the data to be inserted have the same number of " +
+                  s"columns as the target table: target table has ${table.output.size} " +
+                  s"column(s) but the inserted data has " +
+                  s"${query.output.size + numStaticPartitions} column(s), including " +
+                  s"$numStaticPartitions partition column(s) having constant value(s).")
+            }
+
+          case o if !o.resolved =>
+            failAnalysis(
+              s"unresolved operator ${operator.simpleString}")
 
           // TODO: although map type is not orderable, technically map type should be able to be
           // used in equality comparison, remove this type check once we support it.

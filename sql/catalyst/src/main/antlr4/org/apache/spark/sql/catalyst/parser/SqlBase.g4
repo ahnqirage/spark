@@ -25,7 +25,7 @@ grammar SqlBase;
    * For char stream "2.3", "2." is not a valid decimal token, because it is followed by digit '3'.
    * For char stream "2.3_", "2.3" is not a valid decimal token, because it is followed by '_'.
    * For char stream "2.3W", "2.3" is not a valid decimal token, because it is followed by 'W'.
-   * For char stream "12.0D 34.E2+0.12 "  12.0D is a valid decimal token because it is followed
+   * For char stream "12.0D 34.E2+0.12 "  12.0D is a valid decimal token because it is folllowed
    * by a space. 34.E2 is a valid decimal token because it is followed by symbol '+'
    * which is not a digit or letter or underscore.
    */
@@ -38,6 +38,10 @@ grammar SqlBase;
       return true;
     }
   }
+}
+
+tokens {
+    DELIMITER
 }
 
 singleStatement
@@ -73,7 +77,11 @@ statement
     | ALTER DATABASE identifier SET DBPROPERTIES tablePropertyList     #setDatabaseProperties
     | DROP DATABASE (IF EXISTS)? identifier (RESTRICT | CASCADE)?      #dropDatabase
     | createTableHeader ('(' colTypeList ')')? tableProvider
-        (OPTIONS options=tablePropertyList)?
+        (OPTIONS tablePropertyList)?
+        (PARTITIONED BY partitionColumnNames=identifierList)?
+        bucketSpec?                                                    #createTableUsing
+    | createTableHeader tableProvider
+        (OPTIONS tablePropertyList)?
         (PARTITIONED BY partitionColumnNames=identifierList)?
         bucketSpec? locationSpec?
         (COMMENT comment=STRING)?
@@ -118,12 +126,11 @@ statement
     | ALTER TABLE tableIdentifier RECOVER PARTITIONS                   #recoverPartitions
     | DROP TABLE (IF EXISTS)? tableIdentifier PURGE?                   #dropTable
     | DROP VIEW (IF EXISTS)? tableIdentifier                           #dropTable
-    | CREATE (OR REPLACE)? (GLOBAL? TEMPORARY)?
-        VIEW (IF NOT EXISTS)? tableIdentifier
+    | CREATE (OR REPLACE)? TEMPORARY? VIEW (IF NOT EXISTS)? tableIdentifier
         identifierCommentList? (COMMENT STRING)?
         (PARTITIONED ON identifierList)?
         (TBLPROPERTIES tablePropertyList)? AS query                    #createView
-    | CREATE (OR REPLACE)? GLOBAL? TEMPORARY VIEW
+    | CREATE (OR REPLACE)? TEMPORARY VIEW
         tableIdentifier ('(' colTypeList ')')? tableProvider
         (OPTIONS tablePropertyList)?                                   #createTempViewUsing
     | ALTER VIEW tableIdentifier AS? query                             #alterViewQuery
@@ -131,8 +138,7 @@ statement
         qualifiedName AS className=STRING
         (USING resource (',' resource)*)?                              #createFunction
     | DROP TEMPORARY? FUNCTION (IF EXISTS)? qualifiedName              #dropFunction
-    | EXPLAIN (LOGICAL | FORMATTED | EXTENDED | CODEGEN | COST)?
-        statement                                                      #explain
+    | EXPLAIN (LOGICAL | FORMATTED | EXTENDED | CODEGEN)? statement    #explain
     | SHOW TABLES ((FROM | IN) db=identifier)?
         (LIKE? pattern=STRING)?                                        #showTables
     | SHOW TABLE EXTENDED ((FROM | IN) db=identifier)?
@@ -148,12 +154,12 @@ statement
     | SHOW CREATE TABLE tableIdentifier                                #showCreateTable
     | (DESC | DESCRIBE) FUNCTION EXTENDED? describeFuncName            #describeFunction
     | (DESC | DESCRIBE) DATABASE EXTENDED? identifier                  #describeDatabase
-    | (DESC | DESCRIBE) TABLE? option=(EXTENDED | FORMATTED)?
+    | (DESC | DESCRIBE) option=(EXTENDED | FORMATTED)?
         tableIdentifier partitionSpec? describeColName?                #describeTable
     | REFRESH TABLE tableIdentifier                                    #refreshTable
-    | REFRESH (STRING | .*?)                                           #refreshResource
+    | REFRESH .*?                                                      #refreshResource
     | CACHE LAZY? TABLE tableIdentifier (AS? query)?                   #cacheTable
-    | UNCACHE TABLE (IF EXISTS)? tableIdentifier                       #uncacheTable
+    | UNCACHE TABLE tableIdentifier                                    #uncacheTable
     | CLEAR CACHE                                                      #clearCache
     | LOAD DATA LOCAL? INPATH path=STRING OVERWRITE? INTO TABLE
         tableIdentifier partitionSpec?                                 #loadData
@@ -206,6 +212,8 @@ unsupportedHiveNativeCommands
     | kw1=ALTER kw2=TABLE tableIdentifier partitionSpec? kw3=COMPACT
     | kw1=ALTER kw2=TABLE tableIdentifier partitionSpec? kw3=CONCATENATE
     | kw1=ALTER kw2=TABLE tableIdentifier partitionSpec? kw3=SET kw4=FILEFORMAT
+    | kw1=ALTER kw2=TABLE tableIdentifier partitionSpec? kw3=ADD kw4=COLUMNS
+    | kw1=ALTER kw2=TABLE tableIdentifier partitionSpec? kw3=CHANGE kw4=COLUMNS?
     | kw1=ALTER kw2=TABLE tableIdentifier partitionSpec? kw3=REPLACE kw4=COLUMNS
     | kw1=START kw2=TRANSACTION
     | kw1=COMMIT
@@ -239,10 +247,8 @@ query
     ;
 
 insertInto
-    : INSERT OVERWRITE TABLE tableIdentifier (partitionSpec (IF NOT EXISTS)?)?                              #insertOverwriteTable
-    | INSERT INTO TABLE? tableIdentifier partitionSpec?                                                     #insertIntoTable
-    | INSERT OVERWRITE LOCAL? DIRECTORY path=STRING rowFormat? createFileFormat?                            #insertOverwriteHiveDir
-    | INSERT OVERWRITE LOCAL? DIRECTORY (path=STRING)? tableProvider (OPTIONS options=tablePropertyList)?   #insertOverwriteDir
+    : INSERT OVERWRITE TABLE tableIdentifier (partitionSpec (IF NOT EXISTS)?)?
+    | INSERT INTO TABLE? tableIdentifier partitionSpec?
     ;
 
 partitionSpecLocation
@@ -291,13 +297,6 @@ tableProperty
 
 tablePropertyKey
     : identifier ('.' identifier)*
-    | STRING
-    ;
-
-tablePropertyValue
-    : INTEGER_VALUE
-    | DECIMAL_VALUE
-    | booleanValue
     | STRING
     ;
 
@@ -423,7 +422,7 @@ relation
     ;
 
 joinRelation
-    : (joinType) JOIN right=relationPrimary joinCriteria?
+    : (CROSS | joinType) JOIN right=relationPrimary joinCriteria?
     | NATURAL joinType JOIN right=relationPrimary
     ;
 
@@ -443,15 +442,12 @@ joinCriteria
     ;
 
 sample
-    : TABLESAMPLE '(' sampleMethod? ')'
-    ;
-
-sampleMethod
-    : negativeSign=MINUS? percentage=(INTEGER_VALUE | DECIMAL_VALUE) PERCENTLIT   #sampleByPercentile
-    | expression ROWS                                                             #sampleByRows
-    | sampleType=BUCKET numerator=INTEGER_VALUE OUT OF denominator=INTEGER_VALUE
-        (ON (identifier | qualifiedName '(' ')'))?                                #sampleByBucket
-    | bytes=expression                                                            #sampleByBytes
+    : TABLESAMPLE '('
+      ( (percentage=(INTEGER_VALUE | DECIMAL_VALUE) sampleType=PERCENTLIT)
+      | (expression sampleType=ROWS)
+      | sampleType=BYTELENGTH_LITERAL
+      | (sampleType=BUCKET numerator=INTEGER_VALUE OUT OF denominator=INTEGER_VALUE (ON (identifier | qualifiedName '(' ')'))?))
+      ')'
     ;
 
 identifierList
@@ -479,11 +475,11 @@ identifierComment
     ;
 
 relationPrimary
-    : tableIdentifier sample? tableAlias      #tableName
-    | '(' queryNoWith ')' sample? tableAlias  #aliasedQuery
-    | '(' relation ')' sample? tableAlias     #aliasedRelation
-    | inlineTable                             #inlineTableDefault2
-    | functionTable                           #tableValuedFunction
+    : tableIdentifier sample? (AS? strictIdentifier)?               #tableName
+    | '(' queryNoWith ')' sample? (AS? strictIdentifier)?           #aliasedQuery
+    | '(' relation ')' sample? (AS? strictIdentifier)?              #aliasedRelation
+    | inlineTable                                                   #inlineTableDefault2
+    | identifier '(' (expression (',' expression)*)? ')'            #tableValuedFunction
     ;
 
 inlineTable
@@ -530,7 +526,6 @@ expression
 
 booleanExpression
     : NOT booleanExpression                                        #logicalNot
-    | EXISTS '(' query ')'                                         #exists
     | predicated                                                   #booleanDefault
     | left=booleanExpression operator=AND right=booleanExpression  #logicalBinary
     | left=booleanExpression operator=OR right=booleanExpression   #logicalBinary
@@ -568,19 +563,12 @@ primaryExpression
     | CASE whenClause+ (ELSE elseExpression=expression)? END                                   #searchedCase
     | CASE value=expression whenClause+ (ELSE elseExpression=expression)? END                  #simpleCase
     | CAST '(' expression AS dataType ')'                                                      #cast
-    | STRUCT '(' (argument+=namedExpression (',' argument+=namedExpression)*)? ')'             #struct
-    | FIRST '(' expression (IGNORE NULLS)? ')'                                                 #first
-    | LAST '(' expression (IGNORE NULLS)? ')'                                                  #last
-    | POSITION '(' substr=valueExpression IN str=valueExpression ')'                           #position
     | constant                                                                                 #constantDefault
     | ASTERISK                                                                                 #star
     | qualifiedName '.' ASTERISK                                                               #star
-    | '(' namedExpression (',' namedExpression)+ ')'                                           #rowConstructor
+    | '(' expression (',' expression)+ ')'                                                     #rowConstructor
     | '(' query ')'                                                                            #subqueryExpression
-    | qualifiedName '(' (setQuantifier? argument+=expression (',' argument+=expression)*)? ')'
-       (OVER windowSpec)?                                                                      #functionCall
-    | qualifiedName '(' trimOption=(BOTH | LEADING | TRAILING) argument+=expression
-      FROM argument+=expression ')'                                                            #functionCall
+    | qualifiedName '(' (setQuantifier? expression (',' expression)*)? ')' (OVER windowSpec)?  #functionCall
     | value=primaryExpression '[' index=valueExpression ']'                                    #subscript
     | identifier                                                                               #columnReference
     | base=primaryExpression '.' fieldName=identifier                                          #dereference
@@ -694,7 +682,7 @@ qualifiedName
 identifier
     : strictIdentifier
     | ANTI | FULL | INNER | LEFT | SEMI | RIGHT | NATURAL | JOIN | CROSS | ON
-    | UNION | INTERSECT | EXCEPT | SETMINUS
+    | UNION | INTERSECT | EXCEPT
     ;
 
 strictIdentifier
@@ -709,6 +697,7 @@ quotedIdentifier
 
 number
     : MINUS? DECIMAL_VALUE            #decimalLiteral
+    | MINUS? SCIENTIFIC_DECIMAL_VALUE #scientificDecimalLiteral
     | MINUS? INTEGER_VALUE            #integerLiteral
     | MINUS? BIGINT_LITERAL           #bigIntLiteral
     | MINUS? SMALLINT_LITERAL         #smallIntLiteral
@@ -733,7 +722,7 @@ nonReserved
     | IF
     | POSITION
     | NO | DATA
-    | START | TRANSACTION | COMMIT | ROLLBACK | IGNORE
+    | START | TRANSACTION | COMMIT | ROLLBACK
     | SORT | CLUSTER | DISTRIBUTE | UNSET | TBLPROPERTIES | SKEWED | STORED | DIRECTORIES | LOCATION
     | EXCHANGE | ARCHIVE | UNARCHIVE | FILEFORMAT | TOUCH | COMPACT | CONCATENATE | CHANGE
     | CASCADE | RESTRICT | BUCKETS | CLUSTERED | SORTED | PURGE | INPUTFORMAT | OUTPUTFORMAT
@@ -748,8 +737,6 @@ nonReserved
     | AND | CASE | CAST | DISTINCT | DIV | ELSE | END | FUNCTION | INTERVAL | MACRO | OR | STRATIFY | THEN
     | UNBOUNDED | WHEN
     | DATABASE | SELECT | FROM | WHERE | HAVING | TO | TABLE | WITH | NOT | CURRENT_DATE | CURRENT_TIMESTAMP
-    | DIRECTORY
-    | BOTH | LEADING | TRAILING
     ;
 
 SELECT: 'SELECT';
@@ -1003,13 +990,21 @@ TINYINT_LITERAL
     : DIGIT+ 'Y'
     ;
 
+BYTELENGTH_LITERAL
+    : DIGIT+ ('B' | 'K' | 'M' | 'G')
+    ;
+
 INTEGER_VALUE
     : DIGIT+
     ;
 
 DECIMAL_VALUE
+    : DECIMAL_DIGITS {isValidDecimal()}?
+    ;
+
+SCIENTIFIC_DECIMAL_VALUE
     : DIGIT+ EXPONENT
-    | DECIMAL_DIGITS EXPONENT? {isValidDecimal()}?
+    | DECIMAL_DIGITS EXPONENT {isValidDecimal()}?
     ;
 
 DOUBLE_LITERAL

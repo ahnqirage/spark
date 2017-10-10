@@ -23,7 +23,6 @@ import java.nio.file.attribute.PosixFilePermission._
 import java.util.EnumSet
 
 import scala.annotation.tailrec
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 import org.apache.hadoop.fs.Path
@@ -85,7 +84,6 @@ class YarnShuffleServiceSuite extends SparkFunSuite with Matchers with BeforeAnd
 
   test("executor state kept across NM restart") {
     s1 = new YarnShuffleService
-    s1.setRecoveryPath(new Path(recoveryLocalDir.toURI))
     // set auth to true to test the secrets recovery
     yarnConfig.setBoolean(SecurityManager.SPARK_AUTH_CONF, true)
     s1.init(yarnConfig)
@@ -163,7 +161,6 @@ class YarnShuffleServiceSuite extends SparkFunSuite with Matchers with BeforeAnd
 
   test("removed applications should not be in registered executor file") {
     s1 = new YarnShuffleService
-    s1.setRecoveryPath(new Path(recoveryLocalDir.toURI))
     yarnConfig.setBoolean(SecurityManager.SPARK_AUTH_CONF, false)
     s1.init(yarnConfig)
     val secretsFile = s1.secretsFile

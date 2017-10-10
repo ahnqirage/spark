@@ -24,9 +24,7 @@ import org.apache.spark.SparkException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
-import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.objects._
-import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, ArrayData, DateTimeUtils, GenericArrayData}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -89,7 +87,7 @@ object RowEncoder {
         udtClass,
         Nil,
         dataType = ObjectType(udtClass), false)
-      Invoke(obj, "serialize", udt, inputObject :: Nil, returnNullable = false)
+      Invoke(obj, "serialize", udt, inputObject :: Nil)
 
     case TimestampType =>
       StaticInvoke(
@@ -120,31 +118,20 @@ object RowEncoder {
         classOf[UTF8String],
         StringType,
         "fromString",
-        inputObject :: Nil,
-        returnNullable = false)
+        inputObject :: Nil)
 
-    case t @ ArrayType(et, containsNull) =>
-      et match {
-        case BooleanType | ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType =>
-          StaticInvoke(
-            classOf[ArrayData],
-            t,
-            "toArrayData",
-            inputObject :: Nil,
-            returnNullable = false)
-
-        case _ => MapObjects(
-          element => {
-            val value = serializerFor(ValidateExternalType(element, et), et)
-            if (!containsNull) {
-              AssertNotNull(value, Seq.empty)
-            } else {
-              value
-            }
-          },
-          inputObject,
-          ObjectType(classOf[Object]))
-      }
+    case t @ ArrayType(et, _) => et match {
+      case BooleanType | ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType =>
+        // TODO: validate input type for primitive array.
+        NewInstance(
+          classOf[GenericArrayData],
+          inputObject :: Nil,
+          dataType = t)
+      case _ => MapObjects(
+        element => serializerFor(ValidateExternalType(element, et), et),
+        inputObject,
+        ObjectType(classOf[Object]))
+    }
 
     case t @ MapType(kt, vt, valueNullable) =>
       val keys =

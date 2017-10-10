@@ -135,7 +135,7 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
 
         <div class="row-fluid">
           <div class="span12">
-            <h4 id="running-app"> Running Applications ({activeApps.length}) </h4>
+            <h4 id="running-app"> Running Applications </h4>
             {activeAppsTable}
           </div>
         </div>
@@ -154,7 +154,7 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
 
         <div class="row-fluid">
           <div class="span12">
-            <h4 id="completed-app"> Completed Applications ({completedApps.length}) </h4>
+            <h4 id="completed-app"> Completed Applications </h4>
             {completedAppsTable}
           </div>
         </div>
@@ -220,8 +220,7 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
           if (app.isFinished) {
             app.desc.name
           } else {
-            <a href={UIUtils.makeHref(parent.master.reverseProxy,
-              app.id, app.desc.appUiUrl)}>{app.desc.name}</a>
+            <a href={app.desc.appUiUrl}>{app.desc.name}</a>
           }
         }
       </td>

@@ -23,8 +23,8 @@ import scala.util.control.NonFatal
 
 import org.json4s.JsonDSL._
 
-import org.apache.spark.SparkException
-import org.apache.spark.annotation.InterfaceStability
+import org.apache.spark.{SparkEnv, SparkException}
+import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, InterpretedOrdering}
 import org.apache.spark.sql.catalyst.parser.{CatalystSqlParser, LegacyTypeStringParser}
 import org.apache.spark.sql.catalyst.util.quoteIdentifier

@@ -113,7 +113,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
       }
       // Check for duplicate names.
       checkDuplicateKeys(ctes, ctx)
-      With(query, ctes)
+      With(query, ctes.toMap)
     }
   }
 
@@ -240,29 +240,18 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
     val tableIdent = visitTableIdentifier(ctx.tableIdentifier)
     val partitionKeys = Option(ctx.partitionSpec).map(visitPartitionSpec).getOrElse(Map.empty)
 
-    val dynamicPartitionKeys: Map[String, Option[String]] = partitionKeys.filter(_._2.isEmpty)
+    val dynamicPartitionKeys = partitionKeys.filter(_._2.isEmpty)
     if (ctx.EXISTS != null && dynamicPartitionKeys.nonEmpty) {
       throw new ParseException(s"Dynamic partitions do not support IF NOT EXISTS. Specified " +
         "partitions with value: " + dynamicPartitionKeys.keys.mkString("[", ",", "]"), ctx)
     }
 
-    (tableIdent, partitionKeys, ctx.EXISTS() != null)
-  }
-
-  /**
-   * Write to a directory, returning a [[InsertIntoDir]] logical plan.
-   */
-  override def visitInsertOverwriteDir(
-      ctx: InsertOverwriteDirContext): InsertDirParams = withOrigin(ctx) {
-    throw new ParseException("INSERT OVERWRITE DIRECTORY is not supported", ctx)
-  }
-
-  /**
-   * Write to a directory, returning a [[InsertIntoDir]] logical plan.
-   */
-  override def visitInsertOverwriteHiveDir(
-      ctx: InsertOverwriteHiveDirContext): InsertDirParams = withOrigin(ctx) {
-    throw new ParseException("INSERT OVERWRITE DIRECTORY is not supported", ctx)
+    InsertIntoTable(
+      UnresolvedRelation(tableIdent, None),
+      partitionKeys,
+      query,
+      ctx.OVERWRITE != null,
+      ctx.EXISTS != null)
   }
 
   /**
@@ -271,13 +260,11 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
   override def visitPartitionSpec(
       ctx: PartitionSpecContext): Map[String, Option[String]] = withOrigin(ctx) {
     val parts = ctx.partitionVal.asScala.map { pVal =>
-      val name = pVal.identifier.getText
+      val name = pVal.identifier.getText.toLowerCase
       val value = Option(pVal.constant).map(visitStringConstant)
       name -> value
     }
-    // Before calling `toMap`, we check duplicated keys to avoid silently ignore partition values
-    // in partition spec like PARTITION(a='1', b='2', a='3'). The real semantical check for
-    // partition columns will be done in analyzer.
+    // Check for duplicate partition columns in one spec.
     checkDuplicateKeys(parts, ctx)
     parts.toMap
   }
@@ -631,7 +618,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
   }
 
   /**
-   * Create a single relation referenced in a FROM clause. This method is used when a part of the
+   * Create a single relation referenced in a FROM claused. This method is used when a part of the
    * join condition is nested, for example:
    * {{{
    *   select * from t1 join (t2 cross join t3) on col1 = col2
@@ -649,7 +636,6 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
       withOrigin(join) {
         val baseJoinType = join.joinType match {
           case null => Inner
-          case jt if jt.CROSS != null => Cross
           case jt if jt.FULL != null => FullOuter
           case jt if jt.SEMI != null => LeftSemi
           case jt if jt.ANTI != null => LeftAnti
@@ -665,9 +651,6 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
           case Some(c) if c.booleanExpression != null =>
             (baseJoinType, Option(expression(c.booleanExpression)))
           case None if join.NATURAL != null =>
-            if (baseJoinType == Cross) {
-              throw new ParseException("NATURAL CROSS JOIN is not supported", ctx)
-            }
             (NaturalJoin(baseJoinType), None)
           case None =>
             (baseJoinType, None)
@@ -712,17 +695,11 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
         val sign = if (ctx.negativeSign == null) 1 else -1
         sample(sign * fraction / 100.0d)
 
-      case ctx: SampleByBytesContext =>
-        val bytesStr = ctx.bytes.getText
-        if (bytesStr.matches("[0-9]+[bBkKmMgG]")) {
-          throw new ParseException("TABLESAMPLE(byteLengthLiteral) is not supported", ctx)
-        } else {
-          throw new ParseException(
-            bytesStr + " is not a valid byte length literal, " +
-              "expected syntax: DIGIT+ ('B' | 'K' | 'M' | 'G')", ctx)
-        }
+      case SqlBaseParser.BYTELENGTH_LITERAL =>
+        throw new ParseException(
+          "TABLESAMPLE(byteLengthLiteral) is not supported", ctx)
 
-      case ctx: SampleByBucketContext if ctx.ON() != null =>
+      case SqlBaseParser.BUCKET if ctx.ON != null =>
         if (ctx.identifier != null) {
           throw new ParseException(
             "TABLESAMPLE(BUCKET x OUT OF y ON colname) is not supported", ctx)
@@ -759,8 +736,9 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * Create an aliased table reference. This is typically used in FROM clauses.
    */
   override def visitTableName(ctx: TableNameContext): LogicalPlan = withOrigin(ctx) {
-    val tableId = visitTableIdentifier(ctx.tableIdentifier)
-    val table = mayApplyAliasPlan(ctx.tableAlias, UnresolvedRelation(tableId))
+    val table = UnresolvedRelation(
+      visitTableIdentifier(ctx.tableIdentifier),
+      Option(ctx.strictIdentifier).map(_.getText))
     table.optionalMap(ctx.sample)(withSample)
   }
 
@@ -769,16 +747,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    */
   override def visitTableValuedFunction(ctx: TableValuedFunctionContext)
       : LogicalPlan = withOrigin(ctx) {
-    val func = ctx.functionTable
-    val aliases = if (func.tableAlias.identifierList != null) {
-      visitIdentifierList(func.tableAlias.identifierList)
-    } else {
-      Seq.empty
-    }
-
-    val tvf = UnresolvedTableValuedFunction(
-      func.identifier.getText, func.expression.asScala.map(expression), aliases)
-    tvf.optionalMap(func.tableAlias.strictIdentifier)(aliasPlan)
+    UnresolvedTableValuedFunction(ctx.identifier.getText, ctx.expression.asScala.map(expression))
   }
 
   /**
@@ -791,19 +760,19 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
         // inline table comes in two styles:
         // style 1: values (1), (2), (3)  -- multiple columns are supported
         // style 2: values 1, 2, 3  -- only a single column is supported here
-        case struct: CreateNamedStruct => struct.valExprs // style 1
-        case child => Seq(child)                          // style 2
+        case CreateStruct(children) => children  // style 1
+        case child => Seq(child)  // style 2
       }
     }
 
-    val aliases = if (ctx.tableAlias.identifierList != null) {
-      visitIdentifierList(ctx.tableAlias.identifierList)
+    val aliases = if (ctx.identifierList != null) {
+      visitIdentifierList(ctx.identifierList)
     } else {
       Seq.tabulate(rows.head.size)(i => s"col${i + 1}")
     }
 
     val table = UnresolvedInlineTable(aliases, rows)
-    table.optionalMap(ctx.tableAlias.strictIdentifier)(aliasPlan)
+    table.optionalMap(ctx.identifier)(aliasPlan)
   }
 
   /**
@@ -815,8 +784,9 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * }}}
    */
   override def visitAliasedRelation(ctx: AliasedRelationContext): LogicalPlan = withOrigin(ctx) {
-    val relation = plan(ctx.relation).optionalMap(ctx.sample)(withSample)
-    mayApplyAliasPlan(ctx.tableAlias, relation)
+    plan(ctx.relation)
+      .optionalMap(ctx.sample)(withSample)
+      .optionalMap(ctx.strictIdentifier)(aliasPlan)
   }
 
   /**
@@ -828,16 +798,9 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * }}}
    */
   override def visitAliasedQuery(ctx: AliasedQueryContext): LogicalPlan = withOrigin(ctx) {
-    val relation = plan(ctx.queryNoWith).optionalMap(ctx.sample)(withSample)
-    if (ctx.tableAlias.strictIdentifier == null) {
-      // For un-aliased subqueries, use a default alias name that is not likely to conflict with
-      // normal subquery names, so that parent operators can only access the columns in subquery by
-      // unqualified names. Users can still use this special qualifier to access columns if they
-      // know it, but that's not recommended.
-      SubqueryAlias("__auto_generated_subquery_name", relation)
-    } else {
-      mayApplyAliasPlan(ctx.tableAlias, relation)
-    }
+    plan(ctx.queryNoWith)
+      .optionalMap(ctx.sample)(withSample)
+      .optionalMap(ctx.strictIdentifier)(aliasPlan)
   }
 
   /**
@@ -1298,8 +1261,10 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
   override def visitFrameBound(ctx: FrameBoundContext): Expression = withOrigin(ctx) {
     def value: Expression = {
       val e = expression(ctx.expression)
-      validate(e.resolved && e.foldable, "Frame bound value must be a literal.", ctx)
-      e
+      validate(e.resolved && e.foldable && e.dataType == IntegerType,
+        "Frame bound value must be a constant integer.",
+        ctx)
+      e.eval().asInstanceOf[Int]
     }
 
     ctx.boundType.getType match {

@@ -795,8 +795,7 @@ def _parse_datatype_string(s):
     to :class:`DataType.simpleString`, except that top level struct type can omit
     the ``struct<>`` and atomic types use ``typeName()`` as their format, e.g. use ``byte`` instead
     of ``tinyint`` for :class:`ByteType`. We can also use ``int`` as a short name
-    for :class:`IntegerType`. Since Spark 2.3, this also supports a schema in a DDL-formatted
-    string and case-insensitive strings.
+    for :class:`IntegerType`.
 
     >>> _parse_datatype_string("int ")
     IntegerType
@@ -1289,11 +1288,10 @@ def _make_type_verifier(dataType, nullable=True, name=None):
 
     _type = type(dataType)
 
-    def assert_acceptable_types(obj):
-        assert _type in _acceptable_types, \
-            new_msg("unknown datatype: %s for object %r" % (dataType, obj))
-
-    def verify_acceptable_types(obj):
+    if _type is StructType:
+        # check the type and fields later
+        pass
+    else:
         # subclass of them can not be fromInternal in JVM
         if type(obj) not in _acceptable_types[_type]:
             raise TypeError(new_msg("%s can not accept object %r in type %s"
@@ -1368,49 +1366,25 @@ def _make_type_verifier(dataType, nullable=True, name=None):
         verify_value = verify_map
 
     elif isinstance(dataType, StructType):
-        verifiers = []
-        for f in dataType.fields:
-            verifier = _make_type_verifier(f.dataType, f.nullable, name=new_name(f.name))
-            verifiers.append((f.name, verifier))
-
-        def verify_struct(obj):
-            assert_acceptable_types(obj)
-
-            if isinstance(obj, dict):
-                for f, verifier in verifiers:
-                    verifier(obj.get(f))
-            elif isinstance(obj, Row) and getattr(obj, "__from_dict__", False):
-                # the order in obj could be different than dataType.fields
-                for f, verifier in verifiers:
-                    verifier(obj[f])
-            elif isinstance(obj, (tuple, list)):
-                if len(obj) != len(verifiers):
-                    raise ValueError(
-                        new_msg("Length of object (%d) does not match with "
-                                "length of fields (%d)" % (len(obj), len(verifiers))))
-                for v, (_, verifier) in zip(obj, verifiers):
-                    verifier(v)
-            elif hasattr(obj, "__dict__"):
-                d = obj.__dict__
-                for f, verifier in verifiers:
-                    verifier(d.get(f))
-            else:
-                raise TypeError(new_msg("StructType can not accept object %r in type %s"
-                                        % (obj, type(obj))))
-        verify_value = verify_struct
-
-    else:
-        def verify_default(obj):
-            assert_acceptable_types(obj)
-            verify_acceptable_types(obj)
-
-        verify_value = verify_default
-
-    def verify(obj):
-        if not verify_nullability(obj):
-            verify_value(obj)
-
-    return verify
+        if isinstance(obj, dict):
+            for f in dataType.fields:
+                _verify_type(obj.get(f.name), f.dataType, f.nullable)
+        elif isinstance(obj, Row) and getattr(obj, "__from_dict__", False):
+            # the order in obj could be different than dataType.fields
+            for f in dataType.fields:
+                _verify_type(obj[f.name], f.dataType, f.nullable)
+        elif isinstance(obj, (tuple, list)):
+            if len(obj) != len(dataType.fields):
+                raise ValueError("Length of object (%d) does not match with "
+                                 "length of fields (%d)" % (len(obj), len(dataType.fields)))
+            for v, f in zip(obj, dataType.fields):
+                _verify_type(v, f.dataType, f.nullable)
+        elif hasattr(obj, "__dict__"):
+            d = obj.__dict__
+            for f in dataType.fields:
+                _verify_type(d.get(f.name), f.dataType, f.nullable)
+        else:
+            raise TypeError("StructType can not accept object %r in type %s" % (obj, type(obj)))
 
 
 # This is used to unpickle a Row from JVM

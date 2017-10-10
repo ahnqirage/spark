@@ -48,22 +48,12 @@ if sys.version_info[:2] <= (2, 6):
 else:
     import unittest
 
-_have_pandas = False
-try:
-    import pandas
-    _have_pandas = True
-except:
-    # No Pandas, but that's okay, we'll skip those tests
-    pass
-
 from pyspark import SparkContext
 from pyspark.sql import SparkSession, SQLContext, HiveContext, Column, Row
 from pyspark.sql.types import *
-from pyspark.sql.types import UserDefinedType, _infer_type, _make_type_verifier
-from pyspark.sql.types import _array_signed_int_typecode_ctype_mappings, _array_type_mappings
-from pyspark.sql.types import _array_unsigned_int_typecode_ctype_mappings
-from pyspark.tests import QuietTest, ReusedPySparkTestCase, SparkSubmitTests
-from pyspark.sql.functions import UserDefinedFunction, sha2, lit
+from pyspark.sql.types import UserDefinedType, _infer_type
+from pyspark.tests import ReusedPySparkTestCase, SparkSubmitTests
+from pyspark.sql.functions import UserDefinedFunction, sha2
 from pyspark.sql.window import Window
 from pyspark.sql.utils import AnalysisException, ParseException, IllegalArgumentException
 
@@ -200,18 +190,9 @@ class DataTypeTests(unittest.TestCase):
         dt = DateType()
         self.assertEqual(dt.fromInternal(0), datetime.date(1970, 1, 1))
 
-    # regression test for SPARK-17035
-    def test_timestamp_microsecond(self):
-        tst = TimestampType()
-        self.assertEqual(tst.toInternal(datetime.datetime.max) % 1000000, 999999)
-
     def test_empty_row(self):
         row = Row()
         self.assertEqual(len(row), 0)
-
-    def test_struct_field_type_name(self):
-        struct_field = StructField("a", IntegerType())
-        self.assertRaises(TypeError, struct_field.typeName)
 
 
 class SQLTests(ReusedPySparkTestCase):
@@ -235,12 +216,6 @@ class SQLTests(ReusedPySparkTestCase):
         sqlContext1 = SQLContext(self.sc)
         sqlContext2 = SQLContext(self.sc)
         self.assertTrue(sqlContext1.sparkSession is sqlContext2.sparkSession)
-
-    def tearDown(self):
-        super(SQLTests, self).tearDown()
-
-        # tear down test_bucketed_write state
-        self.spark.sql("DROP TABLE IF EXISTS pyspark_bucket")
 
     def test_row_should_be_read_only(self):
         row = Row(a=1, b=2)
@@ -395,15 +370,6 @@ class SQLTests(ReusedPySparkTestCase):
         df = df.withColumn('b', udf(lambda x: 'x')(df.a))
         self.assertEqual(df.filter('b = "x"').collect(), [Row(a=1, b='x')])
 
-    def test_udf_in_filter_on_top_of_join(self):
-        # regression test for SPARK-18589
-        from pyspark.sql.functions import udf
-        left = self.spark.createDataFrame([Row(a=1)])
-        right = self.spark.createDataFrame([Row(b=1)])
-        f = udf(lambda a, b: a == b, BooleanType())
-        df = left.crossJoin(right).filter(f("a", "b"))
-        self.assertEqual(df.collect(), [Row(a=1, b=1)])
-
     def test_udf_without_arguments(self):
         self.spark.catalog.registerFunction("foo", lambda: "bar")
         [row] = self.spark.sql("SELECT foo()").collect()
@@ -428,9 +394,9 @@ class SQLTests(ReusedPySparkTestCase):
         [res] = self.spark.sql("SELECT MYUDF('')").collect()
         self.assertEqual("", res[0])
 
-    def test_udf_with_filter_function(self):
+    def test_udf_with_aggregate_function(self):
         df = self.spark.createDataFrame([(1, "1"), (2, "2"), (1, "2"), (1, "2")], ["key", "value"])
-        from pyspark.sql.functions import udf, col
+        from pyspark.sql.functions import udf, col, sum
         from pyspark.sql.types import BooleanType
 
         my_filter = udf(lambda a: a < 2, BooleanType())
@@ -488,231 +454,6 @@ class SQLTests(ReusedPySparkTestCase):
         res = df.select(df.id, my_copy(df.id).alias("copy")).limit(1)
         res.explain(True)
         self.assertEqual(res.collect(), [Row(id=0, copy=0)])
-
-    def test_multiLine_json(self):
-        people1 = self.spark.read.json("python/test_support/sql/people.json")
-        people_array = self.spark.read.json("python/test_support/sql/people_array.json",
-                                            multiLine=True)
-        self.assertEqual(people1.collect(), people_array.collect())
-
-    def test_multiLine_csv(self):
-        ages_newlines = self.spark.read.csv(
-            "python/test_support/sql/ages_newlines.csv", multiLine=True)
-        expected = [Row(_c0=u'Joe', _c1=u'20', _c2=u'Hi,\nI am Jeo'),
-                    Row(_c0=u'Tom', _c1=u'30', _c2=u'My name is Tom'),
-                    Row(_c0=u'Hyukjin', _c1=u'25', _c2=u'I am Hyukjin\n\nI love Spark!')]
-        self.assertEqual(ages_newlines.collect(), expected)
-
-    def test_ignorewhitespace_csv(self):
-        tmpPath = tempfile.mkdtemp()
-        shutil.rmtree(tmpPath)
-        self.spark.createDataFrame([[" a", "b  ", " c "]]).write.csv(
-            tmpPath,
-            ignoreLeadingWhiteSpace=False,
-            ignoreTrailingWhiteSpace=False)
-
-        expected = [Row(value=u' a,b  , c ')]
-        readback = self.spark.read.text(tmpPath)
-        self.assertEqual(readback.collect(), expected)
-        shutil.rmtree(tmpPath)
-
-    def test_read_multiple_orc_file(self):
-        df = self.spark.read.orc(["python/test_support/sql/orc_partitioned/b=0/c=0",
-                                  "python/test_support/sql/orc_partitioned/b=1/c=1"])
-        self.assertEqual(2, df.count())
-
-    def test_udf_with_input_file_name(self):
-        from pyspark.sql.functions import udf, input_file_name
-        from pyspark.sql.types import StringType
-        sourceFile = udf(lambda path: path, StringType())
-        filePath = "python/test_support/sql/people1.json"
-        row = self.spark.read.json(filePath).select(sourceFile(input_file_name())).first()
-        self.assertTrue(row[0].find("people1.json") != -1)
-
-    def test_udf_with_input_file_name_for_hadooprdd(self):
-        from pyspark.sql.functions import udf, input_file_name
-        from pyspark.sql.types import StringType
-
-        def filename(path):
-            return path
-
-        sameText = udf(filename, StringType())
-
-        rdd = self.sc.textFile('python/test_support/sql/people.json')
-        df = self.spark.read.json(rdd).select(input_file_name().alias('file'))
-        row = df.select(sameText(df['file'])).first()
-        self.assertTrue(row[0].find("people.json") != -1)
-
-        rdd2 = self.sc.newAPIHadoopFile(
-            'python/test_support/sql/people.json',
-            'org.apache.hadoop.mapreduce.lib.input.TextInputFormat',
-            'org.apache.hadoop.io.LongWritable',
-            'org.apache.hadoop.io.Text')
-
-        df2 = self.spark.read.json(rdd2).select(input_file_name().alias('file'))
-        row2 = df2.select(sameText(df2['file'])).first()
-        self.assertTrue(row2[0].find("people.json") != -1)
-
-    def test_udf_defers_judf_initalization(self):
-        # This is separate of  UDFInitializationTests
-        # to avoid context initialization
-        # when udf is called
-
-        from pyspark.sql.functions import UserDefinedFunction
-
-        f = UserDefinedFunction(lambda x: x, StringType())
-
-        self.assertIsNone(
-            f._judf_placeholder,
-            "judf should not be initialized before the first call."
-        )
-
-        self.assertIsInstance(f("foo"), Column, "UDF call should return a Column.")
-
-        self.assertIsNotNone(
-            f._judf_placeholder,
-            "judf should be initialized after UDF has been called."
-        )
-
-    def test_udf_with_string_return_type(self):
-        from pyspark.sql.functions import UserDefinedFunction
-
-        add_one = UserDefinedFunction(lambda x: x + 1, "integer")
-        make_pair = UserDefinedFunction(lambda x: (-x, x), "struct<x:integer,y:integer>")
-        make_array = UserDefinedFunction(
-            lambda x: [float(x) for x in range(x, x + 3)], "array<double>")
-
-        expected = (2, Row(x=-1, y=1), [1.0, 2.0, 3.0])
-        actual = (self.spark.range(1, 2).toDF("x")
-                  .select(add_one("x"), make_pair("x"), make_array("x"))
-                  .first())
-
-        self.assertTupleEqual(expected, actual)
-
-    def test_udf_shouldnt_accept_noncallable_object(self):
-        from pyspark.sql.functions import UserDefinedFunction
-        from pyspark.sql.types import StringType
-
-        non_callable = None
-        self.assertRaises(TypeError, UserDefinedFunction, non_callable, StringType())
-
-    def test_udf_with_decorator(self):
-        from pyspark.sql.functions import lit, udf
-        from pyspark.sql.types import IntegerType, DoubleType
-
-        @udf(IntegerType())
-        def add_one(x):
-            if x is not None:
-                return x + 1
-
-        @udf(returnType=DoubleType())
-        def add_two(x):
-            if x is not None:
-                return float(x + 2)
-
-        @udf
-        def to_upper(x):
-            if x is not None:
-                return x.upper()
-
-        @udf()
-        def to_lower(x):
-            if x is not None:
-                return x.lower()
-
-        @udf
-        def substr(x, start, end):
-            if x is not None:
-                return x[start:end]
-
-        @udf("long")
-        def trunc(x):
-            return int(x)
-
-        @udf(returnType="double")
-        def as_double(x):
-            return float(x)
-
-        df = (
-            self.spark
-                .createDataFrame(
-                    [(1, "Foo", "foobar", 3.0)], ("one", "Foo", "foobar", "float"))
-                .select(
-                    add_one("one"), add_two("one"),
-                    to_upper("Foo"), to_lower("Foo"),
-                    substr("foobar", lit(0), lit(3)),
-                    trunc("float"), as_double("one")))
-
-        self.assertListEqual(
-            [tpe for _, tpe in df.dtypes],
-            ["int", "double", "string", "string", "string", "bigint", "double"]
-        )
-
-        self.assertListEqual(
-            list(df.first()),
-            [2, 3.0, "FOO", "foo", "foo", 3, 1.0]
-        )
-
-    def test_udf_wrapper(self):
-        from pyspark.sql.functions import udf
-        from pyspark.sql.types import IntegerType
-
-        def f(x):
-            """Identity"""
-            return x
-
-        return_type = IntegerType()
-        f_ = udf(f, return_type)
-
-        self.assertTrue(f.__doc__ in f_.__doc__)
-        self.assertEqual(f, f_.func)
-        self.assertEqual(return_type, f_.returnType)
-
-        class F(object):
-            """Identity"""
-            def __call__(self, x):
-                return x
-
-        f = F()
-        return_type = IntegerType()
-        f_ = udf(f, return_type)
-
-        self.assertTrue(f.__doc__ in f_.__doc__)
-        self.assertEqual(f, f_.func)
-        self.assertEqual(return_type, f_.returnType)
-
-        f = functools.partial(f, x=1)
-        return_type = IntegerType()
-        f_ = udf(f, return_type)
-
-        self.assertTrue(f.__doc__ in f_.__doc__)
-        self.assertEqual(f, f_.func)
-        self.assertEqual(return_type, f_.returnType)
-
-    def test_validate_column_types(self):
-        from pyspark.sql.functions import udf, to_json
-        from pyspark.sql.column import _to_java_column
-
-        self.assertTrue("Column" in _to_java_column("a").getClass().toString())
-        self.assertTrue("Column" in _to_java_column(u"a").getClass().toString())
-        self.assertTrue("Column" in _to_java_column(self.spark.range(1).id).getClass().toString())
-
-        self.assertRaisesRegexp(
-            TypeError,
-            "Invalid argument, not a string or column",
-            lambda: _to_java_column(1))
-
-        class A():
-            pass
-
-        self.assertRaises(TypeError, lambda: _to_java_column(A()))
-        self.assertRaises(TypeError, lambda: _to_java_column([]))
-
-        self.assertRaisesRegexp(
-            TypeError,
-            "Invalid argument, not a string or column",
-            lambda: udf(lambda x: x)(None))
-        self.assertRaises(TypeError, lambda: to_json(1))
 
     def test_basic_functions(self):
         rdd = self.sc.parallelize(['{"foo":"bar"}', '{"foo":"baz"}'])
@@ -879,6 +620,16 @@ class SQLTests(ReusedPySparkTestCase):
 
         self.assertEqual((126, -127, -32767, 32766, 2147483646, 2.5), tuple(r))
 
+        from pyspark.sql.types import _parse_schema_abstract, _infer_schema_type
+        rdd = self.sc.parallelize([(127, -32768, 1.0, datetime(2010, 1, 1, 1, 1, 1),
+                                    {"a": 1}, (2,), [1, 2, 3])])
+        abstract = "byte1 short1 float1 time1 map1{} struct1(b) list1[]"
+        schema = _parse_schema_abstract(abstract)
+        typedSchema = _infer_schema_type(rdd.first(), schema)
+        df = self.spark.createDataFrame(rdd, typedSchema)
+        r = (127, -32768, 1.0, datetime(2010, 1, 1, 1, 1, 1), {"a": 1}, Row(b=2), [1, 2, 3])
+        self.assertEqual(r, tuple(df.first()))
+
     def test_struct_in_map(self):
         d = [Row(m={Row(i=1): Row(s="")})]
         df = self.sc.parallelize(d).toDF()
@@ -902,7 +653,7 @@ class SQLTests(ReusedPySparkTestCase):
         def check_datatype(datatype):
             pickled = pickle.loads(pickle.dumps(datatype))
             assert datatype == pickled
-            scala_datatype = self.spark._jsparkSession.parseDataType(datatype.json())
+            scala_datatype = self.spark._wrapped._ssql_ctx.parseDataType(datatype.json())
             python_datatype = _parse_datatype_json_string(scala_datatype.json())
             assert datatype == python_datatype
 
@@ -925,6 +676,52 @@ class SQLTests(ReusedPySparkTestCase):
         self.assertRaises(
             ValueError,
             lambda: _make_type_verifier(PythonOnlyUDT())([1.0, 2.0]))
+
+    def test_simple_udt_in_df(self):
+        schema = StructType().add("key", LongType()).add("val", PythonOnlyUDT())
+        df = self.spark.createDataFrame(
+            [(i % 3, PythonOnlyPoint(float(i), float(i))) for i in range(10)],
+            schema=schema)
+        df.show()
+
+    def test_nested_udt_in_df(self):
+        schema = StructType().add("key", LongType()).add("val", ArrayType(PythonOnlyUDT()))
+        df = self.spark.createDataFrame(
+            [(i % 3, [PythonOnlyPoint(float(i), float(i))]) for i in range(10)],
+            schema=schema)
+        df.collect()
+
+        schema = StructType().add("key", LongType()).add("val",
+                                                         MapType(LongType(), PythonOnlyUDT()))
+        df = self.spark.createDataFrame(
+            [(i % 3, {i % 3: PythonOnlyPoint(float(i + 1), float(i + 1))}) for i in range(10)],
+            schema=schema)
+        df.collect()
+
+    def test_complex_nested_udt_in_df(self):
+        from pyspark.sql.functions import udf
+
+        schema = StructType().add("key", LongType()).add("val", PythonOnlyUDT())
+        df = self.spark.createDataFrame(
+            [(i % 3, PythonOnlyPoint(float(i), float(i))) for i in range(10)],
+            schema=schema)
+        df.collect()
+
+        gd = df.groupby("key").agg({"val": "collect_list"})
+        gd.collect()
+        udf = udf(lambda k, v: [(k, v[0])], ArrayType(df.schema))
+        gd.select(udf(*gd)).collect()
+
+    def test_udt_with_none(self):
+        df = self.spark.range(0, 10, 1, 1)
+
+        def myudf(x):
+            if x > 0:
+                return PythonOnlyPoint(float(x), float(x))
+
+        self.spark.catalog.registerFunction("udf", myudf, PythonOnlyUDT())
+        rows = [r[0] for r in df.selectExpr("udf(id)").take(2)]
+        self.assertEqual(rows, [None, PythonOnlyPoint(1, 1)])
 
     def test_simple_udt_in_df(self):
         schema = StructType().add("key", LongType()).add("val", PythonOnlyUDT())
@@ -1397,22 +1194,8 @@ class SQLTests(ReusedPySparkTestCase):
 
         shutil.rmtree(tmpPath)
 
-    def test_stream_trigger(self):
+    def test_stream_trigger_takes_keyword_args(self):
         df = self.spark.readStream.format('text').load('python/test_support/sql/streaming')
-
-        # Should take at least one arg
-        try:
-            df.writeStream.trigger()
-        except ValueError:
-            pass
-
-        # Should not take multiple args
-        try:
-            df.writeStream.trigger(once=True, processingTime='5 seconds')
-        except ValueError:
-            pass
-
-        # Should take only keyword args
         try:
             df.writeStream.trigger('5 seconds')
             self.fail("Should have thrown an exception")
@@ -1439,8 +1222,7 @@ class SQLTests(ReusedPySparkTestCase):
         self.assertEqual(df.schema.simpleString(), "struct<data:string>")
 
     def test_stream_save_options(self):
-        df = self.spark.readStream.format('text').load('python/test_support/sql/streaming') \
-            .withColumn('id', lit(1))
+        df = self.spark.readStream.format('text').load('python/test_support/sql/streaming')
         for q in self.spark._wrapped.streams.active:
             q.stop()
         tmpPath = tempfile.mkdtemp()
@@ -1449,7 +1231,7 @@ class SQLTests(ReusedPySparkTestCase):
         out = os.path.join(tmpPath, 'out')
         chk = os.path.join(tmpPath, 'chk')
         q = df.writeStream.option('checkpointLocation', chk).queryName('this_query') \
-            .format('parquet').partitionBy('id').outputMode('append').option('path', out).start()
+            .format('parquet').outputMode('append').option('path', out).start()
         try:
             self.assertEqual(q.name, 'this_query')
             self.assertTrue(q.isActive)
@@ -1490,49 +1272,6 @@ class SQLTests(ReusedPySparkTestCase):
             self.assertTrue(len(os.listdir(chk)) > 0)
             self.assertFalse(os.path.isdir(fake1))  # should not have been created
             self.assertFalse(os.path.isdir(fake2))  # should not have been created
-        finally:
-            q.stop()
-            shutil.rmtree(tmpPath)
-
-    def test_stream_status_and_progress(self):
-        df = self.spark.readStream.format('text').load('python/test_support/sql/streaming')
-        for q in self.spark._wrapped.streams.active:
-            q.stop()
-        tmpPath = tempfile.mkdtemp()
-        shutil.rmtree(tmpPath)
-        self.assertTrue(df.isStreaming)
-        out = os.path.join(tmpPath, 'out')
-        chk = os.path.join(tmpPath, 'chk')
-
-        def func(x):
-            time.sleep(1)
-            return x
-
-        from pyspark.sql.functions import col, udf
-        sleep_udf = udf(func)
-
-        # Use "sleep_udf" to delay the progress update so that we can test `lastProgress` when there
-        # were no updates.
-        q = df.select(sleep_udf(col("value")).alias('value')).writeStream \
-            .start(path=out, format='parquet', queryName='this_query', checkpointLocation=chk)
-        try:
-            # "lastProgress" will return None in most cases. However, as it may be flaky when
-            # Jenkins is very slow, we don't assert it. If there is something wrong, "lastProgress"
-            # may throw error with a high chance and make this test flaky, so we should still be
-            # able to detect broken codes.
-            q.lastProgress
-
-            q.processAllAvailable()
-            lastProgress = q.lastProgress
-            recentProgress = q.recentProgress
-            status = q.status
-            self.assertEqual(lastProgress['name'], q.name)
-            self.assertEqual(lastProgress['id'], q.id)
-            self.assertTrue(any(p == lastProgress for p in recentProgress))
-            self.assertTrue(
-                "message" in status and
-                "isDataAvailable" in status and
-                "isTriggerActive" in status)
         finally:
             q.stop()
             shutil.rmtree(tmpPath)
@@ -1814,17 +1553,16 @@ class SQLTests(ReusedPySparkTestCase):
             StructField("spy", BooleanType(), True)])
 
         # fillna shouldn't change non-null values
-        row = self.spark.createDataFrame([(u'Alice', 10, 80.1, True)], schema).fillna(50).first()
+        row = self.spark.createDataFrame([(u'Alice', 10, 80.1)], schema).fillna(50).first()
         self.assertEqual(row.age, 10)
 
         # fillna with int
-        row = self.spark.createDataFrame([(u'Alice', None, None, None)], schema).fillna(50).first()
+        row = self.spark.createDataFrame([(u'Alice', None, None)], schema).fillna(50).first()
         self.assertEqual(row.age, 50)
         self.assertEqual(row.height, 50.0)
 
         # fillna with double
-        row = self.spark.createDataFrame(
-            [(u'Alice', None, None, None)], schema).fillna(50.1).first()
+        row = self.spark.createDataFrame([(u'Alice', None, None)], schema).fillna(50.1).first()
         self.assertEqual(row.age, 50)
         self.assertEqual(row.height, 50.1)
 
@@ -1835,21 +1573,21 @@ class SQLTests(ReusedPySparkTestCase):
         self.assertEqual(row.spy, True)
 
         # fillna with string
-        row = self.spark.createDataFrame([(None, None, None, None)], schema).fillna("hello").first()
+        row = self.spark.createDataFrame([(None, None, None)], schema).fillna("hello").first()
         self.assertEqual(row.name, u"hello")
         self.assertEqual(row.age, None)
 
         # fillna with subset specified for numeric cols
         row = self.spark.createDataFrame(
-            [(None, None, None, None)], schema).fillna(50, subset=['name', 'age']).first()
+            [(None, None, None)], schema).fillna(50, subset=['name', 'age']).first()
         self.assertEqual(row.name, None)
         self.assertEqual(row.age, 50)
         self.assertEqual(row.height, None)
         self.assertEqual(row.spy, None)
 
-        # fillna with subset specified for string cols
+        # fillna with subset specified for numeric cols
         row = self.spark.createDataFrame(
-            [(None, None, None, None)], schema).fillna("haha", subset=['name', 'age']).first()
+            [(None, None, None)], schema).fillna("haha", subset=['name', 'age']).first()
         self.assertEqual(row.name, "haha")
         self.assertEqual(row.age, None)
         self.assertEqual(row.height, None)
@@ -2205,8 +1943,8 @@ class SQLTests(ReusedPySparkTestCase):
         self.assertEquals(spark.catalog.listTables(), [])
         self.assertEquals(spark.catalog.listTables("some_db"), [])
         spark.createDataFrame([(1, 1)]).createOrReplaceTempView("temp_tab")
-        spark.sql("CREATE TABLE tab1 (name STRING, age INT) USING parquet")
-        spark.sql("CREATE TABLE some_db.tab2 (name STRING, age INT) USING parquet")
+        spark.sql("CREATE TABLE tab1 (name STRING, age INT)")
+        spark.sql("CREATE TABLE some_db.tab2 (name STRING, age INT)")
         tables = sorted(spark.catalog.listTables(), key=lambda t: t.name)
         tablesDefault = sorted(spark.catalog.listTables("default"), key=lambda t: t.name)
         tablesSomeDb = sorted(spark.catalog.listTables("some_db"), key=lambda t: t.name)
@@ -2368,186 +2106,11 @@ class SQLTests(ReusedPySparkTestCase):
 
     def test_BinaryType_serialization(self):
         # Pyrolite version <= 4.9 could not serialize BinaryType with Python3 SPARK-17808
-        # The empty bytearray is test for SPARK-21534.
         schema = StructType([StructField('mybytes', BinaryType())])
         data = [[bytearray(b'here is my data')],
-                [bytearray(b'and here is some more')],
-                [bytearray(b'')]]
+                [bytearray(b'and here is some more')]]
         df = self.spark.createDataFrame(data, schema=schema)
         df.collect()
-
-    # test for SPARK-16542
-    def test_array_types(self):
-        # This test need to make sure that the Scala type selected is at least
-        # as large as the python's types. This is necessary because python's
-        # array types depend on C implementation on the machine. Therefore there
-        # is no machine independent correspondence between python's array types
-        # and Scala types.
-        # See: https://docs.python.org/2/library/array.html
-
-        def assertCollectSuccess(typecode, value):
-            row = Row(myarray=array.array(typecode, [value]))
-            df = self.spark.createDataFrame([row])
-            self.assertEqual(df.first()["myarray"][0], value)
-
-        # supported string types
-        #
-        # String types in python's array are "u" for Py_UNICODE and "c" for char.
-        # "u" will be removed in python 4, and "c" is not supported in python 3.
-        supported_string_types = []
-        if sys.version_info[0] < 4:
-            supported_string_types += ['u']
-            # test unicode
-            assertCollectSuccess('u', u'a')
-        if sys.version_info[0] < 3:
-            supported_string_types += ['c']
-            # test string
-            assertCollectSuccess('c', 'a')
-
-        # supported float and double
-        #
-        # Test max, min, and precision for float and double, assuming IEEE 754
-        # floating-point format.
-        supported_fractional_types = ['f', 'd']
-        assertCollectSuccess('f', ctypes.c_float(1e+38).value)
-        assertCollectSuccess('f', ctypes.c_float(1e-38).value)
-        assertCollectSuccess('f', ctypes.c_float(1.123456).value)
-        assertCollectSuccess('d', sys.float_info.max)
-        assertCollectSuccess('d', sys.float_info.min)
-        assertCollectSuccess('d', sys.float_info.epsilon)
-
-        # supported signed int types
-        #
-        # The size of C types changes with implementation, we need to make sure
-        # that there is no overflow error on the platform running this test.
-        supported_signed_int_types = list(
-            set(_array_signed_int_typecode_ctype_mappings.keys())
-            .intersection(set(_array_type_mappings.keys())))
-        for t in supported_signed_int_types:
-            ctype = _array_signed_int_typecode_ctype_mappings[t]
-            max_val = 2 ** (ctypes.sizeof(ctype) * 8 - 1)
-            assertCollectSuccess(t, max_val - 1)
-            assertCollectSuccess(t, -max_val)
-
-        # supported unsigned int types
-        #
-        # JVM does not have unsigned types. We need to be very careful to make
-        # sure that there is no overflow error.
-        supported_unsigned_int_types = list(
-            set(_array_unsigned_int_typecode_ctype_mappings.keys())
-            .intersection(set(_array_type_mappings.keys())))
-        for t in supported_unsigned_int_types:
-            ctype = _array_unsigned_int_typecode_ctype_mappings[t]
-            assertCollectSuccess(t, 2 ** (ctypes.sizeof(ctype) * 8) - 1)
-
-        # all supported types
-        #
-        # Make sure the types tested above:
-        # 1. are all supported types
-        # 2. cover all supported types
-        supported_types = (supported_string_types +
-                           supported_fractional_types +
-                           supported_signed_int_types +
-                           supported_unsigned_int_types)
-        self.assertEqual(set(supported_types), set(_array_type_mappings.keys()))
-
-        # all unsupported types
-        #
-        # Keys in _array_type_mappings is a complete list of all supported types,
-        # and types not in _array_type_mappings are considered unsupported.
-        # `array.typecodes` are not supported in python 2.
-        if sys.version_info[0] < 3:
-            all_types = set(['c', 'b', 'B', 'u', 'h', 'H', 'i', 'I', 'l', 'L', 'f', 'd'])
-        else:
-            all_types = set(array.typecodes)
-        unsupported_types = all_types - set(supported_types)
-        # test unsupported types
-        for t in unsupported_types:
-            with self.assertRaises(TypeError):
-                a = array.array(t)
-                self.spark.createDataFrame([Row(myarray=a)]).collect()
-
-    def test_bucketed_write(self):
-        data = [
-            (1, "foo", 3.0), (2, "foo", 5.0),
-            (3, "bar", -1.0), (4, "bar", 6.0),
-        ]
-        df = self.spark.createDataFrame(data, ["x", "y", "z"])
-
-        def count_bucketed_cols(names, table="pyspark_bucket"):
-            """Given a sequence of column names and a table name
-            query the catalog and return number o columns which are
-            used for bucketing
-            """
-            cols = self.spark.catalog.listColumns(table)
-            num = len([c for c in cols if c.name in names and c.isBucket])
-            return num
-
-        # Test write with one bucketing column
-        df.write.bucketBy(3, "x").mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x"]), 1)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write two bucketing columns
-        df.write.bucketBy(3, "x", "y").mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x", "y"]), 2)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with bucket and sort
-        df.write.bucketBy(2, "x").sortBy("z").mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x"]), 1)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with a list of columns
-        df.write.bucketBy(3, ["x", "y"]).mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x", "y"]), 2)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with bucket and sort with a list of columns
-        (df.write.bucketBy(2, "x")
-            .sortBy(["y", "z"])
-            .mode("overwrite").saveAsTable("pyspark_bucket"))
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with bucket and sort with multiple columns
-        (df.write.bucketBy(2, "x")
-            .sortBy("y", "z")
-            .mode("overwrite").saveAsTable("pyspark_bucket"))
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-    @unittest.skipIf(not _have_pandas, "Pandas not installed")
-    def test_to_pandas(self):
-        import numpy as np
-        schema = StructType().add("a", IntegerType()).add("b", StringType())\
-                             .add("c", BooleanType()).add("d", FloatType())
-        data = [
-            (1, "foo", True, 3.0), (2, "foo", True, 5.0),
-            (3, "bar", False, -1.0), (4, "bar", False, 6.0),
-        ]
-        df = self.spark.createDataFrame(data, schema)
-        types = df.toPandas().dtypes
-        self.assertEquals(types[0], np.int32)
-        self.assertEquals(types[1], np.object)
-        self.assertEquals(types[2], np.bool)
-        self.assertEquals(types[3], np.float32)
-
-    @unittest.skipIf(not _have_pandas, "Pandas not installed")
-    def test_to_pandas_avoid_astype(self):
-        import numpy as np
-        schema = StructType().add("a", IntegerType()).add("b", StringType())\
-                             .add("c", IntegerType())
-        data = [(1, "foo", 16777220), (None, "bar", None)]
-        df = self.spark.createDataFrame(data, schema)
-        types = df.toPandas().dtypes
-        self.assertEquals(types[0], np.float64)  # doesn't convert to np.int32 due to NaN value.
-        self.assertEquals(types[1], np.object)
-        self.assertEquals(types[2], np.float64)
-
-    def test_create_dataframe_from_array_of_long(self):
-        import array
-        data = [Row(longarray=array.array('l', [-9223372036854775808, 0, 9223372036854775807]))]
-        df = self.spark.createDataFrame(data)
-        self.assertEqual(df.first(), Row(longarray=[-9223372036854775808, 0, 9223372036854775807]))
 
 
 class HiveSparkSubmitTests(SparkSubmitTests):
@@ -2614,29 +2177,6 @@ class SQLTests2(ReusedPySparkTestCase):
         finally:
             spark.stop()
             sc.stop()
-
-
-class UDFInitializationTests(unittest.TestCase):
-    def tearDown(self):
-        if SparkSession._instantiatedSession is not None:
-            SparkSession._instantiatedSession.stop()
-
-        if SparkContext._active_spark_context is not None:
-            SparkContext._active_spark_contex.stop()
-
-    def test_udf_init_shouldnt_initalize_context(self):
-        from pyspark.sql.functions import UserDefinedFunction
-
-        UserDefinedFunction(lambda x: x, StringType())
-
-        self.assertIsNone(
-            SparkContext._active_spark_context,
-            "SparkContext shouldn't be initialized when UserDefinedFunction is created."
-        )
-        self.assertIsNone(
-            SparkSession._instantiatedSession,
-            "SparkSession shouldn't be initialized when UserDefinedFunction is created."
-        )
 
 
 class HiveContextSQLTests(ReusedPySparkTestCase):
@@ -2816,532 +2356,6 @@ class HiveContextSQLTests(ReusedPySparkTestCase):
         # Regression test for SPARK-17514: limit(n).collect() should the perform same as take(n)
         assert_runs_only_one_job_stage_and_task("collect_limit", lambda: df.limit(1).collect())
 
-    def test_datetime_functions(self):
-        from pyspark.sql import functions
-        from datetime import date, datetime
-        df = self.spark.range(1).selectExpr("'2017-01-22' as dateCol")
-        parse_result = df.select(functions.to_date(functions.col("dateCol"))).first()
-        self.assertEquals(date(2017, 1, 22), parse_result['to_date(`dateCol`)'])
-
-    @unittest.skipIf(sys.version_info < (3, 3), "Unittest < 3.3 doesn't support mocking")
-    def test_unbounded_frames(self):
-        from unittest.mock import patch
-        from pyspark.sql import functions as F
-        from pyspark.sql import window
-        import importlib
-
-        df = self.spark.range(0, 3)
-
-        def rows_frame_match():
-            return "ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING" in df.select(
-                F.count("*").over(window.Window.rowsBetween(-sys.maxsize, sys.maxsize))
-            ).columns[0]
-
-        def range_frame_match():
-            return "RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING" in df.select(
-                F.count("*").over(window.Window.rangeBetween(-sys.maxsize, sys.maxsize))
-            ).columns[0]
-
-        with patch("sys.maxsize", 2 ** 31 - 1):
-            importlib.reload(window)
-            self.assertTrue(rows_frame_match())
-            self.assertTrue(range_frame_match())
-
-        with patch("sys.maxsize", 2 ** 63 - 1):
-            importlib.reload(window)
-            self.assertTrue(rows_frame_match())
-            self.assertTrue(range_frame_match())
-
-        with patch("sys.maxsize", 2 ** 127 - 1):
-            importlib.reload(window)
-            self.assertTrue(rows_frame_match())
-            self.assertTrue(range_frame_match())
-
-        importlib.reload(window)
-
-
-class DataTypeVerificationTests(unittest.TestCase):
-
-    def test_verify_type_exception_msg(self):
-        self.assertRaisesRegexp(
-            ValueError,
-            "test_name",
-            lambda: _make_type_verifier(StringType(), nullable=False, name="test_name")(None))
-
-        schema = StructType([StructField('a', StructType([StructField('b', IntegerType())]))])
-        self.assertRaisesRegexp(
-            TypeError,
-            "field b in field a",
-            lambda: _make_type_verifier(schema)([["data"]]))
-
-    def test_verify_type_ok_nullable(self):
-        obj = None
-        types = [IntegerType(), FloatType(), StringType(), StructType([])]
-        for data_type in types:
-            try:
-                _make_type_verifier(data_type, nullable=True)(obj)
-            except Exception:
-                self.fail("verify_type(%s, %s, nullable=True)" % (obj, data_type))
-
-    def test_verify_type_not_nullable(self):
-        import array
-        import datetime
-        import decimal
-
-        schema = StructType([
-            StructField('s', StringType(), nullable=False),
-            StructField('i', IntegerType(), nullable=True)])
-
-        class MyObj:
-            def __init__(self, **kwargs):
-                for k, v in kwargs.items():
-                    setattr(self, k, v)
-
-        # obj, data_type
-        success_spec = [
-            # String
-            ("", StringType()),
-            (u"", StringType()),
-            (1, StringType()),
-            (1.0, StringType()),
-            ([], StringType()),
-            ({}, StringType()),
-
-            # UDT
-            (ExamplePoint(1.0, 2.0), ExamplePointUDT()),
-
-            # Boolean
-            (True, BooleanType()),
-
-            # Byte
-            (-(2**7), ByteType()),
-            (2**7 - 1, ByteType()),
-
-            # Short
-            (-(2**15), ShortType()),
-            (2**15 - 1, ShortType()),
-
-            # Integer
-            (-(2**31), IntegerType()),
-            (2**31 - 1, IntegerType()),
-
-            # Long
-            (2**64, LongType()),
-
-            # Float & Double
-            (1.0, FloatType()),
-            (1.0, DoubleType()),
-
-            # Decimal
-            (decimal.Decimal("1.0"), DecimalType()),
-
-            # Binary
-            (bytearray([1, 2]), BinaryType()),
-
-            # Date/Timestamp
-            (datetime.date(2000, 1, 2), DateType()),
-            (datetime.datetime(2000, 1, 2, 3, 4), DateType()),
-            (datetime.datetime(2000, 1, 2, 3, 4), TimestampType()),
-
-            # Array
-            ([], ArrayType(IntegerType())),
-            (["1", None], ArrayType(StringType(), containsNull=True)),
-            ([1, 2], ArrayType(IntegerType())),
-            ((1, 2), ArrayType(IntegerType())),
-            (array.array('h', [1, 2]), ArrayType(IntegerType())),
-
-            # Map
-            ({}, MapType(StringType(), IntegerType())),
-            ({"a": 1}, MapType(StringType(), IntegerType())),
-            ({"a": None}, MapType(StringType(), IntegerType(), valueContainsNull=True)),
-
-            # Struct
-            ({"s": "a", "i": 1}, schema),
-            ({"s": "a", "i": None}, schema),
-            ({"s": "a"}, schema),
-            ({"s": "a", "f": 1.0}, schema),
-            (Row(s="a", i=1), schema),
-            (Row(s="a", i=None), schema),
-            (Row(s="a", i=1, f=1.0), schema),
-            (["a", 1], schema),
-            (["a", None], schema),
-            (("a", 1), schema),
-            (MyObj(s="a", i=1), schema),
-            (MyObj(s="a", i=None), schema),
-            (MyObj(s="a"), schema),
-        ]
-
-        # obj, data_type, exception class
-        failure_spec = [
-            # String (match anything but None)
-            (None, StringType(), ValueError),
-
-            # UDT
-            (ExamplePoint(1.0, 2.0), PythonOnlyUDT(), ValueError),
-
-            # Boolean
-            (1, BooleanType(), TypeError),
-            ("True", BooleanType(), TypeError),
-            ([1], BooleanType(), TypeError),
-
-            # Byte
-            (-(2**7) - 1, ByteType(), ValueError),
-            (2**7, ByteType(), ValueError),
-            ("1", ByteType(), TypeError),
-            (1.0, ByteType(), TypeError),
-
-            # Short
-            (-(2**15) - 1, ShortType(), ValueError),
-            (2**15, ShortType(), ValueError),
-
-            # Integer
-            (-(2**31) - 1, IntegerType(), ValueError),
-            (2**31, IntegerType(), ValueError),
-
-            # Float & Double
-            (1, FloatType(), TypeError),
-            (1, DoubleType(), TypeError),
-
-            # Decimal
-            (1.0, DecimalType(), TypeError),
-            (1, DecimalType(), TypeError),
-            ("1.0", DecimalType(), TypeError),
-
-            # Binary
-            (1, BinaryType(), TypeError),
-
-            # Date/Timestamp
-            ("2000-01-02", DateType(), TypeError),
-            (946811040, TimestampType(), TypeError),
-
-            # Array
-            (["1", None], ArrayType(StringType(), containsNull=False), ValueError),
-            ([1, "2"], ArrayType(IntegerType()), TypeError),
-
-            # Map
-            ({"a": 1}, MapType(IntegerType(), IntegerType()), TypeError),
-            ({"a": "1"}, MapType(StringType(), IntegerType()), TypeError),
-            ({"a": None}, MapType(StringType(), IntegerType(), valueContainsNull=False),
-             ValueError),
-
-            # Struct
-            ({"s": "a", "i": "1"}, schema, TypeError),
-            (Row(s="a"), schema, ValueError),     # Row can't have missing field
-            (Row(s="a", i="1"), schema, TypeError),
-            (["a"], schema, ValueError),
-            (["a", "1"], schema, TypeError),
-            (MyObj(s="a", i="1"), schema, TypeError),
-            (MyObj(s=None, i="1"), schema, ValueError),
-        ]
-
-        # Check success cases
-        for obj, data_type in success_spec:
-            try:
-                _make_type_verifier(data_type, nullable=False)(obj)
-            except Exception:
-                self.fail("verify_type(%s, %s, nullable=False)" % (obj, data_type))
-
-        # Check failure cases
-        for obj, data_type, exp in failure_spec:
-            msg = "verify_type(%s, %s, nullable=False) == %s" % (obj, data_type, exp)
-            with self.assertRaises(exp, msg=msg):
-                _make_type_verifier(data_type, nullable=False)(obj)
-
-
-@unittest.skipIf(not _have_arrow, "Arrow not installed")
-class ArrowTests(ReusedPySparkTestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        ReusedPySparkTestCase.setUpClass()
-        cls.spark = SparkSession(cls.sc)
-        cls.spark.conf.set("spark.sql.execution.arrow.enabled", "true")
-        cls.schema = StructType([
-            StructField("1_str_t", StringType(), True),
-            StructField("2_int_t", IntegerType(), True),
-            StructField("3_long_t", LongType(), True),
-            StructField("4_float_t", FloatType(), True),
-            StructField("5_double_t", DoubleType(), True)])
-        cls.data = [("a", 1, 10, 0.2, 2.0),
-                    ("b", 2, 20, 0.4, 4.0),
-                    ("c", 3, 30, 0.8, 6.0)]
-
-    def assertFramesEqual(self, df_with_arrow, df_without):
-        msg = ("DataFrame from Arrow is not equal" +
-               ("\n\nWith Arrow:\n%s\n%s" % (df_with_arrow, df_with_arrow.dtypes)) +
-               ("\n\nWithout:\n%s\n%s" % (df_without, df_without.dtypes)))
-        self.assertTrue(df_without.equals(df_with_arrow), msg=msg)
-
-    def test_unsupported_datatype(self):
-        schema = StructType([StructField("dt", DateType(), True)])
-        df = self.spark.createDataFrame([(datetime.date(1970, 1, 1),)], schema=schema)
-        with QuietTest(self.sc):
-            self.assertRaises(Exception, lambda: df.toPandas())
-
-    def test_null_conversion(self):
-        df_null = self.spark.createDataFrame([tuple([None for _ in range(len(self.data[0]))])] +
-                                             self.data)
-        pdf = df_null.toPandas()
-        null_counts = pdf.isnull().sum().tolist()
-        self.assertTrue(all([c == 1 for c in null_counts]))
-
-    def test_toPandas_arrow_toggle(self):
-        df = self.spark.createDataFrame(self.data, schema=self.schema)
-        self.spark.conf.set("spark.sql.execution.arrow.enabled", "false")
-        pdf = df.toPandas()
-        self.spark.conf.set("spark.sql.execution.arrow.enabled", "true")
-        pdf_arrow = df.toPandas()
-        self.assertFramesEqual(pdf_arrow, pdf)
-
-    def test_pandas_round_trip(self):
-        import pandas as pd
-        import numpy as np
-        data_dict = {}
-        for j, name in enumerate(self.schema.names):
-            data_dict[name] = [self.data[i][j] for i in range(len(self.data))]
-        # need to convert these to numpy types first
-        data_dict["2_int_t"] = np.int32(data_dict["2_int_t"])
-        data_dict["4_float_t"] = np.float32(data_dict["4_float_t"])
-        pdf = pd.DataFrame(data=data_dict)
-        df = self.spark.createDataFrame(self.data, schema=self.schema)
-        pdf_arrow = df.toPandas()
-        self.assertFramesEqual(pdf_arrow, pdf)
-
-    def test_filtered_frame(self):
-        df = self.spark.range(3).toDF("i")
-        pdf = df.filter("i < 0").toPandas()
-        self.assertEqual(len(pdf.columns), 1)
-        self.assertEqual(pdf.columns[0], "i")
-        self.assertTrue(pdf.empty)
-
-
-@unittest.skipIf(not _have_pandas or not _have_arrow, "Pandas or Arrow not installed")
-class VectorizedUDFTests(ReusedPySparkTestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        ReusedPySparkTestCase.setUpClass()
-        cls.spark = SparkSession(cls.sc)
-
-    @classmethod
-    def tearDownClass(cls):
-        ReusedPySparkTestCase.tearDownClass()
-        cls.spark.stop()
-
-    def test_vectorized_udf_basic(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.range(10).select(
-            col('id').cast('string').alias('str'),
-            col('id').cast('int').alias('int'),
-            col('id').alias('long'),
-            col('id').cast('float').alias('float'),
-            col('id').cast('double').alias('double'),
-            col('id').cast('boolean').alias('bool'))
-        f = lambda x: x
-        str_f = pandas_udf(f, StringType())
-        int_f = pandas_udf(f, IntegerType())
-        long_f = pandas_udf(f, LongType())
-        float_f = pandas_udf(f, FloatType())
-        double_f = pandas_udf(f, DoubleType())
-        bool_f = pandas_udf(f, BooleanType())
-        res = df.select(str_f(col('str')), int_f(col('int')),
-                        long_f(col('long')), float_f(col('float')),
-                        double_f(col('double')), bool_f(col('bool')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_boolean(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [(True,), (True,), (None,), (False,)]
-        schema = StructType().add("bool", BooleanType())
-        df = self.spark.createDataFrame(data, schema)
-        bool_f = pandas_udf(lambda x: x, BooleanType())
-        res = df.select(bool_f(col('bool')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_byte(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [(None,), (2,), (3,), (4,)]
-        schema = StructType().add("byte", ByteType())
-        df = self.spark.createDataFrame(data, schema)
-        byte_f = pandas_udf(lambda x: x, ByteType())
-        res = df.select(byte_f(col('byte')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_short(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [(None,), (2,), (3,), (4,)]
-        schema = StructType().add("short", ShortType())
-        df = self.spark.createDataFrame(data, schema)
-        short_f = pandas_udf(lambda x: x, ShortType())
-        res = df.select(short_f(col('short')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_int(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [(None,), (2,), (3,), (4,)]
-        schema = StructType().add("int", IntegerType())
-        df = self.spark.createDataFrame(data, schema)
-        int_f = pandas_udf(lambda x: x, IntegerType())
-        res = df.select(int_f(col('int')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_long(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [(None,), (2,), (3,), (4,)]
-        schema = StructType().add("long", LongType())
-        df = self.spark.createDataFrame(data, schema)
-        long_f = pandas_udf(lambda x: x, LongType())
-        res = df.select(long_f(col('long')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_float(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [(3.0,), (5.0,), (-1.0,), (None,)]
-        schema = StructType().add("float", FloatType())
-        df = self.spark.createDataFrame(data, schema)
-        float_f = pandas_udf(lambda x: x, FloatType())
-        res = df.select(float_f(col('float')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_double(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [(3.0,), (5.0,), (-1.0,), (None,)]
-        schema = StructType().add("double", DoubleType())
-        df = self.spark.createDataFrame(data, schema)
-        double_f = pandas_udf(lambda x: x, DoubleType())
-        res = df.select(double_f(col('double')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_null_string(self):
-        from pyspark.sql.functions import pandas_udf, col
-        data = [("foo",), (None,), ("bar",), ("bar",)]
-        schema = StructType().add("str", StringType())
-        df = self.spark.createDataFrame(data, schema)
-        str_f = pandas_udf(lambda x: x, StringType())
-        res = df.select(str_f(col('str')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_zero_parameter(self):
-        from pyspark.sql.functions import pandas_udf
-        error_str = '0-parameter pandas_udfs.*not.*supported'
-        with QuietTest(self.sc):
-            with self.assertRaisesRegexp(NotImplementedError, error_str):
-                pandas_udf(lambda: 1, LongType())
-
-            with self.assertRaisesRegexp(NotImplementedError, error_str):
-                @pandas_udf
-                def zero_no_type():
-                    return 1
-
-            with self.assertRaisesRegexp(NotImplementedError, error_str):
-                @pandas_udf(LongType())
-                def zero_with_type():
-                    return 1
-
-    def test_vectorized_udf_datatype_string(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.range(10).select(
-            col('id').cast('string').alias('str'),
-            col('id').cast('int').alias('int'),
-            col('id').alias('long'),
-            col('id').cast('float').alias('float'),
-            col('id').cast('double').alias('double'),
-            col('id').cast('boolean').alias('bool'))
-        f = lambda x: x
-        str_f = pandas_udf(f, 'string')
-        int_f = pandas_udf(f, 'integer')
-        long_f = pandas_udf(f, 'long')
-        float_f = pandas_udf(f, 'float')
-        double_f = pandas_udf(f, 'double')
-        bool_f = pandas_udf(f, 'boolean')
-        res = df.select(str_f(col('str')), int_f(col('int')),
-                        long_f(col('long')), float_f(col('float')),
-                        double_f(col('double')), bool_f(col('bool')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_complex(self):
-        from pyspark.sql.functions import pandas_udf, col, expr
-        df = self.spark.range(10).select(
-            col('id').cast('int').alias('a'),
-            col('id').cast('int').alias('b'),
-            col('id').cast('double').alias('c'))
-        add = pandas_udf(lambda x, y: x + y, IntegerType())
-        power2 = pandas_udf(lambda x: 2 ** x, IntegerType())
-        mul = pandas_udf(lambda x, y: x * y, DoubleType())
-        res = df.select(add(col('a'), col('b')), power2(col('a')), mul(col('b'), col('c')))
-        expected = df.select(expr('a + b'), expr('power(2, a)'), expr('b * c'))
-        self.assertEquals(expected.collect(), res.collect())
-
-    def test_vectorized_udf_exception(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.range(10)
-        raise_exception = pandas_udf(lambda x: x * (1 / 0), LongType())
-        with QuietTest(self.sc):
-            with self.assertRaisesRegexp(Exception, 'division( or modulo)? by zero'):
-                df.select(raise_exception(col('id'))).collect()
-
-    def test_vectorized_udf_invalid_length(self):
-        from pyspark.sql.functions import pandas_udf, col
-        import pandas as pd
-        df = self.spark.range(10)
-        raise_exception = pandas_udf(lambda _: pd.Series(1), LongType())
-        with QuietTest(self.sc):
-            with self.assertRaisesRegexp(
-                    Exception,
-                    'Result vector from pandas_udf was not the required length'):
-                df.select(raise_exception(col('id'))).collect()
-
-    def test_vectorized_udf_mix_udf(self):
-        from pyspark.sql.functions import pandas_udf, udf, col
-        df = self.spark.range(10)
-        row_by_row_udf = udf(lambda x: x, LongType())
-        pd_udf = pandas_udf(lambda x: x, LongType())
-        with QuietTest(self.sc):
-            with self.assertRaisesRegexp(
-                    Exception,
-                    'Can not mix vectorized and non-vectorized UDFs'):
-                df.select(row_by_row_udf(col('id')), pd_udf(col('id'))).collect()
-
-    def test_vectorized_udf_chained(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.range(10)
-        f = pandas_udf(lambda x: x + 1, LongType())
-        g = pandas_udf(lambda x: x - 1, LongType())
-        res = df.select(g(f(col('id'))))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_wrong_return_type(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.range(10)
-        f = pandas_udf(lambda x: x * 1.0, StringType())
-        with QuietTest(self.sc):
-            with self.assertRaisesRegexp(Exception, 'Invalid.*type.*string'):
-                df.select(f(col('id'))).collect()
-
-    def test_vectorized_udf_return_scalar(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.range(10)
-        f = pandas_udf(lambda x: 1.0, DoubleType())
-        with QuietTest(self.sc):
-            with self.assertRaisesRegexp(Exception, 'Return.*type.*pandas_udf.*Series'):
-                df.select(f(col('id'))).collect()
-
-    def test_vectorized_udf_decorator(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.range(10)
-
-        @pandas_udf(returnType=LongType())
-        def identity(x):
-            return x
-        res = df.select(identity(col('id')))
-        self.assertEquals(df.collect(), res.collect())
-
-    def test_vectorized_udf_empty_partition(self):
-        from pyspark.sql.functions import pandas_udf, col
-        df = self.spark.createDataFrame(self.sc.parallelize([Row(id=1)], 2))
-        f = pandas_udf(lambda x: x, LongType())
-        res = df.select(f(col('id')))
-        self.assertEquals(df.collect(), res.collect())
 
 if __name__ == "__main__":
     from pyspark.sql.tests import *

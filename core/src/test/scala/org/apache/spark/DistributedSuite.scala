@@ -151,8 +151,8 @@ class DistributedSuite extends SparkFunSuite with Matchers with LocalSparkContex
     sc.parallelize(1 to 10).count()
   }
 
-  private def testCaching(conf: SparkConf, storageLevel: StorageLevel): Unit = {
-    sc = new SparkContext(conf.setMaster(clusterUrl).setAppName("test"))
+  private def testCaching(storageLevel: StorageLevel): Unit = {
+    sc = new SparkContext(clusterUrl, "test")
     sc.jobProgressListener.waitUntilExecutorsUp(2, 30000)
     val data = sc.parallelize(1 to 1000, 10)
     val cachedData = data.persist(storageLevel)
@@ -189,8 +189,8 @@ class DistributedSuite extends SparkFunSuite with Matchers with LocalSparkContex
     "caching in memory and disk, replicated" -> StorageLevel.MEMORY_AND_DISK_2,
     "caching in memory and disk, serialized, replicated" -> StorageLevel.MEMORY_AND_DISK_SER_2
   ).foreach { case (testName, storageLevel) =>
-    encryptionTest(testName) { conf =>
-      testCaching(conf, storageLevel)
+    test(testName) {
+      testCaching(storageLevel)
     }
   }
 

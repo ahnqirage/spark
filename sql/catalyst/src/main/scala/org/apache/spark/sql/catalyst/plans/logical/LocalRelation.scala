@@ -69,8 +69,16 @@ case class LocalRelation(output: Seq[Attribute],
     }
   }
 
-  override def computeStats(): Statistics =
-    Statistics(sizeInBytes = output.map(n => BigInt(n.dataType.defaultSize)).sum * data.length)
+  override def sameResult(plan: LogicalPlan): Boolean = {
+    plan.canonicalized match {
+      case LocalRelation(otherOutput, otherData) =>
+        otherOutput.map(_.dataType) == output.map(_.dataType) && otherData == data
+      case _ => false
+    }
+  }
+
+  override lazy val statistics =
+    Statistics(sizeInBytes = output.map(_.dataType.defaultSize).sum * data.length)
 
   def toSQL(inlineTableName: String): String = {
     require(data.nonEmpty)

@@ -23,9 +23,8 @@ import java.util.List
 
 import com.google.common.io.Files
 
-import org.apache.spark.SparkFunSuite
+import org.apache.spark.{SparkException, SparkFunSuite}
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
-import org.apache.spark.ml.linalg.SQLDataTypes.VectorType
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
@@ -107,12 +106,12 @@ class LibSVMRelationSuite extends SparkFunSuite with MLlibTestSparkContext {
 
   test("write libsvm data and read it again") {
     val df = spark.read.format("libsvm").load(path)
-    val writePath = Utils.createTempDir().getPath
-
+    val tempDir2 = new File(tempDir, "read_write_test")
+    val writepath = tempDir2.toURI.toString
     // TODO: Remove requirement to coalesce by supporting multiple reads.
     df.coalesce(1).write.format("libsvm").mode(SaveMode.Overwrite).save(writePath)
 
-    val df2 = spark.read.format("libsvm").load(writePath)
+    val df2 = spark.read.format("libsvm").load(writepath)
     val row1 = df2.first()
     val v = row1.getAs[SparseVector](1)
     assert(v == Vectors.sparse(6, Seq((0, 1.0), (2, 2.0), (4, 3.0))))
@@ -120,7 +119,7 @@ class LibSVMRelationSuite extends SparkFunSuite with MLlibTestSparkContext {
 
   test("write libsvm data failed due to invalid schema") {
     val df = spark.read.format("text").load(path)
-    intercept[IOException] {
+    intercept[SparkException] {
       df.write.format("libsvm").save(path + "_2")
     }
   }
@@ -150,34 +149,5 @@ class LibSVMRelationSuite extends SparkFunSuite with MLlibTestSparkContext {
     val df = spark.read.format("libsvm").load(path)
     df.select("features").rdd.map { case Row(d: Vector) => d }.first
     df.select("features").collect
-  }
-
-  test("create libsvmTable table without schema") {
-    try {
-      spark.sql(
-        s"""
-           |CREATE TABLE libsvmTable
-           |USING libsvm
-           |OPTIONS (
-           |  path '$path'
-           |)
-         """.stripMargin)
-      val df = spark.table("libsvmTable")
-      assert(df.columns(0) == "label")
-      assert(df.columns(1) == "features")
-    } finally {
-      spark.sql("DROP TABLE IF EXISTS libsvmTable")
-    }
-  }
-
-  test("create libsvmTable table without schema and path") {
-    try {
-      val e = intercept[IllegalArgumentException] {
-        spark.sql("CREATE TABLE libsvmTable USING libsvm")
-      }
-      assert(e.getMessage.contains("No input path specified for libsvm data"))
-    } finally {
-      spark.sql("DROP TABLE IF EXISTS libsvmTable")
-    }
   }
 }

@@ -25,9 +25,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.types.DataTypes;
 
@@ -54,7 +54,16 @@ public class JavaUDFSuite implements Serializable {
   @SuppressWarnings("unchecked")
   @Test
   public void udf1Test() {
-    spark.udf().register("stringLengthTest", (String str) -> str.length(), DataTypes.IntegerType);
+    // With Java 8 lambdas:
+    // sqlContext.registerFunction(
+    //   "stringLengthTest", (String str) -> str.length(), DataType.IntegerType);
+
+    spark.udf().register("stringLengthTest", new UDF1<String, Integer>() {
+      @Override
+      public Integer call(String str) {
+        return str.length();
+      }
+    }, DataTypes.IntegerType);
 
     Row result = spark.sql("SELECT stringLengthTest('test')").head();
     Assert.assertEquals(4, result.getInt(0));
@@ -63,25 +72,19 @@ public class JavaUDFSuite implements Serializable {
   @SuppressWarnings("unchecked")
   @Test
   public void udf2Test() {
-    spark.udf().register("stringLengthTest",
-        (String str1, String str2) -> str1.length() + str2.length(), DataTypes.IntegerType);
+    // With Java 8 lambdas:
+    // sqlContext.registerFunction(
+    //   "stringLengthTest",
+    //   (String str1, String str2) -> str1.length() + str2.length,
+    //   DataType.IntegerType);
 
-    Row result = spark.sql("SELECT stringLengthTest('test', 'test2')").head();
-    Assert.assertEquals(9, result.getInt(0));
-  }
+    spark.udf().register("stringLengthTest", new UDF2<String, String, Integer>() {
+      @Override
+      public Integer call(String str1, String str2) {
+        return str1.length() + str2.length();
+      }
+    }, DataTypes.IntegerType);
 
-  public static class StringLengthTest implements UDF2<String, String, Integer> {
-    @Override
-    public Integer call(String str1, String str2) {
-      return str1.length() + str2.length();
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
-  public void udf3Test() {
-    spark.udf().registerJava("stringLengthTest", StringLengthTest.class.getName(),
-        DataTypes.IntegerType);
     Row result = spark.sql("SELECT stringLengthTest('test', 'test2')").head();
     Assert.assertEquals(9, result.getInt(0));
 

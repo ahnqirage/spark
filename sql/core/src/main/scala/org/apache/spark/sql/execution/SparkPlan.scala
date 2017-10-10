@@ -29,7 +29,7 @@ import org.apache.spark.{broadcast, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.io.CompressionCodec
 import org.apache.spark.rdd.{RDD, RDDOperationScope}
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession, SQLContext}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.{Predicate => GenPredicate, _}
@@ -74,7 +74,12 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
   }
 
   /**
-   * @return All metrics containing metrics of this SparkPlan.
+   * Return all metadata that describes more details of this SparkPlan.
+   */
+  def metadata: Map[String, String] = Map.empty
+
+  /**
+   * Return all metrics containing metrics of this SparkPlan.
    */
   def metrics: Map[String, SQLMetric] = Map.empty
 
@@ -161,8 +166,19 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
    */
   protected def waitForSubqueries(): Unit = synchronized {
     // fill in the result of subqueries
-    runningSubqueries.foreach { sub =>
-      sub.updateResult()
+    subqueryResults.foreach { case (e, futureResult) =>
+      val rows = ThreadUtils.awaitResultInForkJoinSafely(futureResult, Duration.Inf)
+      if (rows.length > 1) {
+        sys.error(s"more than one row returned by a subquery used as an expression:\n${e.plan}")
+      }
+      if (rows.length == 1) {
+        assert(rows(0).numFields == 1,
+          s"Expects 1 field, but got ${rows(0).numFields}; something went wrong in analysis")
+        e.updateResult(rows(0).get(0, e.dataType))
+      } else {
+        // If there is no rows returned, the result should be null.
+        e.updateResult(null)
+      }
     }
     runningSubqueries.clear()
   }
@@ -407,7 +423,7 @@ object SparkPlan {
 }
 
 trait LeafExecNode extends SparkPlan {
-  override final def children: Seq[SparkPlan] = Nil
+  override def children: Seq[SparkPlan] = Nil
   override def producedAttributes: AttributeSet = outputSet
 }
 

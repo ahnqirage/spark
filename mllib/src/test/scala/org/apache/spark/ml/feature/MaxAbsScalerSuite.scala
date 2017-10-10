@@ -39,7 +39,7 @@ class MaxAbsScalerSuite extends SparkFunSuite with MLlibTestSparkContext with De
       Vectors.sparse(3, Array(0, 2), Array(-1, -1)),
       Vectors.sparse(3, Array(0), Array(-0.75)))
 
-    val df = data.zip(expected).toSeq.toDF("features", "expected")
+    val df = spark.createDataFrame(data.zip(expected)).toDF("features", "expected")
     val scaler = new MaxAbsScaler()
       .setInputCol("features")
       .setOutputCol("scaled")

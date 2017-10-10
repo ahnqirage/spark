@@ -29,7 +29,7 @@ import org.apache.spark.annotation.InterfaceStability
  *
  * Internally, this is represented as the number of days from 1970-01-01.
  *
- * @since 1.3.0
+ * Internally, this is represented as the number of days from 1970-01-01.
  */
 @InterfaceStability.Stable
 class DateType private() extends AtomicType {

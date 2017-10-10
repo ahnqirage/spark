@@ -54,7 +54,6 @@ public class JavaStringIndexerExample {
       createStructField("category", StringType, false)
     });
     Dataset<Row> df = spark.createDataFrame(data, schema);
-
     StringIndexer indexer = new StringIndexer()
       .setInputCol("category")
       .setOutputCol("categoryIndex");
@@ -62,7 +61,6 @@ public class JavaStringIndexerExample {
     Dataset<Row> indexed = indexer.fit(df).transform(df);
     indexed.show();
     // $example off$
-
     spark.stop();
   }
 }

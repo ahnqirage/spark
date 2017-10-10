@@ -133,12 +133,8 @@ object DateTimeUtils {
 
   // reverse of millisToDays
   def daysToMillis(days: SQLDate): Long = {
-    daysToMillis(days, defaultTimeZone())
-  }
-
-  def daysToMillis(days: SQLDate, timeZone: TimeZone): Long = {
     val millisLocal = days.toLong * MILLIS_PER_DAY
-    millisLocal - getOffsetFromLocalMillis(millisLocal, timeZone)
+    millisLocal - getOffsetFromLocalMillis(millisLocal, threadLocalLocalTimeZone.get())
   }
 
   def dateToString(days: SQLDate): String =
@@ -399,10 +395,8 @@ object DateTimeUtils {
       digitsMilli += 1
     }
 
-    // We are truncating the nanosecond part, which results in loss of precision
-    while (digitsMilli > 6) {
-      segments(6) /= 10
-      digitsMilli -= 1
+    if (!justTime && isInvalidDate(segments(0), segments(1), segments(2))) {
+      return None
     }
 
     if (!justTime && isInvalidDate(segments(0), segments(1), segments(2))) {
@@ -1024,7 +1018,7 @@ object DateTimeUtils {
    */
   def convertTz(ts: SQLTimestamp, fromZone: TimeZone, toZone: TimeZone): SQLTimestamp = {
     // We always use local timezone to parse or format a timestamp
-    val localZone = defaultTimeZone()
+    val localZone = threadLocalLocalTimeZone.get()
     val utcTs = if (fromZone.getID == localZone.getID) {
       ts
     } else {
@@ -1035,9 +1029,9 @@ object DateTimeUtils {
     if (toZone.getID == localZone.getID) {
       utcTs
     } else {
-      val localTs = utcTs + toZone.getOffset(utcTs / 1000L) * 1000L  // in toZone
+      val localTs2 = utcTs + toZone.getOffset(utcTs / 1000L) * 1000L  // in toZone
       // treat it as local timezone, convert to UTC (we could get the expected human time back)
-      localTs - getOffsetFromLocalMillis(localTs / 1000L, localZone) * 1000L
+      localTs2 - getOffsetFromLocalMillis(localTs2 / 1000L, localZone) * 1000L
     }
   }
 
@@ -1046,7 +1040,7 @@ object DateTimeUtils {
    * representation in their timezone.
    */
   def fromUTCTime(time: SQLTimestamp, timeZone: String): SQLTimestamp = {
-    convertTz(time, TimeZoneGMT, getTimeZone(timeZone))
+    convertTz(time, TimeZoneGMT, TimeZone.getTimeZone(timeZone))
   }
 
   /**
@@ -1054,7 +1048,7 @@ object DateTimeUtils {
    * string representation in their timezone.
    */
   def toUTCTime(time: SQLTimestamp, timeZone: String): SQLTimestamp = {
-    convertTz(time, getTimeZone(timeZone), TimeZoneGMT)
+    convertTz(time, TimeZone.getTimeZone(timeZone), TimeZoneGMT)
   }
 
   /**
@@ -1062,6 +1056,7 @@ object DateTimeUtils {
    */
   private[util] def resetThreadLocals(): Unit = {
     threadLocalGmtCalendar.remove()
+    threadLocalLocalTimeZone.remove()
     threadLocalTimestampFormat.remove()
     threadLocalDateFormat.remove()
   }

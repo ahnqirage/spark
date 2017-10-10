@@ -42,29 +42,29 @@ from shutil import rmtree
 import tempfile
 import array as pyarray
 import numpy as np
-from numpy import abs, all, arange, array, array_equal, inf, ones, tile, zeros
+from numpy import (
+    array, array_equal, zeros, inf, random, exp, dot, all, mean, abs, arange, tile, ones)
+from numpy import sum as array_sum
 import inspect
 
 from pyspark import keyword_only, SparkContext
-from pyspark.ml import Estimator, Model, Pipeline, PipelineModel, Transformer, UnaryTransformer
+from pyspark.ml import Estimator, Model, Pipeline, PipelineModel, Transformer
 from pyspark.ml.classification import *
 from pyspark.ml.clustering import *
 from pyspark.ml.common import _java2py, _py2java
 from pyspark.ml.evaluation import BinaryClassificationEvaluator, \
     MulticlassClassificationEvaluator, RegressionEvaluator
 from pyspark.ml.feature import *
-from pyspark.ml.fpm import FPGrowth, FPGrowthModel
-from pyspark.ml.linalg import DenseMatrix, DenseMatrix, DenseVector, Matrices, MatrixUDT, \
-    SparseMatrix, SparseVector, Vector, VectorUDT, Vectors
+from pyspark.ml.linalg import Vector, SparseVector, DenseVector, VectorUDT,\
+    DenseMatrix, SparseMatrix, Vectors, Matrices, MatrixUDT, _convert_to_vector
 from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCol, HasMaxIter, HasSeed
 from pyspark.ml.recommendation import ALS
-from pyspark.ml.regression import DecisionTreeRegressor, GeneralizedLinearRegression, \
-    LinearRegression
-from pyspark.ml.stat import ChiSquareTest
+from pyspark.ml.regression import LinearRegression, DecisionTreeRegressor, \
+    GeneralizedLinearRegression
 from pyspark.ml.tuning import *
-from pyspark.ml.util import *
-from pyspark.ml.wrapper import JavaParams, JavaWrapper
+from pyspark.ml.wrapper import JavaParams
+from pyspark.ml.common import _java2py
 from pyspark.serializers import PickleSerializer
 from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql.functions import rand
@@ -488,6 +488,23 @@ class EvaluatorTests(SparkSessionTestCase):
         self.assertEqual(evaluator._java_obj.getMetricName(), "r2")
         self.assertEqual(evaluatorCopy._java_obj.getMetricName(), "mae")
 
+class EvaluatorTests(SparkSessionTestCase):
+
+    def test_java_params(self):
+        """
+        This tests a bug fixed by SPARK-18274 which causes multiple copies
+        of a Params instance in Python to be linked to the same Java instance.
+        """
+        evaluator = RegressionEvaluator(metricName="r2")
+        df = self.spark.createDataFrame([Row(label=1.0, prediction=1.1)])
+        evaluator.evaluate(df)
+        self.assertEqual(evaluator._java_obj.getMetricName(), "r2")
+        evaluatorCopy = evaluator.copy({evaluator.metricName: "mae"})
+        evaluator.evaluate(df)
+        evaluatorCopy.evaluate(df)
+        self.assertEqual(evaluator._java_obj.getMetricName(), "r2")
+        self.assertEqual(evaluatorCopy._java_obj.getMetricName(), "mae")
+
 
 class FeatureTests(SparkSessionTestCase):
 
@@ -768,67 +785,6 @@ class CrossValidatorTests(SparkSessionTestCase):
              (Vectors.dense([1.0]), 1.0)] * 10,
             ["features", "label"])
 
-        lr = LogisticRegression()
-        grid = ParamGridBuilder().addGrid(lr.maxIter, [0, 1]).build()
-        evaluator = BinaryClassificationEvaluator()
-
-        # test save/load of CrossValidator
-        cv = CrossValidator(estimator=lr, estimatorParamMaps=grid, evaluator=evaluator)
-        cvModel = cv.fit(dataset)
-        cvPath = temp_path + "/cv"
-        cv.save(cvPath)
-        loadedCV = CrossValidator.load(cvPath)
-        self.assertEqual(loadedCV.getEstimator().uid, cv.getEstimator().uid)
-        self.assertEqual(loadedCV.getEvaluator().uid, cv.getEvaluator().uid)
-        self.assertEqual(loadedCV.getEstimatorParamMaps(), cv.getEstimatorParamMaps())
-
-        # test save/load of CrossValidatorModel
-        cvModelPath = temp_path + "/cvModel"
-        cvModel.save(cvModelPath)
-        loadedModel = CrossValidatorModel.load(cvModelPath)
-        self.assertEqual(loadedModel.bestModel.uid, cvModel.bestModel.uid)
-
-    def test_save_load_nested_estimator(self):
-        temp_path = tempfile.mkdtemp()
-        dataset = self.spark.createDataFrame(
-            [(Vectors.dense([0.0]), 0.0),
-             (Vectors.dense([0.4]), 1.0),
-             (Vectors.dense([0.5]), 0.0),
-             (Vectors.dense([0.6]), 1.0),
-             (Vectors.dense([1.0]), 1.0)] * 10,
-            ["features", "label"])
-
-        ova = OneVsRest(classifier=LogisticRegression())
-        lr1 = LogisticRegression().setMaxIter(100)
-        lr2 = LogisticRegression().setMaxIter(150)
-        grid = ParamGridBuilder().addGrid(ova.classifier, [lr1, lr2]).build()
-        evaluator = MulticlassClassificationEvaluator()
-
-        # test save/load of CrossValidator
-        cv = CrossValidator(estimator=ova, estimatorParamMaps=grid, evaluator=evaluator)
-        cvModel = cv.fit(dataset)
-        cvPath = temp_path + "/cv"
-        cv.save(cvPath)
-        loadedCV = CrossValidator.load(cvPath)
-        self.assertEqual(loadedCV.getEstimator().uid, cv.getEstimator().uid)
-        self.assertEqual(loadedCV.getEvaluator().uid, cv.getEvaluator().uid)
-
-        originalParamMap = cv.getEstimatorParamMaps()
-        loadedParamMap = loadedCV.getEstimatorParamMaps()
-        for i, param in enumerate(loadedParamMap):
-            for p in param:
-                if p.name == "classifier":
-                    self.assertEqual(param[p].uid, originalParamMap[i][p].uid)
-                else:
-                    self.assertEqual(param[p], originalParamMap[i][p])
-
-        # test save/load of CrossValidatorModel
-        cvModelPath = temp_path + "/cvModel"
-        cvModel.save(cvModelPath)
-        loadedModel = CrossValidatorModel.load(cvModelPath)
-        self.assertEqual(loadedModel.bestModel.uid, cvModel.bestModel.uid)
-
-
 class TrainValidationSplitTests(SparkSessionTestCase):
 
     def test_fit_minimize_metric(self):
@@ -909,74 +865,6 @@ class TrainValidationSplitTests(SparkSessionTestCase):
         self.assertEqual(loadedLrModel.uid, lrModel.uid)
         self.assertEqual(loadedLrModel.intercept, lrModel.intercept)
 
-    def test_save_load_simple_estimator(self):
-        # This tests saving and loading the trained model only.
-        # Save/load for TrainValidationSplit will be added later: SPARK-13786
-        temp_path = tempfile.mkdtemp()
-        dataset = self.spark.createDataFrame(
-            [(Vectors.dense([0.0]), 0.0),
-             (Vectors.dense([0.4]), 1.0),
-             (Vectors.dense([0.5]), 0.0),
-             (Vectors.dense([0.6]), 1.0),
-             (Vectors.dense([1.0]), 1.0)] * 10,
-            ["features", "label"])
-        lr = LogisticRegression()
-        grid = ParamGridBuilder().addGrid(lr.maxIter, [0, 1]).build()
-        evaluator = BinaryClassificationEvaluator()
-        tvs = TrainValidationSplit(estimator=lr, estimatorParamMaps=grid, evaluator=evaluator)
-        tvsModel = tvs.fit(dataset)
-
-        tvsPath = temp_path + "/tvs"
-        tvs.save(tvsPath)
-        loadedTvs = TrainValidationSplit.load(tvsPath)
-        self.assertEqual(loadedTvs.getEstimator().uid, tvs.getEstimator().uid)
-        self.assertEqual(loadedTvs.getEvaluator().uid, tvs.getEvaluator().uid)
-        self.assertEqual(loadedTvs.getEstimatorParamMaps(), tvs.getEstimatorParamMaps())
-
-        tvsModelPath = temp_path + "/tvsModel"
-        tvsModel.save(tvsModelPath)
-        loadedModel = TrainValidationSplitModel.load(tvsModelPath)
-        self.assertEqual(loadedModel.bestModel.uid, tvsModel.bestModel.uid)
-
-    def test_save_load_nested_estimator(self):
-        # This tests saving and loading the trained model only.
-        # Save/load for TrainValidationSplit will be added later: SPARK-13786
-        temp_path = tempfile.mkdtemp()
-        dataset = self.spark.createDataFrame(
-            [(Vectors.dense([0.0]), 0.0),
-             (Vectors.dense([0.4]), 1.0),
-             (Vectors.dense([0.5]), 0.0),
-             (Vectors.dense([0.6]), 1.0),
-             (Vectors.dense([1.0]), 1.0)] * 10,
-            ["features", "label"])
-        ova = OneVsRest(classifier=LogisticRegression())
-        lr1 = LogisticRegression().setMaxIter(100)
-        lr2 = LogisticRegression().setMaxIter(150)
-        grid = ParamGridBuilder().addGrid(ova.classifier, [lr1, lr2]).build()
-        evaluator = MulticlassClassificationEvaluator()
-
-        tvs = TrainValidationSplit(estimator=ova, estimatorParamMaps=grid, evaluator=evaluator)
-        tvsModel = tvs.fit(dataset)
-        tvsPath = temp_path + "/tvs"
-        tvs.save(tvsPath)
-        loadedTvs = TrainValidationSplit.load(tvsPath)
-        self.assertEqual(loadedTvs.getEstimator().uid, tvs.getEstimator().uid)
-        self.assertEqual(loadedTvs.getEvaluator().uid, tvs.getEvaluator().uid)
-
-        originalParamMap = tvs.getEstimatorParamMaps()
-        loadedParamMap = loadedTvs.getEstimatorParamMaps()
-        for i, param in enumerate(loadedParamMap):
-            for p in param:
-                if p.name == "classifier":
-                    self.assertEqual(param[p].uid, originalParamMap[i][p].uid)
-                else:
-                    self.assertEqual(param[p], originalParamMap[i][p])
-
-        tvsModelPath = temp_path + "/tvsModel"
-        tvsModel.save(tvsModelPath)
-        loadedModel = TrainValidationSplitModel.load(tvsModelPath)
-        self.assertEqual(loadedModel.bestModel.uid, tvsModel.bestModel.uid)
-
     def test_copy(self):
         dataset = self.spark.createDataFrame([
             (10, 10.0),
@@ -1046,6 +934,18 @@ class PersistenceTest(SparkSessionTestCase):
             rmtree(path)
         except OSError:
             pass
+
+    def logistic_regression_check_thresholds(self):
+        self.assertIsInstance(
+            LogisticRegression(threshold=0.5, thresholds=[0.5, 0.5]),
+            LogisticRegressionModel
+        )
+
+        self.assertRaisesRegexp(
+            ValueError,
+            "Logistic Regression getThreshold found inconsistent.*$",
+            LogisticRegression, threshold=0.42, thresholds=[0.5, 0.5]
+        )
 
     def _compare_params(self, m1, m2, param):
         """
@@ -1159,35 +1059,6 @@ class PersistenceTest(SparkSessionTestCase):
             except OSError:
                 pass
 
-    def test_python_transformer_pipeline_persistence(self):
-        """
-        Pipeline[MockUnaryTransformer, Binarizer]
-        """
-        temp_path = tempfile.mkdtemp()
-
-        try:
-            df = self.spark.range(0, 10).toDF('input')
-            tf = MockUnaryTransformer(shiftVal=2)\
-                .setInputCol("input").setOutputCol("shiftedInput")
-            tf2 = Binarizer(threshold=6, inputCol="shiftedInput", outputCol="binarized")
-            pl = Pipeline(stages=[tf, tf2])
-            model = pl.fit(df)
-
-            pipeline_path = temp_path + "/pipeline"
-            pl.save(pipeline_path)
-            loaded_pipeline = Pipeline.load(pipeline_path)
-            self._compare_pipelines(pl, loaded_pipeline)
-
-            model_path = temp_path + "/pipeline-model"
-            model.save(model_path)
-            loaded_model = PipelineModel.load(model_path)
-            self._compare_pipelines(model, loaded_model)
-        finally:
-            try:
-                rmtree(temp_path)
-            except OSError:
-                pass
-
     def test_onevsrest(self):
         temp_path = tempfile.mkdtemp()
         df = self.spark.createDataFrame([(0.0, Vectors.dense(1.0, 0.8)),
@@ -1268,7 +1139,6 @@ class PersistenceTest(SparkSessionTestCase):
 
         self.assertEqual(lr.uid, lr3.uid)
         self.assertEqual(lr.extractParamMap(), lr3.extractParamMap())
-
 
 class LDATest(SparkSessionTestCase):
 
@@ -1379,7 +1249,6 @@ class TrainingSummaryTest(SparkSessionTestCase):
         self.assertEqual(s.numIterations, 1)  # this should default to a single iteration of WLS
         self.assertTrue(isinstance(s.predictions, DataFrame))
         self.assertEqual(s.predictionCol, "prediction")
-        self.assertEqual(s.numInstances, 2)
         self.assertTrue(isinstance(s.residuals(), DataFrame))
         self.assertTrue(isinstance(s.residuals("pearson"), DataFrame))
         coefStdErr = s.coefficientStandardErrors
@@ -1398,12 +1267,11 @@ class TrainingSummaryTest(SparkSessionTestCase):
         self.assertTrue(isinstance(s.nullDeviance, float))
         self.assertTrue(isinstance(s.dispersion, float))
         # test evaluation (with training dataset) produces a summary with same values
-        # one check is enough to verify a summary is returned
-        # The child class GeneralizedLinearRegressionTrainingSummary runs full test
+        # one check is enough to verify a summary is returned, Scala version runs full test
         sameSummary = model.evaluate(df)
         self.assertAlmostEqual(sameSummary.deviance, s.deviance)
 
-    def test_binary_logistic_regression_summary(self):
+    def test_logistic_regression_summary(self):
         df = self.spark.createDataFrame([(1.0, 2.0, Vectors.dense(1.0)),
                                          (0.0, 2.0, Vectors.sparse(1, [], []))],
                                         ["label", "weight", "features"])
@@ -1587,134 +1455,6 @@ class HashingTFTest(SparkSessionTestCase):
         for i in range(0, n):
             self.assertAlmostEqual(features[i], expected[i], 14, "Error at " + str(i) +
                                    ": expected " + str(expected[i]) + ", got " + str(features[i]))
-
-
-class GeneralizedLinearRegressionTest(SparkSessionTestCase):
-
-    def test_tweedie_distribution(self):
-
-        df = self.spark.createDataFrame(
-            [(1.0, Vectors.dense(0.0, 0.0)),
-             (1.0, Vectors.dense(1.0, 2.0)),
-             (2.0, Vectors.dense(0.0, 0.0)),
-             (2.0, Vectors.dense(1.0, 1.0)), ], ["label", "features"])
-
-        glr = GeneralizedLinearRegression(family="tweedie", variancePower=1.6)
-        model = glr.fit(df)
-        self.assertTrue(np.allclose(model.coefficients.toArray(), [-0.4645, 0.3402], atol=1E-4))
-        self.assertTrue(np.isclose(model.intercept, 0.7841, atol=1E-4))
-
-        model2 = glr.setLinkPower(-1.0).fit(df)
-        self.assertTrue(np.allclose(model2.coefficients.toArray(), [-0.6667, 0.5], atol=1E-4))
-        self.assertTrue(np.isclose(model2.intercept, 0.6667, atol=1E-4))
-
-    def test_offset(self):
-
-        df = self.spark.createDataFrame(
-            [(0.2, 1.0, 2.0, Vectors.dense(0.0, 5.0)),
-             (0.5, 2.1, 0.5, Vectors.dense(1.0, 2.0)),
-             (0.9, 0.4, 1.0, Vectors.dense(2.0, 1.0)),
-             (0.7, 0.7, 0.0, Vectors.dense(3.0, 3.0))], ["label", "weight", "offset", "features"])
-
-        glr = GeneralizedLinearRegression(family="poisson", weightCol="weight", offsetCol="offset")
-        model = glr.fit(df)
-        self.assertTrue(np.allclose(model.coefficients.toArray(), [0.664647, -0.3192581],
-                                    atol=1E-4))
-        self.assertTrue(np.isclose(model.intercept, -1.561613, atol=1E-4))
-
-
-class LogisticRegressionTest(SparkSessionTestCase):
-
-    def test_binomial_logistic_regression_with_bound(self):
-
-        df = self.spark.createDataFrame(
-            [(1.0, 1.0, Vectors.dense(0.0, 5.0)),
-             (0.0, 2.0, Vectors.dense(1.0, 2.0)),
-             (1.0, 3.0, Vectors.dense(2.0, 1.0)),
-             (0.0, 4.0, Vectors.dense(3.0, 3.0)), ], ["label", "weight", "features"])
-
-        lor = LogisticRegression(regParam=0.01, weightCol="weight",
-                                 lowerBoundsOnCoefficients=Matrices.dense(1, 2, [-1.0, -1.0]),
-                                 upperBoundsOnIntercepts=Vectors.dense(0.0))
-        model = lor.fit(df)
-        self.assertTrue(
-            np.allclose(model.coefficients.toArray(), [-0.2944, -0.0484], atol=1E-4))
-        self.assertTrue(np.isclose(model.intercept, 0.0, atol=1E-4))
-
-    def test_multinomial_logistic_regression_with_bound(self):
-
-        data_path = "data/mllib/sample_multiclass_classification_data.txt"
-        df = self.spark.read.format("libsvm").load(data_path)
-
-        lor = LogisticRegression(regParam=0.01,
-                                 lowerBoundsOnCoefficients=Matrices.dense(3, 4, range(12)),
-                                 upperBoundsOnIntercepts=Vectors.dense(0.0, 0.0, 0.0))
-        model = lor.fit(df)
-        expected = [[4.593, 4.5516, 9.0099, 12.2904],
-                    [1.0, 8.1093, 7.0, 10.0],
-                    [3.041, 5.0, 8.0, 11.0]]
-        for i in range(0, len(expected)):
-            self.assertTrue(
-                np.allclose(model.coefficientMatrix.toArray()[i], expected[i], atol=1E-4))
-        self.assertTrue(
-            np.allclose(model.interceptVector.toArray(), [-0.9057, -1.1392, -0.0033], atol=1E-4))
-
-
-class MultilayerPerceptronClassifierTest(SparkSessionTestCase):
-
-    def test_raw_and_probability_prediction(self):
-
-        data_path = "data/mllib/sample_multiclass_classification_data.txt"
-        df = self.spark.read.format("libsvm").load(data_path)
-
-        mlp = MultilayerPerceptronClassifier(maxIter=100, layers=[4, 5, 4, 3],
-                                             blockSize=128, seed=123)
-        model = mlp.fit(df)
-        test = self.sc.parallelize([Row(features=Vectors.dense(0.1, 0.1, 0.25, 0.25))]).toDF()
-        result = model.transform(test).head()
-        expected_prediction = 2.0
-        expected_probability = [0.0, 0.0, 1.0]
-        expected_rawPrediction = [57.3955, -124.5462, 67.9943]
-        self.assertTrue(result.prediction, expected_prediction)
-        self.assertTrue(np.allclose(result.probability, expected_probability, atol=1E-4))
-        self.assertTrue(np.allclose(result.rawPrediction, expected_rawPrediction, atol=1E-4))
-
-
-class FPGrowthTests(SparkSessionTestCase):
-    def setUp(self):
-        super(FPGrowthTests, self).setUp()
-        self.data = self.spark.createDataFrame(
-            [([1, 2], ), ([1, 2], ), ([1, 2, 3], ), ([1, 3], )],
-            ["items"])
-
-    def test_association_rules(self):
-        fp = FPGrowth()
-        fpm = fp.fit(self.data)
-
-        expected_association_rules = self.spark.createDataFrame(
-            [([3], [1], 1.0), ([2], [1], 1.0)],
-            ["antecedent", "consequent", "confidence"]
-        )
-        actual_association_rules = fpm.associationRules
-
-        self.assertEqual(actual_association_rules.subtract(expected_association_rules).count(), 0)
-        self.assertEqual(expected_association_rules.subtract(actual_association_rules).count(), 0)
-
-    def test_freq_itemsets(self):
-        fp = FPGrowth()
-        fpm = fp.fit(self.data)
-
-        expected_freq_itemsets = self.spark.createDataFrame(
-            [([1], 4), ([2], 3), ([2, 1], 3), ([3], 2), ([3, 1], 2)],
-            ["items", "freq"]
-        )
-        actual_freq_itemsets = fpm.freqItemsets
-
-        self.assertEqual(actual_freq_itemsets.subtract(expected_freq_itemsets).count(), 0)
-        self.assertEqual(expected_freq_itemsets.subtract(actual_freq_itemsets).count(), 0)
-
-    def tearDown(self):
-        del self.data
 
 
 class ALSTest(SparkSessionTestCase):
@@ -2186,6 +1926,350 @@ class UnaryTransformerTests(SparkSessionTestCase):
 
         for res in results:
             self.assertEqual(res.input + shiftVal, res.output)
+
+
+def _squared_distance(a, b):
+    if isinstance(a, Vector):
+        return a.squared_distance(b)
+    else:
+        return b.squared_distance(a)
+
+
+class VectorTests(MLlibTestCase):
+
+    def _test_serialize(self, v):
+        self.assertEqual(v, ser.loads(ser.dumps(v)))
+        jvec = self.sc._jvm.org.apache.spark.ml.python.MLSerDe.loads(bytearray(ser.dumps(v)))
+        nv = ser.loads(bytes(self.sc._jvm.org.apache.spark.ml.python.MLSerDe.dumps(jvec)))
+        self.assertEqual(v, nv)
+        vs = [v] * 100
+        jvecs = self.sc._jvm.org.apache.spark.ml.python.MLSerDe.loads(bytearray(ser.dumps(vs)))
+        nvs = ser.loads(bytes(self.sc._jvm.org.apache.spark.ml.python.MLSerDe.dumps(jvecs)))
+        self.assertEqual(vs, nvs)
+
+    def test_serialize(self):
+        self._test_serialize(DenseVector(range(10)))
+        self._test_serialize(DenseVector(array([1., 2., 3., 4.])))
+        self._test_serialize(DenseVector(pyarray.array('d', range(10))))
+        self._test_serialize(SparseVector(4, {1: 1, 3: 2}))
+        self._test_serialize(SparseVector(3, {}))
+        self._test_serialize(DenseMatrix(2, 3, range(6)))
+        sm1 = SparseMatrix(
+            3, 4, [0, 2, 2, 4, 4], [1, 2, 1, 2], [1.0, 2.0, 4.0, 5.0])
+        self._test_serialize(sm1)
+
+    def test_dot(self):
+        sv = SparseVector(4, {1: 1, 3: 2})
+        dv = DenseVector(array([1., 2., 3., 4.]))
+        lst = DenseVector([1, 2, 3, 4])
+        mat = array([[1., 2., 3., 4.],
+                     [1., 2., 3., 4.],
+                     [1., 2., 3., 4.],
+                     [1., 2., 3., 4.]])
+        arr = pyarray.array('d', [0, 1, 2, 3])
+        self.assertEqual(10.0, sv.dot(dv))
+        self.assertTrue(array_equal(array([3., 6., 9., 12.]), sv.dot(mat)))
+        self.assertEqual(30.0, dv.dot(dv))
+        self.assertTrue(array_equal(array([10., 20., 30., 40.]), dv.dot(mat)))
+        self.assertEqual(30.0, lst.dot(dv))
+        self.assertTrue(array_equal(array([10., 20., 30., 40.]), lst.dot(mat)))
+        self.assertEqual(7.0, sv.dot(arr))
+
+    def test_squared_distance(self):
+        sv = SparseVector(4, {1: 1, 3: 2})
+        dv = DenseVector(array([1., 2., 3., 4.]))
+        lst = DenseVector([4, 3, 2, 1])
+        lst1 = [4, 3, 2, 1]
+        arr = pyarray.array('d', [0, 2, 1, 3])
+        narr = array([0, 2, 1, 3])
+        self.assertEqual(15.0, _squared_distance(sv, dv))
+        self.assertEqual(25.0, _squared_distance(sv, lst))
+        self.assertEqual(20.0, _squared_distance(dv, lst))
+        self.assertEqual(15.0, _squared_distance(dv, sv))
+        self.assertEqual(25.0, _squared_distance(lst, sv))
+        self.assertEqual(20.0, _squared_distance(lst, dv))
+        self.assertEqual(0.0, _squared_distance(sv, sv))
+        self.assertEqual(0.0, _squared_distance(dv, dv))
+        self.assertEqual(0.0, _squared_distance(lst, lst))
+        self.assertEqual(25.0, _squared_distance(sv, lst1))
+        self.assertEqual(3.0, _squared_distance(sv, arr))
+        self.assertEqual(3.0, _squared_distance(sv, narr))
+
+    def test_hash(self):
+        v1 = DenseVector([0.0, 1.0, 0.0, 5.5])
+        v2 = SparseVector(4, [(1, 1.0), (3, 5.5)])
+        v3 = DenseVector([0.0, 1.0, 0.0, 5.5])
+        v4 = SparseVector(4, [(1, 1.0), (3, 2.5)])
+        self.assertEqual(hash(v1), hash(v2))
+        self.assertEqual(hash(v1), hash(v3))
+        self.assertEqual(hash(v2), hash(v3))
+        self.assertFalse(hash(v1) == hash(v4))
+        self.assertFalse(hash(v2) == hash(v4))
+
+    def test_eq(self):
+        v1 = DenseVector([0.0, 1.0, 0.0, 5.5])
+        v2 = SparseVector(4, [(1, 1.0), (3, 5.5)])
+        v3 = DenseVector([0.0, 1.0, 0.0, 5.5])
+        v4 = SparseVector(6, [(1, 1.0), (3, 5.5)])
+        v5 = DenseVector([0.0, 1.0, 0.0, 2.5])
+        v6 = SparseVector(4, [(1, 1.0), (3, 2.5)])
+        self.assertEqual(v1, v2)
+        self.assertEqual(v1, v3)
+        self.assertFalse(v2 == v4)
+        self.assertFalse(v1 == v5)
+        self.assertFalse(v1 == v6)
+
+    def test_equals(self):
+        indices = [1, 2, 4]
+        values = [1., 3., 2.]
+        self.assertTrue(Vectors._equals(indices, values, list(range(5)), [0., 1., 3., 0., 2.]))
+        self.assertFalse(Vectors._equals(indices, values, list(range(5)), [0., 3., 1., 0., 2.]))
+        self.assertFalse(Vectors._equals(indices, values, list(range(5)), [0., 3., 0., 2.]))
+        self.assertFalse(Vectors._equals(indices, values, list(range(5)), [0., 1., 3., 2., 2.]))
+
+    def test_conversion(self):
+        # numpy arrays should be automatically upcast to float64
+        # tests for fix of [SPARK-5089]
+        v = array([1, 2, 3, 4], dtype='float64')
+        dv = DenseVector(v)
+        self.assertTrue(dv.array.dtype == 'float64')
+        v = array([1, 2, 3, 4], dtype='float32')
+        dv = DenseVector(v)
+        self.assertTrue(dv.array.dtype == 'float64')
+
+    def test_sparse_vector_indexing(self):
+        sv = SparseVector(5, {1: 1, 3: 2})
+        self.assertEqual(sv[0], 0.)
+        self.assertEqual(sv[3], 2.)
+        self.assertEqual(sv[1], 1.)
+        self.assertEqual(sv[2], 0.)
+        self.assertEqual(sv[4], 0.)
+        self.assertEqual(sv[-1], 0.)
+        self.assertEqual(sv[-2], 2.)
+        self.assertEqual(sv[-3], 0.)
+        self.assertEqual(sv[-5], 0.)
+        for ind in [5, -6]:
+            self.assertRaises(IndexError, sv.__getitem__, ind)
+        for ind in [7.8, '1']:
+            self.assertRaises(TypeError, sv.__getitem__, ind)
+
+        zeros = SparseVector(4, {})
+        self.assertEqual(zeros[0], 0.0)
+        self.assertEqual(zeros[3], 0.0)
+        for ind in [4, -5]:
+            self.assertRaises(IndexError, zeros.__getitem__, ind)
+
+        empty = SparseVector(0, {})
+        for ind in [-1, 0, 1]:
+            self.assertRaises(IndexError, empty.__getitem__, ind)
+
+    def test_sparse_vector_iteration(self):
+        self.assertListEqual(list(SparseVector(3, [], [])), [0.0, 0.0, 0.0])
+        self.assertListEqual(list(SparseVector(5, [0, 3], [1.0, 2.0])), [1.0, 0.0, 0.0, 2.0, 0.0])
+
+    def test_matrix_indexing(self):
+        mat = DenseMatrix(3, 2, [0, 1, 4, 6, 8, 10])
+        expected = [[0, 6], [1, 8], [4, 10]]
+        for i in range(3):
+            for j in range(2):
+                self.assertEqual(mat[i, j], expected[i][j])
+
+        for i, j in [(-1, 0), (4, 1), (3, 4)]:
+            self.assertRaises(IndexError, mat.__getitem__, (i, j))
+
+    def test_repr_dense_matrix(self):
+        mat = DenseMatrix(3, 2, [0, 1, 4, 6, 8, 10])
+        self.assertTrue(
+            repr(mat),
+            'DenseMatrix(3, 2, [0.0, 1.0, 4.0, 6.0, 8.0, 10.0], False)')
+
+        mat = DenseMatrix(3, 2, [0, 1, 4, 6, 8, 10], True)
+        self.assertTrue(
+            repr(mat),
+            'DenseMatrix(3, 2, [0.0, 1.0, 4.0, 6.0, 8.0, 10.0], False)')
+
+        mat = DenseMatrix(6, 3, zeros(18))
+        self.assertTrue(
+            repr(mat),
+            'DenseMatrix(6, 3, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ..., \
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], False)')
+
+    def test_repr_sparse_matrix(self):
+        sm1t = SparseMatrix(
+            3, 4, [0, 2, 3, 5], [0, 1, 2, 0, 2], [3.0, 2.0, 4.0, 9.0, 8.0],
+            isTransposed=True)
+        self.assertTrue(
+            repr(sm1t),
+            'SparseMatrix(3, 4, [0, 2, 3, 5], [0, 1, 2, 0, 2], [3.0, 2.0, 4.0, 9.0, 8.0], True)')
+
+        indices = tile(arange(6), 3)
+        values = ones(18)
+        sm = SparseMatrix(6, 3, [0, 6, 12, 18], indices, values)
+        self.assertTrue(
+            repr(sm), "SparseMatrix(6, 3, [0, 6, 12, 18], \
+                [0, 1, 2, 3, 4, 5, 0, 1, ..., 4, 5, 0, 1, 2, 3, 4, 5], \
+                [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, ..., \
+                1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], False)")
+
+        self.assertTrue(
+            str(sm),
+            "6 X 3 CSCMatrix\n\
+            (0,0) 1.0\n(1,0) 1.0\n(2,0) 1.0\n(3,0) 1.0\n(4,0) 1.0\n(5,0) 1.0\n\
+            (0,1) 1.0\n(1,1) 1.0\n(2,1) 1.0\n(3,1) 1.0\n(4,1) 1.0\n(5,1) 1.0\n\
+            (0,2) 1.0\n(1,2) 1.0\n(2,2) 1.0\n(3,2) 1.0\n..\n..")
+
+        sm = SparseMatrix(1, 18, zeros(19), [], [])
+        self.assertTrue(
+            repr(sm),
+            'SparseMatrix(1, 18, \
+                [0, 0, 0, 0, 0, 0, 0, 0, ..., 0, 0, 0, 0, 0, 0, 0, 0], [], [], False)')
+
+    def test_sparse_matrix(self):
+        # Test sparse matrix creation.
+        sm1 = SparseMatrix(
+            3, 4, [0, 2, 2, 4, 4], [1, 2, 1, 2], [1.0, 2.0, 4.0, 5.0])
+        self.assertEqual(sm1.numRows, 3)
+        self.assertEqual(sm1.numCols, 4)
+        self.assertEqual(sm1.colPtrs.tolist(), [0, 2, 2, 4, 4])
+        self.assertEqual(sm1.rowIndices.tolist(), [1, 2, 1, 2])
+        self.assertEqual(sm1.values.tolist(), [1.0, 2.0, 4.0, 5.0])
+        self.assertTrue(
+            repr(sm1),
+            'SparseMatrix(3, 4, [0, 2, 2, 4, 4], [1, 2, 1, 2], [1.0, 2.0, 4.0, 5.0], False)')
+
+        # Test indexing
+        expected = [
+            [0, 0, 0, 0],
+            [1, 0, 4, 0],
+            [2, 0, 5, 0]]
+
+        for i in range(3):
+            for j in range(4):
+                self.assertEqual(expected[i][j], sm1[i, j])
+        self.assertTrue(array_equal(sm1.toArray(), expected))
+
+        for i, j in [(-1, 1), (4, 3), (3, 5)]:
+            self.assertRaises(IndexError, sm1.__getitem__, (i, j))
+
+        # Test conversion to dense and sparse.
+        smnew = sm1.toDense().toSparse()
+        self.assertEqual(sm1.numRows, smnew.numRows)
+        self.assertEqual(sm1.numCols, smnew.numCols)
+        self.assertTrue(array_equal(sm1.colPtrs, smnew.colPtrs))
+        self.assertTrue(array_equal(sm1.rowIndices, smnew.rowIndices))
+        self.assertTrue(array_equal(sm1.values, smnew.values))
+
+        sm1t = SparseMatrix(
+            3, 4, [0, 2, 3, 5], [0, 1, 2, 0, 2], [3.0, 2.0, 4.0, 9.0, 8.0],
+            isTransposed=True)
+        self.assertEqual(sm1t.numRows, 3)
+        self.assertEqual(sm1t.numCols, 4)
+        self.assertEqual(sm1t.colPtrs.tolist(), [0, 2, 3, 5])
+        self.assertEqual(sm1t.rowIndices.tolist(), [0, 1, 2, 0, 2])
+        self.assertEqual(sm1t.values.tolist(), [3.0, 2.0, 4.0, 9.0, 8.0])
+
+        expected = [
+            [3, 2, 0, 0],
+            [0, 0, 4, 0],
+            [9, 0, 8, 0]]
+
+        for i in range(3):
+            for j in range(4):
+                self.assertEqual(expected[i][j], sm1t[i, j])
+        self.assertTrue(array_equal(sm1t.toArray(), expected))
+
+    def test_dense_matrix_is_transposed(self):
+        mat1 = DenseMatrix(3, 2, [0, 4, 1, 6, 3, 9], isTransposed=True)
+        mat = DenseMatrix(3, 2, [0, 1, 3, 4, 6, 9])
+        self.assertEqual(mat1, mat)
+
+        expected = [[0, 4], [1, 6], [3, 9]]
+        for i in range(3):
+            for j in range(2):
+                self.assertEqual(mat1[i, j], expected[i][j])
+        self.assertTrue(array_equal(mat1.toArray(), expected))
+
+        sm = mat1.toSparse()
+        self.assertTrue(array_equal(sm.rowIndices, [1, 2, 0, 1, 2]))
+        self.assertTrue(array_equal(sm.colPtrs, [0, 2, 5]))
+        self.assertTrue(array_equal(sm.values, [1, 3, 4, 6, 9]))
+
+    def test_norms(self):
+        a = DenseVector([0, 2, 3, -1])
+        self.assertAlmostEqual(a.norm(2), 3.742, 3)
+        self.assertTrue(a.norm(1), 6)
+        self.assertTrue(a.norm(inf), 3)
+        a = SparseVector(4, [0, 2], [3, -4])
+        self.assertAlmostEqual(a.norm(2), 5)
+        self.assertTrue(a.norm(1), 7)
+        self.assertTrue(a.norm(inf), 4)
+
+        tmp = SparseVector(4, [0, 2], [3, 0])
+        self.assertEqual(tmp.numNonzeros(), 1)
+
+
+class VectorUDTTests(MLlibTestCase):
+
+    dv0 = DenseVector([])
+    dv1 = DenseVector([1.0, 2.0])
+    sv0 = SparseVector(2, [], [])
+    sv1 = SparseVector(2, [1], [2.0])
+    udt = VectorUDT()
+
+    def test_json_schema(self):
+        self.assertEqual(VectorUDT.fromJson(self.udt.jsonValue()), self.udt)
+
+    def test_serialization(self):
+        for v in [self.dv0, self.dv1, self.sv0, self.sv1]:
+            self.assertEqual(v, self.udt.deserialize(self.udt.serialize(v)))
+
+    def test_infer_schema(self):
+        rdd = self.sc.parallelize([Row(label=1.0, features=self.dv1),
+                                   Row(label=0.0, features=self.sv1)])
+        df = rdd.toDF()
+        schema = df.schema
+        field = [f for f in schema.fields if f.name == "features"][0]
+        self.assertEqual(field.dataType, self.udt)
+        vectors = df.rdd.map(lambda p: p.features).collect()
+        self.assertEqual(len(vectors), 2)
+        for v in vectors:
+            if isinstance(v, SparseVector):
+                self.assertEqual(v, self.sv1)
+            elif isinstance(v, DenseVector):
+                self.assertEqual(v, self.dv1)
+            else:
+                raise TypeError("expecting a vector but got %r of type %r" % (v, type(v)))
+
+
+class MatrixUDTTests(MLlibTestCase):
+
+    dm1 = DenseMatrix(3, 2, [0, 1, 4, 5, 9, 10])
+    dm2 = DenseMatrix(3, 2, [0, 1, 4, 5, 9, 10], isTransposed=True)
+    sm1 = SparseMatrix(1, 1, [0, 1], [0], [2.0])
+    sm2 = SparseMatrix(2, 1, [0, 0, 1], [0], [5.0], isTransposed=True)
+    udt = MatrixUDT()
+
+    def test_json_schema(self):
+        self.assertEqual(MatrixUDT.fromJson(self.udt.jsonValue()), self.udt)
+
+    def test_serialization(self):
+        for m in [self.dm1, self.dm2, self.sm1, self.sm2]:
+            self.assertEqual(m, self.udt.deserialize(self.udt.serialize(m)))
+
+    def test_infer_schema(self):
+        rdd = self.sc.parallelize([("dense", self.dm1), ("sparse", self.sm1)])
+        df = rdd.toDF()
+        schema = df.schema
+        self.assertTrue(schema.fields[1].dataType, self.udt)
+        matrices = df.rdd.map(lambda x: x._2).collect()
+        self.assertEqual(len(matrices), 2)
+        for m in matrices:
+            if isinstance(m, DenseMatrix):
+                self.assertTrue(m, self.dm1)
+            elif isinstance(m, SparseMatrix):
+                self.assertTrue(m, self.sm1)
+            else:
+                raise ValueError("Expected a matrix but got type %r" % type(m))
 
 
 if __name__ == "__main__":

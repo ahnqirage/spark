@@ -19,7 +19,6 @@ package org.apache.spark
 
 import java.io._
 import java.nio.ByteBuffer
-import java.util.zip.GZIPOutputStream
 
 import scala.io.Source
 
@@ -31,7 +30,6 @@ import org.apache.hadoop.mapreduce.Job
 import org.apache.hadoop.mapreduce.lib.input.{FileSplit => NewFileSplit, TextInputFormat => NewTextInputFormat}
 import org.apache.hadoop.mapreduce.lib.output.{TextOutputFormat => NewTextOutputFormat}
 
-import org.apache.spark.internal.config.IGNORE_CORRUPT_FILES
 import org.apache.spark.rdd.{HadoopRDD, NewHadoopRDD}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.Utils
@@ -258,7 +256,7 @@ class FileSuite extends SparkFunSuite with LocalSparkContext {
     val inRdd = sc.binaryFiles(outFile.getAbsolutePath)
     val (infile, indata) = inRdd.collect().head
     // Make sure the name and array match
-    assert(infile.contains(outFile.toURI.getPath)) // a prefix may get added
+    assert(infile.contains(outFile.getAbsolutePath)) // a prefix may get added
     assert(indata.toArray === testOutput)
   }
 

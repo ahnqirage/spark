@@ -18,7 +18,7 @@
 package org.apache.spark.scheduler
 
 import java.util.Properties
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.annotation.meta.param
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet, Map}
@@ -223,11 +223,7 @@ class DAGSchedulerSuite extends SparkFunSuite with LocalSparkContext with TimeLi
     results.clear()
     securityMgr = new SecurityManager(conf)
     broadcastManager = new BroadcastManager(true, conf, securityMgr)
-    mapOutputTracker = new MapOutputTrackerMaster(conf, broadcastManager, true) {
-      override def sendTracker(message: Any): Unit = {
-        // no-op, just so we can stop this to avoid leaking threads
-      }
-    }
+    mapOutputTracker = new MapOutputTrackerMaster(conf, broadcastManager, true)
     scheduler = new DAGScheduler(
       sc,
       taskScheduler,
@@ -376,92 +372,18 @@ class DAGSchedulerSuite extends SparkFunSuite with LocalSparkContext with TimeLi
 
     submit(rddD, Array(0))
 
-    assert(scheduler.shuffleIdToMapStage.size === 3)
+    assert(scheduler.shuffleToMapStage.size === 3)
     assert(scheduler.activeJobs.size === 1)
 
-    val mapStageA = scheduler.shuffleIdToMapStage(s_A)
-    val mapStageB = scheduler.shuffleIdToMapStage(s_B)
-    val mapStageC = scheduler.shuffleIdToMapStage(s_C)
+    val mapStageA = scheduler.shuffleToMapStage(s_A)
+    val mapStageB = scheduler.shuffleToMapStage(s_B)
+    val mapStageC = scheduler.shuffleToMapStage(s_C)
     val finalStage = scheduler.activeJobs.head.finalStage
 
     assert(mapStageA.parents.isEmpty)
     assert(mapStageB.parents === List(mapStageA))
     assert(mapStageC.parents === List(mapStageA, mapStageB))
     assert(finalStage.parents === List(mapStageC))
-
-    complete(taskSets(0), Seq((Success, makeMapStatus("hostA", 1))))
-    complete(taskSets(1), Seq((Success, makeMapStatus("hostA", 1))))
-    complete(taskSets(2), Seq((Success, makeMapStatus("hostA", 1))))
-    complete(taskSets(3), Seq((Success, 42)))
-    assert(results === Map(0 -> 42))
-    assertDataStructuresEmpty()
-  }
-
-  test("All shuffle files on the slave should be cleaned up when slave lost") {
-    // reset the test context with the right shuffle service config
-    afterEach()
-    val conf = new SparkConf()
-    conf.set("spark.shuffle.service.enabled", "true")
-    conf.set("spark.files.fetchFailure.unRegisterOutputOnHost", "true")
-    init(conf)
-    runEvent(ExecutorAdded("exec-hostA1", "hostA"))
-    runEvent(ExecutorAdded("exec-hostA2", "hostA"))
-    runEvent(ExecutorAdded("exec-hostB", "hostB"))
-    val firstRDD = new MyRDD(sc, 3, Nil)
-    val firstShuffleDep = new ShuffleDependency(firstRDD, new HashPartitioner(3))
-    val firstShuffleId = firstShuffleDep.shuffleId
-    val shuffleMapRdd = new MyRDD(sc, 3, List(firstShuffleDep))
-    val shuffleDep = new ShuffleDependency(shuffleMapRdd, new HashPartitioner(3))
-    val secondShuffleId = shuffleDep.shuffleId
-    val reduceRdd = new MyRDD(sc, 1, List(shuffleDep))
-    submit(reduceRdd, Array(0))
-    // map stage1 completes successfully, with one task on each executor
-    complete(taskSets(0), Seq(
-      (Success,
-        MapStatus(BlockManagerId("exec-hostA1", "hostA", 12345), Array.fill[Long](1)(2))),
-      (Success,
-        MapStatus(BlockManagerId("exec-hostA2", "hostA", 12345), Array.fill[Long](1)(2))),
-      (Success, makeMapStatus("hostB", 1))
-    ))
-    // map stage2 completes successfully, with one task on each executor
-    complete(taskSets(1), Seq(
-      (Success,
-        MapStatus(BlockManagerId("exec-hostA1", "hostA", 12345), Array.fill[Long](1)(2))),
-      (Success,
-        MapStatus(BlockManagerId("exec-hostA2", "hostA", 12345), Array.fill[Long](1)(2))),
-      (Success, makeMapStatus("hostB", 1))
-    ))
-    // make sure our test setup is correct
-    val initialMapStatus1 = mapOutputTracker.shuffleStatuses(firstShuffleId).mapStatuses
-    //  val initialMapStatus1 = mapOutputTracker.mapStatuses.get(0).get
-    assert(initialMapStatus1.count(_ != null) === 3)
-    assert(initialMapStatus1.map{_.location.executorId}.toSet ===
-      Set("exec-hostA1", "exec-hostA2", "exec-hostB"))
-
-    val initialMapStatus2 = mapOutputTracker.shuffleStatuses(secondShuffleId).mapStatuses
-    //  val initialMapStatus1 = mapOutputTracker.mapStatuses.get(0).get
-    assert(initialMapStatus2.count(_ != null) === 3)
-    assert(initialMapStatus2.map{_.location.executorId}.toSet ===
-      Set("exec-hostA1", "exec-hostA2", "exec-hostB"))
-
-    // reduce stage fails with a fetch failure from one host
-    complete(taskSets(2), Seq(
-      (FetchFailed(BlockManagerId("exec-hostA2", "hostA", 12345), firstShuffleId, 0, 0, "ignored"),
-        null)
-    ))
-
-    // Here is the main assertion -- make sure that we de-register
-    // the map outputs for both map stage from both executors on hostA
-
-    val mapStatus1 = mapOutputTracker.shuffleStatuses(firstShuffleId).mapStatuses
-    assert(mapStatus1.count(_ != null) === 1)
-    assert(mapStatus1(2).location.executorId === "exec-hostB")
-    assert(mapStatus1(2).location.host === "hostB")
-
-    val mapStatus2 = mapOutputTracker.shuffleStatuses(secondShuffleId).mapStatuses
-    assert(mapStatus2.count(_ != null) === 1)
-    assert(mapStatus2(2).location.executorId === "exec-hostB")
-    assert(mapStatus2(2).location.host === "hostB")
   }
 
   test("zero split job") {
@@ -1656,8 +1578,11 @@ class DAGSchedulerSuite extends SparkFunSuite with LocalSparkContext with TimeLi
     val shuffleId = shuffleDep.shuffleId
     val reduceRdd = new MyRDD(sc, 1, List(shuffleDep), tracker = mapOutputTracker)
     submit(reduceRdd, Array(0))
-    // Tell the DAGScheduler that hostA was lost.
+    // blockManagerMaster.removeExecutor("exec-hostA")
+    // pretend we were told hostA went away
     runEvent(ExecutorLost("exec-hostA", ExecutorKilled))
+    // DAGScheduler will immediately resubmit the stage after it appears to have no pending tasks
+    // rather than marking it is as failed and waiting.
     complete(taskSets(0), Seq(
       (Success, makeMapStatus("hostA", 1)),
       (Success, makeMapStatus("hostB", 1))))
@@ -2188,6 +2113,61 @@ class DAGSchedulerSuite extends SparkFunSuite with LocalSparkContext with TimeLi
     assert(results === Map(0 -> 42, 1 -> 43))
     results.clear()
     assertDataStructuresEmpty()
+  }
+
+  test("SPARK-17644: After one stage is aborted for too many failed attempts, subsequent stages" +
+    "still behave correctly on fetch failures") {
+    // Runs a job that always encounters a fetch failure, so should eventually be aborted
+    def runJobWithPersistentFetchFailure: Unit = {
+      val rdd1 = sc.makeRDD(Array(1, 2, 3, 4), 2).map(x => (x, 1)).groupByKey()
+      val shuffleHandle =
+        rdd1.dependencies.head.asInstanceOf[ShuffleDependency[_, _, _]].shuffleHandle
+      rdd1.map {
+        case (x, _) if (x == 1) =>
+          throw new FetchFailedException(
+            BlockManagerId("1", "1", 1), shuffleHandle.shuffleId, 0, 0, "test")
+        case (x, _) => x
+      }.count()
+    }
+
+    // Runs a job that encounters a single fetch failure but succeeds on the second attempt
+    def runJobWithTemporaryFetchFailure: Unit = {
+      object FailThisAttempt {
+        val _fail = new AtomicBoolean(true)
+      }
+      val rdd1 = sc.makeRDD(Array(1, 2, 3, 4), 2).map(x => (x, 1)).groupByKey()
+      val shuffleHandle =
+        rdd1.dependencies.head.asInstanceOf[ShuffleDependency[_, _, _]].shuffleHandle
+      rdd1.map {
+        case (x, _) if (x == 1) && FailThisAttempt._fail.getAndSet(false) =>
+          throw new FetchFailedException(
+            BlockManagerId("1", "1", 1), shuffleHandle.shuffleId, 0, 0, "test")
+      }
+    }
+
+    failAfter(10.seconds) {
+      val e = intercept[SparkException] {
+        runJobWithPersistentFetchFailure
+      }
+      assert(e.getMessage.contains("org.apache.spark.shuffle.FetchFailedException"))
+    }
+
+    // Run a second job that will fail due to a fetch failure.
+    // This job will hang without the fix for SPARK-17644.
+    failAfter(10.seconds) {
+      val e = intercept[SparkException] {
+        runJobWithPersistentFetchFailure
+      }
+      assert(e.getMessage.contains("org.apache.spark.shuffle.FetchFailedException"))
+    }
+
+    failAfter(10.seconds) {
+      try {
+        runJobWithTemporaryFetchFailure
+      } catch {
+        case e: Throwable => fail("A job with one fetch failure should eventually succeed")
+      }
+    }
   }
 
   /**

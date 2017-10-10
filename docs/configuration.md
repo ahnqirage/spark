@@ -429,33 +429,31 @@ Apart from these, the following properties are also available, and may be useful
   <td><code>spark.files</code></td>
   <td></td>
   <td>
-    Comma-separated list of files to be placed in the working directory of each executor. Globs are allowed.
+    Comma-separated list of files to be placed in the working directory of each executor.
   </td>
 </tr>
 <tr>
   <td><code>spark.submit.pyFiles</code></td>
   <td></td>
   <td>
-    Comma-separated list of .zip, .egg, or .py files to place on the PYTHONPATH for Python apps. Globs are allowed.
+    Comma-separated list of .zip, .egg, or .py files to place on the PYTHONPATH for Python apps.
   </td>
 </tr>
 <tr>
   <td><code>spark.jars</code></td>
   <td></td>
   <td>
-    Comma-separated list of jars to include on the driver and executor classpaths. Globs are allowed.
+    Comma-separated list of local jars to include on the driver and executor classpaths.
   </td>
 </tr>
 <tr>
   <td><code>spark.jars.packages</code></td>
   <td></td>
   <td>
-    Comma-separated list of Maven coordinates of jars to include on the driver and executor
-    classpaths. The coordinates should be groupId:artifactId:version. If <code>spark.jars.ivySettings</code>
-    is given artifacts will be resolved according to the configuration in the file, otherwise artifacts
-    will be searched for in the local maven repo, then maven central and finally any additional remote
-    repositories given by the command-line option <code>--repositories</code>. For more details, see
-    <a href="submitting-applications.html#advanced-dependency-management">Advanced Dependency Management</a>.
+    Comma-separated list of maven coordinates of jars to include on the driver and executor
+    classpaths. Will search the local maven repo, then maven central and any additional remote
+    repositories given by <code>spark.jars.ivy</code>. The format for the coordinates should be
+    groupId:artifactId:version.
   </td>
 </tr>
 <tr>
@@ -470,44 +468,8 @@ Apart from these, the following properties are also available, and may be useful
   <td><code>spark.jars.ivy</code></td>
   <td></td>
   <td>
-    Path to specify the Ivy user directory, used for the local Ivy cache and package files from
-    <code>spark.jars.packages</code>. This will override the Ivy property <code>ivy.default.ivy.user.dir</code>
-    which defaults to ~/.ivy2.
-  </td>
-</tr>
-<tr>
-  <td><code>spark.jars.ivySettings</code></td>
-  <td></td>
-  <td>
-    Path to an Ivy settings file to customize resolution of jars specified using <code>spark.jars.packages</code>
-    instead of the built-in defaults, such as maven central. Additional repositories given by the command-line
-    option <code>--repositories</code> or <code>spark.jars.repositories</code> will also be included.
-    Useful for allowing Spark to resolve artifacts from behind a firewall e.g. via an in-house
-    artifact server like Artifactory. Details on the settings file format can be
-    found at http://ant.apache.org/ivy/history/latest-milestone/settings.html
-  </td>
-</tr>
- <tr>
-  <td><code>spark.jars.repositories</code></td>
-  <td></td>
-  <td>
-    Comma-separated list of additional remote repositories to search for the maven coordinates
-    given with <code>--packages</code> or <code>spark.jars.packages</code>.
-  </td>
-</tr>
-<tr>
-  <td><code>spark.pyspark.driver.python</code></td>
-  <td></td>
-  <td>
-    Python binary executable to use for PySpark in driver.
-    (default is <code>spark.pyspark.python</code>)
-  </td>
-</tr>
-<tr>
-  <td><code>spark.pyspark.python</code></td>
-  <td></td>
-  <td>
-    Python binary executable to use for PySpark in both driver and executors.
+    Comma-separated list of additional remote repositories to search for the coordinates given
+    with <code>spark.jars.packages</code>.
   </td>
 </tr>
 </table>
@@ -791,6 +753,14 @@ Apart from these, the following properties are also available, and may be useful
     Show the progress bar in the console. The progress bar shows the progress of stages
     that run for longer than 500ms. If multiple stages run at the same time, multiple
     progress bars will be displayed on the same line.
+  </td>
+</tr>
+<tr>
+  <td><code>spark.ui.retainedTasks</code></td>
+  <td>100000</td>
+  <td>
+    How many tasks the Spark UI and status APIs remember before garbage
+    collecting.
   </td>
 </tr>
 <tr>
@@ -1567,7 +1537,7 @@ Apart from these, the following properties are also available, and may be useful
     Enables monitoring of killed / interrupted tasks. When set to true, any task which is killed
     will be monitored by the executor until that task actually finishes executing. See the other
     <code>spark.task.reaper.*</code> configurations for details on how to control the exact behavior
-    of this monitoring. When set to false (the default), task killing will use an older code
+    of this monitoring</code>. When set to false (the default), task killing will use an older code
     path which lacks such monitoring.
   </td>
 </tr>
@@ -1600,13 +1570,6 @@ Apart from these, the following properties are also available, and may be useful
     value, -1, disables this mechanism and prevents the executor from self-destructing. The purpose
     of this setting is to act as a safety-net to prevent runaway uncancellable tasks from rendering
     an executor unusable.
-  </td>
-</tr>
-<tr>
-  <td><code>spark.stage.maxConsecutiveAttempts</code></td>
-  <td>4</td>
-  <td>
-    Number of consecutive stage attempts allowed before a stage is aborted.
   </td>
 </tr>
 </table>
@@ -1901,25 +1864,11 @@ Apart from these, the following properties are also available, and may be useful
             protocols. In order to override the global configuration for the particular protocol,
             the properties must be overwritten in the protocol-specific namespace.
 
-            <br />Use <code>spark.ssl.YYY.XXX</code> settings to overwrite the global configuration for
+            <p>Use <code>spark.ssl.YYY.XXX</code> settings to overwrite the global configuration for
             particular protocol denoted by <code>YYY</code>. Example values for <code>YYY</code>
             include <code>fs</code>, <code>ui</code>, <code>standalone</code>, and
             <code>historyServer</code>.  See <a href="security.html#ssl-configuration">SSL
-            Configuration</a> for details on hierarchical SSL configuration for services.
-        </td>
-    </tr>
-    <tr>
-        <td><code>spark.ssl.[namespace].port</code></td>
-        <td>None</td>
-        <td>
-            The port where the SSL service will listen on.
-
-            <br />The port must be defined within a namespace configuration; see
-            <a href="security.html#ssl-configuration">SSL Configuration</a> for the available
-            namespaces.
-
-            <br />When not set, the SSL port will be derived from the non-SSL port for the
-            same service. A value of "0" will make the service bind to an ephemeral port.
+            Configuration</a> for details on hierarchical SSL configuration for services.</p>
         </td>
     </tr>
     <tr>
@@ -2003,8 +1952,7 @@ Apart from these, the following properties are also available, and may be useful
 </table>
 
 
-### Spark SQL
-
+#### Spark SQL
 Running the <code>SET -v</code> command will show the entire list of the SQL configuration.
 
 <div class="codetabs">
@@ -2046,8 +1994,7 @@ showDF(properties, numRows = 200, truncate = FALSE)
 </div>
 
 
-### Spark Streaming
-
+#### Spark Streaming
 <table class="table">
 <tr><th>Property Name</th><th>Default</th><th>Meaning</th></tr>
 <tr>

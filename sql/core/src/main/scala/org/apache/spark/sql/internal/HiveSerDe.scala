@@ -81,16 +81,4 @@ object HiveSerDe {
 
     serdeMap.get(key)
   }
-
-  def getDefaultStorage(conf: SQLConf): CatalogStorageFormat = {
-    val defaultStorageType = conf.getConfString("hive.default.fileformat", "textfile")
-    val defaultHiveSerde = sourceToSerDe(defaultStorageType)
-    CatalogStorageFormat.empty.copy(
-      inputFormat = defaultHiveSerde.flatMap(_.inputFormat)
-        .orElse(Some("org.apache.hadoop.mapred.TextInputFormat")),
-      outputFormat = defaultHiveSerde.flatMap(_.outputFormat)
-        .orElse(Some("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")),
-      serde = defaultHiveSerde.flatMap(_.serde)
-        .orElse(Some("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe")))
-  }
 }

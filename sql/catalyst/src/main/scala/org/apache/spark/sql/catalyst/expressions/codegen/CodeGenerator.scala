@@ -23,18 +23,14 @@ import java.util.{Map => JavaMap}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.language.existentials
 import scala.util.control.NonFatal
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
-import com.google.common.util.concurrent.{ExecutionError, UncheckedExecutionException}
-import org.apache.commons.lang3.exception.ExceptionUtils
-import org.codehaus.commons.compiler.CompileException
-import org.codehaus.janino.{ByteArrayClassLoader, ClassBodyEvaluator, JaninoRuntimeException, SimpleCompiler}
+import org.codehaus.janino.{ByteArrayClassLoader, ClassBodyEvaluator, SimpleCompiler}
 import org.codehaus.janino.util.ClassFile
+import scala.language.existentials
 
-import org.apache.spark.{SparkEnv, TaskContext, TaskKilledException}
-import org.apache.spark.executor.InputMetrics
+import org.apache.spark.SparkEnv
 import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.source.CodegenMetrics
 import org.apache.spark.sql.catalyst.InternalRow
@@ -97,10 +93,10 @@ class CodegenContext {
    * This is for minor objects not to store the object into field but refer it from the references
    * field at the time of use because number of fields in class is limited so we should reduce it.
    */
-  def addReferenceMinorObj(obj: Any, className: String = null): String = {
+  def addReferenceObj(obj: Any): String = {
     val idx = references.length
     references += obj
-    val clsName = Option(className).getOrElse(obj.getClass.getName)
+    val clsName = obj.getClass.getName
     s"(($clsName) references[$idx])"
   }
 
@@ -599,7 +595,6 @@ class CodegenContext {
     case array: ArrayType => genComp(array, c1, c2) + " == 0"
     case struct: StructType => genComp(struct, c1, c2) + " == 0"
     case udt: UserDefinedType[_] => genEqual(udt.sqlType, c1, c2)
-    case NullType => "false"
     case _ =>
       throw new IllegalArgumentException(
         "cannot generate equality code for un-comparable type: " + dataType.simpleString)
@@ -669,6 +664,7 @@ class CodegenContext {
         """
       s"${addNewFunction(compareFunc, funcCode)}($c1, $c2)"
     case schema: StructType =>
+      INPUT_ROW = "i"
       val comparisons = GenerateOrdering.genComparisons(this, schema)
       val compareFunc = freshName("compareStruct")
       val funcCode: String =
@@ -679,6 +675,7 @@ class CodegenContext {
             if (a instanceof UnsafeRow && b instanceof UnsafeRow && a.equals(b)) {
               return 0;
             }
+            InternalRow i = null;
             $comparisons
             return 0;
           }
@@ -779,7 +776,7 @@ class CodegenContext {
       // also not be too small, or it will have many function calls (for wide table), see the
       // results in BenchmarkWideTable.
       if (blockBuilder.length > 1024) {
-        blocks += blockBuilder.toString()
+        blocks.append(blockBuilder.toString())
         blockBuilder.clear()
       }
       blockBuilder.append(code)
@@ -804,6 +801,58 @@ class CodegenContext {
 
       foldFunctions(functions.map(name => s"$name(${arguments.map(_._2).mkString(", ")})"))
     }
+  }
+
+  /**
+   * Perform a function which generates a sequence of ExprCodes with a given mapping between
+   * expressions and common expressions, instead of using the mapping in current context.
+   */
+  def withSubExprEliminationExprs(
+      newSubExprEliminationExprs: Map[Expression, SubExprEliminationState])(
+      f: => Seq[ExprCode]): Seq[ExprCode] = {
+    val oldsubExprEliminationExprs = subExprEliminationExprs
+    subExprEliminationExprs.clear
+    newSubExprEliminationExprs.foreach(subExprEliminationExprs += _)
+
+    val genCodes = f
+
+    // Restore previous subExprEliminationExprs
+    subExprEliminationExprs.clear
+    oldsubExprEliminationExprs.foreach(subExprEliminationExprs += _)
+    genCodes
+  }
+
+  /**
+   * Checks and sets up the state and codegen for subexpression elimination. This finds the
+   * common subexpressions, generates the code snippets that evaluate those expressions and
+   * populates the mapping of common subexpressions to the generated code snippets. The generated
+   * code snippets will be returned and should be inserted into generated codes before these
+   * common subexpressions actually are used first time.
+   */
+  def subexpressionEliminationForWholeStageCodegen(expressions: Seq[Expression]): SubExprCodes = {
+    // Create a clear EquivalentExpressions and SubExprEliminationState mapping
+    val equivalentExpressions: EquivalentExpressions = new EquivalentExpressions
+    val subExprEliminationExprs = mutable.HashMap.empty[Expression, SubExprEliminationState]
+
+    // Add each expression tree and compute the common subexpressions.
+    expressions.foreach(equivalentExpressions.addExprTree(_, true, false))
+
+    // Get all the expressions that appear at least twice and set up the state for subexpression
+    // elimination.
+    val commonExprs = equivalentExpressions.getAllEquivalentExprs.filter(_.size > 1)
+    val codes = commonExprs.map { e =>
+      val expr = e.head
+      val fnName = freshName("evalExpr")
+      val isNull = s"${fnName}IsNull"
+      val value = s"${fnName}Value"
+
+      // Generate the code for this expression tree.
+      val code = expr.genCode(this)
+      val state = SubExprEliminationState(code.isNull, code.value)
+      e.foreach(subExprEliminationExprs.put(_, state))
+      code.code.trim
+    }
+    SubExprCodes(codes, subExprEliminationExprs.toMap)
   }
 
   /**
@@ -1016,7 +1065,7 @@ object CodeGenerator extends Logging {
    *
    * @return a pair of a generated class and the max bytecode size of generated functions.
    */
-  def compile(code: CodeAndComment): GeneratedClass = try {
+  def compile(code: CodeAndComment): GeneratedClass = {
     cache.get(code)
   } catch {
     // Cache.get() may wrap the original exception. See the following URL
@@ -1029,7 +1078,7 @@ object CodeGenerator extends Logging {
   /**
    * Compile the Java source code into a Java class, using Janino.
    */
-  private[this] def doCompile(code: CodeAndComment): (GeneratedClass, Int) = {
+  private[this] def doCompile(code: CodeAndComment): GeneratedClass = {
     val evaluator = new ClassBodyEvaluator()
 
     // A special classloader used to wrap the actual parent classloader of
@@ -1062,15 +1111,17 @@ object CodeGenerator extends Logging {
     ))
     evaluator.setExtendedClass(classOf[GeneratedClass])
 
+    lazy val formatted = CodeFormatter.format(code)
+
     logDebug({
       // Only add extra debugging info to byte code when we are going to print the source code.
       evaluator.setDebuggingInformation(true, true, false)
       s"\n${CodeFormatter.format(code)}"
     })
 
-    val maxCodeSize = try {
+    try {
       evaluator.cook("generated.java", code.body)
-      updateAndGetCompilationStats(evaluator)
+      recordCompilationStats(evaluator)
     } catch {
       case e: JaninoRuntimeException =>
         val msg = s"failed to compile: $e\n$formatted"
@@ -1127,6 +1178,43 @@ object CodeGenerator extends Logging {
   }
 
   /**
+   * Records the generated class and method bytecode sizes by inspecting janino private fields.
+   */
+  private def recordCompilationStats(evaluator: ClassBodyEvaluator): Unit = {
+    // First retrieve the generated classes.
+    val classes = {
+      val resultField = classOf[SimpleCompiler].getDeclaredField("result")
+      resultField.setAccessible(true)
+      val loader = resultField.get(evaluator).asInstanceOf[ByteArrayClassLoader]
+      val classesField = loader.getClass.getDeclaredField("classes")
+      classesField.setAccessible(true)
+      classesField.get(loader).asInstanceOf[JavaMap[String, Array[Byte]]].asScala
+    }
+
+    // Then walk the classes to get at the method bytecode.
+    val codeAttr = Utils.classForName("org.codehaus.janino.util.ClassFile$CodeAttribute")
+    val codeAttrField = codeAttr.getDeclaredField("code")
+    codeAttrField.setAccessible(true)
+    classes.foreach { case (_, classBytes) =>
+      CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE.update(classBytes.length)
+      try {
+        val cf = new ClassFile(new ByteArrayInputStream(classBytes))
+        cf.methodInfos.asScala.foreach { method =>
+          method.getAttributes().foreach { a =>
+            if (a.getClass.getName == codeAttr.getName) {
+              CodegenMetrics.METRIC_GENERATED_METHOD_BYTECODE_SIZE.update(
+                codeAttrField.get(a).asInstanceOf[Array[Byte]].length)
+            }
+          }
+        }
+      } catch {
+        case NonFatal(e) =>
+          logWarning("Error calculating stats of compiled class.", e)
+      }
+    }
+  }
+
+  /**
    * A cache of generated classes.
    *
    * From the Guava Docs: A Cache is similar to ConcurrentMap, but not quite the same. The most
@@ -1138,8 +1226,8 @@ object CodeGenerator extends Logging {
   private val cache = CacheBuilder.newBuilder()
     .maximumSize(100)
     .build(
-      new CacheLoader[CodeAndComment, (GeneratedClass, Int)]() {
-        override def load(code: CodeAndComment): (GeneratedClass, Int) = {
+      new CacheLoader[CodeAndComment, GeneratedClass]() {
+        override def load(code: CodeAndComment): GeneratedClass = {
           val startTime = System.nanoTime()
           val result = doCompile(code)
           val endTime = System.nanoTime()

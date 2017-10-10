@@ -419,7 +419,7 @@ object RandomRDDs {
 
   /**
    * :: DeveloperApi ::
-   * `RandomRDDs.randomJavaRDD` with the default seed.
+   * [[RandomRDDs#randomJavaRDD]] with the default seed.
    */
   @DeveloperApi
   @Since("1.6.0")
@@ -433,7 +433,7 @@ object RandomRDDs {
 
   /**
    * :: DeveloperApi ::
-   * `RandomRDDs.randomJavaRDD` with the default seed & numPartitions
+   * [[RandomRDDs#randomJavaRDD]] with the default seed & numPartitions
    */
   @DeveloperApi
   @Since("1.6.0")
@@ -857,7 +857,7 @@ object RandomRDDs {
 
   /**
    * :: DeveloperApi ::
-   * Java-friendly version of `RandomRDDs.randomVectorRDD`.
+   * Java-friendly version of [[RandomRDDs#randomVectorRDD]].
    */
   @DeveloperApi
   @Since("1.6.0")
@@ -873,7 +873,7 @@ object RandomRDDs {
 
   /**
    * :: DeveloperApi ::
-   * `RandomRDDs.randomJavaVectorRDD` with the default seed.
+   * [[RandomRDDs#randomJavaVectorRDD]] with the default seed.
    */
   @DeveloperApi
   @Since("1.6.0")
@@ -888,7 +888,7 @@ object RandomRDDs {
 
   /**
    * :: DeveloperApi ::
-   * `RandomRDDs.randomJavaVectorRDD` with the default number of partitions and the default seed.
+   * [[RandomRDDs#randomJavaVectorRDD]] with the default number of partitions and the default seed.
    */
   @DeveloperApi
   @Since("1.6.0")

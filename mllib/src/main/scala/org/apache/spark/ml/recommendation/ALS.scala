@@ -82,48 +82,16 @@ private[recommendation] trait ALSModelParams extends Params with HasPredictionCo
 
   /**
    * Attempts to safely cast a user/item id to an Int. Throws an exception if the value is
-   * out of integer range or contains a fractional part.
+   * out of integer range.
    */
-  protected[recommendation] val checkedCast = udf { (n: Any) =>
-    n match {
-      case v: Int => v // Avoid unnecessary casting
-      case v: Number =>
-        val intV = v.intValue
-        // Checks if number within Int range and has no fractional part.
-        if (v.doubleValue == intV) {
-          intV
-        } else {
-          throw new IllegalArgumentException(s"ALS only supports values in Integer range " +
-            s"and without fractional part for columns ${$(userCol)} and ${$(itemCol)}. " +
-            s"Value $n was either out of Integer range or contained a fractional part that " +
-            s"could not be converted.")
-        }
-      case _ => throw new IllegalArgumentException(s"ALS only supports values in Integer range " +
-        s"for columns ${$(userCol)} and ${$(itemCol)}. Value $n was not numeric.")
+  protected val checkedCast = udf { (n: Double) =>
+    if (n > Int.MaxValue || n < Int.MinValue) {
+      throw new IllegalArgumentException(s"ALS only supports values in Integer range for columns " +
+        s"${$(userCol)} and ${$(itemCol)}. Value $n was out of Integer range.")
+    } else {
+      n.toInt
     }
   }
-
-  /**
-   * Param for strategy for dealing with unknown or new users/items at prediction time.
-   * This may be useful in cross-validation or production scenarios, for handling user/item ids
-   * the model has not seen in the training data.
-   * Supported values:
-   * - "nan":  predicted value for unknown ids will be NaN.
-   * - "drop": rows in the input DataFrame containing unknown ids will be dropped from
-   *           the output DataFrame containing predictions.
-   * Default: "nan".
-   * @group expertParam
-   */
-  val coldStartStrategy = new Param[String](this, "coldStartStrategy",
-    "strategy for dealing with unknown or new users/items at prediction time. This may be " +
-    "useful in cross-validation or production scenarios, for handling user/item ids the model " +
-    "has not seen in the training data. Supported values: " +
-    s"${ALSModel.supportedColdStartStrategies.mkString(",")}.",
-    (s: String) =>
-      ALSModel.supportedColdStartStrategies.contains(s.toLowerCase(Locale.ROOT)))
-
-  /** @group expertGetParam */
-  def getColdStartStrategy: String = $(coldStartStrategy).toLowerCase(Locale.ROOT)
 }
 
 /**
@@ -300,12 +268,20 @@ class ALSModel private[ml] (
   @Since("2.0.0")
   override def transform(dataset: Dataset[_]): DataFrame = {
     transformSchema(dataset.schema)
+    // Register a UDF for DataFrame, and then
     // create a new column named map(predictionCol) by running the predict UDF.
-    val predictions = dataset
+    val predict = udf { (userFeatures: Seq[Float], itemFeatures: Seq[Float]) =>
+      if (userFeatures != null && itemFeatures != null) {
+        blas.sdot(rank, userFeatures.toArray, 1, itemFeatures.toArray, 1)
+      } else {
+        Float.NaN
+      }
+    }
+    dataset
       .join(userFactors,
-        checkedCast(dataset($(userCol))) === userFactors("id"), "left")
+        checkedCast(dataset($(userCol)).cast(DoubleType)) === userFactors("id"), "left")
       .join(itemFactors,
-        checkedCast(dataset($(itemCol))) === itemFactors("id"), "left")
+        checkedCast(dataset($(itemCol)).cast(DoubleType)) === itemFactors("id"), "left")
       .select(dataset("*"),
         predict(userFactors("features"), itemFactors("features")).as($(predictionCol)))
     getColdStartStrategy match {
@@ -556,8 +532,8 @@ object ALSModel extends MLReadable[ALSModel] {
  *
  * Essentially instead of finding the low-rank approximations to the rating matrix `R`,
  * this finds the approximations for a preference matrix `P` where the elements of `P` are 1 if
- * r is greater than 0 and 0 if r is less than or equal to 0. The ratings then act as 'confidence'
- * values related to strength of indicated user
+ * r &gt; 0 and 0 if r &lt;= 0. The ratings then act as 'confidence' values related to strength of
+ * indicated user
  * preferences rather than explicit ratings given to items.
  */
 @Since("1.3.0")
@@ -633,10 +609,6 @@ class ALS(@Since("1.4.0") override val uid: String) extends Estimator[ALSModel] 
   @Since("2.0.0")
   def setFinalStorageLevel(value: String): this.type = set(finalStorageLevel, value)
 
-  /** @group expertSetParam */
-  @Since("2.2.0")
-  def setColdStartStrategy(value: String): this.type = set(coldStartStrategy, value)
-
   /**
    * Sets both numUserBlocks and numItemBlocks to the specific value.
    *
@@ -656,7 +628,8 @@ class ALS(@Since("1.4.0") override val uid: String) extends Estimator[ALSModel] 
 
     val r = if ($(ratingCol) != "") col($(ratingCol)).cast(FloatType) else lit(1.0f)
     val ratings = dataset
-      .select(checkedCast(col($(userCol))), checkedCast(col($(itemCol))), r)
+      .select(checkedCast(col($(userCol)).cast(DoubleType)),
+        checkedCast(col($(itemCol)).cast(DoubleType)), r)
       .rdd
       .map { row =>
         Rating(row.getInt(0), row.getInt(1), row.getFloat(2))

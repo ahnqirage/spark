@@ -17,8 +17,7 @@
 
 package org.apache.spark.sql.catalyst.plans
 
-import java.util.Locale
-
+import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.Attribute
 
 object JoinType {

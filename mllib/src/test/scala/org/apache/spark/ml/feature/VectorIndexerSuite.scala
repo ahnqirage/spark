@@ -86,11 +86,11 @@ class VectorIndexerSuite extends SparkFunSuite with MLlibTestSparkContext
     checkPair(densePoints1Seq, sparsePoints1Seq)
     checkPair(densePoints2Seq, sparsePoints2Seq)
 
-    densePoints1 = densePoints1Seq.map(FeatureData).toDF()
-    sparsePoints1 = sparsePoints1Seq.map(FeatureData).toDF()
-    densePoints2 = densePoints2Seq.map(FeatureData).toDF()
-    sparsePoints2 = sparsePoints2Seq.map(FeatureData).toDF()
-    badPoints = badPointsSeq.map(FeatureData).toDF()
+    densePoints1 = spark.createDataFrame(sc.parallelize(densePoints1Seq, 2).map(FeatureData))
+    sparsePoints1 = spark.createDataFrame(sc.parallelize(sparsePoints1Seq, 2).map(FeatureData))
+    densePoints2 = spark.createDataFrame(sc.parallelize(densePoints2Seq, 2).map(FeatureData))
+    sparsePoints2 = spark.createDataFrame(sc.parallelize(sparsePoints2Seq, 2).map(FeatureData))
+    badPoints = spark.createDataFrame(sc.parallelize(badPointsSeq, 2).map(FeatureData))
   }
 
   private def getIndexer: VectorIndexer =
@@ -103,7 +103,7 @@ class VectorIndexerSuite extends SparkFunSuite with MLlibTestSparkContext
   }
 
   test("Cannot fit an empty DataFrame") {
-    val rdd = Array.empty[Vector].map(FeatureData).toSeq.toDF()
+    val rdd = spark.createDataFrame(sc.parallelize(Array.empty[Vector], 2).map(FeatureData))
     val vectorIndexer = getIndexer
     intercept[IllegalArgumentException] {
       vectorIndexer.fit(rdd)

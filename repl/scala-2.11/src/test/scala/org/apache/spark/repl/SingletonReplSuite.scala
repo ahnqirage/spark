@@ -21,10 +21,11 @@ import java.io._
 import java.net.URLClassLoader
 
 import scala.collection.mutable.ArrayBuffer
-
 import org.apache.commons.lang3.StringEscapeUtils
-
-import org.apache.spark.SparkFunSuite
+import org.apache.log4j.{Level, LogManager}
+import org.apache.spark.{SparkContext, SparkFunSuite}
+import org.apache.spark.internal.config._
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.util.Utils
 
 /**
@@ -55,28 +56,11 @@ class SingletonReplSuite extends SparkFunSuite {
     val classpath = paths.map(new File(_).getAbsolutePath).mkString(File.pathSeparator)
 
     System.setProperty(CONF_EXECUTOR_CLASSPATH, classpath)
-    Main.conf.set("spark.master", "local-cluster[2,1,1024]")
-    val interp = new SparkILoop(
-      new BufferedReader(new InputStreamReader(new PipedInputStream(in))),
-      new PrintWriter(out))
-
-    // Forces to create new SparkContext
     Main.sparkContext = null
-    Main.sparkSession = null
+    Main.sparkSession = null // causes recreation of SparkContext for each test.
+    Main.conf.set("spark.master", master)
+    Main.doMain(Array("-classpath", classpath), new SparkILoop(in, new PrintWriter(out)))
 
-    // Starts a new thread to run the REPL interpreter, so that we won't block.
-    thread = new Thread(new Runnable {
-      override def run(): Unit = Main.doMain(Array("-classpath", classpath), interp)
-    })
-    thread.setDaemon(true)
-    thread.start()
-
-    waitUntil(() => out.toString.contains("Type :help for more information"))
-  }
-
-  override def afterAll(): Unit = {
-    in.close()
-    thread.join()
     if (oldExecutorClasspath != null) {
       System.setProperty(CONF_EXECUTOR_CLASSPATH, oldExecutorClasspath)
     } else {
@@ -122,16 +106,86 @@ class SingletonReplSuite extends SparkFunSuite {
       "Interpreter output contained '" + message + "':\n" + output)
   }
 
+  test("propagation of local properties") {
+    // A mock ILoop that doesn't install the SIGINT handler.
+    class ILoop(out: PrintWriter) extends SparkILoop(None, out) {
+      settings = new scala.tools.nsc.Settings
+      settings.usejavacp.value = true
+      org.apache.spark.repl.Main.interp = this
+    }
+
+    val out = new StringWriter()
+    Main.interp = new ILoop(new PrintWriter(out))
+    Main.sparkContext = new SparkContext("local", "repl-test")
+    Main.interp.createInterpreter()
+
+    Main.sparkContext.setLocalProperty("someKey", "someValue")
+
+    // Make sure the value we set in the caller to interpret is propagated in the thread that
+    // interprets the command.
+    Main.interp.interpret("org.apache.spark.repl.Main.sparkContext.getLocalProperty(\"someKey\")")
+    assert(out.toString.contains("someValue"))
+
+    Main.sparkContext.stop()
+    System.clearProperty("spark.driver.port")
+  }
+
+  test("SPARK-15236: use Hive catalog") {
+    // turn on the INFO log so that it is possible the code will dump INFO
+    // entry for using "HiveMetastore"
+    val rootLogger = LogManager.getRootLogger()
+    val logLevel = rootLogger.getLevel
+    rootLogger.setLevel(Level.INFO)
+    try {
+      Main.conf.set(CATALOG_IMPLEMENTATION.key, "hive")
+      val output = runInterpreter("local",
+        """
+      |spark.sql("drop table if exists t_15236")
+    """.stripMargin)
+      assertDoesNotContain("error:", output)
+      assertDoesNotContain("Exception", output)
+      // only when the config is set to hive and
+      // hive classes are built, we will use hive catalog.
+      // Then log INFO entry will show things using HiveMetastore
+      if (SparkSession.hiveClassesArePresent) {
+        assertContains("HiveMetaStore", output)
+      } else {
+        // If hive classes are not built, in-memory catalog will be used
+        assertDoesNotContain("HiveMetaStore", output)
+      }
+    } finally {
+      rootLogger.setLevel(logLevel)
+    }
+  }
+
+  test("SPARK-15236: use in-memory catalog") {
+    val rootLogger = LogManager.getRootLogger()
+    val logLevel = rootLogger.getLevel
+    rootLogger.setLevel(Level.INFO)
+    try {
+      Main.conf.set(CATALOG_IMPLEMENTATION.key, "in-memory")
+      val output = runInterpreter("local",
+        """
+          |spark.sql("drop table if exists t_16236")
+        """.stripMargin)
+      assertDoesNotContain("error:", output)
+      assertDoesNotContain("Exception", output)
+      assertDoesNotContain("HiveMetaStore", output)
+    } finally {
+      rootLogger.setLevel(logLevel)
+    }
+  }
+
   test("simple foreach with accumulator") {
     val output = runInterpreter(
       """
         |val accum = sc.longAccumulator
         |sc.parallelize(1 to 10).foreach(x => accum.add(x))
-        |val res = accum.value
+        |accum.value
       """.stripMargin)
     assertDoesNotContain("error:", output)
     assertDoesNotContain("Exception", output)
-    assertContains("res: Long = 55", output)
+    assertContains("res1: Long = 55", output)
   }
 
   test("external vars") {
@@ -250,7 +304,7 @@ class SingletonReplSuite extends SparkFunSuite {
   }
 
   test("SPARK-1199 two instances of same class don't type check.") {
-    val output = runInterpreter(
+    val output = runInterpreter("local",
       """
         |case class Sum(exp: String, exp2: String)
         |val a = Sum("A", "B")
@@ -310,7 +364,7 @@ class SingletonReplSuite extends SparkFunSuite {
   }
 
   test("SPARK-2632 importing a method from non serializable class and not using it.") {
-    val output = runInterpreter(
+    val output = runInterpreter("local-cluster[1,1,1024]",
       """
         |class TestClass() { def testMethod = 3 }
         |val t = new TestClass
@@ -338,7 +392,48 @@ class SingletonReplSuite extends SparkFunSuite {
       """
         |case class Foo(i: Int)
         |val list = List((1, Foo(1)), (1, Foo(2)))
-        |val res = sc.parallelize(list).groupByKey().collect()
+        |val ret = sc.parallelize(list).groupByKey().collect()
+      """.stripMargin)
+    assertDoesNotContain("error:", output)
+    assertDoesNotContain("Exception", output)
+    assertContains("ret: Array[(Int, Iterable[Foo])] = Array((1,", output)
+  }
+
+  test("replicating blocks of object with class defined in repl") {
+    val output = runInterpreter("local-cluster[2,1,1024]",
+      """
+        |val timeout = 60000 // 60 seconds
+        |val start = System.currentTimeMillis
+        |while(sc.getExecutorStorageStatus.size != 3 &&
+        |    (System.currentTimeMillis - start) < timeout) {
+        |  Thread.sleep(10)
+        |}
+        |if (System.currentTimeMillis - start >= timeout) {
+        |  throw new java.util.concurrent.TimeoutException("Executors were not up in 60 seconds")
+        |}
+        |import org.apache.spark.storage.StorageLevel._
+        |case class Foo(i: Int)
+        |val ret = sc.parallelize((1 to 100).map(Foo), 10).persist(MEMORY_AND_DISK_2)
+        |ret.count()
+        |sc.getExecutorStorageStatus.map(s => s.rddBlocksById(ret.id).size).sum
+      """.stripMargin)
+    assertDoesNotContain("error:", output)
+    assertDoesNotContain("Exception", output)
+    assertContains(": Int = 20", output)
+  }
+
+  test("line wrapper only initialized once when used as encoder outer scope") {
+    val output = runInterpreter("local",
+      """
+        |val fileName = "repl-test-" + System.currentTimeMillis
+        |val tmpDir = System.getProperty("java.io.tmpdir")
+        |val file = new java.io.File(tmpDir, fileName)
+        |def createFile(): Unit = file.createNewFile()
+        |
+        |createFile();case class TestCaseClass(value: Int)
+        |sc.parallelize(1 to 10).map(x => TestCaseClass(x)).collect()
+        |
+        |file.delete()
       """.stripMargin)
     assertDoesNotContain("error:", output)
     assertDoesNotContain("Exception", output)
@@ -396,11 +491,11 @@ class SingletonReplSuite extends SparkFunSuite {
   }
 
   test("newProductSeqEncoder with REPL defined class") {
-    val output = runInterpreter(
+    val output = runInterpreterInPasteMode("local-cluster[1,4,4096]",
       """
-        |case class Click(id: Int)
-        |spark.implicits.newProductSeqEncoder[Click]
-      """.stripMargin)
+      |case class Click(id: Int)
+      |spark.implicits.newProductSeqEncoder[Click]
+    """.stripMargin)
 
     assertDoesNotContain("error:", output)
     assertDoesNotContain("Exception", output)

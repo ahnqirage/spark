@@ -58,7 +58,7 @@ private[yarn] class ExecutorRunnable(
   var nmClient: NMClient = _
 
   def run(): Unit = {
-    logDebug("Starting Executor Container")
+    logInfo("Starting Executor Container")
     nmClient = NMClient.createNMClient()
     nmClient.init(conf)
     nmClient.start()
@@ -198,8 +198,9 @@ private[yarn] class ExecutorRunnable(
     }.toSeq
 
     YarnSparkHadoopUtil.addOutOfMemoryErrorArgument(javaOpts)
-    val commands = prefixEnv ++
-      Seq(Environment.JAVA_HOME.$$() + "/bin/java", "-server") ++
+    val commands = prefixEnv ++ Seq(
+      YarnSparkHadoopUtil.expandEnvironment(Environment.JAVA_HOME) + "/bin/java",
+      "-server") ++
       javaOpts ++
       Seq("org.apache.spark.executor.CoarseGrainedExecutorBackend",
         "--driver-url", masterAddress,

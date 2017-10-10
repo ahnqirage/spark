@@ -23,7 +23,6 @@ import java.nio.ByteBuffer
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.SparkEnv
-import org.apache.spark.serializer.SerializerInstance
 import org.apache.spark.storage.BlockId
 import org.apache.spark.util.{AccumulatorV2, Utils}
 

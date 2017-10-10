@@ -86,6 +86,8 @@ class Pipeline(Estimator, MLReadable, MLWritable):
         setParams(self, stages=None)
         Sets params for Pipeline.
         """
+        if stages is None:
+            stages = []
         kwargs = self._input_kwargs
         return self._set(**kwargs)
 

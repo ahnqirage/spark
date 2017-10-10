@@ -103,40 +103,18 @@ object TypeCoercion {
     case _ => None
   }
 
-  /** Promotes all the way to StringType. */
-  private def stringPromotion(dt1: DataType, dt2: DataType): Option[DataType] = (dt1, dt2) match {
-    case (StringType, t2: AtomicType) if t2 != BinaryType && t2 != BooleanType => Some(StringType)
-    case (t1: AtomicType, StringType) if t1 != BinaryType && t1 != BooleanType => Some(StringType)
-    case _ => None
+  /** Similar to [[findTightestCommonType]], but can promote all the way to StringType. */
+  def findTightestCommonTypeToString(left: DataType, right: DataType): Option[DataType] = {
+    findTightestCommonTypeOfTwo(left, right).orElse((left, right) match {
+      case (StringType, t2: AtomicType) if t2 != BinaryType && t2 != BooleanType => Some(StringType)
+      case (t1: AtomicType, StringType) if t1 != BinaryType && t1 != BooleanType => Some(StringType)
+      case _ => None
+    })
   }
 
   /**
-   * This function determines the target type of a comparison operator when one operand
-   * is a String and the other is not. It also handles when one op is a Date and the
-   * other is a Timestamp by making the target type to be String.
-   */
-  val findCommonTypeForBinaryComparison: (DataType, DataType) => Option[DataType] = {
-    // We should cast all relative timestamp/date/string comparison into string comparisons
-    // This behaves as a user would expect because timestamp strings sort lexicographically.
-    // i.e. TimeStamp(2013-01-01 00:00 ...) < "2014" = true
-    case (StringType, DateType) => Some(StringType)
-    case (DateType, StringType) => Some(StringType)
-    case (StringType, TimestampType) => Some(StringType)
-    case (TimestampType, StringType) => Some(StringType)
-    case (TimestampType, DateType) => Some(StringType)
-    case (DateType, TimestampType) => Some(StringType)
-    case (StringType, NullType) => Some(StringType)
-    case (NullType, StringType) => Some(StringType)
-    case (l: StringType, r: AtomicType) if r != StringType => Some(r)
-    case (l: AtomicType, r: StringType) if (l != StringType) => Some(l)
-    case (l, r) => None
-  }
-
-  /**
-   * Case 2 type widening (see the classdoc comment above for TypeCoercion).
-   *
-   * i.e. the main difference with [[findTightestCommonType]] is that here we allow some
-   * loss of precision when widening decimal and double, and promotion to string.
+   * Find the tightest common type of a set of types by continuously applying
+   * `findTightestCommonTypeOfTwo` on these types.
    */
   private[analysis] def findWiderTypeForTwo(t1: DataType, t2: DataType): Option[DataType] = {
     findTightestCommonType(t1, t2)
@@ -157,9 +135,10 @@ object TypeCoercion {
   }
 
   /**
-   * Similar to [[findWiderTypeForTwo]] that can handle decimal types, but can't promote to
-   * string. If the wider decimal type exceeds system limitation, this rule will truncate
-   * the decimal type before return it.
+   * Case 2 type widening (see the classdoc comment above for TypeCoercion).
+   *
+   * i.e. the main difference with [[findTightestCommonTypeOfTwo]] is that here we allow some
+   * loss of precision when widening decimal and double.
    */
   private[analysis] def findWiderTypeWithoutStringPromotionForTwo(
       t1: DataType,
@@ -182,22 +161,25 @@ object TypeCoercion {
   }
 
   /**
-   * Finds a wider type when one or both types are decimals. If the wider decimal type exceeds
-   * system limitation, this rule will truncate the decimal type. If a decimal and other fractional
-   * types are compared, returns a double type.
+   * Similar to [[findWiderCommonType]], but can't promote to string. This is also similar to
+   * [[findTightestCommonType]], but can handle decimal types. If the wider decimal type exceeds
+   * system limitation, this rule will truncate the decimal type before return it.
    */
-  private def findWiderTypeForDecimal(dt1: DataType, dt2: DataType): Option[DataType] = {
-    (dt1, dt2) match {
-      case (t1: DecimalType, t2: DecimalType) =>
-        Some(DecimalPrecision.widerDecimalType(t1, t2))
-      case (t: IntegralType, d: DecimalType) =>
-        Some(DecimalPrecision.widerDecimalType(DecimalType.forType(t), d))
-      case (d: DecimalType, t: IntegralType) =>
-        Some(DecimalPrecision.widerDecimalType(DecimalType.forType(t), d))
-      case (_: FractionalType, _: DecimalType) | (_: DecimalType, _: FractionalType) =>
-        Some(DoubleType)
-      case _ => None
-    }
+  def findWiderTypeWithoutStringPromotion(types: Seq[DataType]): Option[DataType] = {
+    types.foldLeft[Option[DataType]](Some(NullType))((r, c) => r match {
+      case Some(d) => findTightestCommonTypeOfTwo(d, c).orElse((d, c) match {
+        case (t1: DecimalType, t2: DecimalType) =>
+          Some(DecimalPrecision.widerDecimalType(t1, t2))
+        case (t: IntegralType, d: DecimalType) =>
+          Some(DecimalPrecision.widerDecimalType(DecimalType.forType(t), d))
+        case (d: DecimalType, t: IntegralType) =>
+          Some(DecimalPrecision.widerDecimalType(DecimalType.forType(t), d))
+        case (_: FractionalType, _: DecimalType) | (_: DecimalType, _: FractionalType) =>
+          Some(DoubleType)
+        case _ => None
+      })
+      case None => None
+    })
   }
 
   private def haveSameType(exprs: Seq[Expression]): Boolean =
@@ -578,6 +560,8 @@ object TypeCoercion {
       case NaNvl(l, r) if l.dataType == FloatType && r.dataType == DoubleType =>
         NaNvl(Cast(l, DoubleType), r)
       case NaNvl(l, r) if r.dataType == NullType => NaNvl(l, Cast(r, l.dataType))
+
+      case e: RuntimeReplaceable => e.replaceForTypeCoercion()
     }
   }
 

@@ -29,16 +29,14 @@ import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.xml._
+import org.apache.spark.sql.catalyst.util.StringKeyHashMap
 import org.apache.spark.sql.types._
 
 
 /**
  * A catalog for looking up user defined functions, used by an [[Analyzer]].
  *
- * Note:
- *   1) The implementation should be thread-safe to allow concurrent access.
- *   2) the database name is always case-sensitive here, callers are responsible to
- *      format the database name w.r.t. case-sensitive config.
+ * Note: The implementation should be thread-safe to allow concurrent access.
  */
 trait FunctionRegistry {
 
@@ -87,15 +85,8 @@ trait FunctionRegistry {
 
 class SimpleFunctionRegistry extends FunctionRegistry {
 
-  @GuardedBy("this")
-  private val functionBuilders =
-    new mutable.HashMap[FunctionIdentifier, (ExpressionInfo, FunctionBuilder)]
-
-  // Resolution of the function name is always case insensitive, but the database name
-  // depends on the caller
-  private def normalizeFuncName(name: FunctionIdentifier): FunctionIdentifier = {
-    FunctionIdentifier(name.funcName.toLowerCase(Locale.ROOT), name.database)
-  }
+  protected val functionBuilders =
+    StringKeyHashMap[(ExpressionInfo, FunctionBuilder)](caseSensitive = false)
 
   override def registerFunction(
       name: FunctionIdentifier,
@@ -195,7 +186,6 @@ object FunctionRegistry {
     expression[Greatest]("greatest"),
     expression[If]("if"),
     expression[Inline]("inline"),
-    expressionGeneratorOuter[Inline]("inline_outer"),
     expression[IsNaN]("isnan"),
     expression[IfNull]("ifnull"),
     expression[IsNull]("isnull"),
@@ -206,7 +196,6 @@ object FunctionRegistry {
     expression[Nvl]("nvl"),
     expression[Nvl2]("nvl2"),
     expression[PosExplode]("posexplode"),
-    expressionGeneratorOuter[PosExplode]("posexplode_outer"),
     expression[Rand]("rand"),
     expression[Randn]("randn"),
     expression[Stack]("stack"),
@@ -284,8 +273,6 @@ object FunctionRegistry {
     expression[Min]("min"),
     expression[Percentile]("percentile"),
     expression[Skewness]("skewness"),
-    expression[ApproximatePercentile]("percentile_approx"),
-    expression[ApproximatePercentile]("approx_percentile"),
     expression[StddevSamp]("std"),
     expression[StddevSamp]("stddev"),
     expression[StddevPop]("stddev_pop"),
@@ -296,7 +283,6 @@ object FunctionRegistry {
     expression[VarianceSamp]("var_samp"),
     expression[CollectList]("collect_list"),
     expression[CollectSet]("collect_set"),
-    expression[CountMinSketchAgg]("count_min_sketch"),
 
     // string functions
     expression[Ascii]("ascii"),
@@ -328,7 +314,6 @@ object FunctionRegistry {
     expression[StringTrimLeft]("ltrim"),
     expression[JsonTuple]("json_tuple"),
     expression[ParseUrl]("parse_url"),
-    expression[StringLocate]("position"),
     expression[FormatString]("printf"),
     expression[RegExpExtract]("regexp_extract"),
     expression[RegExpReplace]("regexp_replace"),
@@ -405,7 +390,7 @@ object FunctionRegistry {
     expression[MapValues]("map_values"),
     expression[Size]("size"),
     expression[SortArray]("sort_array"),
-    CreateStruct.registryEntry,
+    expression[CreateStruct]("struct"),
 
     // misc functions
     expression[AssertTrue]("assert_true"),
@@ -463,12 +448,6 @@ object FunctionRegistry {
     expression[BitwiseOr]("|"),
     expression[BitwiseXor]("^"),
 
-    // json
-    expression[StructsToJson]("to_json"),
-    expression[JsonToStructs]("from_json"),
-
-    // cast
-    expression[Cast]("cast"),
     // Cast aliases (SPARK-16730)
     castAlias("boolean", BooleanType),
     castAlias("tinyint", ByteType),
@@ -492,7 +471,7 @@ object FunctionRegistry {
     fr
   }
 
-  val functionSet: Set[FunctionIdentifier] = builtin.listFunction().toSet
+  val functionSet: Set[String] = builtin.listFunction().toSet
 
   /** See usage above. */
   private def expression[T <: Expression](name: String)
@@ -553,9 +532,7 @@ object FunctionRegistry {
       }
       Cast(args.head, dataType)
     }
-    val clazz = scala.reflect.classTag[Cast].runtimeClass
-    val usage = "_FUNC_(expr) - Casts the value `expr` to the target data type `_FUNC_`."
-    (name, (new ExpressionInfo(clazz.getCanonicalName, null, name, usage, null), builder))
+    (name, (expressionInfo[Cast](name), builder))
   }
 
   /**
@@ -565,31 +542,9 @@ object FunctionRegistry {
     val clazz = scala.reflect.classTag[T].runtimeClass
     val df = clazz.getAnnotation(classOf[ExpressionDescription])
     if (df != null) {
-      if (df.extended().isEmpty) {
-        new ExpressionInfo(
-          clazz.getCanonicalName,
-          null,
-          name,
-          df.usage(),
-          df.arguments(),
-          df.examples(),
-          df.note(),
-          df.since())
-      } else {
-        // This exists for the backward compatibility with old `ExpressionDescription`s defining
-        // the extended description in `extended()`.
-        new ExpressionInfo(clazz.getCanonicalName, null, name, df.usage(), df.extended())
-      }
+      new ExpressionInfo(clazz.getCanonicalName, name, df.usage(), df.extended())
     } else {
       new ExpressionInfo(clazz.getCanonicalName, name)
-    }
-  }
-
-  private def expressionGeneratorOuter[T <: Generator : ClassTag](name: String)
-    : (String, (ExpressionInfo, FunctionBuilder)) = {
-    val (_, (info, generatorBuilder)) = expression[T](name)
-    val outerBuilder = (args: Seq[Expression]) => {
-      GeneratorOuter(generatorBuilder(args).asInstanceOf[Generator])
     }
     (name, (info, outerBuilder))
   }

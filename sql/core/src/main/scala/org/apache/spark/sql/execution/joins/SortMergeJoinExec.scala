@@ -81,44 +81,15 @@ case class SortMergeJoinExec(
     ClusteredDistribution(leftKeys) :: ClusteredDistribution(rightKeys) :: Nil
 
   override def outputOrdering: Seq[SortOrder] = joinType match {
-    // For inner join, orders of both sides keys should be kept.
-    case _: InnerLike =>
-      val leftKeyOrdering = getKeyOrdering(leftKeys, left.outputOrdering)
-      val rightKeyOrdering = getKeyOrdering(rightKeys, right.outputOrdering)
-      leftKeyOrdering.zip(rightKeyOrdering).map { case (lKey, rKey) =>
-        // Also add the right key and its `sameOrderExpressions`
-        SortOrder(lKey.child, Ascending, lKey.sameOrderExpressions + rKey.child ++ rKey
-          .sameOrderExpressions)
-      }
     // For left and right outer joins, the output is ordered by the streamed input's join keys.
-    case LeftOuter => getKeyOrdering(leftKeys, left.outputOrdering)
-    case RightOuter => getKeyOrdering(rightKeys, right.outputOrdering)
+    case LeftOuter => requiredOrders(leftKeys)
+    case RightOuter => requiredOrders(rightKeys)
     // There are null rows in both streams, so there is no order.
     case FullOuter => Nil
-    case LeftExistence(_) => getKeyOrdering(leftKeys, left.outputOrdering)
+    case Inner | LeftExistence(_) => requiredOrders(leftKeys)
     case x =>
       throw new IllegalArgumentException(
         s"${getClass.getSimpleName} should not take $x as the JoinType")
-  }
-
-  /**
-   * The utility method to get output ordering for left or right side of the join.
-   *
-   * Returns the required ordering for left or right child if childOutputOrdering does not
-   * satisfy the required ordering; otherwise, which means the child does not need to be sorted
-   * again, returns the required ordering for this child with extra "sameOrderExpressions" from
-   * the child's outputOrdering.
-   */
-  private def getKeyOrdering(keys: Seq[Expression], childOutputOrdering: Seq[SortOrder])
-    : Seq[SortOrder] = {
-    val requiredOrdering = requiredOrders(keys)
-    if (SortOrder.orderingSatisfies(childOutputOrdering, requiredOrdering)) {
-      keys.zip(childOutputOrdering).map { case (key, childOrder) =>
-        SortOrder(key, Ascending, childOrder.sameOrderExpressions + childOrder.child - key)
-      }
-    } else {
-      requiredOrdering
-    }
   }
 
   override def requiredChildOrdering: Seq[Seq[SortOrder]] =
@@ -334,15 +305,13 @@ case class SortMergeJoinExec(
         case j: ExistenceJoin =>
           new RowIterator {
             private[this] var currentLeftRow: InternalRow = _
-            private[this] val result: InternalRow = new GenericInternalRow(Array[Any](null))
+            private[this] val result: MutableRow = new GenericMutableRow(Array[Any](null))
             private[this] val smjScanner = new SortMergeJoinScanner(
               createLeftKeyGenerator(),
               createRightKeyGenerator(),
               keyOrdering,
               RowIterator.fromScala(leftIter),
-              RowIterator.fromScala(rightIter),
-              inMemoryThreshold,
-              spillThreshold
+              RowIterator.fromScala(rightIter)
             )
             private[this] val joinRow = new JoinedRow
 
@@ -351,13 +320,14 @@ case class SortMergeJoinExec(
                 currentLeftRow = smjScanner.getStreamedRow
                 val currentRightMatches = smjScanner.getBufferedMatches
                 var found = false
-                if (currentRightMatches != null && currentRightMatches.length > 0) {
-                  val rightMatchesIterator = currentRightMatches.generateIterator()
-                  while (!found && rightMatchesIterator.hasNext) {
-                    joinRow(currentLeftRow, rightMatchesIterator.next())
+                if (currentRightMatches != null) {
+                  var i = 0
+                  while (!found && i < currentRightMatches.length) {
+                    joinRow(currentLeftRow, currentRightMatches(i))
                     if (boundCondition(joinRow)) {
                       found = true
                     }
+                    i += 1
                   }
                 }
                 result.setBoolean(0, found)

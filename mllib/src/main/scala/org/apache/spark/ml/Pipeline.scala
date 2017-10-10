@@ -46,10 +46,6 @@ abstract class PipelineStage extends Params with Logging {
    *
    * Check transform validity and derive the output schema from the input schema.
    *
-   * We check validity for interactions between parameters during `transformSchema` and
-   * raise an exception if any parameter value is invalid. Parameter value checks which
-   * do not depend on other parameters are handled by `Param.validate()`.
-   *
    * Typical implementation should first conduct verification on schema change and parameter
    * validity, including complex parameter interaction checks.
    */
@@ -87,7 +83,7 @@ abstract class PipelineStage extends Params with Logging {
  * stages are executed in order. If a stage is an [[Estimator]], its `Estimator.fit` method will
  * be called on the input dataset to fit a model. Then the model, which is a transformer, will be
  * used to transform the dataset as the input to the next stage. If a stage is a [[Transformer]],
- * its `Transformer.transform` method will be called to produce the dataset for the next stage.
+ * its [[Transformer#transform]] method will be called to produce the dataset for the next stage.
  * The fitted model from a [[Pipeline]] is a [[PipelineModel]], which consists of fitted models and
  * transformers, corresponding to the pipeline stages. If there are no stages, the pipeline acts as
  * an identity transformer.
@@ -216,9 +212,7 @@ object Pipeline extends MLReadable[Pipeline] {
     }
   }
 
-  /**
-   * Methods for `MLReader` and `MLWriter` shared between [[Pipeline]] and [[PipelineModel]]
-   */
+  /** Methods for `MLReader` and `MLWriter` shared between [[Pipeline]] and [[PipelineModel]] */
   private[ml] object SharedReadWrite {
 
     import org.json4s.JsonDSL._

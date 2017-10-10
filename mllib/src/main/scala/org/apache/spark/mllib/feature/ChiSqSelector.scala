@@ -30,6 +30,7 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.mllib.util.{Loader, Saveable}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext
 import org.apache.spark.sql.{Row, SparkSession}
 
 /**
@@ -171,19 +172,10 @@ object ChiSqSelectorModel extends Loader[ChiSqSelectorModel] {
 
 /**
  * Creates a ChiSquared feature selector.
- * The selector supports different selection methods: `numTopFeatures`, `percentile`, `fpr`,
- * `fdr`, `fwe`.
- *  - `numTopFeatures` chooses a fixed number of top features according to a chi-squared test.
- *  - `percentile` is similar but chooses a fraction of all features instead of a fixed number.
- *  - `fpr` chooses all features whose p-values are below a threshold, thus controlling the false
- *    positive rate of selection.
- *  - `fdr` uses the [Benjamini-Hochberg procedure]
- *    (https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini.E2.80.93Hochberg_procedure)
- *    to choose all features whose false discovery rate is below a threshold.
- *  - `fwe` chooses all features whose p-values are below a threshold. The threshold is scaled by
- *    1/numFeatures, thus controlling the family-wise error rate of selection.
- * By default, the selection method is `numTopFeatures`, with the default number of top features
- * set to 50.
+ * @param numTopFeatures number of features that selector will select
+ *                       (ordered by statistic value descending)
+ *                       Note that if the number of features is less than numTopFeatures,
+ *                       then this will select all features.
  */
 @Since("1.3.0")
 class ChiSqSelector @Since("2.1.0") () extends Serializable {

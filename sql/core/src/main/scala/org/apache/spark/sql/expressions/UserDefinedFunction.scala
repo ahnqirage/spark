@@ -23,8 +23,10 @@ import org.apache.spark.sql.catalyst.expressions.ScalaUDF
 import org.apache.spark.sql.types.DataType
 
 /**
- * A user-defined function. To create one, use the `udf` functions in `functions`.
- *
+ * A user-defined function. To create one, use the `udf` functions in [[functions]].
+ * Note that the user-defined functions must be deterministic. Due to optimization,
+ * duplicate invocations may be eliminated or the function may even be invoked more times than
+ * it is present in the query.
  * As an example:
  * {{{
  *   // Defined a UDF that returns true or false based on some numeric score.

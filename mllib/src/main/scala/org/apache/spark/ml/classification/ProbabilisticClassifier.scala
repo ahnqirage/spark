@@ -18,7 +18,7 @@
 package org.apache.spark.ml.classification
 
 import org.apache.spark.annotation.DeveloperApi
-import org.apache.spark.ml.linalg.{DenseVector, Vector, VectorUDT}
+import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors, VectorUDT}
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util.SchemaUtils
 import org.apache.spark.sql.{DataFrame, Dataset}
@@ -93,7 +93,7 @@ abstract class ProbabilisticClassificationModel[
   /**
    * Transforms dataset by reading from [[featuresCol]], and appending new columns as specified by
    * parameters:
-   *  - predicted labels as [[predictionCol]] of type `Double`
+   *  - predicted labels as [[predictionCol]] of type [[Double]]
    *  - raw predictions (confidences) as [[rawPredictionCol]] of type `Vector`
    *  - probability of each class as [[probabilityCol]] of type `Vector`.
    *

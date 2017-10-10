@@ -101,14 +101,14 @@ private[spark] object HiveUtils extends Logging {
       .booleanConf
       .createWithDefault(false)
 
-  val CONVERT_METASTORE_ORC = buildConf("spark.sql.hive.convertMetastoreOrc")
+  val CONVERT_METASTORE_ORC = SQLConfigBuilder("spark.sql.hive.convertMetastoreOrc")
     .internal()
-    .doc("When set to true, the built-in ORC reader and writer are used to process " +
-      "ORC tables created by using the HiveQL syntax, instead of Hive serde.")
+    .doc("When set to false, Spark SQL will use the Hive SerDe for ORC tables instead of " +
+      "the built in support.")
     .booleanConf
     .createWithDefault(false)
 
-  val HIVE_METASTORE_SHARED_PREFIXES = buildConf("spark.sql.hive.metastore.sharedPrefixes")
+  val HIVE_METASTORE_SHARED_PREFIXES = SQLConfigBuilder("spark.sql.hive.metastore.sharedPrefixes")
     .doc("A comma separated list of class prefixes that should be loaded using the classloader " +
       "that is shared between Spark SQL and a specific version of Hive. An example of classes " +
       "that should be shared is JDBC drivers that are needed to talk to the metastore. Other " +
@@ -421,13 +421,6 @@ private[spark] object HiveUtils extends Logging {
     propMap.put(ConfVars.METASTORE_PRE_EVENT_LISTENERS.varname, "")
     propMap.put(ConfVars.METASTORE_EVENT_LISTENERS.varname, "")
     propMap.put(ConfVars.METASTORE_END_FUNCTION_LISTENERS.varname, "")
-
-    // SPARK-21451: Spark will gather all `spark.hadoop.*` properties from a `SparkConf` to a
-    // Hadoop Configuration internally, as long as it happens after SparkContext initialized.
-    // Some instances such as `CliSessionState` used in `SparkSQLCliDriver` may also rely on these
-    // Configuration. But it happens before SparkContext initialized, we need to take them from
-    // system properties in the form of regular hadoop configurations.
-    SparkHadoopUtil.get.appendSparkHadoopConfigs(sys.props.toMap, propMap)
 
     propMap.toMap
   }

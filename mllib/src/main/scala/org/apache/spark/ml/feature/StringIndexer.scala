@@ -118,11 +118,6 @@ class StringIndexer @Since("1.4.0") (
   def setHandleInvalid(value: String): this.type = set(handleInvalid, value)
 
   /** @group setParam */
-  @Since("2.3.0")
-  def setStringOrderType(value: String): this.type = set(stringOrderType, value)
-  setDefault(stringOrderType, StringIndexer.frequencyDesc)
-
-  /** @group setParam */
   @Since("1.4.0")
   def setInputCol(value: String): this.type = set(inputCol, value)
 
@@ -133,17 +128,11 @@ class StringIndexer @Since("1.4.0") (
   @Since("2.0.0")
   override def fit(dataset: Dataset[_]): StringIndexerModel = {
     transformSchema(dataset.schema, logging = true)
-    val values = dataset.na.drop(Array($(inputCol)))
-      .select(col($(inputCol)).cast(StringType))
-      .rdd.map(_.getString(0))
-    val labels = $(stringOrderType) match {
-      case StringIndexer.frequencyDesc => values.countByValue().toSeq.sortBy(-_._2)
-        .map(_._1).toArray
-      case StringIndexer.frequencyAsc => values.countByValue().toSeq.sortBy(_._2)
-        .map(_._1).toArray
-      case StringIndexer.alphabetDesc => values.distinct.collect.sortWith(_ > _)
-      case StringIndexer.alphabetAsc => values.distinct.collect.sortWith(_ < _)
-    }
+    val counts = dataset.select(col($(inputCol)).cast(StringType))
+      .rdd
+      .map(_.getString(0))
+      .countByValue()
+    val labels = counts.toSeq.sortBy(-_._2).map(_._1).toArray
     copyValues(new StringIndexerModel(uid, labels).setParent(this))
   }
 
@@ -328,7 +317,7 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
 }
 
 /**
- * A `Transformer` that maps a column of indices back to a new column of corresponding
+ * A [[Transformer]] that maps a column of indices back to a new column of corresponding
  * string values.
  * The index-string mapping is either from the ML attributes of the input column,
  * or from user-supplied labels (which take precedence over ML attributes).
@@ -336,7 +325,7 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
  * @see `StringIndexer` for converting strings into indices
  */
 @Since("1.5.0")
-class IndexToString @Since("2.2.0") (@Since("1.5.0") override val uid: String)
+class IndexToString private[ml] (@Since("1.5.0") override val uid: String)
   extends Transformer with HasInputCol with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.5.0")

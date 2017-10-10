@@ -42,7 +42,7 @@ private[clustering] trait BisectingKMeansParams extends Params
   with HasMaxIter with HasFeaturesCol with HasSeed with HasPredictionCol {
 
   /**
-   * The desired number of leaf clusters. Must be &gt; 1. Default: 4.
+   * The desired number of leaf clusters. Must be > 1. Default: 4.
    * The actual number could be smaller if there are no divisible leaf clusters.
    * @group param
    */
@@ -55,8 +55,8 @@ private[clustering] trait BisectingKMeansParams extends Params
   def getK: Int = $(k)
 
   /**
-   * The minimum number of points (if greater than or equal to 1.0) or the minimum proportion
-   * of points (if less than 1.0) of a divisible cluster (default: 1.0).
+   * The minimum number of points (if >= 1.0) or the minimum proportion
+   * of points (if < 1.0) of a divisible cluster (default: 1.0).
    * @group expertParam
    */
   @Since("2.0.0")
@@ -254,9 +254,6 @@ class BisectingKMeans @Since("2.0.0") (
     val rdd: RDD[OldVector] = dataset.select(col($(featuresCol))).rdd.map {
       case Row(point: Vector) => OldVectors.fromML(point)
     }
-
-    val instr = Instrumentation.create(this, rdd)
-    instr.logParams(featuresCol, predictionCol, k, maxIter, seed, minDivisibleClusterSize)
 
     val bkm = new MLlibBisectingKMeans()
       .setK($(k))

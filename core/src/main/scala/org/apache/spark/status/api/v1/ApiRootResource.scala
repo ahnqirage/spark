@@ -108,15 +108,6 @@ private[v1] class ApiRootResource extends ApiRequestContext {
     }
   }
 
-  @Path("applications/{appId}/{attemptId}/allexecutors")
-  def getAllExecutors(
-      @PathParam("appId") appId: String,
-      @PathParam("attemptId") attemptId: String): AllExecutorListResource = {
-    withSparkUI(appId, Some(attemptId)) { ui =>
-      new AllExecutorListResource(ui)
-    }
-  }
-
   @Path("applications/{appId}/stages")
   def getStages(@PathParam("appId") appId: String): AllStagesResource = {
     withSparkUI(appId, None) { ui =>

@@ -19,10 +19,10 @@ package org.apache.spark.sql.test
 
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.internal.{SessionState, SessionStateBuilder, SQLConf, WithTestConf}
+import org.apache.spark.sql.internal.{SessionState, SQLConf}
 
 /**
- * A special `SparkSession` prepared for testing.
+ * A special [[SparkSession]] prepared for testing.
  */
 private[sql] class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
   def this(sparkConf: SparkConf) {
@@ -35,8 +35,17 @@ private[sql] class TestSparkSession(sc: SparkContext) extends SparkSession(sc) {
   }
 
   @transient
-  override lazy val sessionState: SessionState = {
-    new TestSQLSessionStateBuilder(this, None).build()
+  protected[sql] override lazy val sessionState: SessionState = new SessionState(self) {
+    override lazy val conf: SQLConf = {
+      new SQLConf {
+        clear()
+        override def clear(): Unit = {
+          super.clear()
+          // Make sure we start with the default test configs even after clear
+          TestSQLContext.overrideConfs.foreach { case (key, value) => setConfString(key, value) }
+        }
+      }
+    }
   }
 
   // Needed for Java tests

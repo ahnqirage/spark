@@ -213,6 +213,11 @@ object LBFGS extends Logging {
     }
     lossHistory += state.value
 
+    if (!state.actuallyConverged) {
+      logWarning("LBFGS training finished but the result " +
+        s"is not converged because: ${state.convergedReason.get.reason}")
+    }
+
     val weights = Vectors.fromBreeze(state.x)
 
     val lossHistoryArray = lossHistory.result()

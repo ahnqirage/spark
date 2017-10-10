@@ -109,9 +109,8 @@ class ExpressionTypeCheckingSuite extends SparkFunSuite {
     assertErrorForDifferingTypes(GreaterThan('intField, 'booleanField))
     assertErrorForDifferingTypes(GreaterThanOrEqual('intField, 'booleanField))
 
-    assertError(EqualTo('mapField, 'mapField), "EqualTo does not support ordering on type MapType")
-    assertError(EqualNullSafe('mapField, 'mapField),
-      "EqualNullSafe does not support ordering on type MapType")
+    assertError(EqualTo('mapField, 'mapField), "Cannot use map type in EqualTo")
+    assertError(EqualNullSafe('mapField, 'mapField), "Cannot use map type in EqualNullSafe")
     assertError(LessThan('mapField, 'mapField),
       "LessThan does not support ordering on type MapType")
     assertError(LessThanOrEqual('mapField, 'mapField),

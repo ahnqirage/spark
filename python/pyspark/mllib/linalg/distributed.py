@@ -391,48 +391,6 @@ class RowMatrix(DistributedMatrix):
 
 class SingularValueDecomposition(JavaModelWrapper):
     """
-    Represents singular value decomposition (SVD) factors.
-
-    .. versionadded:: 2.2.0
-    """
-
-    @property
-    @since('2.2.0')
-    def U(self):
-        """
-        Returns a distributed matrix whose columns are the left
-        singular vectors of the SingularValueDecomposition if computeU was set to be True.
-        """
-        u = self.call("U")
-        if u is not None:
-            mat_name = u.getClass().getSimpleName()
-            if mat_name == "RowMatrix":
-                return RowMatrix(u)
-            elif mat_name == "IndexedRowMatrix":
-                return IndexedRowMatrix(u)
-            else:
-                raise TypeError("Expected RowMatrix/IndexedRowMatrix got %s" % mat_name)
-
-    @property
-    @since('2.2.0')
-    def s(self):
-        """
-        Returns a DenseVector with singular values in descending order.
-        """
-        return self.call("s")
-
-    @property
-    @since('2.2.0')
-    def V(self):
-        """
-        Returns a DenseMatrix whose columns are the right singular
-        vectors of the SingularValueDecomposition.
-        """
-        return self.call("V")
-
-
-class IndexedRow(object):
-    """
     Represents a row of an IndexedRowMatrix.
 
     Just a wrapper over a (long, vector) tuple.

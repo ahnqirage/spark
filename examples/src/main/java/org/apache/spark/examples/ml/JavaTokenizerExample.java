@@ -23,8 +23,6 @@ import org.apache.spark.sql.SparkSession;
 import java.util.Arrays;
 import java.util.List;
 
-import scala.collection.mutable.WrappedArray;
-
 import org.apache.spark.ml.feature.RegexTokenizer;
 import org.apache.spark.ml.feature.Tokenizer;
 import org.apache.spark.sql.Dataset;
@@ -81,7 +79,6 @@ public class JavaTokenizerExample {
         .withColumn("tokens", callUDF("countTokens", col("words")))
         .show(false);
     // $example off$
-
     spark.stop();
   }
 }

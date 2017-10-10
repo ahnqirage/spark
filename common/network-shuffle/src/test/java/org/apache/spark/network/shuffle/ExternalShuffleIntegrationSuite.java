@@ -240,9 +240,9 @@ public class ExternalShuffleIntegrationSuite {
     assertEquals(Sets.newHashSet("shuffle_1_0_0", "shuffle_1_0_1"), execFetch.failedBlocks);
   }
 
-  private static void registerExecutor(String executorId, ExecutorShuffleInfo executorInfo)
+  private void registerExecutor(String executorId, ExecutorShuffleInfo executorInfo)
       throws IOException, InterruptedException {
-    ExternalShuffleClient client = new ExternalShuffleClient(conf, null, false, 5000);
+    ExternalShuffleClient client = new ExternalShuffleClient(conf, null, false, false);
     client.init(APP_ID);
     client.registerWithShuffleServer(TestUtils.getLocalHost(), server.getPort(),
       executorId, executorInfo);

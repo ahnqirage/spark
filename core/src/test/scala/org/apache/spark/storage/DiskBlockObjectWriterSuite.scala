@@ -68,8 +68,7 @@ class DiskBlockObjectWriterSuite extends SparkFunSuite with BeforeAndAfterEach {
     }
     assert(writeMetrics.bytesWritten > 0)
     assert(writeMetrics.recordsWritten === 16385)
-    writer.commitAndGet()
-    writer.close()
+    writer.commitAndClose()
     assert(file.length() == writeMetrics.bytesWritten)
   }
 

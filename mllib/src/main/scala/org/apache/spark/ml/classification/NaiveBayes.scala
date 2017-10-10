@@ -19,15 +19,19 @@ package org.apache.spark.ml.classification
 
 import org.apache.hadoop.fs.Path
 
+import org.apache.spark.SparkException
 import org.apache.spark.annotation.Since
 import org.apache.spark.ml.PredictorParams
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.param.{DoubleParam, Param, ParamMap, ParamValidators}
 import org.apache.spark.ml.param.shared.HasWeightCol
 import org.apache.spark.ml.util._
+import org.apache.spark.mllib.classification.{NaiveBayes => OldNaiveBayes}
+import org.apache.spark.mllib.classification.{NaiveBayesModel => OldNaiveBayesModel}
+import org.apache.spark.mllib.regression.{LabeledPoint => OldLabeledPoint}
 import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, Row}
-import org.apache.spark.sql.functions.{col, lit}
 
 /**
  * Params for Naive Bayes Classifiers.
@@ -114,98 +118,18 @@ class NaiveBayes @Since("1.5.0") (
   def setWeightCol(value: String): this.type = set(weightCol, value)
 
   override protected def train(dataset: Dataset[_]): NaiveBayesModel = {
-    trainWithLabelCheck(dataset, positiveLabel = true)
-  }
+    val numClasses = getNumClasses(dataset)
 
-  /**
-   * ml assumes input labels in range [0, numClasses). But this implementation
-   * is also called by mllib NaiveBayes which allows other kinds of input labels
-   * such as {-1, +1}. `positiveLabel` is used to determine whether the label
-   * should be checked and it should be removed when we remove mllib NaiveBayes.
-   */
-  private[spark] def trainWithLabelCheck(
-      dataset: Dataset[_],
-      positiveLabel: Boolean): NaiveBayesModel = {
-    if (positiveLabel && isDefined(thresholds)) {
-      val numClasses = getNumClasses(dataset)
+    if (isDefined(thresholds)) {
       require($(thresholds).length == numClasses, this.getClass.getSimpleName +
         ".train() called with non-matching numClasses and thresholds.length." +
         s" numClasses=$numClasses, but thresholds has length ${$(thresholds).length}")
     }
 
-    val modelTypeValue = $(modelType)
-    val requireValues: Vector => Unit = {
-      modelTypeValue match {
-        case Multinomial =>
-          requireNonnegativeValues
-        case Bernoulli =>
-          requireZeroOneBernoulliValues
-        case _ =>
-          // This should never happen.
-          throw new UnknownError(s"Invalid modelType: ${$(modelType)}.")
-      }
-    }
-
-    val instr = Instrumentation.create(this, dataset)
-    instr.logParams(labelCol, featuresCol, weightCol, predictionCol, rawPredictionCol,
-      probabilityCol, modelType, smoothing, thresholds)
-
-    val numFeatures = dataset.select(col($(featuresCol))).head().getAs[Vector](0).size
-    instr.logNumFeatures(numFeatures)
-    val w = if (!isDefined(weightCol) || $(weightCol).isEmpty) lit(1.0) else col($(weightCol))
-
-    // Aggregates term frequencies per label.
-    // TODO: Calling aggregateByKey and collect creates two stages, we can implement something
-    // TODO: similar to reduceByKeyLocally to save one stage.
-    val aggregated = dataset.select(col($(labelCol)), w, col($(featuresCol))).rdd
-      .map { row => (row.getDouble(0), (row.getDouble(1), row.getAs[Vector](2)))
-      }.aggregateByKey[(Double, DenseVector)]((0.0, Vectors.zeros(numFeatures).toDense))(
-      seqOp = {
-         case ((weightSum: Double, featureSum: DenseVector), (weight, features)) =>
-           requireValues(features)
-           BLAS.axpy(weight, features, featureSum)
-           (weightSum + weight, featureSum)
-      },
-      combOp = {
-         case ((weightSum1, featureSum1), (weightSum2, featureSum2)) =>
-           BLAS.axpy(1.0, featureSum2, featureSum1)
-           (weightSum1 + weightSum2, featureSum1)
-      }).collect().sortBy(_._1)
-
-    val numLabels = aggregated.length
-    instr.logNumClasses(numLabels)
-    val numDocuments = aggregated.map(_._2._1).sum
-
-    val labelArray = new Array[Double](numLabels)
-    val piArray = new Array[Double](numLabels)
-    val thetaArray = new Array[Double](numLabels * numFeatures)
-
-    val lambda = $(smoothing)
-    val piLogDenom = math.log(numDocuments + numLabels * lambda)
-    var i = 0
-    aggregated.foreach { case (label, (n, sumTermFreqs)) =>
-      labelArray(i) = label
-      piArray(i) = math.log(n + lambda) - piLogDenom
-      val thetaLogDenom = $(modelType) match {
-        case Multinomial => math.log(sumTermFreqs.values.sum + numFeatures * lambda)
-        case Bernoulli => math.log(n + 2.0 * lambda)
-        case _ =>
-          // This should never happen.
-          throw new UnknownError(s"Invalid modelType: ${$(modelType)}.")
-      }
-      var j = 0
-      while (j < numFeatures) {
-        thetaArray(i * numFeatures + j) = math.log(sumTermFreqs(j) + lambda) - thetaLogDenom
-        j += 1
-      }
-      i += 1
-    }
-
-    val pi = Vectors.dense(piArray)
-    val theta = new DenseMatrix(numLabels, numFeatures, thetaArray, true)
-    val model = new NaiveBayesModel(uid, pi, theta).setOldLabels(labelArray)
-    instr.logSuccess(model)
-    model
+    val oldDataset: RDD[OldLabeledPoint] =
+      extractLabeledPoints(dataset).map(OldLabeledPoint.fromML)
+    val oldModel = OldNaiveBayes.train(oldDataset, $(smoothing), $(modelType))
+    NaiveBayesModel.fromOld(oldModel, this)
   }
 
   @Since("1.5.0")

@@ -24,8 +24,7 @@ import scala.collection.immutable.HashSet
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.RandomDataGenerator
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.encoders.ExamplePointUDT
-import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.catalyst.util.GenericArrayData
 import org.apache.spark.sql.types._
 
 
@@ -38,8 +37,7 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
     test(s"3VL $name") {
       truthTable.foreach {
         case (l, r, answer) =>
-          val expr = op(NonFoldableLiteral.create(l, BooleanType),
-            NonFoldableLiteral.create(r, BooleanType))
+          val expr = op(NonFoldableLiteral(l, BooleanType), NonFoldableLiteral(r, BooleanType))
           checkEvaluation(expr, answer)
       }
     }
@@ -76,7 +74,7 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
         (false, true) ::
         (null, null) :: Nil
     notTrueTable.foreach { case (v, answer) =>
-      checkEvaluation(Not(NonFoldableLiteral.create(v, BooleanType)), answer)
+      checkEvaluation(Not(NonFoldableLiteral(v, BooleanType)), answer)
     }
     checkConsistencyBetweenInterpretedAndCodegen(Not, BooleanType)
   }
@@ -124,17 +122,14 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
       (null, null, null) :: Nil)
 
   test("IN") {
-    checkEvaluation(In(NonFoldableLiteral.create(null, IntegerType), Seq(Literal(1),
-      Literal(2))), null)
-    checkEvaluation(In(NonFoldableLiteral.create(null, IntegerType),
-      Seq(NonFoldableLiteral.create(null, IntegerType))), null)
-    checkEvaluation(In(NonFoldableLiteral.create(null, IntegerType), Seq.empty), null)
+    checkEvaluation(In(NonFoldableLiteral(null, IntegerType), Seq(Literal(1), Literal(2))), null)
+    checkEvaluation(In(NonFoldableLiteral(null, IntegerType),
+      Seq(NonFoldableLiteral(null, IntegerType))), null)
+    checkEvaluation(In(NonFoldableLiteral(null, IntegerType), Seq.empty), null)
     checkEvaluation(In(Literal(1), Seq.empty), false)
-    checkEvaluation(In(Literal(1), Seq(NonFoldableLiteral.create(null, IntegerType))), null)
-    checkEvaluation(In(Literal(1), Seq(Literal(1), NonFoldableLiteral.create(null, IntegerType))),
-      true)
-    checkEvaluation(In(Literal(2), Seq(Literal(1), NonFoldableLiteral.create(null, IntegerType))),
-      null)
+    checkEvaluation(In(Literal(1), Seq(NonFoldableLiteral(null, IntegerType))), null)
+    checkEvaluation(In(Literal(1), Seq(Literal(1), NonFoldableLiteral(null, IntegerType))), true)
+    checkEvaluation(In(Literal(2), Seq(Literal(1), NonFoldableLiteral(null, IntegerType))), null)
     checkEvaluation(In(Literal(1), Seq(Literal(1), Literal(2))), true)
     checkEvaluation(In(Literal(2), Seq(Literal(1), Literal(2))), true)
     checkEvaluation(In(Literal(3), Seq(Literal(1), Literal(2))), false)
@@ -143,7 +138,7 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
         Literal(2)))),
       true)
 
-    val ns = NonFoldableLiteral.create(null, StringType)
+    val ns = NonFoldableLiteral(null, StringType)
     checkEvaluation(In(ns, Seq(Literal("1"), Literal("2"))), null)
     checkEvaluation(In(ns, Seq(ns)), null)
     checkEvaluation(In(Literal("a"), Seq(ns)), null)
@@ -176,7 +171,7 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
           case _ => cleanData(value)
         }
       }
-      val input = inputData.map(NonFoldableLiteral.create(_, t))
+      val input = inputData.map(NonFoldableLiteral(_, t))
       val expected = if (inputData(0) == null) {
         null
       } else if (inputData.slice(1, 10).contains(inputData(0))) {
@@ -370,7 +365,7 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
   test("BinaryComparison: null test") {
     // Use -1 (default value for codegen) which can trigger some weird bugs, e.g. SPARK-14757
     val normalInt = Literal(-1)
-    val nullInt = NonFoldableLiteral.create(null, IntegerType)
+    val nullInt = NonFoldableLiteral(null, IntegerType)
 
     def nullTest(op: (Expression, Expression) => Expression): Unit = {
       checkEvaluation(op(normalInt, nullInt), null)
@@ -421,5 +416,32 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
   test("EqualTo double/float infinity") {
     val infinity = Literal(Double.PositiveInfinity)
     checkEvaluation(EqualTo(infinity, infinity), true)
+  }
+
+  test("EqualTo on complex type") {
+    val array = new GenericArrayData(Array(1, 2, 3))
+    val struct = create_row("a", 1L, array)
+
+    val arrayType = ArrayType(IntegerType)
+    val structType = new StructType()
+      .add("1", StringType)
+      .add("2", LongType)
+      .add("3", ArrayType(IntegerType))
+
+    val projection = UnsafeProjection.create(
+      new StructType().add("array", arrayType).add("struct", structType))
+
+    val unsafeRow = projection(InternalRow(array, struct))
+
+    val unsafeArray = unsafeRow.getArray(0)
+    val unsafeStruct = unsafeRow.getStruct(1, 3)
+
+    checkEvaluation(EqualTo(
+      Literal.create(array, arrayType),
+      Literal.create(unsafeArray, arrayType)), true)
+
+    checkEvaluation(EqualTo(
+      Literal.create(struct, structType),
+      Literal.create(unsafeStruct, structType)), true)
   }
 }

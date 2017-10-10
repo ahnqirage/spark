@@ -24,15 +24,13 @@ import scala.language.postfixOps
 import org.scalatest.concurrent.Eventually._
 
 import org.apache.spark.CleanerListener
-import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.expressions.SubqueryExpression
-import org.apache.spark.sql.execution.{RDDScanExec, SparkPlan}
+import org.apache.spark.sql.execution.RDDScanExec
 import org.apache.spark.sql.execution.columnar._
 import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.test.{SharedSQLContext, SQLTestUtils}
 import org.apache.spark.storage.{RDDBlockId, StorageLevel}
-import org.apache.spark.util.{AccumulatorContext, Utils}
+import org.apache.spark.util.AccumulatorContext
 
 private case class BigData(s: String)
 
@@ -195,7 +193,9 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with SharedSQLContext
     assertCached(spark.table("testData"))
 
     assertResult(1, "InMemoryRelation not found, testData should have been cached") {
-      getNumInMemoryRelations(spark.table("testData"))
+      spark.table("testData").queryExecution.withCachedData.collect {
+        case r: InMemoryRelation => r
+      }.size
     }
 
     spark.catalog.cacheTable("testData")
@@ -589,197 +589,9 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with SharedSQLContext
     localRelation.createOrReplaceTempView("localRelation")
 
     spark.catalog.cacheTable("localRelation")
-    assert(getNumInMemoryRelations(localRelation) == 1)
-  }
-
-  test("SPARK-19093 Caching in side subquery") {
-    withTempView("t1") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      spark.catalog.cacheTable("t1")
-      val ds =
-        sql(
-          """
-            |SELECT * FROM t1
-            |WHERE
-            |NOT EXISTS (SELECT * FROM t1)
-          """.stripMargin)
-      assert(getNumInMemoryRelations(ds) == 2)
-    }
-  }
-
-  test("SPARK-19093 scalar and nested predicate query") {
-    withTempView("t1", "t2", "t3", "t4") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(2).toDF("c1").createOrReplaceTempView("t2")
-      Seq(1).toDF("c1").createOrReplaceTempView("t3")
-      Seq(1).toDF("c1").createOrReplaceTempView("t4")
-      spark.catalog.cacheTable("t1")
-      spark.catalog.cacheTable("t2")
-      spark.catalog.cacheTable("t3")
-      spark.catalog.cacheTable("t4")
-
-      // Nested predicate subquery
-      val ds =
-        sql(
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |c1 IN (SELECT c1 FROM t2 WHERE c1 IN (SELECT c1 FROM t3 WHERE c1 = 1))
-        """.stripMargin)
-      assert(getNumInMemoryRelations(ds) == 3)
-
-      // Scalar subquery and predicate subquery
-      val ds2 =
-        sql(
-          """
-            |SELECT * FROM (SELECT c1, max(c1) FROM t1 GROUP BY c1)
-            |WHERE
-            |c1 = (SELECT max(c1) FROM t2 GROUP BY c1)
-            |OR
-            |EXISTS (SELECT c1 FROM t3)
-            |OR
-            |c1 IN (SELECT c1 FROM t4)
-          """.stripMargin)
-      assert(getNumInMemoryRelations(ds2) == 4)
-    }
-  }
-
-  test("SPARK-19765: UNCACHE TABLE should un-cache all cached plans that refer to this table") {
-    withTable("t") {
-      withTempPath { path =>
-        Seq(1 -> "a").toDF("i", "j").write.parquet(path.getCanonicalPath)
-        sql(s"CREATE TABLE t USING parquet LOCATION '${path.toURI}'")
-        spark.catalog.cacheTable("t")
-        spark.table("t").select($"i").cache()
-        checkAnswer(spark.table("t").select($"i"), Row(1))
-        assertCached(spark.table("t").select($"i"))
-
-        Utils.deleteRecursively(path)
-        spark.sessionState.catalog.refreshTable(TableIdentifier("t"))
-        spark.catalog.uncacheTable("t")
-        assert(spark.table("t").select($"i").count() == 0)
-        assert(getNumInMemoryRelations(spark.table("t").select($"i")) == 0)
-      }
-    }
-  }
-
-  test("refreshByPath should refresh all cached plans with the specified path") {
-    withTempDir { dir =>
-      val path = dir.getCanonicalPath()
-
-      spark.range(10).write.mode("overwrite").parquet(path)
-      spark.read.parquet(path).cache()
-      spark.read.parquet(path).filter($"id" > 4).cache()
-      assert(spark.read.parquet(path).filter($"id" > 4).count() == 5)
-
-      spark.range(20).write.mode("overwrite").parquet(path)
-      spark.catalog.refreshByPath(path)
-      assert(spark.read.parquet(path).count() == 20)
-      assert(spark.read.parquet(path).filter($"id" > 4).count() == 15)
-    }
-  }
-
-  test("SPARK-19993 simple subquery caching") {
-    withTempView("t1", "t2") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(2).toDF("c1").createOrReplaceTempView("t2")
-
-      val sql1 =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |NOT EXISTS (SELECT * FROM t2)
-        """.stripMargin
-      sql(sql1).cache()
-
-      val cachedDs = sql(sql1)
-      assert(getNumInMemoryRelations(cachedDs) == 1)
-
-      // Additional predicate in the subquery plan should cause a cache miss
-      val cachedMissDs =
-      sql(
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |NOT EXISTS (SELECT * FROM t2 where c1 = 0)
-        """.stripMargin)
-      assert(getNumInMemoryRelations(cachedMissDs) == 0)
-    }
-  }
-
-  test("SPARK-19993 subquery caching with correlated predicates") {
-    withTempView("t1", "t2") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(1).toDF("c1").createOrReplaceTempView("t2")
-
-      // Simple correlated predicate in subquery
-      val sqlText =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |t1.c1 in (SELECT t2.c1 FROM t2 where t1.c1 = t2.c1)
-        """.stripMargin
-      sql(sqlText).cache()
-
-      val cachedDs = sql(sqlText)
-      assert(getNumInMemoryRelations(cachedDs) == 1)
-    }
-  }
-
-  test("SPARK-19993 subquery with cached underlying relation") {
-    withTempView("t1") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      spark.catalog.cacheTable("t1")
-
-      // underlying table t1 is cached as well as the query that refers to it.
-      val sqlText =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |NOT EXISTS (SELECT * FROM t1)
-        """.stripMargin
-      val ds = sql(sqlText)
-      assert(getNumInMemoryRelations(ds) == 2)
-
-      val cachedDs = sql(sqlText).cache()
-      assert(getNumInMemoryTablesRecursively(cachedDs.queryExecution.sparkPlan) == 3)
-    }
-  }
-
-  test("SPARK-19993 nested subquery caching and scalar + predicate subqueris") {
-    withTempView("t1", "t2", "t3", "t4") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(2).toDF("c1").createOrReplaceTempView("t2")
-      Seq(1).toDF("c1").createOrReplaceTempView("t3")
-      Seq(1).toDF("c1").createOrReplaceTempView("t4")
-
-      // Nested predicate subquery
-      val sql1 =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |c1 IN (SELECT c1 FROM t2 WHERE c1 IN (SELECT c1 FROM t3 WHERE c1 = 1))
-        """.stripMargin
-      sql(sql1).cache()
-
-      val cachedDs = sql(sql1)
-      assert(getNumInMemoryRelations(cachedDs) == 1)
-
-      // Scalar subquery and predicate subquery
-      val sql2 =
-        """
-          |SELECT * FROM (SELECT c1, max(c1) FROM t1 GROUP BY c1)
-          |WHERE
-          |c1 = (SELECT max(c1) FROM t2 GROUP BY c1)
-          |OR
-          |EXISTS (SELECT c1 FROM t3)
-          |OR
-          |c1 IN (SELECT c1 FROM t4)
-        """.stripMargin
-      sql(sql2).cache()
-
-      val cachedDs2 = sql(sql2)
-      assert(getNumInMemoryRelations(cachedDs2) == 1)
-    }
+    assert(
+      localRelation.queryExecution.withCachedData.collect {
+        case i: InMemoryRelation => i
+      }.size == 1)
   }
 }

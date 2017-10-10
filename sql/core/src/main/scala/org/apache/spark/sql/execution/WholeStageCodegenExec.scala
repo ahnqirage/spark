@@ -274,8 +274,7 @@ case class InputAdapter(child: SparkPlan) extends UnaryExecNode with CodegenSupp
       lastChildren: Seq[Boolean],
       builder: StringBuilder,
       verbose: Boolean,
-      prefix: String = "",
-      addSuffix: Boolean = false): StringBuilder = {
+      prefix: String = ""): StringBuilder = {
     child.generateTreeString(depth, lastChildren, builder, verbose, "")
   }
 }
@@ -381,29 +380,14 @@ case class WholeStageCodegenExec(child: SparkPlan) extends UnaryExecNode with Co
   override def doExecute(): RDD[InternalRow] = {
     val (ctx, cleanedSource) = doCodeGen()
     // try to compile and fallback if it failed
-    val (_, maxCodeSize) = try {
+    try {
       CodeGenerator.compile(cleanedSource)
     } catch {
-      case _: Exception if !Utils.isTesting && sqlContext.conf.codegenFallback =>
+      case e: Exception if !Utils.isTesting && sqlContext.conf.wholeStageFallback =>
         // We should already saw the error message
         logWarning(s"Whole-stage codegen disabled for this plan:\n $treeString")
         return child.execute()
     }
-
-    // Check if compiled code has a too large function
-    if (maxCodeSize > sqlContext.conf.hugeMethodLimit) {
-      logInfo(s"Found too long generated codes and JIT optimization might not work: " +
-        s"the bytecode size ($maxCodeSize) is above the limit " +
-        s"${sqlContext.conf.hugeMethodLimit}, and the whole-stage codegen was disabled " +
-        s"for this plan. To avoid this, you can raise the limit " +
-        s"`${SQLConf.WHOLESTAGE_HUGE_METHOD_LIMIT.key}`:\n$treeString")
-      child match {
-        // The fallback solution of batch file source scan still uses WholeStageCodegenExec
-        case f: FileSourceScanExec if f.supportsBatch => // do nothing
-        case _ => return child.execute()
-      }
-    }
-
     val references = ctx.references.toArray
 
     val durationMs = longMetric("pipelineTime")
@@ -471,8 +455,7 @@ case class WholeStageCodegenExec(child: SparkPlan) extends UnaryExecNode with Co
       lastChildren: Seq[Boolean],
       builder: StringBuilder,
       verbose: Boolean,
-      prefix: String = "",
-      addSuffix: Boolean = false): StringBuilder = {
+      prefix: String = ""): StringBuilder = {
     child.generateTreeString(depth, lastChildren, builder, verbose, "*")
   }
 }

@@ -20,7 +20,7 @@ package org.apache.spark.ml.feature
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{DataFrame, Row}
@@ -75,7 +75,7 @@ class StandardScalerSuite extends SparkFunSuite with MLlibTestSparkContext
   }
 
   test("Standardization with default parameter") {
-    val df0 = data.zip(resWithStd).toSeq.toDF("features", "expected")
+    val df0 = spark.createDataFrame(data.zip(resWithStd)).toDF("features", "expected")
 
     val standardScalerEst0 = new StandardScaler()
       .setInputCol("features")
@@ -87,9 +87,9 @@ class StandardScalerSuite extends SparkFunSuite with MLlibTestSparkContext
   }
 
   test("Standardization with setter") {
-    val df1 = data.zip(resWithBoth).toSeq.toDF("features", "expected")
-    val df2 = data.zip(resWithMean).toSeq.toDF("features", "expected")
-    val df3 = data.zip(data).toSeq.toDF("features", "expected")
+    val df1 = spark.createDataFrame(data.zip(resWithBoth)).toDF("features", "expected")
+    val df2 = spark.createDataFrame(data.zip(resWithMean)).toDF("features", "expected")
+    val df3 = spark.createDataFrame(data.zip(data)).toDF("features", "expected")
 
     val standardScaler1 = new StandardScaler()
       .setInputCol("features")

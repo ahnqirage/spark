@@ -30,16 +30,19 @@ private[v1] class ApplicationListResource(uiRoot: UIRoot) {
       @QueryParam("status") status: JList[ApplicationStatus],
       @DefaultValue("2010-01-01") @QueryParam("minDate") minDate: SimpleDateParam,
       @DefaultValue("3000-01-01") @QueryParam("maxDate") maxDate: SimpleDateParam,
-      @DefaultValue("2010-01-01") @QueryParam("minEndDate") minEndDate: SimpleDateParam,
-      @DefaultValue("3000-01-01") @QueryParam("maxEndDate") maxEndDate: SimpleDateParam,
       @QueryParam("limit") limit: Integer)
   : Iterator[ApplicationInfo] = {
-
-    val numApps = Option(limit).map(_.toInt).getOrElse(Integer.MAX_VALUE)
-    val includeCompleted = status.isEmpty || status.contains(ApplicationStatus.COMPLETED)
-    val includeRunning = status.isEmpty || status.contains(ApplicationStatus.RUNNING)
-
-    uiRoot.getApplicationInfoList.filter { app =>
+    val allApps = uiRoot.getApplicationInfoList
+    val adjStatus = {
+      if (status.isEmpty) {
+        Arrays.asList(ApplicationStatus.values(): _*)
+      } else {
+        status
+      }
+    }
+    val includeCompleted = adjStatus.contains(ApplicationStatus.COMPLETED)
+    val includeRunning = adjStatus.contains(ApplicationStatus.RUNNING)
+    val appList = allApps.filter { app =>
       val anyRunning = app.attempts.exists(!_.completed)
       // if any attempt is still running, we consider the app to also still be running;
       // keep the app if *any* attempts fall in the right time window
@@ -47,24 +50,13 @@ private[v1] class ApplicationListResource(uiRoot: UIRoot) {
       app.attempts.exists { attempt =>
         isAttemptInRange(attempt, minDate, maxDate, minEndDate, maxEndDate, anyRunning)
       }
-    }.take(numApps)
-  }
-
-  private def isAttemptInRange(
-      attempt: ApplicationAttemptInfo,
-      minStartDate: SimpleDateParam,
-      maxStartDate: SimpleDateParam,
-      minEndDate: SimpleDateParam,
-      maxEndDate: SimpleDateParam,
-      anyRunning: Boolean): Boolean = {
-    val startTimeOk = attempt.startTime.getTime >= minStartDate.timestamp &&
-      attempt.startTime.getTime <= maxStartDate.timestamp
-    // If the maxEndDate is in the past, exclude all running apps.
-    val endTimeOkForRunning = anyRunning && (maxEndDate.timestamp > System.currentTimeMillis())
-    val endTimeOkForCompleted = !anyRunning && (attempt.endTime.getTime >= minEndDate.timestamp &&
-      attempt.endTime.getTime <= maxEndDate.timestamp)
-    val endTimeOk = endTimeOkForRunning || endTimeOkForCompleted
-    startTimeOk && endTimeOk
+      statusOk && dateOk
+    }
+    if (limit != null) {
+      appList.take(limit)
+    } else {
+      appList
+    }
   }
 }
 

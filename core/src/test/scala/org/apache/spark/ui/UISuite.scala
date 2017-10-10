@@ -18,8 +18,7 @@
 package org.apache.spark.ui
 
 import java.net.{BindException, ServerSocket}
-import java.net.{URI, URL}
-import java.util.Locale
+import java.net.URL
 import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 
 import scala.io.Source
@@ -199,38 +198,6 @@ class UISuite extends SparkFunSuite {
     }
   }
 
-  test("verify proxy rewrittenURI") {
-    val prefix = "/worker-id"
-    val target = "http://localhost:8081"
-    val path = "/worker-id/json"
-    var rewrittenURI = JettyUtils.createProxyURI(prefix, target, path, null)
-    assert(rewrittenURI.toString() === "http://localhost:8081/json")
-    rewrittenURI = JettyUtils.createProxyURI(prefix, target, path, "test=done")
-    assert(rewrittenURI.toString() === "http://localhost:8081/json?test=done")
-    rewrittenURI = JettyUtils.createProxyURI(prefix, target, "/worker-id", null)
-    assert(rewrittenURI.toString() === "http://localhost:8081")
-    rewrittenURI = JettyUtils.createProxyURI(prefix, target, "/worker-id/test%2F", null)
-    assert(rewrittenURI.toString() === "http://localhost:8081/test%2F")
-    rewrittenURI = JettyUtils.createProxyURI(prefix, target, "/worker-id/%F0%9F%98%84", null)
-    assert(rewrittenURI.toString() === "http://localhost:8081/%F0%9F%98%84")
-    rewrittenURI = JettyUtils.createProxyURI(prefix, target, "/worker-noid/json", null)
-    assert(rewrittenURI === null)
-  }
-
-  test("verify rewriting location header for reverse proxy") {
-    val clientRequest = mock(classOf[HttpServletRequest])
-    var headerValue = "http://localhost:4040/jobs"
-    val targetUri = URI.create("http://localhost:4040")
-    when(clientRequest.getScheme()).thenReturn("http")
-    when(clientRequest.getHeader("host")).thenReturn("localhost:8080")
-    when(clientRequest.getPathInfo()).thenReturn("/proxy/worker-id/jobs")
-    var newHeader = JettyUtils.createProxyLocationHeader(headerValue, clientRequest, targetUri)
-    assert(newHeader.toString() === "http://localhost:8080/proxy/worker-id/jobs")
-    headerValue = "http://localhost:4041/jobs"
-    newHeader = JettyUtils.createProxyLocationHeader(headerValue, clientRequest, targetUri)
-    assert(newHeader === null)
-  }
-
   test("http -> https redirect applies to all URIs") {
     var serverInfo: ServerInfo = null
     try {
@@ -269,34 +236,16 @@ class UISuite extends SparkFunSuite {
           s"$scheme://localhost:$port/test1/root",
           s"$scheme://localhost:$port/test2/root")
         urls.foreach { url =>
-          val rc = TestUtils.httpResponseCode(new URL(url))
+          val (rc, redirectUrl) = TestUtils.httpResponseCodeAndURL(new URL(url))
           assert(rc === expected, s"Unexpected status $rc for $url")
+          if (rc == HttpServletResponse.SC_FOUND) {
+            assert(
+              TestUtils.httpResponseCode(new URL(redirectUrl.get)) === HttpServletResponse.SC_OK)
+          }
         }
       }
     } finally {
       stopServer(serverInfo)
-    }
-  }
-
-  test("specify both http and https ports separately") {
-    var socket: ServerSocket = null
-    var serverInfo: ServerInfo = null
-    try {
-      socket = new ServerSocket(0)
-
-      // Make sure the SSL port lies way outside the "http + 400" range used as the default.
-      val baseSslPort = Utils.userPort(socket.getLocalPort(), 10000)
-      val (conf, sslOptions) = sslEnabledConf(sslPort = Some(baseSslPort))
-
-      serverInfo = JettyUtils.startJettyServer("0.0.0.0", socket.getLocalPort() + 1,
-        sslOptions, Seq[ServletContextHandler](), conf, "server1")
-
-      val notAllowed = Utils.userPort(serverInfo.boundPort, 400)
-      assert(serverInfo.securePort.isDefined)
-      assert(serverInfo.securePort.get != Utils.userPort(serverInfo.boundPort, 400))
-    } finally {
-      stopServer(serverInfo)
-      closeSocket(socket)
     }
   }
 

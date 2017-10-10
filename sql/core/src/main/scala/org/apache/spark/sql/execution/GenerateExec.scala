@@ -50,7 +50,7 @@ private[execution] sealed case class LazyIterator(func: () => TraversableOnce[In
  * @param join  when true, each output row is implicitly joined with the input tuple that produced
  *              it.
  * @param outer when true, each input row will be output at least once, even if the output of the
- *              given `generator` is empty.
+ *              given `generator` is empty. `outer` has no effect when `join` is false.
  * @param generatorOutput the qualified output attributes of the generator of this node, which
  *                        constructed in analysis phase, and we can not change it, as the
  *                        parent node bound with it already.
@@ -71,6 +71,14 @@ case class GenerateExec(
     }
   }
 
+  override def output: Seq[Attribute] = {
+    if (join) {
+      child.output ++ generatorOutput
+    } else {
+      generatorOutput
+    }
+  }
+
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
 
@@ -82,10 +90,9 @@ case class GenerateExec(
 
   protected override def doExecute(): RDD[InternalRow] = {
     // boundGenerator.terminate() should be triggered after all of the rows in the partition
-    val numOutputRows = longMetric("numOutputRows")
-    child.execute().mapPartitionsWithIndexInternal { (index, iter) =>
-      val generatorNullRow = new GenericInternalRow(generator.elementSchema.length)
-      val rows = if (join) {
+    val rows = if (join) {
+      child.execute().mapPartitionsInternal { iter =>
+        val generatorNullRow = new GenericInternalRow(generator.elementSchema.length)
         val joinedRow = new JoinedRow
         iter.flatMap { row =>
           // we should always set the left (child output)

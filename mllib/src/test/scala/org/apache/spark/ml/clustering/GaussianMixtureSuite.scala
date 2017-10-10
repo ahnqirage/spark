@@ -45,26 +45,6 @@ class GaussianMixtureSuite extends SparkFunSuite with MLlibTestSparkContext
     super.beforeAll()
 
     dataset = KMeansSuite.generateKMeansData(spark, 50, 3, k)
-    denseDataset = denseData.map(FeatureData).toDF()
-    sparseDataset = denseData.map { point =>
-      FeatureData(point.toSparse)
-    }.toDF()
-    decompositionDataset = decompositionData.map(FeatureData).toDF()
-    rDataset = rData.map(FeatureData).toDF()
-  }
-
-  test("gmm fails on high dimensional data") {
-    val df = Seq(
-      Vectors.sparse(GaussianMixture.MAX_NUM_FEATURES + 1, Array(0, 4), Array(3.0, 8.0)),
-      Vectors.sparse(GaussianMixture.MAX_NUM_FEATURES + 1, Array(1, 5), Array(4.0, 9.0)))
-      .map(Tuple1.apply).toDF("features")
-    val gm = new GaussianMixture()
-    withClue(s"GMM should restrict the maximum number of features to be < " +
-      s"${GaussianMixture.MAX_NUM_FEATURES}") {
-      intercept[IllegalArgumentException] {
-        gm.fit(df)
-      }
-    }
   }
 
   test("default parameters") {

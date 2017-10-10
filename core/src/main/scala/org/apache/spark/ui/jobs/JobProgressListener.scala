@@ -334,7 +334,7 @@ class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
         new StageUIData
       })
       stageData.numActiveTasks += 1
-      stageData.taskData.put(taskInfo.taskId, TaskUIData(taskInfo))
+      stageData.taskData.put(taskInfo.taskId, TaskUIData(taskInfo, Some(metrics)))
     }
     for (
       activeJobsDependentOnStage <- stageIdToActiveJobIds.get(taskStart.stageId);
@@ -413,15 +413,14 @@ class JobProgressListener(conf: SparkConf) extends SparkListener with Logging {
         updateAggregateMetrics(stageData, info.executorId, m, oldMetrics)
       }
 
-      val taskData = stageData.taskData.getOrElseUpdate(info.taskId, TaskUIData(info))
+      val taskData = stageData.taskData.getOrElseUpdate(info.taskId, TaskUIData(info, None))
       taskData.updateTaskInfo(info)
       taskData.updateTaskMetrics(taskMetrics)
       taskData.errorMessage = errorMessage
 
       // If Tasks is too large, remove and garbage collect old tasks
       if (stageData.taskData.size > retainedTasks) {
-        stageData.taskData = stageData.taskData.drop(
-          calculateNumberToRemove(stageData.taskData.size, retainedTasks))
+        stageData.taskData = stageData.taskData.drop(stageData.taskData.size - retainedTasks)
       }
 
       for (

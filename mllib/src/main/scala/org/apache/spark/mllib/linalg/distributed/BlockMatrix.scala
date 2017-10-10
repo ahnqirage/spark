@@ -275,7 +275,7 @@ class BlockMatrix @Since("1.3.0") (
     val rows = blocks.flatMap { case ((blockRowIdx, blockColIdx), mat) =>
       mat.rowIter.zipWithIndex.map {
         case (vector, rowIdx) =>
-          blockRowIdx * rowsPerBlock + rowIdx -> ((blockColIdx, vector.asBreeze))
+          blockRowIdx * rowsPerBlock + rowIdx -> (blockColIdx, vector.asBreeze)
       }
     }.groupByKey().map { case (rowIdx, vectors) =>
       val numberNonZeroPerRow = vectors.map(_._2.activeSize).sum.toDouble / cols.toDouble
@@ -425,27 +425,22 @@ class BlockMatrix @Since("1.3.0") (
    */
   private[distributed] def simulateMultiply(
       other: BlockMatrix,
-      partitioner: GridPartitioner,
-      midDimSplitNum: Int): (BlockDestinations, BlockDestinations) = {
-    val leftMatrix = blockInfo.keys.collect()
-    val rightMatrix = other.blockInfo.keys.collect()
+      partitioner: GridPartitioner): (BlockDestinations, BlockDestinations) = {
+    val leftMatrix = blockInfo.keys.collect() // blockInfo should already be cached
+    val rightMatrix = other.blocks.keys.collect()
 
     val rightCounterpartsHelper = rightMatrix.groupBy(_._1).mapValues(_.map(_._2))
     val leftDestinations = leftMatrix.map { case (rowIndex, colIndex) =>
-      val rightCounterparts = rightCounterpartsHelper.getOrElse(colIndex, Array.empty[Int])
+      val rightCounterparts = rightCounterpartsHelper.getOrElse(colIndex, Array())
       val partitions = rightCounterparts.map(b => partitioner.getPartition((rowIndex, b)))
-      val midDimSplitIndex = colIndex % midDimSplitNum
-      ((rowIndex, colIndex),
-        partitions.toSet.map((pid: Int) => pid * midDimSplitNum + midDimSplitIndex))
+      ((rowIndex, colIndex), partitions.toSet)
     }.toMap
 
     val leftCounterpartsHelper = leftMatrix.groupBy(_._2).mapValues(_.map(_._1))
     val rightDestinations = rightMatrix.map { case (rowIndex, colIndex) =>
-      val leftCounterparts = leftCounterpartsHelper.getOrElse(rowIndex, Array.empty[Int])
+      val leftCounterparts = leftCounterpartsHelper.getOrElse(rowIndex, Array())
       val partitions = leftCounterparts.map(b => partitioner.getPartition((b, colIndex)))
-      val midDimSplitIndex = rowIndex % midDimSplitNum
-      ((rowIndex, colIndex),
-        partitions.toSet.map((pid: Int) => pid * midDimSplitNum + midDimSplitIndex))
+      ((rowIndex, colIndex), partitions.toSet)
     }.toMap
 
     (leftDestinations, rightDestinations)

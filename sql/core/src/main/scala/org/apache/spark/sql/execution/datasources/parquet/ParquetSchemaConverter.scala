@@ -556,7 +556,7 @@ private[parquet] class ParquetSchemaConverter(
   }
 }
 
-private[sql] object ParquetSchemaConverter {
+private[parquet] object ParquetSchemaConverter {
   val SPARK_PARQUET_SCHEMA_NAME = "spark_schema"
 
   val EMPTY_MESSAGE: MessageType =

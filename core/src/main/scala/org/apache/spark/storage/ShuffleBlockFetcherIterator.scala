@@ -374,6 +374,27 @@ final class ShuffleBlockFetcherIterator(
     }
 
     numBlocksProcessed += 1
+    val startFetchWait = System.currentTimeMillis()
+    currentResult = results.take()
+    val result = currentResult
+    val stopFetchWait = System.currentTimeMillis()
+    shuffleMetrics.incFetchWaitTime(stopFetchWait - startFetchWait)
+
+    result match {
+      case SuccessFetchResult(_, address, size, buf, isNetworkReqDone) =>
+        if (address != blockManager.blockManagerId) {
+          shuffleMetrics.incRemoteBytesRead(buf.size)
+          shuffleMetrics.incRemoteBlocksFetched(1)
+        }
+        bytesInFlight -= size
+        if (isNetworkReqDone) {
+          reqsInFlight -= 1
+          logDebug("Number of requests in flight " + reqsInFlight)
+        }
+      case _ =>
+    }
+
+    numBlocksProcessed += 1
 
     var result: FetchResult = null
     var input: InputStream = null

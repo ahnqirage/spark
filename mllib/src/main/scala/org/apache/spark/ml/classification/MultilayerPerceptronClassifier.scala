@@ -31,11 +31,8 @@ import org.apache.spark.ml.util._
 import org.apache.spark.sql.Dataset
 
 /** Params for Multilayer Perceptron. */
-private[classification] trait MultilayerPerceptronParams extends ProbabilisticClassifierParams
-  with HasSeed with HasMaxIter with HasTol with HasStepSize with HasSolver {
-
-  import MultilayerPerceptronClassifier._
-
+private[classification] trait MultilayerPerceptronParams extends PredictorParams
+  with HasSeed with HasMaxIter with HasTol with HasStepSize {
   /**
    * Layer sizes including input size and output size.
    *
@@ -80,10 +77,14 @@ private[classification] trait MultilayerPerceptronParams extends ProbabilisticCl
    * @group expertParam
    */
   @Since("2.0.0")
-  final override val solver: Param[String] = new Param[String](this, "solver",
+  final val solver: Param[String] = new Param[String](this, "solver",
     "The solver algorithm for optimization. Supported options: " +
-      s"${supportedSolvers.mkString(", ")}. (Default l-bfgs)",
-    ParamValidators.inArray[String](supportedSolvers))
+      s"${MultilayerPerceptronClassifier.supportedSolvers.mkString(", ")}. (Default l-bfgs)",
+    ParamValidators.inArray[String](MultilayerPerceptronClassifier.supportedSolvers))
+
+  /** @group expertGetParam */
+  @Since("2.0.0")
+  final def getSolver: String = $(solver)
 
   /**
    * The initial weights of the model.
@@ -98,8 +99,8 @@ private[classification] trait MultilayerPerceptronParams extends ProbabilisticCl
   @Since("2.0.0")
   final def getInitialWeights: Vector = $(initialWeights)
 
-  setDefault(maxIter -> 100, tol -> 1e-6, blockSize -> 128,
-    solver -> LBFGS, stepSize -> 0.03)
+  setDefault(maxIter -> 100, tol -> 1e-4, blockSize -> 128,
+    solver -> MultilayerPerceptronClassifier.LBFGS, stepSize -> 0.03)
 }
 
 /** Label to vector converter. */
@@ -301,13 +302,13 @@ class MultilayerPerceptronClassificationModel private[ml] (
     @Since("1.5.0") override val uid: String,
     @Since("1.5.0") val layers: Array[Int],
     @Since("2.0.0") val weights: Vector)
-  extends ProbabilisticClassificationModel[Vector, MultilayerPerceptronClassificationModel]
+  extends PredictionModel[Vector, MultilayerPerceptronClassificationModel]
   with Serializable with MLWritable {
 
   @Since("1.6.0")
   override val numFeatures: Int = layers.head
 
-  private[ml] val mlpModel = FeedForwardTopology
+  private val mlpModel = FeedForwardTopology
     .multiLayerPerceptron(layers, softmaxOnTop = true)
     .model(weights)
 

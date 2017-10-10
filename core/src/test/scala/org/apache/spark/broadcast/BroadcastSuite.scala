@@ -142,8 +142,9 @@ class BroadcastSuite extends SparkFunSuite with LocalSparkContext with Encryptio
     sc.stop()
   }
 
-  encryptionTest("Cache broadcast to disk") { conf =>
-    conf.setMaster("local")
+  test("Cache broadcast to disk") {
+    val conf = new SparkConf()
+      .setMaster("local")
       .setAppName("test")
       .set("spark.memory.useLegacyMode", "true")
       .set("spark.storage.memoryFraction", "0.0")

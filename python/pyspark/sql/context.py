@@ -28,7 +28,7 @@ from pyspark.sql.session import _monkey_patch_RDD, SparkSession
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.readwriter import DataFrameReader
 from pyspark.sql.streaming import DataStreamReader
-from pyspark.sql.types import IntegerType, Row, StringType
+from pyspark.sql.types import Row, StringType
 from pyspark.sql.utils import install_exception_handler
 
 __all__ = ["SQLContext", "HiveContext", "UDFRegistration"]
@@ -185,7 +185,6 @@ class SQLContext(object):
         :param name: name of the UDF
         :param f: python function
         :param returnType: a :class:`pyspark.sql.types.DataType` object
-        :return: a wrapped :class:`UserDefinedFunction`
 
         >>> strlen = sqlContext.registerFunction("stringLengthString", lambda x: len(x))
         >>> sqlContext.sql("SELECT stringLengthString('test')").collect()
@@ -273,8 +272,9 @@ class SQLContext(object):
         from ``data``, which should be an RDD of :class:`Row`,
         or :class:`namedtuple`, or :class:`dict`.
 
-        When ``schema`` is :class:`pyspark.sql.types.DataType` or a datatype string it must match
-        the real data, or an exception will be thrown at runtime. If the given schema is not
+        When ``schema`` is :class:`pyspark.sql.types.DataType` or
+        :class:`pyspark.sql.types.StringType`, it must match the
+        real data, or an exception will be thrown at runtime. If the given schema is not
         :class:`pyspark.sql.types.StructType`, it will be wrapped into a
         :class:`pyspark.sql.types.StructType` as its only field, and the field name will be "value",
         each record will also be wrapped into a tuple, which can be converted to row later.
@@ -285,7 +285,8 @@ class SQLContext(object):
         :param data: an RDD of any kind of SQL data representation(e.g. :class:`Row`,
             :class:`tuple`, ``int``, ``boolean``, etc.), or :class:`list`, or
             :class:`pandas.DataFrame`.
-        :param schema: a :class:`pyspark.sql.types.DataType` or a datatype string or a list of
+        :param schema: a :class:`pyspark.sql.types.DataType` or a
+            :class:`pyspark.sql.types.StringType` or a list of
             column names, default is None.  The data type string format equals to
             :class:`pyspark.sql.types.DataType.simpleString`, except that top level struct type can
             omit the ``struct<>`` and atomic types use ``typeName()`` as their format, e.g. use
@@ -297,11 +298,11 @@ class SQLContext(object):
 
         .. versionchanged:: 2.0
            The ``schema`` parameter can be a :class:`pyspark.sql.types.DataType` or a
-           datatype string after 2.0.
+           :class:`pyspark.sql.types.StringType` after 2.0.
            If it's not a :class:`pyspark.sql.types.StructType`, it will be wrapped into a
            :class:`pyspark.sql.types.StructType` and each record will also be wrapped into a tuple.
 
-        .. versionchanged:: 2.1
+        .. versionchanged:: 2.0.1
            Added verifySchema.
 
         >>> l = [('Alice', 1)]
@@ -491,7 +492,7 @@ class SQLContext(object):
         Returns a :class:`DataStreamReader` that can be used to read data streams
         as a streaming :class:`DataFrame`.
 
-        .. note:: Evolving.
+        .. note:: Experimental.
 
         :return: :class:`DataStreamReader`
 
@@ -507,7 +508,7 @@ class SQLContext(object):
         """Returns a :class:`StreamingQueryManager` that allows managing all the
         :class:`StreamingQuery` StreamingQueries active on `this` context.
 
-        .. note:: Evolving.
+        .. note:: Experimental.
         """
         from pyspark.sql.streaming import StreamingQueryManager
         return StreamingQueryManager(self._ssql_ctx.streams())
@@ -525,6 +526,11 @@ class HiveContext(SQLContext):
 
     .. note:: Deprecated in 2.0.0. Use SparkSession.builder.enableHiveSupport().getOrCreate().
     """
+
+    warnings.warn(
+        "HiveContext is deprecated in Spark 2.0.0. Please use " +
+        "SparkSession.builder.enableHiveSupport().getOrCreate() instead.",
+        DeprecationWarning)
 
     def __init__(self, sparkContext, jhiveContext=None):
         warnings.warn(

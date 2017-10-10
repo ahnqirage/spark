@@ -45,13 +45,13 @@ import org.apache.ivy.plugins.matcher.GlobPatternMatcher
 import org.apache.ivy.plugins.repository.file.FileRepository
 import org.apache.ivy.plugins.resolver.{ChainResolver, FileSystemResolver, IBiblioResolver}
 
-import org.apache.spark._
+import org.apache.spark.{SPARK_REVISION, SPARK_VERSION, SparkException, SparkUserAppException}
+import org.apache.spark.{SPARK_BRANCH, SPARK_BUILD_DATE, SPARK_BUILD_USER, SPARK_REPO_URL}
 import org.apache.spark.api.r.RUtils
 import org.apache.spark.deploy.rest._
-import org.apache.spark.internal.Logging
-import org.apache.spark.internal.config._
 import org.apache.spark.launcher.SparkLauncher
-import org.apache.spark.util._
+import org.apache.spark.util.{ChildFirstURLClassLoader, MutableURLClassLoader, Utils}
+
 
 /**
  * Whether to submit, kill, or request the status of an application.
@@ -102,8 +102,6 @@ object SparkSubmit extends CommandLineUtils with Logging {
    /___/ .__/\_,_/_/ /_/\_\   version %s
       /_/
                         """.format(SPARK_VERSION))
-    printStream.println("Using Scala %s, %s, %s".format(
-      Properties.versionString, Properties.javaVmName, Properties.javaVersion))
     printStream.println("Branch %s".format(SPARK_BRANCH))
     printStream.println("Compiled by user %s on %s".format(SPARK_BUILD_USER, SPARK_BUILD_DATE))
     printStream.println("Revision %s".format(SPARK_REVISION))
@@ -394,19 +392,10 @@ object SparkSubmit extends CommandLineUtils with Logging {
         printErrorAndExit(s"Only local additional python files are supported: $nonLocalPyFiles")
       }
 
-      def downloadResource(resource: String): String = {
-        val uri = Utils.resolveURI(resource)
-        uri.getScheme match {
-          case "local" | "file" => resource
-          case e if shouldDownload(e) =>
-            val file = new File(targetDir, new Path(uri).getName)
-            if (file.exists()) {
-              file.toURI.toString
-            } else {
-              downloadFile(resource, targetDir, sparkConf, hadoopConf, secMgr)
-            }
-          case _ => uri.toString
-        }
+    // Require all R files to be local
+    if (args.isR && !isYarnCluster) {
+      if (Utils.nonLocalPaths(args.primaryResource).nonEmpty) {
+        printErrorAndExit(s"Only local R files are supported: ${args.primaryResource}")
       }
 
       args.primaryResource = Option(args.primaryResource).map { downloadResource }.orNull
@@ -1118,7 +1107,13 @@ private[spark] object SparkSubmitUtils {
     // Add scala exclusion rule
     md.addExcludeRule(createExclusion("*:scala-library:*", ivySettings, ivyConfName))
 
-    IVY_DEFAULT_EXCLUDES.foreach { comp =>
+    // We need to specify each component explicitly, otherwise we miss spark-streaming-kafka-0-8 and
+    // other spark-streaming utility components. Underscore is there to differentiate between
+    // spark-streaming_2.1x and spark-streaming-kafka-0-8-assembly_2.1x
+    val components = Seq("catalyst_", "core_", "graphx_", "hive_", "mllib_", "repl_",
+      "sql_", "streaming_", "yarn_", "network-common_", "network-shuffle_", "network-yarn_")
+
+    components.foreach { comp =>
       md.addExcludeRule(createExclusion(s"org.apache.spark:spark-$comp*:*", ivySettings,
         ivyConfName))
     }

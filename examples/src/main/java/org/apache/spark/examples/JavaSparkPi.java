@@ -19,6 +19,8 @@ package org.apache.spark.examples;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.sql.SparkSession;
 
 import java.util.ArrayList;

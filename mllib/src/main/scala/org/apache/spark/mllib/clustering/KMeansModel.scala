@@ -129,8 +129,8 @@ object KMeansModel extends Loader[KMeansModel] {
       val metadata = compact(render(
         ("class" -> thisClassName) ~ ("version" -> thisFormatVersion) ~ ("k" -> model.k)))
       sc.parallelize(Seq(metadata), 1).saveAsTextFile(Loader.metadataPath(path))
-      val dataRDD = sc.parallelize(model.clusterCentersWithNorm.zipWithIndex).map { case (p, id) =>
-        Cluster(id, p.vector)
+      val dataRDD = sc.parallelize(model.clusterCenters.zipWithIndex).map { case (point, id) =>
+        Cluster(id, point)
       }
       spark.createDataFrame(dataRDD).write.parquet(Loader.dataPath(path))
     }

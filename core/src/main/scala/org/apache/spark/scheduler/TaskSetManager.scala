@@ -27,10 +27,7 @@ import scala.util.control.NonFatal
 
 import org.apache.spark._
 import org.apache.spark.TaskState.TaskState
-import org.apache.spark.internal.{config, Logging}
-import org.apache.spark.scheduler.SchedulingMode._
 import org.apache.spark.util.{AccumulatorV2, Clock, SystemClock, Utils}
-import org.apache.spark.util.collection.MedianHeap
 
 /**
  * Schedules the tasks within a single TaskSet in the TaskSchedulerImpl. This class keeps track of
@@ -459,62 +456,57 @@ private[spark] class TaskSetManager(
         }
       }
 
-      dequeueTask(execId, host, allowedLocality).map { case ((index, taskLocality, speculative)) =>
-        // Found a task; do some bookkeeping and return a task description
-        val task = tasks(index)
-        val taskId = sched.newTaskId()
-        // Do various bookkeeping
-        copiesRunning(index) += 1
-        val attemptNum = taskAttempts(index).size
-        val info = new TaskInfo(taskId, index, attemptNum, curTime,
-          execId, host, taskLocality, speculative)
-        taskInfos(taskId) = info
-        taskAttempts(index) = info :: taskAttempts(index)
-        // Update our locality level for delay scheduling
-        // NO_PREF will not affect the variables related to delay scheduling
-        if (maxLocality != TaskLocality.NO_PREF) {
-          currentLocalityIndex = getLocalityIndex(taskLocality)
-          lastLaunchTime = curTime
-        }
-        // Serialize and return the task
-        val serializedTask: ByteBuffer = try {
-          ser.serialize(task)
-        } catch {
-          // If the task cannot be serialized, then there's no point to re-attempt the task,
-          // as it will always fail. So just abort the whole task-set.
-          case NonFatal(e) =>
-            val msg = s"Failed to serialize task $taskId, not attempting to retry it."
-            logError(msg, e)
-            abort(s"$msg Exception during serialization: $e")
-            throw new TaskNotSerializableException(e)
-        }
-        if (serializedTask.limit > TaskSetManager.TASK_SIZE_TO_WARN_KB * 1024 &&
-          !emittedTaskSizeWarning) {
-          emittedTaskSizeWarning = true
-          logWarning(s"Stage ${task.stageId} contains a task of very large size " +
-            s"(${serializedTask.limit / 1024} KB). The maximum recommended task size is " +
-            s"${TaskSetManager.TASK_SIZE_TO_WARN_KB} KB.")
-        }
-        addRunningTask(taskId)
+      dequeueTask(execId, host, allowedLocality) match {
+        case Some((index, taskLocality, speculative)) =>
+          // Found a task; do some bookkeeping and return a task description
+          val task = tasks(index)
+          val taskId = sched.newTaskId()
+          // Do various bookkeeping
+          copiesRunning(index) += 1
+          val attemptNum = taskAttempts(index).size
+          val info = new TaskInfo(taskId, index, attemptNum, curTime,
+            execId, host, taskLocality, speculative)
+          taskInfos(taskId) = info
+          taskAttempts(index) = info :: taskAttempts(index)
+          // Update our locality level for delay scheduling
+          // NO_PREF will not affect the variables related to delay scheduling
+          if (maxLocality != TaskLocality.NO_PREF) {
+            currentLocalityIndex = getLocalityIndex(taskLocality)
+            lastLaunchTime = curTime
+          }
+          // Serialize and return the task
+          val startTime = clock.getTimeMillis()
+          val serializedTask: ByteBuffer = try {
+            Task.serializeWithDependencies(task, sched.sc.addedFiles, sched.sc.addedJars, ser)
+          } catch {
+            // If the task cannot be serialized, then there's no point to re-attempt the task,
+            // as it will always fail. So just abort the whole task-set.
+            case NonFatal(e) =>
+              val msg = s"Failed to serialize task $taskId, not attempting to retry it."
+              logError(msg, e)
+              abort(s"$msg Exception during serialization: $e")
+              throw new TaskNotSerializableException(e)
+          }
+          if (serializedTask.limit > TaskSetManager.TASK_SIZE_TO_WARN_KB * 1024 &&
+              !emittedTaskSizeWarning) {
+            emittedTaskSizeWarning = true
+            logWarning(s"Stage ${task.stageId} contains a task of very large size " +
+              s"(${serializedTask.limit / 1024} KB). The maximum recommended task size is " +
+              s"${TaskSetManager.TASK_SIZE_TO_WARN_KB} KB.")
+          }
+          addRunningTask(taskId)
 
-        // We used to log the time it takes to serialize the task, but task size is already
-        // a good proxy to task serialization time.
-        // val timeTaken = clock.getTime() - startTime
-        val taskName = s"task ${info.id} in stage ${taskSet.id}"
-        logInfo(s"Starting $taskName (TID $taskId, $host, executor ${info.executorId}, " +
-          s"partition ${task.partitionId}, $taskLocality, ${serializedTask.limit} bytes)")
+          // We used to log the time it takes to serialize the task, but task size is already
+          // a good proxy to task serialization time.
+          // val timeTaken = clock.getTime() - startTime
+          val taskName = s"task ${info.id} in stage ${taskSet.id}"
+          logInfo(s"Starting $taskName (TID $taskId, $host, partition ${task.partitionId}," +
+            s" $taskLocality, ${serializedTask.limit} bytes)")
 
-        sched.dagScheduler.taskStarted(task, info)
-        new TaskDescription(
-          taskId,
-          attemptNum,
-          execId,
-          taskName,
-          index,
-          addedFiles,
-          addedJars,
-          task.localProperties,
-          serializedTask)
+          sched.dagScheduler.taskStarted(task, info)
+          return Some(new TaskDescription(taskId = taskId, attemptNumber = attemptNum, execId,
+            taskName, index, serializedTask))
+        case _ =>
       }
     } else {
       None
@@ -779,8 +771,8 @@ private[spark] class TaskSetManager(
     val index = info.index
     copiesRunning(index) -= 1
     var accumUpdates: Seq[AccumulatorV2[_, _]] = Seq.empty
-    val failureReason = s"Lost task ${info.id} in stage ${taskSet.id} (TID $tid, ${info.host}," +
-      s" executor ${info.executorId}): ${reason.toErrorString}"
+    val failureReason = s"Lost task ${info.id} in stage ${taskSet.id} (TID $tid, ${info.host}): " +
+      reason.asInstanceOf[TaskFailedReason].toErrorString
     val failureException: Option[Throwable] = reason match {
       case fetchFailed: FetchFailed =>
         logWarning(failureReason)
@@ -847,7 +839,18 @@ private[spark] class TaskSetManager(
 
     sched.dagScheduler.taskEnded(tasks(index), reason, null, accumUpdates, info)
 
-    if (!isZombie && reason.countTowardsTaskFailures) {
+    if (successful(index)) {
+      logInfo(
+        s"Task ${info.id} in stage ${taskSet.id} (TID $tid) failed, " +
+        "but another instance of the task has already succeeded, " +
+        "so not re-queuing the task to be re-executed.")
+    } else {
+      addPendingTask(index)
+    }
+
+    if (!isZombie && state != TaskState.KILLED
+        && reason.isInstanceOf[TaskFailedReason]
+        && reason.asInstanceOf[TaskFailedReason].countTowardsTaskFailures) {
       assert (null != failureReason)
       taskSetBlacklistHelperOpt.foreach(_.updateBlacklistForFailedTask(
         info.host, info.executorId, index, failureReason))

@@ -34,7 +34,6 @@ private[spark] class ApplicationEventListener extends SparkListener {
   var adminAcls: Option[String] = None
   var viewAclsGroups: Option[String] = None
   var adminAclsGroups: Option[String] = None
-  var appSparkVersion: Option[String] = None
 
   override def onApplicationStart(applicationStart: SparkListenerApplicationStart) {
     appName = Some(applicationStart.appName)

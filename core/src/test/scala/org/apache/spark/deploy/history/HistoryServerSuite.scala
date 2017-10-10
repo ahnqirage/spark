@@ -76,7 +76,6 @@ class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with Matchers
       .set("spark.history.fs.logDirectory", logDir)
       .set("spark.history.fs.update.interval", "0")
       .set("spark.testing", "true")
-      .set(LOCAL_STORE_DIR, storeDir.getAbsolutePath())
     conf.setAll(extraConf)
     provider = new FsHistoryProvider(conf)
     provider.checkForLogs()
@@ -106,12 +105,6 @@ class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with Matchers
     "minDate app list json" -> "applications?minDate=2015-02-10",
     "maxDate app list json" -> "applications?maxDate=2015-02-10",
     "maxDate2 app list json" -> "applications?maxDate=2015-02-03T16:42:40.000GMT",
-    "minEndDate app list json" -> "applications?minEndDate=2015-05-06T13:03:00.950GMT",
-    "maxEndDate app list json" -> "applications?maxEndDate=2015-05-06T13:03:00.950GMT",
-    "minEndDate and maxEndDate app list json" ->
-      "applications?minEndDate=2015-03-16&maxEndDate=2015-05-06T13:03:00.950GMT",
-    "minDate and maxEndDate app list json" ->
-      "applications?minDate=2015-03-16&maxEndDate=2015-05-06T13:03:00.950GMT",
     "limit app list json" -> "applications?limit=3",
     "one app json" -> "applications/local-1422981780767",
     "one app multi-attempt json" -> "applications/local-1426533911241",
@@ -295,14 +288,13 @@ class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with Matchers
     server.stop()
 
     val conf = new SparkConf()
-      .set("spark.history.fs.logDirectory", logDir)
+      .set("spark.history.fs.logDirectory", logDir.getAbsolutePath)
       .set("spark.history.fs.update.interval", "0")
       .set("spark.testing", "true")
-      .set(LOCAL_STORE_DIR, storeDir.getAbsolutePath())
 
     provider = new FsHistoryProvider(conf)
     provider.checkForLogs()
-    val securityManager = HistoryServer.createSecurityManager(conf)
+    val securityManager = new SecurityManager(conf)
 
     server = new HistoryServer(conf, provider, securityManager, 18080)
     server.initialize()
@@ -361,17 +353,6 @@ class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with Matchers
       quit()
     }
 
-  }
-
-  /**
-   * Verify that the security manager needed for the history server can be instantiated
-   * when `spark.authenticate` is `true`, rather than raise an `IllegalArgumentException`.
-   */
-  test("security manager starts with spark.authenticate set") {
-    val conf = new SparkConf()
-      .set("spark.testing", "true")
-      .set(SecurityManager.SPARK_AUTH_CONF, "true")
-    HistoryServer.createSecurityManager(conf)
   }
 
   test("incomplete apps get refreshed") {
@@ -574,18 +555,15 @@ class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with Matchers
   test("ui and api authorization checks") {
     val appId = "local-1430917381535"
     val owner = "irashid"
-    val admin = "root"
     val other = "alice"
 
     stop()
     init(
       "spark.ui.filters" -> classOf[FakeAuthFilter].getName(),
-      "spark.history.ui.acls.enable" -> "true",
-      "spark.history.ui.admin.acls" -> admin)
+      "spark.history.ui.acls.enable" -> "true")
 
     val tests = Seq(
       (owner, HttpServletResponse.SC_OK),
-      (admin, HttpServletResponse.SC_OK),
       (other, HttpServletResponse.SC_FORBIDDEN),
       // When the remote user is null, the code behaves as if auth were disabled.
       (null, HttpServletResponse.SC_OK))

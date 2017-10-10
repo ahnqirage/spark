@@ -16,7 +16,7 @@
 #
 library(SparkR)
 
-sc <- sparkR.session(master = "local[1]")
+sc <- sparkR.session()
 
 helloTest <- SparkR:::callJStatic("sparkrtest.DummyClass",
                                   "helloWorld",

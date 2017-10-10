@@ -173,7 +173,6 @@ private[spark] object UIUtils extends Logging {
     <script src={prependBaseUri("/static/table.js")}></script>
     <script src={prependBaseUri("/static/additional-metrics.js")}></script>
     <script src={prependBaseUri("/static/timeline-view.js")}></script>
-    <script src={prependBaseUri("/static/log-view.js")}></script>
     <script src={prependBaseUri("/static/webui.js")}></script>
     <script>setUIRoot('{UIUtils.uiRoot}')</script>
   }
@@ -520,33 +519,4 @@ private[spark] object UIUtils extends Logging {
 
   def getTimeZoneOffset() : Int =
     TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 1000 / 60
-
-  /**
-  * Return the correct Href after checking if master is running in the
-  * reverse proxy mode or not.
-  */
-  def makeHref(proxy: Boolean, id: String, origHref: String): String = {
-    if (proxy) {
-      s"/proxy/$id"
-    } else {
-      origHref
-    }
-  }
-
-  /**
-   * Remove suspicious characters of user input to prevent Cross-Site scripting (XSS) attacks
-   *
-   * For more information about XSS testing:
-   * https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet and
-   * https://www.owasp.org/index.php/Testing_for_Reflected_Cross_site_scripting_(OTG-INPVAL-001)
-   */
-  def stripXSS(requestParameter: String): String = {
-    if (requestParameter == null) {
-      null
-    } else {
-      // Remove new lines and single quotes, followed by escaping HTML version 4.0
-      StringEscapeUtils.escapeHtml4(
-        NEWLINE_AND_SINGLE_QUOTE_REGEX.replaceAllIn(requestParameter, ""))
-    }
-  }
 }

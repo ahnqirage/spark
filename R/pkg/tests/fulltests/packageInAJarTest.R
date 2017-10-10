@@ -17,7 +17,7 @@
 library(SparkR)
 library(sparkPackageTest)
 
-sparkR.session(master = "local[1]")
+sparkR.session()
 
 run1 <- myfunc(5L)
 

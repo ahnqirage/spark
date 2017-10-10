@@ -264,8 +264,7 @@ streaming_kafka_0_10 = Module(
     name="streaming-kafka-0-10",
     dependencies=[streaming],
     source_file_regexes=[
-        # The ending "/" is necessary otherwise it will include "sql-kafka" codes
-        "external/kafka-0-10/",
+        "external/kafka-0-10",
         "external/kafka-0-10-assembly",
     ],
     sbt_test_goals=[
@@ -463,9 +462,6 @@ pyspark_ml = Module(
     python_test_goals=[
         "pyspark.ml.classification",
         "pyspark.ml.clustering",
-        "pyspark.ml.evaluation",
-        "pyspark.ml.feature",
-        "pyspark.ml.fpm",
         "pyspark.ml.linalg.__init__",
         "pyspark.ml.recommendation",
         "pyspark.ml.regression",

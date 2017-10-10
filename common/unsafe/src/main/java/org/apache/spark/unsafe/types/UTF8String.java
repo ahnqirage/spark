@@ -500,7 +500,9 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     int s = 0;
     // skip all of the space (0x20) in the left side
     while (s < this.numBytes && getByte(s) == 0x20) s++;
-    if (s == this.numBytes) {
+    // skip all of the space (0x20) in the right side
+    while (e >= 0 && getByte(e) == 0x20) e--;
+    if (s > e) {
       // empty string
       return EMPTY_UTF8;
     }
@@ -957,23 +959,11 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     return fromString(sb.toString());
   }
 
-  /**
-   * Wrapper over `long` to allow result of parsing long from string to be accessed via reference.
-   * This is done solely for better performance and is not expected to be used by end users.
-   */
-  public static class LongWrapper implements Serializable {
-    public transient long value = 0;
-  }
-
-  /**
-   * Wrapper over `int` to allow result of parsing integer from string to be accessed via reference.
-   * This is done solely for better performance and is not expected to be used by end users.
-   *
-   * {@link LongWrapper} could have been used here but using `int` directly save the extra cost of
-   * conversion from `long` to `int`
-   */
-  public static class IntWrapper implements Serializable {
-    public transient int value = 0;
+  private int getDigit(byte b) {
+    if (b >= '0' && b <= '9') {
+      return b - '0';
+    }
+    throw new NumberFormatException(toString());
   }
 
   /**
@@ -981,18 +971,14 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
    *
    * Note that, in this method we accumulate the result in negative format, and convert it to
    * positive format at the end, if this string is not started with '-'. This is because min value
-   * is bigger than max value in digits, e.g. Long.MAX_VALUE is '9223372036854775807' and
-   * Long.MIN_VALUE is '-9223372036854775808'.
+   * is bigger than max value in digits, e.g. Integer.MAX_VALUE is '2147483647' and
+   * Integer.MIN_VALUE is '-2147483648'.
    *
    * This code is mostly copied from LazyLong.parseLong in Hive.
-   *
-   * @param toLongResult If a valid `long` was parsed from this UTF8String, then its value would
-   *                     be set in `toLongResult`
-   * @return true if the parsing was successful else false
    */
-  public boolean toLong(LongWrapper toLongResult) {
+  public long toLong() {
     if (numBytes == 0) {
-      return false;
+      throw new NumberFormatException("Empty string");
     }
 
     byte b = getByte(0);
@@ -1001,7 +987,7 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     if (negative || b == '+') {
       offset++;
       if (numBytes == 1) {
-        return false;
+        throw new NumberFormatException(toString());
       }
     }
 
@@ -1020,25 +1006,20 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
         break;
       }
 
-      int digit;
-      if (b >= '0' && b <= '9') {
-        digit = b - '0';
-      } else {
-        return false;
-      }
-
+      int digit = getDigit(b);
       // We are going to process the new digit and accumulate the result. However, before doing
       // this, if the result is already smaller than the stopValue(Long.MIN_VALUE / radix), then
-      // result * 10 will definitely be smaller than minValue, and we can stop.
+      // result * 10 will definitely be smaller than minValue, and we can stop and throw exception.
       if (result < stopValue) {
-        return false;
+        throw new NumberFormatException(toString());
       }
 
       result = result * radix - digit;
       // Since the previous result is less than or equal to stopValue(Long.MIN_VALUE / radix), we
-      // can just use `result > 0` to check overflow. If result overflows, we should stop.
+      // can just use `result > 0` to check overflow. If result overflows, we should stop and throw
+      // exception.
       if (result > 0) {
-        return false;
+        throw new NumberFormatException(toString());
       }
     }
 
@@ -1046,9 +1027,8 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     // part will not change the number, but we will verify that the fractional part
     // is well formed.
     while (offset < numBytes) {
-      byte currentByte = getByte(offset);
-      if (currentByte < '0' || currentByte > '9') {
-        return false;
+      if (getDigit(getByte(offset)) == -1) {
+        throw new NumberFormatException(toString());
       }
       offset++;
     }
@@ -1056,12 +1036,11 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     if (!negative) {
       result = -result;
       if (result < 0) {
-        return false;
+        throw new NumberFormatException(toString());
       }
     }
 
-    toLongResult.value = result;
-    return true;
+    return result;
   }
 
   /**
@@ -1076,14 +1055,10 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
    *
    * Note that, this method is almost same as `toLong`, but we leave it duplicated for performance
    * reasons, like Hive does.
-   *
-   * @param intWrapper If a valid `int` was parsed from this UTF8String, then its value would
-   *                    be set in `intWrapper`
-   * @return true if the parsing was successful else false
    */
-  public boolean toInt(IntWrapper intWrapper) {
+  public int toInt() {
     if (numBytes == 0) {
-      return false;
+      throw new NumberFormatException("Empty string");
     }
 
     byte b = getByte(0);
@@ -1092,7 +1067,7 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     if (negative || b == '+') {
       offset++;
       if (numBytes == 1) {
-        return false;
+        throw new NumberFormatException(toString());
       }
     }
 
@@ -1111,25 +1086,20 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
         break;
       }
 
-      int digit;
-      if (b >= '0' && b <= '9') {
-        digit = b - '0';
-      } else {
-        return false;
-      }
-
+      int digit = getDigit(b);
       // We are going to process the new digit and accumulate the result. However, before doing
       // this, if the result is already smaller than the stopValue(Integer.MIN_VALUE / radix), then
-      // result * 10 will definitely be smaller than minValue, and we can stop
+      // result * 10 will definitely be smaller than minValue, and we can stop and throw exception.
       if (result < stopValue) {
-        return false;
+        throw new NumberFormatException(toString());
       }
 
       result = result * radix - digit;
       // Since the previous result is less than or equal to stopValue(Integer.MIN_VALUE / radix),
-      // we can just use `result > 0` to check overflow. If result overflows, we should stop
+      // we can just use `result > 0` to check overflow. If result overflows, we should stop and
+      // throw exception.
       if (result > 0) {
-        return false;
+        throw new NumberFormatException(toString());
       }
     }
 
@@ -1137,9 +1107,8 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     // part will not change the number, but we will verify that the fractional part
     // is well formed.
     while (offset < numBytes) {
-      byte currentByte = getByte(offset);
-      if (currentByte < '0' || currentByte > '9') {
-        return false;
+      if (getDigit(getByte(offset)) == -1) {
+        throw new NumberFormatException(toString());
       }
       offset++;
     }
@@ -1147,33 +1116,31 @@ public final class UTF8String implements Comparable<UTF8String>, Externalizable,
     if (!negative) {
       result = -result;
       if (result < 0) {
-        return false;
+        throw new NumberFormatException(toString());
       }
     }
-    intWrapper.value = result;
-    return true;
+
+    return result;
   }
 
-  public boolean toShort(IntWrapper intWrapper) {
-    if (toInt(intWrapper)) {
-      int intValue = intWrapper.value;
-      short result = (short) intValue;
-      if (result == intValue) {
-        return true;
-      }
+  public short toShort() {
+    int intValue = toInt();
+    short result = (short) intValue;
+    if (result != intValue) {
+      throw new NumberFormatException(toString());
     }
-    return false;
+
+    return result;
   }
 
-  public boolean toByte(IntWrapper intWrapper) {
-    if (toInt(intWrapper)) {
-      int intValue = intWrapper.value;
-      byte result = (byte) intValue;
-      if (result == intValue) {
-        return true;
-      }
+  public byte toByte() {
+    int intValue = toInt();
+    byte result = (byte) intValue;
+    if (result != intValue) {
+      throw new NumberFormatException(toString());
     }
-    return false;
+
+    return result;
   }
 
   @Override

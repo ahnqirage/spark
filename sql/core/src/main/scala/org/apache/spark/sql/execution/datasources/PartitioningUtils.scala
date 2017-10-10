@@ -46,17 +46,20 @@ object PartitionPath {
  * Holds a directory in a partitioned collection of files as well as the partition values
  * in the form of a Row.  Before scanning, the files at `path` need to be enumerated.
  */
-case class PartitionPath(values: InternalRow, path: Path)
+case class PartitionDirectory(values: InternalRow, path: Path)
 
 case class PartitionSpec(
     partitionColumns: StructType,
     partitions: Seq[PartitionPath])
 
 object PartitionSpec {
-  val emptySpec = PartitionSpec(StructType(Seq.empty[StructField]), Seq.empty[PartitionPath])
+  val emptySpec = PartitionSpec(StructType(Seq.empty[StructField]), Seq.empty[PartitionDirectory])
 }
 
 object PartitioningUtils {
+  // This duplicates default value of Hive `ConfVars.DEFAULTPARTITIONNAME`, since sql/core doesn't
+  // depend on Hive.
+  val DEFAULT_PARTITION_NAME = "__HIVE_DEFAULT_PARTITION__"
 
   private[datasources] case class PartitionValues(columnNames: Seq[String], literals: Seq[Literal])
   {
@@ -318,8 +321,7 @@ object PartitioningUtils {
    * }}}
    */
   def resolvePartitions(
-      pathsWithPartitionValues: Seq[(Path, PartitionValues)],
-      timeZone: TimeZone): Seq[PartitionValues] = {
+      pathsWithPartitionValues: Seq[(Path, PartitionValues)]): Seq[PartitionValues] = {
     if (pathsWithPartitionValues.isEmpty) {
       Seq.empty
     } else {

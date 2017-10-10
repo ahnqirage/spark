@@ -61,7 +61,4 @@ if __name__ == "__main__":
     # Generate top 10 user recommendations for each movie
     movieRecs = model.recommendForAllItems(10)
     # $example off$
-    userRecs.show()
-    movieRecs.show()
-
     spark.stop()

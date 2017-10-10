@@ -20,7 +20,7 @@ package org.apache.spark.sql.types
 import org.json4s.JsonAST.JValue
 import org.json4s.JsonDSL._
 
-import org.apache.spark.annotation.InterfaceStability
+import org.apache.spark.annotation.DeveloperApi
 
 /**
  * The data type for Maps. Keys in a map are not allowed to have `null` values.
@@ -31,7 +31,7 @@ import org.apache.spark.annotation.InterfaceStability
  * @param valueType The data type of map values.
  * @param valueContainsNull Indicates if map values have `null` values.
  */
-@InterfaceStability.Stable
+@DeveloperApi
 case class MapType(
   keyType: DataType,
   valueType: DataType,

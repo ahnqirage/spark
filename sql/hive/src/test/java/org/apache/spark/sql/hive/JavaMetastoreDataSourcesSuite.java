@@ -80,8 +80,8 @@ public class JavaMetastoreDataSourcesSuite {
     for (int i = 0; i < 10; i++) {
       jsonObjects.add("{\"a\":" + i + ", \"b\":\"str" + i + "\"}");
     }
-    Dataset<String> ds = sqlContext.createDataset(jsonObjects, Encoders.STRING());
-    df = sqlContext.read().json(ds);
+    JavaRDD<String> rdd = sc.parallelize(jsonObjects);
+    df = sqlContext.read().json(rdd);
     df.createOrReplaceTempView("jsonTable");
   }
 

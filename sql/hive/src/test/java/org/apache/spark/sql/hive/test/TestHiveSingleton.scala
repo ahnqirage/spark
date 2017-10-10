@@ -19,10 +19,8 @@ package org.apache.spark.sql.hive.test
 
 import org.scalatest.BeforeAndAfterAll
 
-import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.hive.HiveExternalCatalog
-import org.apache.spark.sql.hive.client.HiveClient
+import org.apache.spark.SparkFunSuite
 
 
 trait TestHiveSingleton extends SparkFunSuite with BeforeAndAfterAll {

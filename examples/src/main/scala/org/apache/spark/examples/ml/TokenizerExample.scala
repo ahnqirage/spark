@@ -23,6 +23,7 @@ import org.apache.spark.ml.feature.{RegexTokenizer, Tokenizer}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 // $example off$
+import org.apache.spark.sql.SparkSession
 
 object TokenizerExample {
   def main(args: Array[String]): Unit = {

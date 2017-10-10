@@ -24,6 +24,7 @@ import java.util.Locale
 import scala.tools.nsc.GenericRunnerSettings
 
 import org.apache.spark._
+import org.apache.spark.internal.config.CATALOG_IMPLEMENTATION
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
@@ -59,10 +60,7 @@ object Main extends Logging {
   // Visible for testing
   private[repl] def doMain(args: Array[String], _interp: SparkILoop): Unit = {
     interp = _interp
-    val jars = Utils.getLocalUserJarsForShell(conf)
-      // Remove file:///, file:// or file:/ scheme if exists for each jar
-      .map { x => if (x.startsWith("file:")) new File(new URI(x)).getPath else x }
-      .mkString(File.pathSeparator)
+    val jars = Utils.getUserJars(conf, isShell = true).mkString(File.pathSeparator)
     val interpArguments = List(
       "-Yrepl-class-based",
       "-Yrepl-outdir", s"${outputDir.getAbsolutePath}",
@@ -95,7 +93,7 @@ object Main extends Logging {
     }
 
     val builder = SparkSession.builder.config(conf)
-    if (conf.get(CATALOG_IMPLEMENTATION.key, "hive").toLowerCase(Locale.ROOT) == "hive") {
+    if (conf.get(CATALOG_IMPLEMENTATION.key, "hive").toLowerCase == "hive") {
       if (SparkSession.hiveClassesArePresent) {
         // In the case that the property is not set at all, builder's config
         // does not have this value set to 'hive' yet. The original default

@@ -41,8 +41,7 @@ import org.apache.spark.deploy.SparkSubmit._
 import org.apache.spark.deploy.SparkSubmitUtils.MavenCoordinate
 import org.apache.spark.internal.Logging
 import org.apache.spark.TestUtils.JavaSourceFromString
-import org.apache.spark.scheduler.EventLoggingListener
-import org.apache.spark.util.{CommandLineUtils, ResetSystemProperties, Utils}
+import org.apache.spark.util.{ResetSystemProperties, Utils}
 
 trait TestPrematureExit {
   suite: SparkFunSuite =>
@@ -542,14 +541,14 @@ class SparkSubmitSuite
     // Check if the SparkR package is installed
     assume(RUtils.isSparkRInstalled, "SparkR is not installed in this build.")
     val rScriptDir =
-      Seq(sparkHome, "R", "pkg", "tests", "fulltests", "jarTest.R").mkString(File.separator)
+      Seq(sparkHome, "R", "pkg", "inst", "tests", "testthat", "jarTest.R").mkString(File.separator)
     assert(new File(rScriptDir).exists)
 
     // compile a small jar containing a class that will be called from R code.
     val tempDir = Utils.createTempDir()
     val srcDir = new File(tempDir, "sparkrtest")
     srcDir.mkdirs()
-    val excSource = new JavaSourceFromString(new File(srcDir, "DummyClass").toURI.getPath,
+    val excSource = new JavaSourceFromString(new File(srcDir, "DummyClass").getAbsolutePath,
       """package sparkrtest;
         |
         |public class DummyClass implements java.io.Serializable {
@@ -741,47 +740,6 @@ class SparkSubmitSuite
     Utils.unionFileLists(None, Option("/tmp/a.jar")) should be (Set("/tmp/a.jar"))
     Utils.unionFileLists(Option("/tmp/a.jar"), None) should be (Set("/tmp/a.jar"))
   }
-
-  test("support glob path") {
-    val tmpJarDir = Utils.createTempDir()
-    val jar1 = TestUtils.createJarWithFiles(Map("test.resource" -> "1"), tmpJarDir)
-    val jar2 = TestUtils.createJarWithFiles(Map("test.resource" -> "USER"), tmpJarDir)
-
-    val tmpFileDir = Utils.createTempDir()
-    val file1 = File.createTempFile("tmpFile1", "", tmpFileDir)
-    val file2 = File.createTempFile("tmpFile2", "", tmpFileDir)
-
-    val tmpPyFileDir = Utils.createTempDir()
-    val pyFile1 = File.createTempFile("tmpPy1", ".py", tmpPyFileDir)
-    val pyFile2 = File.createTempFile("tmpPy2", ".egg", tmpPyFileDir)
-
-    val tmpArchiveDir = Utils.createTempDir()
-    val archive1 = File.createTempFile("archive1", ".zip", tmpArchiveDir)
-    val archive2 = File.createTempFile("archive2", ".zip", tmpArchiveDir)
-
-    val args = Seq(
-      "--class", UserClasspathFirstTest.getClass.getName.stripPrefix("$"),
-      "--name", "testApp",
-      "--master", "yarn",
-      "--deploy-mode", "client",
-      "--jars", s"${tmpJarDir.getAbsolutePath}/*.jar",
-      "--files", s"${tmpFileDir.getAbsolutePath}/tmpFile*",
-      "--py-files", s"${tmpPyFileDir.getAbsolutePath}/tmpPy*",
-      "--archives", s"${tmpArchiveDir.getAbsolutePath}/*.zip",
-      jar2.toString)
-
-    val appArgs = new SparkSubmitArguments(args)
-    val sysProps = SparkSubmit.prepareSubmitEnvironment(appArgs)._3
-    sysProps("spark.yarn.dist.jars").split(",").toSet should be
-      (Set(jar1.toURI.toString, jar2.toURI.toString))
-    sysProps("spark.yarn.dist.files").split(",").toSet should be
-      (Set(file1.toURI.toString, file2.toURI.toString))
-    sysProps("spark.yarn.dist.pyFiles").split(",").toSet should be
-      (Set(pyFile1.getAbsolutePath, pyFile2.getAbsolutePath))
-    sysProps("spark.yarn.dist.archives").split(",").toSet should be
-      (Set(archive1.toURI.toString, archive2.toURI.toString))
-  }
-
   // scalastyle:on println
 
   private def checkDownloadedFile(sourcePath: String, outputPath: String): Unit = {

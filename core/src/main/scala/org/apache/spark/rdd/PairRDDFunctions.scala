@@ -35,6 +35,8 @@ import org.apache.hadoop.mapreduce.{Job => NewAPIHadoopJob, OutputFormat => NewO
 import org.apache.spark._
 import org.apache.spark.Partitioner.defaultPartitioner
 import org.apache.spark.annotation.Experimental
+import org.apache.spark.deploy.SparkHadoopUtil
+import org.apache.spark.executor.OutputMetrics
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.io._
 import org.apache.spark.partial.{BoundedDouble, PartialResult}
@@ -1079,10 +1081,80 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * result of using direct output committer with speculation enabled.
    */
   def saveAsNewAPIHadoopDataset(conf: Configuration): Unit = self.withScope {
-    val config = new HadoopMapReduceWriteConfigUtil[K, V](new SerializableConfiguration(conf))
-    SparkHadoopWriter.write(
-      rdd = self,
-      config = config)
+    // Rename this as hadoopConf internally to avoid shadowing (see SPARK-2038).
+    val hadoopConf = conf
+    val job = NewAPIHadoopJob.getInstance(hadoopConf)
+    val formatter = new SimpleDateFormat("yyyyMMddHHmm")
+    val jobtrackerID = formatter.format(new Date())
+    val stageId = self.id
+    val jobConfiguration = job.getConfiguration
+    val wrappedConf = new SerializableConfiguration(jobConfiguration)
+    val outfmt = job.getOutputFormatClass
+    val jobFormat = outfmt.newInstance
+
+    if (isOutputSpecValidationEnabled) {
+      // FileOutputFormat ignores the filesystem parameter
+      jobFormat.checkOutputSpecs(job)
+    }
+
+    val writeShard = (context: TaskContext, iter: Iterator[(K, V)]) => {
+      val config = wrappedConf.value
+      /* "reduce task" <split #> <attempt # = spark task #> */
+      val attemptId = new TaskAttemptID(jobtrackerID, stageId, TaskType.REDUCE, context.partitionId,
+        context.attemptNumber)
+      val hadoopContext = new TaskAttemptContextImpl(config, attemptId)
+      val format = outfmt.newInstance
+      format match {
+        case c: Configurable => c.setConf(config)
+        case _ => ()
+      }
+      val committer = format.getOutputCommitter(hadoopContext)
+      committer.setupTask(hadoopContext)
+
+      val outputMetricsAndBytesWrittenCallback: Option[(OutputMetrics, () => Long)] =
+        initHadoopOutputMetrics(context)
+
+      val writer = format.getRecordWriter(hadoopContext).asInstanceOf[NewRecordWriter[K, V]]
+      require(writer != null, "Unable to obtain RecordWriter")
+      var recordsWritten = 0L
+      Utils.tryWithSafeFinallyAndFailureCallbacks {
+        while (iter.hasNext) {
+          val pair = iter.next()
+          writer.write(pair._1, pair._2)
+
+          // Update bytes written metric every few records
+          maybeUpdateOutputMetrics(outputMetricsAndBytesWrittenCallback, recordsWritten)
+          recordsWritten += 1
+        }
+      }(finallyBlock = writer.close(hadoopContext))
+      committer.commitTask(hadoopContext)
+      outputMetricsAndBytesWrittenCallback.foreach { case (om, callback) =>
+        om.setBytesWritten(callback())
+        om.setRecordsWritten(recordsWritten)
+      }
+      1
+    } : Int
+
+    val jobAttemptId = new TaskAttemptID(jobtrackerID, stageId, TaskType.MAP, 0, 0)
+    val jobTaskContext = new TaskAttemptContextImpl(wrappedConf.value, jobAttemptId)
+    val jobCommitter = jobFormat.getOutputCommitter(jobTaskContext)
+
+    // When speculation is on and output committer class name contains "Direct", we should warn
+    // users that they may loss data if they are using a direct output committer.
+    val speculationEnabled = self.conf.getBoolean("spark.speculation", false)
+    val outputCommitterClass = jobCommitter.getClass.getSimpleName
+    if (speculationEnabled && outputCommitterClass.contains("Direct")) {
+      val warningMessage =
+        s"$outputCommitterClass may be an output committer that writes data directly to " +
+          "the final location. Because speculation is enabled, this output committer may " +
+          "cause data loss (see the case in SPARK-10063). If possible, please use an output " +
+          "committer that does not have this behavior (e.g. FileOutputCommitter)."
+      logWarning(warningMessage)
+    }
+
+    jobCommitter.setupJob(jobTaskContext)
+    self.context.runJob(self, writeShard)
+    jobCommitter.commitJob(jobTaskContext)
   }
 
   /**

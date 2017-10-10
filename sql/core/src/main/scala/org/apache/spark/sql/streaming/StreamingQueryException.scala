@@ -20,17 +20,19 @@ package org.apache.spark.sql.streaming
 import org.apache.spark.annotation.InterfaceStability
 
 /**
+ * :: Experimental ::
  * Exception that stopped a [[StreamingQuery]]. Use `cause` get the actual exception
  * that caused the failure.
+ * @param query      Query that caused the exception
  * @param message     Message of this exception
  * @param cause       Internal cause of this exception
  * @param startOffset Starting offset in json of the range of data in which exception occurred
  * @param endOffset   Ending offset in json of the range of data in exception occurred
  * @since 2.0.0
  */
-@InterfaceStability.Evolving
+@Experimental
 class StreamingQueryException private[sql](
-    private val queryDebugString: String,
+    @transient val query: StreamingQuery,
     val message: String,
     val cause: Throwable,
     val startOffset: String,

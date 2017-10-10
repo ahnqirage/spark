@@ -131,7 +131,8 @@ public class SaslIntegrationSuite {
 
   @Test
   public void testNoSaslClient() throws IOException, InterruptedException {
-    clientFactory = context.createClientFactory(new ArrayList<>());
+    clientFactory = context.createClientFactory(
+      Lists.<TransportClientBootstrap>newArrayList());
 
     TransportClient client = clientFactory.createClient(TestUtils.getLocalHost(), server.getPort());
     try {

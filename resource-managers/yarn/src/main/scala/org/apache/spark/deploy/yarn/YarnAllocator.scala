@@ -25,6 +25,7 @@ import java.util.regex.Pattern
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet, Queue}
+import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
 import org.apache.hadoop.yarn.api.records._
@@ -497,12 +498,10 @@ private[yarn] class YarnAllocator(
       val containerId = container.getId
       val executorId = executorIdCounter.toString
       assert(container.getResource.getMemory >= resource.getMemory)
-      logInfo(s"Launching container $containerId on host $executorHostname " +
-        s"for executor with ID $executorId")
+      logInfo("Launching container %s for on host %s".format(containerId, executorHostname))
 
       def updateInternalState(): Unit = synchronized {
-        numExecutorsRunning.incrementAndGet()
-        numExecutorsStarting.decrementAndGet()
+        numExecutorsRunning += 1
         executorIdToContainer(executorId) = container
         containerIdToExecutorId(container.getId) = executorId
 
@@ -512,14 +511,16 @@ private[yarn] class YarnAllocator(
         allocatedContainerToHostMap.put(containerId, executorHostname)
       }
 
-      if (numExecutorsRunning.get < targetNumExecutors) {
-        numExecutorsStarting.incrementAndGet()
+      if (numExecutorsRunning < targetNumExecutors) {
         if (launchContainers) {
+          logInfo("Launching ExecutorRunnable. driverUrl: %s,  executorHostname: %s".format(
+            driverUrl, executorHostname))
+
           launcherPool.execute(new Runnable {
             override def run(): Unit = {
               try {
                 new ExecutorRunnable(
-                  Some(container),
+                  container,
                   conf,
                   sparkConf,
                   driverUrl,
@@ -533,16 +534,11 @@ private[yarn] class YarnAllocator(
                 ).run()
                 updateInternalState()
               } catch {
-                case e: Throwable =>
-                  numExecutorsStarting.decrementAndGet()
-                  if (NonFatal(e)) {
-                    logError(s"Failed to launch executor $executorId on container $containerId", e)
-                    // Assigned container should be released immediately
-                    // to avoid unnecessary resource occupation.
-                    amClient.releaseAssignedContainer(containerId)
-                  } else {
-                    throw e
-                  }
+                case NonFatal(e) =>
+                  logError(s"Failed to launch executor $executorId on container $containerId", e)
+                  // Assigned container should be released immediately to avoid unnecessary resource
+                  // occupation.
+                  amClient.releaseAssignedContainer(containerId)
               }
             }
           })
@@ -552,8 +548,7 @@ private[yarn] class YarnAllocator(
         }
       } else {
         logInfo(("Skip launching executorRunnable as runnning Excecutors count: %d " +
-          "reached target Executors count: %d.").format(
-          numExecutorsRunning.get, targetNumExecutors))
+          "reached target Executors count: %d.").format(numExecutorsRunning, targetNumExecutors))
       }
     }
   }

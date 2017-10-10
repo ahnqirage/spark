@@ -20,6 +20,7 @@ package org.apache.spark.sql.catalyst.trees
 import java.util.UUID
 
 import scala.collection.Map
+import scala.collection.mutable.Stack
 import scala.reflect.ClassTag
 
 import org.apache.commons.lang3.ClassUtils
@@ -103,10 +104,9 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
    * Find the first [[TreeNode]] that satisfies the condition specified by `f`.
    * The condition is recursively applied to this node and all of its children (pre-order).
    */
-  def find(f: BaseType => Boolean): Option[BaseType] = if (f(this)) {
-    Some(this)
-  } else {
-    children.foldLeft(Option.empty[BaseType]) { (l, r) => l.orElse(r.find(f)) }
+  def find(f: BaseType => Boolean): Option[BaseType] = f(this) match {
+    case true => Some(this)
+    case false => children.foldLeft(Option.empty[BaseType]) { (l, r) => l.orElse(r.find(f)) }
   }
 
   /**
@@ -188,6 +188,26 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
       i += 1
     }
     arr
+  }
+
+  /**
+   * Returns a copy of this node where `f` has been applied to all the nodes children.
+   */
+  def mapChildren(f: BaseType => BaseType): BaseType = {
+    var changed = false
+    val newArgs = mapProductIterator {
+      case arg: TreeNode[_] if containsChild(arg) =>
+        val newChild = f(arg.asInstanceOf[BaseType])
+        if (newChild fastEquals arg) {
+          arg
+        } else {
+          changed = true
+          newChild
+        }
+      case nonChild: AnyRef => nonChild
+      case null => null
+    }
+    if (changed) makeCopy(newArgs) else this
   }
 
   /**
@@ -298,10 +318,28 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   /**
    * Returns a copy of this node where `f` has been applied to all the nodes children.
    */
-  def mapChildren(f: BaseType => BaseType): BaseType = {
-    if (children.nonEmpty) {
-      var changed = false
-      val newArgs = mapProductIterator {
+  protected def transformChildren(
+      rule: PartialFunction[BaseType, BaseType],
+      nextOperation: (BaseType, PartialFunction[BaseType, BaseType]) => BaseType): BaseType = {
+    var changed = false
+    val newArgs = mapProductIterator {
+      case arg: TreeNode[_] if containsChild(arg) =>
+        val newChild = nextOperation(arg.asInstanceOf[BaseType], rule)
+        if (!(newChild fastEquals arg)) {
+          changed = true
+          newChild
+        } else {
+          arg
+        }
+      case Some(arg: TreeNode[_]) if containsChild(arg) =>
+        val newChild = nextOperation(arg.asInstanceOf[BaseType], rule)
+        if (!(newChild fastEquals arg)) {
+          changed = true
+          Some(newChild)
+        } else {
+          Some(arg)
+        }
+      case m: Map[_, _] => m.mapValues {
         case arg: TreeNode[_] if containsChild(arg) =>
           val newChild = f(arg.asInstanceOf[BaseType])
           if (!(newChild fastEquals arg)) {
@@ -363,10 +401,10 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
         case nonChild: AnyRef => nonChild
         case null => null
       }
-      if (changed) makeCopy(newArgs) else this
-    } else {
-      this
+      case nonChild: AnyRef => nonChild
+      case null => null
     }
+    if (changed) makeCopy(newArgs) else this
   }
 
   /**
@@ -454,11 +492,6 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     case None => Nil
     case Some(null) => Nil
     case Some(any) => any :: Nil
-    case table: CatalogTable =>
-      table.storage.serde match {
-        case Some(serde) => table.identifier :: serde :: Nil
-        case _ => table.identifier :: Nil
-      }
     case other => other :: Nil
   }.mkString(", ")
 
@@ -468,16 +501,13 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   /** ONE line description of this node with more information */
   def verboseString: String
 
-  /** ONE line description of this node with some suffix information */
-  def verboseStringWithSuffix: String = verboseString
-
   override def toString: String = treeString
 
   /** Returns a string representation of the nodes in this tree */
   def treeString: String = treeString(verbose = true)
 
-  def treeString(verbose: Boolean, addSuffix: Boolean = false): String = {
-    generateTreeString(0, Nil, new StringBuilder, verbose = verbose, addSuffix = addSuffix).toString
+  def treeString(verbose: Boolean): String = {
+    generateTreeString(0, Nil, new StringBuilder, verbose).toString
   }
 
   /**
@@ -542,8 +572,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
       lastChildren: Seq[Boolean],
       builder: StringBuilder,
       verbose: Boolean,
-      prefix: String = "",
-      addSuffix: Boolean = false): StringBuilder = {
+      prefix: String = ""): StringBuilder = {
 
     if (depth > 0) {
       lastChildren.init.foreach { isLast =>
@@ -552,29 +581,22 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
       builder.append(if (lastChildren.last) "+- " else ":- ")
     }
 
-    val str = if (verbose) {
-      if (addSuffix) verboseStringWithSuffix else verboseString
-    } else {
-      simpleString
-    }
     builder.append(prefix)
-    builder.append(str)
+    builder.append(if (verbose) verboseString else simpleString)
     builder.append("\n")
 
     if (innerChildren.nonEmpty) {
       innerChildren.init.foreach(_.generateTreeString(
-        depth + 2, lastChildren :+ children.isEmpty :+ false, builder, verbose,
-        addSuffix = addSuffix))
+        depth + 2, lastChildren :+ false :+ false, builder, verbose))
       innerChildren.last.generateTreeString(
-        depth + 2, lastChildren :+ children.isEmpty :+ true, builder, verbose,
-        addSuffix = addSuffix)
+        depth + 2, lastChildren :+ false :+ true, builder, verbose)
     }
 
     if (children.nonEmpty) {
       children.init.foreach(_.generateTreeString(
-        depth + 1, lastChildren :+ false, builder, verbose, prefix, addSuffix))
+        depth + 1, lastChildren :+ false, builder, verbose, prefix))
       children.last.generateTreeString(
-        depth + 1, lastChildren :+ true, builder, verbose, prefix, addSuffix)
+        depth + 1, lastChildren :+ true, builder, verbose, prefix)
     }
 
     builder
@@ -648,7 +670,6 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     // SPARK-17356: In usage of mllib, Metadata may store a huge vector of data, transforming
     // it to JSON may trigger OutOfMemoryError.
     case m: Metadata => Metadata.empty.jsonValue
-    case clazz: Class[_] => JString(clazz.getName)
     case s: StorageLevel =>
       ("useDisk" -> s.useDisk) ~ ("useMemory" -> s.useMemory) ~ ("useOffHeap" -> s.useOffHeap) ~
         ("deserialized" -> s.deserialized) ~ ("replication" -> s.replication)

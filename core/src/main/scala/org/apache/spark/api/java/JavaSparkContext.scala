@@ -821,8 +821,7 @@ class JavaSparkContext(val sc: SparkContext)
 
   /**
    * Returns a Java map of JavaRDDs that have marked themselves as persistent via cache() call.
-   *
-   * @note This does not necessarily mean the caching or computation was successful.
+   * Note that this does not necessarily mean the caching or computation was successful.
    */
   def getPersistentRDDs: JMap[java.lang.Integer, JavaRDD[_]] = {
     sc.getPersistentRDDs.mapValues(s => JavaRDD.fromRDD(s))

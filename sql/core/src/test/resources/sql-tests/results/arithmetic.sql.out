@@ -29,7 +29,7 @@ struct<-5.2:decimal(2,1)>
 -- !query 3
 select +6.8e0
 -- !query 3 schema
-struct<6.8:decimal(2,1)>
+struct<6.8:double>
 -- !query 3 output
 6.8
 
@@ -281,7 +281,7 @@ struct<CEIL(CAST(1 AS DOUBLE)):bigint>
 -- !query 34
 select ceil(1234567890123456)
 -- !query 34 schema
-struct<CEIL(1234567890123456):bigint>
+struct<CEIL(CAST(1234567890123456 AS DOUBLE)):bigint>
 -- !query 34 output
 1234567890123456
 
@@ -289,7 +289,7 @@ struct<CEIL(1234567890123456):bigint>
 -- !query 35
 select ceiling(1234567890123456)
 -- !query 35 schema
-struct<CEIL(1234567890123456):bigint>
+struct<CEIL(CAST(1234567890123456 AS DOUBLE)):bigint>
 -- !query 35 output
 1234567890123456
 
@@ -329,7 +329,7 @@ struct<FLOOR(CAST(1 AS DOUBLE)):bigint>
 -- !query 40
 select floor(1234567890123456)
 -- !query 40 schema
-struct<FLOOR(1234567890123456):bigint>
+struct<FLOOR(CAST(1234567890123456 AS DOUBLE)):bigint>
 -- !query 40 output
 1234567890123456
 

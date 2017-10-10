@@ -29,9 +29,9 @@ setOldClass("jobj")
 #' @param col1 name of the first column. Distinct items will make the first item of each row.
 #' @param col2 name of the second column. Distinct items will make the column names of the output.
 #' @return a local R data.frame representing the contingency table. The first column of each row
-#'         will be the distinct values of \code{col1} and the column names will be the distinct
-#'         values of \code{col2}. The name of the first column will be "\code{col1}_\code{col2}".
-#'         Pairs that have no occurrences will have zero as their counts.
+#'         will be the distinct values of \code{col1} and the column names will be the distinct values
+#'         of \code{col2}. The name of the first column will be "\code{col1}_\code{col2}". Pairs
+#'         that have no occurrences will have zero as their counts.
 #'
 #' @rdname crosstab
 #' @name crosstab
@@ -52,23 +52,22 @@ setMethod("crosstab",
             collect(dataFrame(sct))
           })
 
-#' @details
-#' \code{cov}: When applied to SparkDataFrame, this calculates the sample covariance of two
-#' numerical columns of \emph{one} SparkDataFrame.
+#' Calculate the sample covariance of two numerical columns of a SparkDataFrame.
 #'
 #' @param colName1 the name of the first column
 #' @param colName2 the name of the second column
 #' @return The covariance of the two columns.
 #'
 #' @rdname cov
+#' @name cov
 #' @aliases cov,SparkDataFrame-method
 #' @family stat functions
 #' @export
 #' @examples
-#'
-#' \dontrun{
-#' cov(df, "mpg", "hp")
-#' cov(df, df$mpg, df$hp)}
+#'\dontrun{
+#' df <- read.json("/path/to/file.json")
+#' cov <- cov(df, "title", "gender")
+#' }
 #' @note cov since 1.6.0
 setMethod("cov",
           signature(x = "SparkDataFrame"),
@@ -94,10 +93,11 @@ setMethod("cov",
 #' @family stat functions
 #' @export
 #' @examples
-#'
-#' \dontrun{
-#' corr(df, "mpg", "hp")
-#' corr(df, "mpg", "hp", method = "pearson")}
+#'\dontrun{
+#' df <- read.json("/path/to/file.json")
+#' corr <- corr(df, "title", "gender")
+#' corr <- corr(df, "title", "gender", method = "pearson")
+#' }
 #' @note corr since 1.6.0
 setMethod("corr",
           signature(x = "SparkDataFrame"),
@@ -138,9 +138,9 @@ setMethod("freqItems", signature(x = "SparkDataFrame", cols = "character"),
             collect(dataFrame(sct))
           })
 
-#' Calculates the approximate quantiles of numerical columns of a SparkDataFrame
+#' Calculates the approximate quantiles of a numerical column of a SparkDataFrame
 #'
-#' Calculates the approximate quantiles of numerical columns of a SparkDataFrame.
+#' Calculates the approximate quantiles of a numerical column of a SparkDataFrame.
 #' The result of this algorithm has the following deterministic bound:
 #' If the SparkDataFrame has N elements and if we request the quantile at probability p up to
 #' error err, then the algorithm will return a sample x from the SparkDataFrame so that the

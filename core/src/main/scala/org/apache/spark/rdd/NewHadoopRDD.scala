@@ -147,6 +147,12 @@ class NewHadoopRDD[K, V](
           InputFileBlockHolder.unset()
       }
 
+      // Sets the thread local variable for the file's name
+      split.serializableHadoopSplit.value match {
+        case fs: FileSplit => InputFileNameHolder.setInputFileName(fs.getPath.toString)
+        case _ => InputFileNameHolder.unsetInputFileName()
+      }
+
       // Find a function that will return the FileSystem bytes read by this thread. Do this before
       // creating RecordReader, because RecordReader's constructor might read some bytes
       private val getBytesReadCallback: Option[() => Long] =
@@ -239,7 +245,11 @@ class NewHadoopRDD[K, V](
 
       private def close(): Unit = {
         if (reader != null) {
-          InputFileBlockHolder.unset()
+          InputFileNameHolder.unsetInputFileName()
+          // Close the reader and release it. Note: it's very important that we don't close the
+          // reader more than once, since that exposes us to MAPREDUCE-5918 when running against
+          // Hadoop 1.x and older Hadoop 2.x releases. That bug can lead to non-deterministic
+          // corruption issues when reading compressed input.
           try {
             reader.close()
           } catch {
@@ -279,7 +289,18 @@ class NewHadoopRDD[K, V](
 
   override def getPreferredLocations(hsplit: Partition): Seq[String] = {
     val split = hsplit.asInstanceOf[NewHadoopPartition].serializableHadoopSplit.value
-    val locs = HadoopRDD.convertSplitLocationInfo(split.getLocationInfo)
+    val locs = HadoopRDD.SPLIT_INFO_REFLECTIONS match {
+      case Some(c) =>
+        try {
+          val infos = c.newGetLocationInfo.invoke(split).asInstanceOf[Array[AnyRef]]
+          HadoopRDD.convertSplitLocationInfo(infos)
+        } catch {
+          case e : Exception =>
+            logDebug("Failed to use InputSplit#getLocationInfo.", e)
+            None
+        }
+      case None => None
+    }
     locs.getOrElse(split.getLocations.filter(_ != "localhost"))
   }
 

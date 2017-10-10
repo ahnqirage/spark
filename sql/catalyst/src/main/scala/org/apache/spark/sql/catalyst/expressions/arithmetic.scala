@@ -232,16 +232,10 @@ case class Multiply(left: Expression, right: Expression) extends BinaryArithmeti
 
 // scalastyle:off line.size.limit
 @ExpressionDescription(
-  usage = "expr1 _FUNC_ expr2 - Returns `expr1`/`expr2`. It always performs floating point division.",
-  examples = """
-    Examples:
-      > SELECT 3 _FUNC_ 2;
-       1.5
-      > SELECT 2L _FUNC_ 2L;
-       1.0
-  """)
-// scalastyle:on line.size.limit
-case class Divide(left: Expression, right: Expression) extends BinaryArithmetic {
+  usage = "a _FUNC_ b - Divides a by b.",
+  extended = "> SELECT 3 _FUNC_ 2;\n 1.5")
+case class Divide(left: Expression, right: Expression)
+    extends BinaryArithmetic with NullIntolerant {
 
   override def inputType: AbstractDataType = TypeCollection(DoubleType, DecimalType)
 
@@ -489,33 +483,41 @@ case class Pmod(left: Expression, right: Expression) extends BinaryArithmetic {
         """
     }
 
-    if (!left.nullable && !right.nullable) {
-      ev.copy(code = s"""
-        ${eval2.code}
-        boolean ${ev.isNull} = false;
-        $javaType ${ev.value} = ${ctx.defaultValue(javaType)};
-        if ($isZero) {
-          ${ev.isNull} = true;
-        } else {
-          ${eval1.code}
-          $result
-        }""")
-    } else {
-      ev.copy(code = s"""
-        ${eval2.code}
-        boolean ${ev.isNull} = false;
-        $javaType ${ev.value} = ${ctx.defaultValue(javaType)};
-        if (${eval2.isNull} || $isZero) {
-          ${ev.isNull} = true;
-        } else {
-          ${eval1.code}
-          if (${eval1.isNull}) {
-            ${ev.isNull} = true;
-          } else {
-            $result
-          }
-        }""")
-    }
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    nullSafeCodeGen(ctx, ev, (eval1, eval2) => {
+      val remainder = ctx.freshName("remainder")
+      dataType match {
+        case dt: DecimalType =>
+          val decimalAdd = "$plus"
+          s"""
+            ${ctx.javaType(dataType)} $remainder = $eval1.remainder($eval2);
+            if ($remainder.compare(new org.apache.spark.sql.types.Decimal().set(0)) < 0) {
+              ${ev.value} = ($remainder.$decimalAdd($eval2)).remainder($eval2);
+            } else {
+              ${ev.value} = $remainder;
+            }
+          """
+        // byte and short are casted into int when add, minus, times or divide
+        case ByteType | ShortType =>
+          s"""
+            ${ctx.javaType(dataType)} $remainder = (${ctx.javaType(dataType)})($eval1 % $eval2);
+            if ($remainder < 0) {
+              ${ev.value} = (${ctx.javaType(dataType)})(($remainder + $eval2) % $eval2);
+            } else {
+              ${ev.value} = $remainder;
+            }
+          """
+        case _ =>
+          s"""
+            ${ctx.javaType(dataType)} $remainder = $eval1 % $eval2;
+            if ($remainder < 0) {
+              ${ev.value} = ($remainder + $eval2) % $eval2;
+            } else {
+              ${ev.value} = $remainder;
+            }
+          """
+      }
+    })
   }
 
   private def pmod(a: Int, n: Int): Int = {

@@ -24,8 +24,7 @@ import org.apache.spark.sql.catalyst.dsl.expressions._
 import org.apache.spark.sql.catalyst.dsl.plans._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Complete, Count, Max}
-import org.apache.spark.sql.catalyst.parser.CatalystSqlParser
-import org.apache.spark.sql.catalyst.plans.{Cross, LeftOuter, RightOuter}
+import org.apache.spark.sql.catalyst.plans.{Inner, LeftOuter, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, GenericArrayData, MapData}
 import org.apache.spark.sql.types._
@@ -111,7 +110,8 @@ class AnalysisErrorSuite extends AnalysisTest {
     "scalar subquery with 2 columns",
      testRelation.select(
        (ScalarSubquery(testRelation.select('a, dateLit.as('b))) + Literal(1)).as('a)),
-       "Scalar subquery must return only one column, but got 2" :: Nil)
+       "The number of columns in the subquery (2)" ::
+       "does not match the required number of columns (1)":: Nil)
 
   errorTest(
     "scalar subquery with no column",
@@ -161,16 +161,6 @@ class AnalysisErrorSuite extends AnalysisTest {
           SortOrder(UnresolvedAttribute("b"), Ascending) :: Nil,
           UnspecifiedFrame)).as('window)),
     "Distinct window functions are not supported" :: Nil)
-
-  errorTest(
-    "distinct function",
-    CatalystSqlParser.parsePlan("SELECT hex(DISTINCT a) FROM TaBlE"),
-    "hex does not support the modifier DISTINCT" :: Nil)
-
-  errorTest(
-    "distinct window function",
-    CatalystSqlParser.parsePlan("SELECT percent_rank(DISTINCT a) over () FROM TaBlE"),
-    "percent_rank does not support the modifier DISTINCT" :: Nil)
 
   errorTest(
     "nested aggregate functions",
@@ -496,16 +486,16 @@ class AnalysisErrorSuite extends AnalysisTest {
 
     val plan1 = left.join(
       right,
-      joinType = Cross,
+      joinType = Inner,
       condition = Some('a === 'c))
 
     assertAnalysisSuccess(plan1)
 
     val plan2 = left.join(
       right,
-      joinType = Cross,
+      joinType = Inner,
       condition = Some('b === 'd))
-    assertAnalysisError(plan2, "EqualTo does not support ordering on type MapType" :: Nil)
+    assertAnalysisError(plan2, "Cannot use map type in EqualTo" :: Nil)
   }
 
   test("PredicateSubQuery is used outside of a filter") {
@@ -565,18 +555,18 @@ class AnalysisErrorSuite extends AnalysisTest {
     val plan4 = Filter(
       Exists(
         Limit(1,
-          Filter(EqualTo(UnresolvedAttribute("a"), b), LocalRelation(b)))
+          Filter(EqualTo(OuterReference(a), b), LocalRelation(b)))
       ),
       LocalRelation(a))
-    assertAnalysisError(plan4, "Accessing outer query column is not allowed in" :: Nil)
+    assertAnalysisError(plan4, "Accessing outer query column is not allowed in a LIMIT" :: Nil)
 
     val plan5 = Filter(
       Exists(
         Sample(0.0, 0.5, false, 1L,
-          Filter(EqualTo(UnresolvedAttribute("a"), b), LocalRelation(b))).select('b)
+          Filter(EqualTo(OuterReference(a), b), LocalRelation(b)))().select('b)
       ),
       LocalRelation(a))
     assertAnalysisError(plan5,
-                        "Accessing outer query column is not allowed in" :: Nil)
+                        "Accessing outer query column is not allowed in a TABLESAMPLE" :: Nil)
   }
 }

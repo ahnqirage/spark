@@ -90,7 +90,8 @@ while (TRUE) {
       close(inputCon)
       Sys.setenv(SPARKR_WORKER_PORT = port)
       try(source(script))
-      # Note that this mcexit does not fully terminate this child.
+      # Set SIGUSR1 so that child can exit
+      tools::pskill(Sys.getpid(), tools::SIGUSR1)
       parallel:::mcexit(0L)
     } else {
       # Forking succeeded and we need to check if they finished their jobs every second.

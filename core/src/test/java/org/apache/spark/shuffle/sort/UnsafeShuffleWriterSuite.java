@@ -29,11 +29,14 @@ import scala.collection.Iterator;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Iterators;
+import com.google.common.io.ByteStreams;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import org.apache.spark.HashPartitioner;
 import org.apache.spark.ShuffleDependency;
@@ -49,7 +52,6 @@ import org.apache.spark.memory.TaskMemoryManager;
 import org.apache.spark.memory.TestMemoryManager;
 import org.apache.spark.network.util.LimitedInputStream;
 import org.apache.spark.scheduler.MapStatus;
-import org.apache.spark.security.CryptoStreamUtils;
 import org.apache.spark.serializer.*;
 import org.apache.spark.shuffle.IndexShuffleBlockResolver;
 import org.apache.spark.storage.*;

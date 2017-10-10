@@ -31,7 +31,7 @@ from pyspark.sql import SparkSession
 if __name__ == "__main__":
     spark = SparkSession\
         .builder\
-        .appName("GradientBoostedTreeClassifierExample")\
+        .appName("gradient_boosted_tree_classifier_example")\
         .getOrCreate()
 
     # $example on$

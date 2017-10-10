@@ -30,7 +30,6 @@ import org.scalatest.concurrent.Eventually._
 
 import org.apache.spark._
 import org.apache.spark.broadcast.BroadcastManager
-import org.apache.spark.internal.Logging
 import org.apache.spark.memory.UnifiedMemoryManager
 import org.apache.spark.network.BlockTransferService
 import org.apache.spark.network.netty.NettyBlockTransferService
@@ -46,14 +45,19 @@ trait BlockManagerReplicationBehavior extends SparkFunSuite
   with BeforeAndAfter
   with LocalSparkContext {
 
-  val conf: SparkConf
+/** Testsuite that tests block replication in BlockManager */
+class BlockManagerReplicationSuite extends SparkFunSuite
+    with Matchers
+    with BeforeAndAfter
+    with LocalSparkContext {
 
-  protected var rpcEnv: RpcEnv = null
-  protected var master: BlockManagerMaster = null
-  protected lazy val securityMgr = new SecurityManager(conf)
-  protected lazy val bcastManager = new BroadcastManager(true, conf, securityMgr)
-  protected lazy val mapOutputTracker = new MapOutputTrackerMaster(conf, bcastManager, true)
-  protected lazy val shuffleManager = new SortShuffleManager(conf)
+  private val conf = new SparkConf(false).set("spark.app.id", "test")
+  private var rpcEnv: RpcEnv = null
+  private var master: BlockManagerMaster = null
+  private val securityMgr = new SecurityManager(conf)
+  private val bcastManager = new BroadcastManager(true, conf, securityMgr)
+  private val mapOutputTracker = new MapOutputTrackerMaster(conf, bcastManager, true)
+  private val shuffleManager = new SortShuffleManager(conf)
 
   // List of block manager created during an unit test, so that all of the them can be stopped
   // after the unit test.
@@ -100,7 +104,7 @@ trait BlockManagerReplicationBehavior extends SparkFunSuite
     sc = new SparkContext("local", "test", conf)
     master = new BlockManagerMaster(rpcEnv.setupEndpoint("blockmanager",
       new BlockManagerMasterEndpoint(rpcEnv, true, conf,
-        new LiveListenerBus(conf))), conf, true)
+        new LiveListenerBus(sc))), conf, true)
     allStores.clear()
   }
 
@@ -327,8 +331,8 @@ trait BlockManagerReplicationBehavior extends SparkFunSuite
 
     storageLevels.foreach { storageLevel =>
       // Put the block into one of the stores
-      val blockId = TestBlockId(
-        "block-with-" + storageLevel.description.replace(" ", "-").toLowerCase(Locale.ROOT))
+      val blockId = new TestBlockId(
+        "block-with-" + storageLevel.description.replace(" ", "-").toLowerCase)
       val testValue = Array.fill[Byte](blockSize)(1)
       stores(0).putSingle(blockId, testValue, storageLevel)
 

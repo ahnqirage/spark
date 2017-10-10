@@ -44,7 +44,9 @@ parameter to select between these two algorithms, or leave it unset and Spark wi
 
 ### Binomial logistic regression
 
-For more background and more details about the implementation of binomial logistic regression, refer to the documentation of [logistic regression in `spark.mllib`](mllib-linear-methods.html#logistic-regression). 
+  > When fitting LogisticRegressionModel without intercept on dataset with constant nonzero column, Spark MLlib outputs zero coefficients for constant nonzero columns. This behavior is the same as R glmnet but different from LIBSVM.
+
+**Example**
 
 **Examples**
 
@@ -496,7 +498,7 @@ summaries is similar to the logistic regression case.
 
   > When fitting LinearRegressionModel without intercept on dataset with constant nonzero column by "l-bfgs" solver, Spark MLlib outputs zero coefficients for constant nonzero columns. This behavior is the same as R glmnet but different from LIBSVM.
 
-**Examples**
+**Example**
 
 The following
 example demonstrates training an elastic net regularized linear
@@ -629,16 +631,11 @@ others.
       <td>Continuous</td>
       <td>Inverse*, Idenity, Log</td>
     </tr>
-    <tr>
-      <td>Tweedie</td>
-      <td>Zero-inflated continuous</td>
-      <td>Power link function</td>
-    </tr>
     <tfoot><tr><td colspan="4">* Canonical Link</td></tr></tfoot>
   </tbody>
 </table>
 
-**Examples**
+**Example**
 
 The following example demonstrates training a GLM with a Gaussian response and identity link
 function and extracting model summary statistics.
@@ -646,31 +643,21 @@ function and extracting model summary statistics.
 <div class="codetabs">
 
 <div data-lang="scala" markdown="1">
-
 Refer to the [Scala API docs](api/scala/index.html#org.apache.spark.ml.regression.GeneralizedLinearRegression) for more details.
 
 {% include_example scala/org/apache/spark/examples/ml/GeneralizedLinearRegressionExample.scala %}
 </div>
 
 <div data-lang="java" markdown="1">
-
 Refer to the [Java API docs](api/java/org/apache/spark/ml/regression/GeneralizedLinearRegression.html) for more details.
 
 {% include_example java/org/apache/spark/examples/ml/JavaGeneralizedLinearRegressionExample.java %}
 </div>
 
 <div data-lang="python" markdown="1">
-
 Refer to the [Python API docs](api/python/pyspark.ml.html#pyspark.ml.regression.GeneralizedLinearRegression) for more details.
 
 {% include_example python/ml/generalized_linear_regression_example.py %}
-</div>
-
-<div data-lang="r" markdown="1">
-
-Refer to the [R API docs](api/R/spark.glm.html) for more details.
-
-{% include_example r/ml/glm.R %}
 </div>
 
 </div>
@@ -860,7 +847,7 @@ The implementation matches the result from R's survival function
 
   > When fitting AFTSurvivalRegressionModel without intercept on dataset with constant nonzero column, Spark MLlib outputs zero coefficients for constant nonzero columns. This behavior is different from R survival::survreg.
 
-**Examples**
+**Example**
 
 <div class="codetabs">
 
@@ -894,6 +881,103 @@ Refer to the [R API docs](api/R/spark.survreg.html) for more details.
 
 </div>
 
+## Isotonic regression
+[Isotonic regression](http://en.wikipedia.org/wiki/Isotonic_regression)
+belongs to the family of regression algorithms. Formally isotonic regression is a problem where
+given a finite set of real numbers `$Y = {y_1, y_2, ..., y_n}$` representing observed responses
+and `$X = {x_1, x_2, ..., x_n}$` the unknown response values to be fitted
+finding a function that minimises
+
+`\begin{equation}
+  f(x) = \sum_{i=1}^n w_i (y_i - x_i)^2
+\end{equation}`
+
+with respect to complete order subject to
+`$x_1\le x_2\le ...\le x_n$` where `$w_i$` are positive weights.
+The resulting function is called isotonic regression and it is unique.
+It can be viewed as least squares problem under order restriction.
+Essentially isotonic regression is a
+[monotonic function](http://en.wikipedia.org/wiki/Monotonic_function)
+best fitting the original data points.
+
+We implement a
+[pool adjacent violators algorithm](http://doi.org/10.1198/TECH.2010.10111)
+which uses an approach to
+[parallelizing isotonic regression](http://doi.org/10.1007/978-3-642-99789-1_10).
+The training input is a DataFrame which contains three columns
+label, features and weight. Additionally IsotonicRegression algorithm has one
+optional parameter called $isotonic$ defaulting to true.
+This argument specifies if the isotonic regression is
+isotonic (monotonically increasing) or antitonic (monotonically decreasing).
+
+Training returns an IsotonicRegressionModel that can be used to predict
+labels for both known and unknown features. The result of isotonic regression
+is treated as piecewise linear function. The rules for prediction therefore are:
+
+* If the prediction input exactly matches a training feature
+  then associated prediction is returned. In case there are multiple predictions with the same
+  feature then one of them is returned. Which one is undefined
+  (same as java.util.Arrays.binarySearch).
+* If the prediction input is lower or higher than all training features
+  then prediction with lowest or highest feature is returned respectively.
+  In case there are multiple predictions with the same feature
+  then the lowest or highest is returned respectively.
+* If the prediction input falls between two training features then prediction is treated
+  as piecewise linear function and interpolated value is calculated from the
+  predictions of the two closest features. In case there are multiple values
+  with the same feature then the same rules as in previous point are used.
+
+### Examples
+
+<div class="codetabs">
+<div data-lang="scala" markdown="1">
+
+Refer to the [`IsotonicRegression` Scala docs](api/scala/index.html#org.apache.spark.ml.regression.IsotonicRegression) for details on the API.
+
+{% include_example scala/org/apache/spark/examples/ml/IsotonicRegressionExample.scala %}
+</div>
+<div data-lang="java" markdown="1">
+
+Refer to the [`IsotonicRegression` Java docs](api/java/org/apache/spark/ml/regression/IsotonicRegression.html) for details on the API.
+
+{% include_example java/org/apache/spark/examples/ml/JavaIsotonicRegressionExample.java %}
+</div>
+<div data-lang="python" markdown="1">
+
+Refer to the [`IsotonicRegression` Python docs](api/python/pyspark.ml.html#pyspark.ml.regression.IsotonicRegression) for more details on the API.
+
+{% include_example python/ml/isotonic_regression_example.py %}
+</div>
+</div>
+
+# Linear methods
+
+We implement popular linear methods such as logistic
+regression and linear least squares with $L_1$ or $L_2$ regularization.
+Refer to [the linear methods guide for the RDD-based API](mllib-linear-methods.html) for
+details about implementation and tuning; this information is still relevant.
+
+We also include a DataFrame API for [Elastic
+net](http://en.wikipedia.org/wiki/Elastic_net_regularization), a hybrid
+of $L_1$ and $L_2$ regularization proposed in [Zou et al, Regularization
+and variable selection via the elastic
+net](http://users.stat.umn.edu/~zouxx019/Papers/elasticnet.pdf).
+Mathematically, it is defined as a convex combination of the $L_1$ and
+the $L_2$ regularization terms:
+`\[
+\alpha \left( \lambda \|\wv\|_1 \right) + (1-\alpha) \left( \frac{\lambda}{2}\|\wv\|_2^2 \right) , \alpha \in [0, 1], \lambda \geq 0
+\]`
+By setting $\alpha$ properly, elastic net contains both $L_1$ and $L_2$
+regularization as special cases. For example, if a [linear
+regression](https://en.wikipedia.org/wiki/Linear_regression) model is
+trained with the elastic net parameter $\alpha$ set to $1$, it is
+equivalent to a
+[Lasso](http://en.wikipedia.org/wiki/Least_squares#Lasso_method) model.
+On the other hand, if $\alpha$ is set to $0$, the trained model reduces
+to a [ridge
+regression](http://en.wikipedia.org/wiki/Tikhonov_regularization) model.
+We implement Pipelines API for both linear regression and logistic
+regression with elastic net regularization.
 
 ## Isotonic regression
 [Isotonic regression](http://en.wikipedia.org/wiki/Isotonic_regression)

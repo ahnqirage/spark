@@ -112,12 +112,9 @@ trait SchemaRelationProvider {
 
 /**
  * ::Experimental::
- * Implemented by objects that can produce a streaming `Source` for a specific format or system.
- *
- * @since 2.0.0
+ * Implemented by objects that can produce a streaming [[Source]] for a specific format or system.
  */
 @Experimental
-@InterfaceStability.Unstable
 trait StreamSourceProvider {
 
   /**
@@ -143,12 +140,9 @@ trait StreamSourceProvider {
 
 /**
  * ::Experimental::
- * Implemented by objects that can produce a streaming `Sink` for a specific format or system.
- *
- * @since 2.0.0
+ * Implemented by objects that can produce a streaming [[Sink]] for a specific format or system.
  */
 @Experimental
-@InterfaceStability.Unstable
 trait StreamSinkProvider {
   def createSink(
       sqlContext: SQLContext,

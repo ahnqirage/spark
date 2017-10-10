@@ -88,39 +88,18 @@ class NullExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper {
   }
 
   test("SPARK-16602 Nvl should support numeric-string cases") {
-    def analyze(expr: Expression): Expression = {
-      val relation = LocalRelation()
-      SimpleAnalyzer.execute(Project(Seq(Alias(expr, "c")()), relation)).expressions.head
-    }
-
     val intLit = Literal.create(1, IntegerType)
     val doubleLit = Literal.create(2.2, DoubleType)
     val stringLit = Literal.create("c", StringType)
     val nullLit = Literal.create(null, NullType)
-    val floatNullLit = Literal.create(null, FloatType)
-    val floatLit = Literal.create(1.01f, FloatType)
-    val timestampLit = Literal.create("2017-04-12", TimestampType)
-    val decimalLit = Literal.create(10.2, DecimalType(20, 2))
 
-    assert(analyze(new Nvl(decimalLit, stringLit)).dataType == StringType)
-    assert(analyze(new Nvl(doubleLit, decimalLit)).dataType == DoubleType)
-    assert(analyze(new Nvl(decimalLit, doubleLit)).dataType == DoubleType)
-    assert(analyze(new Nvl(decimalLit, floatLit)).dataType == DoubleType)
-    assert(analyze(new Nvl(floatLit, decimalLit)).dataType == DoubleType)
+    assert(Nvl(intLit, doubleLit).replaceForTypeCoercion().dataType == DoubleType)
+    assert(Nvl(intLit, stringLit).replaceForTypeCoercion().dataType == StringType)
+    assert(Nvl(stringLit, doubleLit).replaceForTypeCoercion().dataType == StringType)
 
-    assert(analyze(new Nvl(timestampLit, stringLit)).dataType == StringType)
-    assert(analyze(new Nvl(intLit, doubleLit)).dataType == DoubleType)
-    assert(analyze(new Nvl(intLit, stringLit)).dataType == StringType)
-    assert(analyze(new Nvl(stringLit, doubleLit)).dataType == StringType)
-    assert(analyze(new Nvl(doubleLit, stringLit)).dataType == StringType)
-
-    assert(analyze(new Nvl(nullLit, intLit)).dataType == IntegerType)
-    assert(analyze(new Nvl(doubleLit, nullLit)).dataType == DoubleType)
-    assert(analyze(new Nvl(nullLit, stringLit)).dataType == StringType)
-
-    assert(analyze(new Nvl(floatLit, stringLit)).dataType == StringType)
-    assert(analyze(new Nvl(floatLit, doubleLit)).dataType == DoubleType)
-    assert(analyze(new Nvl(floatNullLit, intLit)).dataType == FloatType)
+    assert(Nvl(nullLit, intLit).replaceForTypeCoercion().dataType == IntegerType)
+    assert(Nvl(doubleLit, nullLit).replaceForTypeCoercion().dataType == DoubleType)
+    assert(Nvl(nullLit, stringLit).replaceForTypeCoercion().dataType == StringType)
   }
 
   test("AtLeastNNonNulls") {

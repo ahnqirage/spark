@@ -24,15 +24,15 @@ import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
 
 import org.apache.spark.TaskContext
-import org.apache.spark.internal.Logging
 import org.apache.spark.ml.feature.LabeledPoint
-import org.apache.spark.ml.linalg.{Vectors, VectorUDT}
+import org.apache.spark.ml.linalg.{Vector, Vectors, VectorUDT}
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateUnsafeProjection
+import org.apache.spark.sql.execution.command.CreateDataSourceTableUtils
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
@@ -46,8 +46,17 @@ private[libsvm] class LibSVMOutputWriter(
 
   private val writer = CodecStreams.createOutputStreamWriter(context, new Path(path))
 
-  // This `asInstanceOf` is safe because it's guaranteed by `LibSVMFileFormat.verifySchema`
-  private val udt = dataSchema(1).dataType.asInstanceOf[VectorUDT]
+  private val recordWriter: RecordWriter[NullWritable, Text] = {
+    new TextOutputFormat[NullWritable, Text]() {
+      override def getDefaultWorkFile(context: TaskAttemptContext, extension: String): Path = {
+        val configuration = context.getConfiguration
+        val uniqueWriteJobId = configuration.get(CreateDataSourceTableUtils.DATASOURCE_WRITEJOBUUID)
+        val taskAttemptId = context.getTaskAttemptID
+        val split = taskAttemptId.getTaskID.getId
+        new Path(path, f"part-r-$split%05d-$uniqueWriteJobId$extension")
+      }
+    }.getRecordWriter(context)
+  }
 
   override def write(row: InternalRow): Unit = {
     val label = row.getDouble(0)
@@ -67,21 +76,18 @@ private[libsvm] class LibSVMOutputWriter(
 
 /** @see [[LibSVMDataSource]] for public documentation. */
 // If this is moved or renamed, please update DataSource's backwardCompatibilityMap.
-private[libsvm] class LibSVMFileFormat
-  extends TextBasedFileFormat
-  with DataSourceRegister
-  with Logging {
+private[libsvm] class LibSVMFileFormat extends TextBasedFileFormat with DataSourceRegister {
 
   override def shortName(): String = "libsvm"
 
   override def toString: String = "LibSVM"
 
-  private def verifySchema(dataSchema: StructType, forWriting: Boolean): Unit = {
+  private def verifySchema(dataSchema: StructType): Unit = {
     if (
       dataSchema.size != 2 ||
         !dataSchema(0).dataType.sameType(DataTypes.DoubleType) ||
         !dataSchema(1).dataType.sameType(new VectorUDT()) ||
-        !(forWriting || dataSchema(1).metadata.getLong(LibSVMOptions.NUM_FEATURES).toInt > 0)
+        !(dataSchema(1).metadata.getLong("numFeatures").toInt > 0)
     ) {
       throw new IOException(s"Illegal schema for libsvm data, schema=$dataSchema")
     }
@@ -91,21 +97,24 @@ private[libsvm] class LibSVMFileFormat
       sparkSession: SparkSession,
       options: Map[String, String],
       files: Seq[FileStatus]): Option[StructType] = {
-    val libSVMOptions = new LibSVMOptions(options)
-    val numFeatures: Int = libSVMOptions.numFeatures.getOrElse {
-      require(files.nonEmpty, "No input path specified for libsvm data")
-      logWarning(
-        "'numFeatures' option not specified, determining the number of features by going " +
-        "though the input. If you know the number in advance, please specify it via " +
-        "'numFeatures' option to avoid the extra scan.")
+    val numFeatures: Int = options.get("numFeatures").map(_.toInt).filter(_ > 0).getOrElse {
+      // Infers number of features if the user doesn't specify (a valid) one.
+      val dataFiles = files.filterNot(_.getPath.getName startsWith "_")
+      val path = if (dataFiles.length == 1) {
+        dataFiles.head.getPath.toUri.toString
+      } else if (dataFiles.isEmpty) {
+        throw new IOException("No input path specified for libsvm data")
+      } else {
+        throw new IOException("Multiple input paths are not supported for libsvm data.")
+      }
 
-      val paths = files.map(_.getPath.toUri.toString)
-      val parsed = MLUtils.parseLibSVMFile(sparkSession, paths)
+      val sc = sparkSession.sparkContext
+      val parsed = MLUtils.parseLibSVMFile(sc, path, sc.defaultParallelism)
       MLUtils.computeNumFeatures(parsed)
     }
 
     val featuresMetadata = new MetadataBuilder()
-      .putLong(LibSVMOptions.NUM_FEATURES, numFeatures)
+      .putLong("numFeatures", numFeatures)
       .build()
 
     Some(
@@ -142,8 +151,8 @@ private[libsvm] class LibSVMFileFormat
       filters: Seq[Filter],
       options: Map[String, String],
       hadoopConf: Configuration): (PartitionedFile) => Iterator[InternalRow] = {
-    verifySchema(dataSchema, false)
-    val numFeatures = dataSchema("features").metadata.getLong(LibSVMOptions.NUM_FEATURES).toInt
+    verifySchema(dataSchema)
+    val numFeatures = dataSchema("features").metadata.getLong("numFeatures").toInt
     assert(numFeatures > 0)
 
     val libSVMOptions = new LibSVMOptions(options)
@@ -175,7 +184,7 @@ private[libsvm] class LibSVMFileFormat
       val requiredColumns = GenerateUnsafeProjection.generate(requiredOutput, fullOutput)
 
       points.map { pt =>
-        val features = if (isSparse) pt.features.toSparse else pt.features.toDense
+        val features = if (sparse) pt.features.toSparse else pt.features.toDense
         requiredColumns(converter.toRow(Row(pt.label, features)))
       }
     }

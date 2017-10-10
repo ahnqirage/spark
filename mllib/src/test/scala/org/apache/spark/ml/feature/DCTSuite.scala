@@ -65,7 +65,9 @@ class DCTSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRead
     }
     val expectedResult = Vectors.dense(expectedResultBuffer)
 
-    val dataset = Seq(DCTTestData(data, expectedResult)).toDF()
+    val dataset = spark.createDataFrame(Seq(
+      DCTTestData(data, expectedResult)
+    ))
 
     val transformer = new DCT()
       .setInputCol("vec")

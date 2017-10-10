@@ -36,11 +36,8 @@ import org.apache.spark.util.Utils
  *
  * At the end, the resulting files are loaded and the answer is checked.
  */
-class FileStreamStressSuite extends StreamTest {
+class FileStressSuite extends StreamTest {
   import testImplicits._
-
-  // Error message thrown in the streaming job for testing recovery.
-  private val injectedErrorMsg = "test suite injected failure!"
 
   testQuietly("fault tolerance stress test - unpartitioned output") {
     stressTest(partitionWrites = false)
@@ -104,14 +101,13 @@ class FileStreamStressSuite extends StreamTest {
     val input = spark.readStream.format("text").load(inputDir)
 
     def startStream(): StreamingQuery = {
-      val errorMsg = injectedErrorMsg  // work around serialization issue
       val output = input
         .repartition(5)
         .as[String]
         .mapPartitions { iter =>
           val rand = Random.nextInt(100)
           if (rand < 10) {
-            sys.error(errorMsg)
+            sys.error("failure")
           }
           iter.map(_.toLong)
         }
@@ -135,18 +131,17 @@ class FileStreamStressSuite extends StreamTest {
     }
 
     var failures = 0
-    while (continue) {
-      if (failures % 10 == 0) { logError(s"Query restart #$failures") }
-      stream = startStream()
+    val streamThread = new Thread("stream runner") {
+      while (continue) {
+        if (failures % 10 == 0) { logError(s"Query restart #$failures") }
+        stream = startStream()
 
-      try {
-        stream.awaitTermination()
-      } catch {
-        case e: StreamingQueryException
-          if e.getCause != null && e.getCause.getCause != null &&
-              e.getCause.getCause.getMessage.contains(injectedErrorMsg) =>
-          // Getting the expected error message
-          failures += 1
+        try {
+          stream.awaitTermination()
+        } catch {
+          case ce: StreamingQueryException =>
+            failures += 1
+        }
       }
     }
 

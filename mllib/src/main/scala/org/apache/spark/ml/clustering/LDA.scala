@@ -17,7 +17,10 @@
 
 package org.apache.spark.ml.clustering
 
-import java.util.Locale
+import org.apache.hadoop.fs.Path
+import org.json4s.DefaultFormats
+import org.json4s.JsonAST.JObject
+import org.json4s.jackson.JsonMethods._
 
 import org.apache.hadoop.fs.Path
 import org.json4s.DefaultFormats
@@ -36,6 +39,7 @@ import org.apache.spark.mllib.clustering.{DistributedLDAModel => OldDistributedL
   EMLDAOptimizer => OldEMLDAOptimizer, LDA => OldLDA, LDAModel => OldLDAModel,
   LDAOptimizer => OldLDAOptimizer, LocalLDAModel => OldLocalLDAModel,
   OnlineLDAOptimizer => OldOnlineLDAOptimizer}
+import org.apache.spark.mllib.impl.PeriodicCheckpointer
 import org.apache.spark.mllib.linalg.{Vector => OldVector, Vectors => OldVectors}
 import org.apache.spark.mllib.linalg.MatrixImplicits._
 import org.apache.spark.mllib.linalg.VectorImplicits._
@@ -44,8 +48,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.sql.functions.{col, monotonically_increasing_id, udf}
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.util.PeriodicCheckpointer
 import org.apache.spark.util.VersionUtils
+
 
 private[clustering] trait LDAParams extends Params with HasFeaturesCol with HasMaxIter
   with HasSeed with HasCheckpointInterval {
@@ -85,7 +89,7 @@ private[clustering] trait LDAParams extends Params with HasFeaturesCol with HasM
    *  - Online
    *     - Values should be greater than or equal to 0
    *     - default = uniformly (1.0 / k), following the implementation from
-   *       <a href="https://github.com/Blei-Lab/onlineldavb">here</a>.
+   *       [[https://github.com/Blei-Lab/onlineldavb]].
    *
    * @group param
    */
@@ -127,7 +131,7 @@ private[clustering] trait LDAParams extends Params with HasFeaturesCol with HasM
    *  - Online
    *     - Value should be greater than or equal to 0
    *     - default = (1.0 / k), following the implementation from
-   *       <a href="https://github.com/Blei-Lab/onlineldavb">here</a>.
+   *       [[https://github.com/Blei-Lab/onlineldavb]].
    *
    * @group param
    */
@@ -174,7 +178,7 @@ private[clustering] trait LDAParams extends Params with HasFeaturesCol with HasM
   @Since("1.6.0")
   final val optimizer = new Param[String](this, "optimizer", "Optimizer or inference" +
     " algorithm used to estimate the LDA model. Supported: " + supportedOptimizers.mkString(", "),
-    (value: String) => supportedOptimizers.contains(value.toLowerCase(Locale.ROOT)))
+    (o: String) => ParamValidators.inArray(supportedOptimizers).apply(o.toLowerCase))
 
   /** @group getParam */
   @Since("1.6.0")
@@ -361,6 +365,39 @@ private[clustering] trait LDAParams extends Params with HasFeaturesCol with HasM
         new OldEMLDAOptimizer()
           .setKeepLastCheckpoint($(keepLastCheckpoint))
     }
+}
+
+private object LDAParams {
+
+  /**
+   * Equivalent to [[DefaultParamsReader.getAndSetParams()]], but handles [[LDA]] and [[LDAModel]]
+   * formats saved with Spark 1.6, which differ from the formats in Spark 2.0+.
+   *
+   * @param model    [[LDA]] or [[LDAModel]] instance.  This instance will be modified with
+   *                 [[Param]] values extracted from metadata.
+   * @param metadata Loaded model metadata
+   */
+  def getAndSetParams(model: LDAParams, metadata: Metadata): Unit = {
+    VersionUtils.majorMinorVersion(metadata.sparkVersion) match {
+      case (1, 6) =>
+        implicit val format = DefaultFormats
+        metadata.params match {
+          case JObject(pairs) =>
+            pairs.foreach { case (paramName, jsonValue) =>
+              val origParam =
+                if (paramName == "topicDistribution") "topicDistributionCol" else paramName
+              val param = model.getParam(origParam)
+              val value = param.jsonDecode(compact(render(jsonValue)))
+              model.set(param, value)
+            }
+          case _ =>
+            throw new IllegalArgumentException(
+              s"Cannot recognize JSON metadata: ${metadata.metadataJson}.")
+        }
+      case _ => // 2.0+
+        DefaultParamsReader.getAndSetParams(model, metadata)
+    }
+  }
 }
 
 private object LDAParams {
@@ -718,7 +755,7 @@ class DistributedLDAModel private[ml] (
   /**
    * :: DeveloperApi ::
    *
-   * If using checkpointing and `LDA.keepLastCheckpoint` is set to true, then there may be
+   * If using checkpointing and [[LDA.keepLastCheckpoint]] is set to true, then there may be
    * saved checkpoint files.  This method is provided so that users can manage those files.
    *
    * Note that removing the checkpoints can cause failures if a partition is lost and is needed

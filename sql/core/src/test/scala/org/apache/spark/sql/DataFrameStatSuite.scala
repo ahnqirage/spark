@@ -215,49 +215,17 @@ class DataFrameStatSuite extends QueryTest with SharedSQLContext {
     }
   }
 
-  test("approximate quantile 3: test on NaN and null values") {
-    val q1 = 0.5
-    val q2 = 0.8
-    val epsilon = 0.1
-    val rows = spark.sparkContext.parallelize(Seq(Row(Double.NaN, 1.0, Double.NaN),
-      Row(1.0, -1.0, null), Row(-1.0, Double.NaN, null), Row(Double.NaN, Double.NaN, null),
-      Row(null, null, Double.NaN), Row(null, 1.0, null), Row(-1.0, null, Double.NaN),
-      Row(Double.NaN, null, null)))
-    val schema = StructType(Seq(StructField("input1", DoubleType, nullable = true),
-      StructField("input2", DoubleType, nullable = true),
-      StructField("input3", DoubleType, nullable = true)))
-    val dfNaN = spark.createDataFrame(rows, schema)
-
-    val resNaN1 = dfNaN.stat.approxQuantile("input1", Array(q1, q2), epsilon)
-    assert(resNaN1.count(_.isNaN) === 0)
-
-    val resNaN2 = dfNaN.stat.approxQuantile("input2", Array(q1, q2), epsilon)
-    assert(resNaN2.count(_.isNaN) === 0)
-
-    val resNaN3 = dfNaN.stat.approxQuantile("input3", Array(q1, q2), epsilon)
-    assert(resNaN3.isEmpty)
-
-    val resNaNAll = dfNaN.stat.approxQuantile(Array("input1", "input2", "input3"),
-      Array(q1, q2), epsilon)
-    assert(resNaNAll.flatten.count(_.isNaN) === 0)
-
-    assert(resNaN1(0) === resNaNAll(0)(0))
-    assert(resNaN1(1) === resNaNAll(0)(1))
-    assert(resNaN2(0) === resNaNAll(1)(0))
-    assert(resNaN2(1) === resNaNAll(1)(1))
-
-    // return empty array for columns only containing null or NaN values
-    assert(resNaNAll(2).isEmpty)
-
-    // return empty array if the dataset is empty
-    val res1 = dfNaN.selectExpr("*").limit(0)
-      .stat.approxQuantile("input1", Array(q1, q2), epsilon)
-    assert(res1.isEmpty)
-
-    val res2 = dfNaN.selectExpr("*").limit(0)
-      .stat.approxQuantile(Array("input1", "input2"), Array(q1, q2), epsilon)
-    assert(res2(0).isEmpty)
-    assert(res2(1).isEmpty)
+  test("approximate quantile, multiple records with the minimum value in a partition") {
+    val data = Seq(1, 1, 2, 1, 1, 3, 1, 1, 4, 1, 1, 5)
+    val df = spark.sparkContext.makeRDD(data, 4).toDF("col")
+    val epsilons = List(0.1, 0.05, 0.001)
+    val quantile = 0.5
+    val expected = 1
+    for (epsilon <- epsilons) {
+      val Array(answer) = df.stat.approxQuantile("col", Array(quantile), epsilon)
+      val error = 2 * data.length * epsilon
+      assert(math.abs(answer - expected) < error)
+    }
   }
 
   test("crosstab") {

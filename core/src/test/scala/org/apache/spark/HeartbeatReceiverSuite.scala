@@ -173,11 +173,11 @@ class HeartbeatReceiverSuite
     val dummyExecutorEndpoint2 = new FakeExecutorEndpoint(rpcEnv)
     val dummyExecutorEndpointRef1 = rpcEnv.setupEndpoint("fake-executor-1", dummyExecutorEndpoint1)
     val dummyExecutorEndpointRef2 = rpcEnv.setupEndpoint("fake-executor-2", dummyExecutorEndpoint2)
-    fakeSchedulerBackend.driverEndpoint.askSync[Boolean](
+    fakeSchedulerBackend.driverEndpoint.askWithRetry[Boolean](
       RegisterExecutor(executorId1, dummyExecutorEndpointRef1, "1.2.3.4", 0, Map.empty))
-    fakeSchedulerBackend.driverEndpoint.askSync[Boolean](
+    fakeSchedulerBackend.driverEndpoint.askWithRetry[Boolean](
       RegisterExecutor(executorId2, dummyExecutorEndpointRef2, "1.2.3.5", 0, Map.empty))
-    heartbeatReceiverRef.askSync[Boolean](TaskSchedulerIsSet)
+    heartbeatReceiverRef.askWithRetry[Boolean](TaskSchedulerIsSet)
     addExecutorAndVerify(executorId1)
     addExecutorAndVerify(executorId2)
     triggerHeartbeat(executorId1, executorShouldReregister = false)
@@ -272,7 +272,7 @@ private class FakeSchedulerBackend(
 
   protected override def doRequestTotalExecutors(requestedTotal: Int): Future[Boolean] = {
     clusterManagerEndpoint.ask[Boolean](
-      RequestExecutors(requestedTotal, localityAwareTasks, hostToLocalTaskCount, Set.empty[String]))
+      RequestExecutors(requestedTotal, localityAwareTasks, hostToLocalTaskCount))
   }
 
   protected override def doKillExecutors(executorIds: Seq[String]): Future[Boolean] = {

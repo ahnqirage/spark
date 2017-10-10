@@ -177,4 +177,7 @@ if not (ENV['SKIP_API'] == '1')
     cp_r("../sql/site/.", "api/sql")
   end
 
+  puts "cp R/pkg/DESCRIPTION docs/api"
+  cp("R/pkg/DESCRIPTION", "docs/api")
+
 end

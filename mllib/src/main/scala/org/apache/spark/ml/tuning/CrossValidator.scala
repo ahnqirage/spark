@@ -30,8 +30,7 @@ import org.apache.spark.annotation.Since
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.evaluation.Evaluator
-import org.apache.spark.ml.param.{IntParam, ParamMap, ParamValidators}
-import org.apache.spark.ml.param.shared.HasParallelism
+import org.apache.spark.ml.param._
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.sql.{DataFrame, Dataset}
@@ -58,11 +57,7 @@ private[ml] trait CrossValidatorParams extends ValidatorParams {
 }
 
 /**
- * K-fold cross validation performs model selection by splitting the dataset into a set of
- * non-overlapping randomly partitioned folds which are used as separate training and test datasets
- * e.g., with k=3 folds, K-fold cross validation will generate 3 (training, test) dataset pairs,
- * each of which uses 2/3 of the data for training and 1/3 for testing. Each fold is used as the
- * test set exactly once.
+ * K-fold cross validation.
  */
 @Since("1.2.0")
 class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
@@ -212,21 +207,20 @@ object CrossValidator extends MLReadable[CrossValidator] {
 
       val (metadata, estimator, evaluator, estimatorParamMaps) =
         ValidatorParams.loadImpl(path, sc, className)
-      val cv = new CrossValidator(metadata.uid)
+      val numFolds = (metadata.params \ "numFolds").extract[Int]
+      val seed = (metadata.params \ "seed").extract[Long]
+      new CrossValidator(metadata.uid)
         .setEstimator(estimator)
         .setEvaluator(evaluator)
         .setEstimatorParamMaps(estimatorParamMaps)
-      DefaultParamsReader.getAndSetParams(cv, metadata,
-        skipParams = Option(List("estimatorParamMaps")))
-      cv
+        .setNumFolds(numFolds)
+        .setSeed(seed)
     }
   }
 }
 
 /**
- * CrossValidatorModel contains the model with the highest average cross-validation
- * metric across folds and uses this model to transform input data. CrossValidatorModel
- * also tracks the metrics for each param map evaluated.
+ * Model from k-fold cross validation.
  *
  * @param bestModel The best model selected from k-fold cross validation.
  * @param avgMetrics Average cross-validation metrics for each paramMap in
@@ -301,17 +295,17 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
 
       val (metadata, estimator, evaluator, estimatorParamMaps) =
         ValidatorParams.loadImpl(path, sc, className)
+      val numFolds = (metadata.params \ "numFolds").extract[Int]
+      val seed = (metadata.params \ "seed").extract[Long]
       val bestModelPath = new Path(path, "bestModel").toString
       val bestModel = DefaultParamsReader.loadParamsInstance[Model[_]](bestModelPath, sc)
       val avgMetrics = (metadata.metadata \ "avgMetrics").extract[Seq[Double]].toArray
-
       val model = new CrossValidatorModel(metadata.uid, bestModel, avgMetrics)
       model.set(model.estimator, estimator)
         .set(model.evaluator, evaluator)
         .set(model.estimatorParamMaps, estimatorParamMaps)
-      DefaultParamsReader.getAndSetParams(model, metadata,
-        skipParams = Option(List("estimatorParamMaps")))
-      model
+        .set(model.numFolds, numFolds)
+        .set(model.seed, seed)
     }
   }
 }

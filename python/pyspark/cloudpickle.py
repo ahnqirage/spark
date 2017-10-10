@@ -42,9 +42,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 from __future__ import print_function
 
-import dis
-from functools import partial
-import imp
+import operator
+import opcode
+import os
 import io
 import itertools
 import logging
@@ -54,10 +54,8 @@ import pickle
 import struct
 import sys
 import traceback
-import types
 import weakref
 
-from pyspark.util import _exception_message
 
 if sys.version < '3':
     from pickle import Pickler

@@ -133,12 +133,6 @@ class ALS(JavaEstimator, HasCheckpointInterval, HasMaxIter, HasPredictionCol, Ha
     finalStorageLevel = Param(Params._dummy(), "finalStorageLevel",
                               "StorageLevel for ALS model factors.",
                               typeConverter=TypeConverters.toString)
-    coldStartStrategy = Param(Params._dummy(), "coldStartStrategy", "strategy for dealing with " +
-                              "unknown or new users/items at prediction time. This may be useful " +
-                              "in cross-validation or production scenarios, for handling " +
-                              "user/item ids the model has not seen in the training data. " +
-                              "Supported values: 'nan', 'drop'.",
-                              typeConverter=TypeConverters.toString)
 
     @keyword_only
     def __init__(self, rank=10, maxIter=10, regParam=0.1, numUserBlocks=10, numItemBlocks=10,
@@ -159,7 +153,7 @@ class ALS(JavaEstimator, HasCheckpointInterval, HasMaxIter, HasPredictionCol, Ha
                          implicitPrefs=False, alpha=1.0, userCol="user", itemCol="item",
                          ratingCol="rating", nonnegative=False, checkpointInterval=10,
                          intermediateStorageLevel="MEMORY_AND_DISK",
-                         finalStorageLevel="MEMORY_AND_DISK", coldStartStrategy="nan")
+                         finalStorageLevel="MEMORY_AND_DISK")
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 

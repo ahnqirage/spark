@@ -177,7 +177,12 @@ private[ml] trait DecisionTreeParams extends PredictorParams
   final def getCacheNodeIds: Boolean = $(cacheNodeIds)
 
   /**
-   * @deprecated This method is deprecated and will be removed in 3.0.0.
+   * Specifies how often to checkpoint the cached node IDs.
+   * E.g. 10 means that the cache will get checkpointed every 10 iterations.
+   * This is only used if cacheNodeIds is true and if the checkpoint directory is set in
+   * [[org.apache.spark.SparkContext]].
+   * Must be >= 1.
+   * (default = 10)
    * @group setParam
    */
   @deprecated("This method is deprecated and will be removed in 3.0.0.", "2.1.0")

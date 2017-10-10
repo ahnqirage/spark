@@ -17,7 +17,6 @@
 package org.apache.spark.examples.sql.hive;
 
 // $example on:spark_hive$
-import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +56,7 @@ public class JavaSparkHiveExample {
   public static void main(String[] args) {
     // $example on:spark_hive$
     // warehouseLocation points to the default location for managed databases and tables
-    String warehouseLocation = new File("spark-warehouse").getAbsolutePath();
+    String warehouseLocation = "spark-warehouse";
     SparkSession spark = SparkSession
       .builder()
       .appName("Java Spark Hive Example")
@@ -65,7 +64,7 @@ public class JavaSparkHiveExample {
       .enableHiveSupport()
       .getOrCreate();
 
-    spark.sql("CREATE TABLE IF NOT EXISTS src (key INT, value STRING) USING hive");
+    spark.sql("CREATE TABLE IF NOT EXISTS src (key INT, value STRING)");
     spark.sql("LOAD DATA LOCAL INPATH 'examples/src/main/resources/kv1.txt' INTO TABLE src");
 
     // Queries are expressed in HiveQL
@@ -89,10 +88,13 @@ public class JavaSparkHiveExample {
     // The results of SQL queries are themselves DataFrames and support all normal functions.
     Dataset<Row> sqlDF = spark.sql("SELECT key, value FROM src WHERE key < 10 ORDER BY key");
 
-    // The items in DataFrames are of type Row, which lets you to access each column by ordinal.
-    Dataset<String> stringsDS = sqlDF.map(
-        (MapFunction<Row, String>) row -> "Key: " + row.get(0) + ", Value: " + row.get(1),
-        Encoders.STRING());
+    // The items in DaraFrames are of type Row, which lets you to access each column by ordinal.
+    Dataset<String> stringsDS = sqlDF.map(new MapFunction<Row, String>() {
+      @Override
+      public String call(Row row) throws Exception {
+        return "Key: " + row.get(0) + ", Value: " + row.get(1);
+      }
+    }, Encoders.STRING());
     stringsDS.show();
     // +--------------------+
     // |               value|

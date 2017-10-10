@@ -160,7 +160,7 @@ class RandomForestClassifierSuite
   }
 
   test("Fitting without numClasses in metadata") {
-    val df: DataFrame = TreeTests.featureImportanceData(sc).toDF()
+    val df: DataFrame = spark.createDataFrame(TreeTests.featureImportanceData(sc))
     val rf = new RandomForestClassifier().setMaxDepth(1).setNumTrees(1)
     rf.fit(df)
   }

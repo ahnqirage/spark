@@ -123,21 +123,15 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
       logger.trace("Received req from {} to fetch block {}", getRemoteAddress(channel),
         req.streamChunkId);
     }
-    long chunksBeingTransferred = streamManager.chunksBeingTransferred();
-    if (chunksBeingTransferred >= maxChunksBeingTransferred) {
-      logger.warn("The number of chunks being transferred {} is above {}, close the connection.",
-        chunksBeingTransferred, maxChunksBeingTransferred);
-      channel.close();
-      return;
-    }
+
     ManagedBuffer buf;
     try {
       streamManager.checkAuthorization(reverseClient, req.streamChunkId.streamId);
       streamManager.registerChannel(channel, req.streamChunkId.streamId);
       buf = streamManager.getChunk(req.streamChunkId.streamId, req.streamChunkId.chunkIndex);
     } catch (Exception e) {
-      logger.error(String.format("Error opening block %s for request from %s",
-        req.streamChunkId, getRemoteAddress(channel)), e);
+      logger.error(String.format("Error opening block %s for request from %s", req.streamChunkId,
+        getRemoteAddress(channel)), e);
       respond(new ChunkFetchFailure(req.streamChunkId, Throwables.getStackTraceAsString(e)));
       return;
     }
@@ -149,18 +143,6 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
   }
 
   private void processStreamRequest(final StreamRequest req) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("Received req from {} to fetch stream {}", getRemoteAddress(channel),
-        req.streamId);
-    }
-
-    long chunksBeingTransferred = streamManager.chunksBeingTransferred();
-    if (chunksBeingTransferred >= maxChunksBeingTransferred) {
-      logger.warn("The number of chunks being transferred {} is above {}, close the connection.",
-        chunksBeingTransferred, maxChunksBeingTransferred);
-      channel.close();
-      return;
-    }
     ManagedBuffer buf;
     try {
       buf = streamManager.openStream(req.streamId);
@@ -217,15 +199,20 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
    * Responds to a single message with some Encodable object. If a failure occurs while sending,
    * it will be logged and the channel closed.
    */
-  private ChannelFuture respond(Encodable result) {
-    SocketAddress remoteAddress = channel.remoteAddress();
-    return channel.writeAndFlush(result).addListener(future -> {
-      if (future.isSuccess()) {
-        logger.trace("Sent result {} to client {}", result, remoteAddress);
-      } else {
-        logger.error(String.format("Error sending result %s to %s; closing connection",
-          result, remoteAddress), future.cause());
-        channel.close();
+  private void respond(final Encodable result) {
+    final SocketAddress remoteAddress = channel.remoteAddress();
+    channel.writeAndFlush(result).addListener(
+      new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+          if (future.isSuccess()) {
+            logger.trace("Sent result {} to client {}", result, remoteAddress);
+          } else {
+            logger.error(String.format("Error sending result %s to %s; closing connection",
+              result, remoteAddress), future.cause());
+            channel.close();
+          }
+        }
       }
     });
   }

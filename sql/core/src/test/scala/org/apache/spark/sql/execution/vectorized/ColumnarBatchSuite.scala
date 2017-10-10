@@ -20,6 +20,8 @@ package org.apache.spark.sql.execution.vectorized
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -183,31 +185,16 @@ class ColumnarBatchSuite extends SparkFunSuite {
     }}
   }
 
-  testVector("Short APIs", 1024, ShortType) {
-    (column, memMode) =>
+  test("Short Apis") {
+    (MemoryMode.ON_HEAP :: MemoryMode.OFF_HEAP :: Nil).foreach { memMode => {
       val seed = System.currentTimeMillis()
       val random = new Random(seed)
       val reference = mutable.ArrayBuffer.empty[Short]
 
-      var values = (10 :: 20 :: 30 :: 40 :: 50 :: Nil).map(_.toShort).toArray
-      column.appendShorts(2, values, 0)
-      reference += 10.toShort
-      reference += 20.toShort
+      val column = ColumnVector.allocate(1024, ShortType, memMode)
+      var idx = 0
 
-      column.appendShorts(3, values, 2)
-      reference += 30.toShort
-      reference += 40.toShort
-      reference += 50.toShort
-
-      column.appendShorts(6, 60.toShort)
-      (1 to 6).foreach(_ => reference += 60.toShort)
-
-      column.appendShort(70.toShort)
-      reference += 70.toShort
-
-      var idx = column.elementsAppended
-
-      values = (1 :: 2 :: 3 :: 4 :: 5 :: Nil).map(_.toShort).toArray
+      val values = (1 :: 2 :: 3 :: 4 :: 5 :: Nil).map(_.toShort).toArray
       column.putShorts(idx, 2, values, 0)
       reference += 1
       reference += 2
@@ -256,10 +243,13 @@ class ColumnarBatchSuite extends SparkFunSuite {
           assert(v._1 == Platform.getShort(null, addr + 2 * v._2))
         }
       }
+
+      column.close
+    }}
   }
 
-  testVector("Int APIs", 1024, IntegerType) {
-    (column, memMode) =>
+  test("Int Apis") {
+    (MemoryMode.ON_HEAP :: MemoryMode.OFF_HEAP :: Nil).foreach { memMode => {
       val seed = System.currentTimeMillis()
       val random = new Random(seed)
       val reference = mutable.ArrayBuffer.empty[Int]
@@ -553,8 +543,8 @@ class ColumnarBatchSuite extends SparkFunSuite {
       Platform.putDouble(buffer, Platform.BYTE_ARRAY_OFFSET + 8, 1.123)
 
       if (ByteOrder.nativeOrder().equals(ByteOrder.BIG_ENDIAN)) {
-        // Ensure array contains Little Endian doubles
-        val bb = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
+        // Ensure array contains Liitle Endian doubles
+        var bb = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
         Platform.putDouble(buffer, Platform.BYTE_ARRAY_OFFSET, bb.getDouble(0))
         Platform.putDouble(buffer, Platform.BYTE_ARRAY_OFFSET + 8, bb.getDouble(8))
       }
@@ -1124,7 +1114,7 @@ class ColumnarBatchSuite extends SparkFunSuite {
 
   test("exceeding maximum capacity should throw an error") {
     (MemoryMode.ON_HEAP :: MemoryMode.OFF_HEAP :: Nil).foreach { memMode =>
-      val column = allocate(1, ByteType, memMode)
+      val column = ColumnVector.allocate(1, ByteType, memMode)
       column.MAX_CAPACITY = 15
       column.appendBytes(5, 0.toByte)
       // Successfully allocate twice the requested capacity
@@ -1139,52 +1129,5 @@ class ColumnarBatchSuite extends SparkFunSuite {
       assert(ex.getMessage.contains(s"Cannot reserve additional contiguous bytes in the " +
         s"vectorized reader"))
     }
-  }
-
-  test("create columnar batch from Arrow column vectors") {
-    val allocator = ArrowUtils.rootAllocator.newChildAllocator("int", 0, Long.MaxValue)
-    val vector1 = ArrowUtils.toArrowField("int1", IntegerType, nullable = true)
-      .createVector(allocator).asInstanceOf[NullableIntVector]
-    vector1.allocateNew()
-    val mutator1 = vector1.getMutator()
-    val vector2 = ArrowUtils.toArrowField("int2", IntegerType, nullable = true)
-      .createVector(allocator).asInstanceOf[NullableIntVector]
-    vector2.allocateNew()
-    val mutator2 = vector2.getMutator()
-
-    (0 until 10).foreach { i =>
-      mutator1.setSafe(i, i)
-      mutator2.setSafe(i + 1, i)
-    }
-    mutator1.setNull(10)
-    mutator1.setValueCount(11)
-    mutator2.setNull(0)
-    mutator2.setValueCount(11)
-
-    val columnVectors = Seq(new ArrowColumnVector(vector1), new ArrowColumnVector(vector2))
-
-    val schema = StructType(Seq(StructField("int1", IntegerType), StructField("int2", IntegerType)))
-    val batch = new ColumnarBatch(schema, columnVectors.toArray[ColumnVector], 11)
-    batch.setNumRows(11)
-
-    assert(batch.numCols() == 2)
-    assert(batch.numRows() == 11)
-
-    val rowIter = batch.rowIterator().asScala
-    rowIter.zipWithIndex.foreach { case (row, i) =>
-      if (i == 10) {
-        assert(row.isNullAt(0))
-      } else {
-        assert(row.getInt(0) == i)
-      }
-      if (i == 0) {
-        assert(row.isNullAt(1))
-      } else {
-        assert(row.getInt(1) == i - 1)
-      }
-    }
-
-    batch.close()
-    allocator.close()
   }
 }

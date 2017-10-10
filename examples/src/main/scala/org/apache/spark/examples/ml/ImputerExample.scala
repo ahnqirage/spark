@@ -23,9 +23,8 @@ import org.apache.spark.ml.feature.Imputer
 import org.apache.spark.sql.SparkSession
 
 /**
- * An example demonstrating Imputer.
- * Run with:
- *   bin/run-example ml.ImputerExample
+ * This holds file names of the current Spark task. This is used in HadoopRDD,
+ * FileScanRDD, NewHadoopRDD and InputFileName function in Spark SQL.
  */
 object ImputerExample {
 

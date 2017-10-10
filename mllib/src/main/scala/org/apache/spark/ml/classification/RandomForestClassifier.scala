@@ -36,7 +36,7 @@ import org.apache.spark.sql.functions._
 
 
 /**
- * <a href="http://en.wikipedia.org/wiki/Random_forest">Random Forest</a> learning algorithm for
+ * [[http://en.wikipedia.org/wiki/Random_forest  Random Forest]] learning algorithm for
  * classification.
  * It supports both binary and multiclass labels, as well as both continuous and categorical
  * features.
@@ -165,7 +165,7 @@ object RandomForestClassifier extends DefaultParamsReadable[RandomForestClassifi
 }
 
 /**
- * <a href="http://en.wikipedia.org/wiki/Random_forest">Random Forest</a> model for classification.
+ * [[http://en.wikipedia.org/wiki/Random_forest  Random Forest]] model for classification.
  * It supports both binary and multiclass labels, as well as both continuous and categorical
  * features.
  *

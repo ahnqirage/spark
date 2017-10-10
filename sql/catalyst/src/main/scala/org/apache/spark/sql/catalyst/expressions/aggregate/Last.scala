@@ -39,6 +39,12 @@ case class Last(child: Expression, ignoreNullsExpr: Expression)
 
   def this(child: Expression) = this(child, Literal.create(false, BooleanType))
 
+  private val ignoreNulls: Boolean = ignoreNullsExpr match {
+    case Literal(b: Boolean, BooleanType) => b
+    case _ =>
+      throw new AnalysisException("The second argument of First should be a boolean literal.")
+  }
+
   override def children: Seq[Expression] = child :: ignoreNullsExpr :: Nil
 
   override def nullable: Boolean = true
@@ -51,20 +57,6 @@ case class Last(child: Expression, ignoreNullsExpr: Expression)
 
   // Expected input data type.
   override def inputTypes: Seq[AbstractDataType] = Seq(AnyDataType, BooleanType)
-
-  override def checkInputDataTypes(): TypeCheckResult = {
-    val defaultCheck = super.checkInputDataTypes()
-    if (defaultCheck.isFailure) {
-      defaultCheck
-    } else if (!ignoreNullsExpr.foldable) {
-      TypeCheckFailure(
-        s"The second argument of Last must be a boolean literal, but got: ${ignoreNullsExpr.sql}")
-    } else {
-      TypeCheckSuccess
-    }
-  }
-
-  private def ignoreNulls: Boolean = ignoreNullsExpr.eval().asInstanceOf[Boolean]
 
   private lazy val last = AttributeReference("last", child.dataType)()
 

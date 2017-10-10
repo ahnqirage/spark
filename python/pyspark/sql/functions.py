@@ -172,7 +172,7 @@ _functions_2_1 = {
 # math functions that take two arguments as input
 _binary_mathfunctions = {
     'atan2': 'Returns the angle theta from the conversion of rectangular coordinates (x, y) to' +
-             'polar coordinates (r, theta). Units in radians.',
+             'polar coordinates (r, theta).',
     'hypot': 'Computes ``sqrt(a^2 + b^2)`` without intermediate overflow or underflow.',
     'pow': 'Returns the value of the first argument raised to the power of the second argument.',
 }
@@ -822,8 +822,8 @@ def date_format(date, format):
     .. note:: Use when ever possible specialized functions like `year`. These benefit from a
         specialized implementation.
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(date_format('dt', 'MM/dd/yyy').alias('date')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['a'])
+    >>> df.select(date_format('a', 'MM/dd/yyy').alias('date')).collect()
     [Row(date=u'04/08/2015')]
     """
     sc = SparkContext._active_spark_context
@@ -835,8 +835,8 @@ def year(col):
     """
     Extract the year of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(year('dt').alias('year')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['a'])
+    >>> df.select(year('a').alias('year')).collect()
     [Row(year=2015)]
     """
     sc = SparkContext._active_spark_context
@@ -848,8 +848,8 @@ def quarter(col):
     """
     Extract the quarter of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(quarter('dt').alias('quarter')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['a'])
+    >>> df.select(quarter('a').alias('quarter')).collect()
     [Row(quarter=2)]
     """
     sc = SparkContext._active_spark_context
@@ -861,8 +861,8 @@ def month(col):
     """
     Extract the month of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(month('dt').alias('month')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['a'])
+    >>> df.select(month('a').alias('month')).collect()
     [Row(month=4)]
    """
     sc = SparkContext._active_spark_context
@@ -874,8 +874,8 @@ def dayofmonth(col):
     """
     Extract the day of the month of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(dayofmonth('dt').alias('day')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['a'])
+    >>> df.select(dayofmonth('a').alias('day')).collect()
     [Row(day=8)]
     """
     sc = SparkContext._active_spark_context
@@ -887,8 +887,8 @@ def dayofyear(col):
     """
     Extract the day of the year of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(dayofyear('dt').alias('day')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['a'])
+    >>> df.select(dayofyear('a').alias('day')).collect()
     [Row(day=98)]
     """
     sc = SparkContext._active_spark_context
@@ -900,8 +900,8 @@ def hour(col):
     """
     Extract the hours of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08 13:08:15',)], ['ts'])
-    >>> df.select(hour('ts').alias('hour')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08 13:08:15',)], ['a'])
+    >>> df.select(hour('a').alias('hour')).collect()
     [Row(hour=13)]
     """
     sc = SparkContext._active_spark_context
@@ -913,8 +913,8 @@ def minute(col):
     """
     Extract the minutes of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08 13:08:15',)], ['ts'])
-    >>> df.select(minute('ts').alias('minute')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08 13:08:15',)], ['a'])
+    >>> df.select(minute('a').alias('minute')).collect()
     [Row(minute=8)]
     """
     sc = SparkContext._active_spark_context
@@ -926,8 +926,8 @@ def second(col):
     """
     Extract the seconds of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08 13:08:15',)], ['ts'])
-    >>> df.select(second('ts').alias('second')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08 13:08:15',)], ['a'])
+    >>> df.select(second('a').alias('second')).collect()
     [Row(second=15)]
     """
     sc = SparkContext._active_spark_context
@@ -939,8 +939,8 @@ def weekofyear(col):
     """
     Extract the week number of a given date as integer.
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(weekofyear(df.dt).alias('week')).collect()
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['a'])
+    >>> df.select(weekofyear(df.a).alias('week')).collect()
     [Row(week=15)]
     """
     sc = SparkContext._active_spark_context
@@ -952,9 +952,9 @@ def date_add(start, days):
     """
     Returns the date that is `days` days after `start`
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(date_add(df.dt, 1).alias('next_date')).collect()
-    [Row(next_date=datetime.date(2015, 4, 9))]
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['d'])
+    >>> df.select(date_add(df.d, 1).alias('d')).collect()
+    [Row(d=datetime.date(2015, 4, 9))]
     """
     sc = SparkContext._active_spark_context
     return Column(sc._jvm.functions.date_add(_to_java_column(start), days))
@@ -965,9 +965,9 @@ def date_sub(start, days):
     """
     Returns the date that is `days` days before `start`
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(date_sub(df.dt, 1).alias('prev_date')).collect()
-    [Row(prev_date=datetime.date(2015, 4, 7))]
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['d'])
+    >>> df.select(date_sub(df.d, 1).alias('d')).collect()
+    [Row(d=datetime.date(2015, 4, 7))]
     """
     sc = SparkContext._active_spark_context
     return Column(sc._jvm.functions.date_sub(_to_java_column(start), days))
@@ -991,9 +991,9 @@ def add_months(start, months):
     """
     Returns the date that is `months` months after `start`
 
-    >>> df = spark.createDataFrame([('2015-04-08',)], ['dt'])
-    >>> df.select(add_months(df.dt, 1).alias('next_month')).collect()
-    [Row(next_month=datetime.date(2015, 5, 8))]
+    >>> df = spark.createDataFrame([('2015-04-08',)], ['d'])
+    >>> df.select(add_months(df.d, 1).alias('d')).collect()
+    [Row(d=datetime.date(2015, 5, 8))]
     """
     sc = SparkContext._active_spark_context
     return Column(sc._jvm.functions.add_months(_to_java_column(start), months))
@@ -1004,22 +1004,19 @@ def months_between(date1, date2):
     """
     Returns the number of months between date1 and date2.
 
-    >>> df = spark.createDataFrame([('1997-02-28 10:30:00', '1996-10-30')], ['date1', 'date2'])
-    >>> df.select(months_between(df.date1, df.date2).alias('months')).collect()
+    >>> df = spark.createDataFrame([('1997-02-28 10:30:00', '1996-10-30')], ['t', 'd'])
+    >>> df.select(months_between(df.t, df.d).alias('months')).collect()
     [Row(months=3.9495967...)]
     """
     sc = SparkContext._active_spark_context
     return Column(sc._jvm.functions.months_between(_to_java_column(date1), _to_java_column(date2)))
 
 
-@since(2.2)
-def to_date(col, format=None):
-    """Converts a :class:`Column` of :class:`pyspark.sql.types.StringType` or
-    :class:`pyspark.sql.types.TimestampType` into :class:`pyspark.sql.types.DateType`
-    using the optionally specified format. Specify formats according to
-    `SimpleDateFormats <http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html>`_.
-    By default, it follows casting rules to :class:`pyspark.sql.types.DateType` if the format
-    is omitted (equivalent to ``col.cast("date")``).
+@since(1.5)
+def to_date(col):
+    """
+    Converts the column of :class:`pyspark.sql.types.StringType` or
+    :class:`pyspark.sql.types.TimestampType` into :class:`pyspark.sql.types.DateType`.
 
     >>> df = spark.createDataFrame([('1997-02-28 10:30:00',)], ['t'])
     >>> df.select(to_date(df.t).alias('date')).collect()
@@ -1155,8 +1152,8 @@ def from_utc_timestamp(timestamp, tz):
     '2017-07-14 03:40:00.0'.
 
     >>> df = spark.createDataFrame([('1997-02-28 10:30:00',)], ['t'])
-    >>> df.select(from_utc_timestamp(df.t, "PST").alias('local_time')).collect()
-    [Row(local_time=datetime.datetime(1997, 2, 28, 2, 30))]
+    >>> df.select(from_utc_timestamp(df.t, "PST").alias('t')).collect()
+    [Row(t=datetime.datetime(1997, 2, 28, 2, 30))]
     """
     sc = SparkContext._active_spark_context
     return Column(sc._jvm.functions.from_utc_timestamp(_to_java_column(timestamp), tz))
@@ -1169,9 +1166,9 @@ def to_utc_timestamp(timestamp, tz):
     zone, and renders that time as a timestamp in UTC. For example, 'GMT+1' would yield
     '2017-07-14 01:40:00.0'.
 
-    >>> df = spark.createDataFrame([('1997-02-28 10:30:00',)], ['ts'])
-    >>> df.select(to_utc_timestamp(df.ts, "PST").alias('utc_time')).collect()
-    [Row(utc_time=datetime.datetime(1997, 2, 28, 18, 30))]
+    >>> df = spark.createDataFrame([('1997-02-28 10:30:00',)], ['t'])
+    >>> df.select(to_utc_timestamp(df.t, "PST").alias('t')).collect()
+    [Row(t=datetime.datetime(1997, 2, 28, 18, 30))]
     """
     sc = SparkContext._active_spark_context
     return Column(sc._jvm.functions.to_utc_timestamp(_to_java_column(timestamp), tz))
@@ -1779,71 +1776,6 @@ def posexplode(col):
     return Column(jc)
 
 
-@since(2.3)
-def explode_outer(col):
-    """Returns a new row for each element in the given array or map.
-    Unlike explode, if the array/map is null or empty then null is produced.
-
-    >>> df = spark.createDataFrame(
-    ...     [(1, ["foo", "bar"], {"x": 1.0}), (2, [], {}), (3, None, None)],
-    ...     ("id", "an_array", "a_map")
-    ... )
-    >>> df.select("id", "an_array", explode_outer("a_map")).show()
-    +---+----------+----+-----+
-    | id|  an_array| key|value|
-    +---+----------+----+-----+
-    |  1|[foo, bar]|   x|  1.0|
-    |  2|        []|null| null|
-    |  3|      null|null| null|
-    +---+----------+----+-----+
-
-    >>> df.select("id", "a_map", explode_outer("an_array")).show()
-    +---+-------------+----+
-    | id|        a_map| col|
-    +---+-------------+----+
-    |  1|Map(x -> 1.0)| foo|
-    |  1|Map(x -> 1.0)| bar|
-    |  2|        Map()|null|
-    |  3|         null|null|
-    +---+-------------+----+
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.explode_outer(_to_java_column(col))
-    return Column(jc)
-
-
-@since(2.3)
-def posexplode_outer(col):
-    """Returns a new row for each element with position in the given array or map.
-    Unlike posexplode, if the array/map is null or empty then the row (null, null) is produced.
-
-    >>> df = spark.createDataFrame(
-    ...     [(1, ["foo", "bar"], {"x": 1.0}), (2, [], {}), (3, None, None)],
-    ...     ("id", "an_array", "a_map")
-    ... )
-    >>> df.select("id", "an_array", posexplode_outer("a_map")).show()
-    +---+----------+----+----+-----+
-    | id|  an_array| pos| key|value|
-    +---+----------+----+----+-----+
-    |  1|[foo, bar]|   0|   x|  1.0|
-    |  2|        []|null|null| null|
-    |  3|      null|null|null| null|
-    +---+----------+----+----+-----+
-    >>> df.select("id", "a_map", posexplode_outer("an_array")).show()
-    +---+-------------+----+----+
-    | id|        a_map| pos| col|
-    +---+-------------+----+----+
-    |  1|Map(x -> 1.0)|   0| foo|
-    |  1|Map(x -> 1.0)|   1| bar|
-    |  2|        Map()|null|null|
-    |  3|         null|null|null|
-    +---+-------------+----+----+
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.posexplode_outer(_to_java_column(col))
-    return Column(jc)
-
-
 @ignore_unicode_prefix
 @since(1.6)
 def get_json_object(col, path):
@@ -2147,6 +2079,12 @@ def _create_udf(f, returnType, vectorized):
 @since(1.3)
 def udf(f=None, returnType=StringType()):
     """Creates a :class:`Column` expression representing a user defined function (UDF).
+    Note that the user-defined functions must be deterministic. Due to optimization,
+    duplicate invocations may be eliminated or the function may even be invoked more times than
+    it is present in the query.
+
+    :param f: python function
+    :param returnType: a :class:`pyspark.sql.types.DataType` object
 
     .. note:: The user-defined functions must be deterministic. Due to optimization,
         duplicate invocations may be eliminated or the function may even be invoked more times than
@@ -2227,7 +2165,7 @@ def _test():
     sc = spark.sparkContext
     globs['sc'] = sc
     globs['spark'] = spark
-    globs['df'] = spark.createDataFrame([Row(name='Alice', age=2), Row(name='Bob', age=5)])
+    globs['df'] = sc.parallelize([Row(name='Alice', age=2), Row(name='Bob', age=5)]).toDF()
     (failure_count, test_count) = doctest.testmod(
         pyspark.sql.functions, globs=globs,
         optionflags=doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE)

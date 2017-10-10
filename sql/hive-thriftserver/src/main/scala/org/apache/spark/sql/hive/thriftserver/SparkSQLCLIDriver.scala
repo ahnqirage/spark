@@ -176,8 +176,12 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     // Execute -i init files (always in silent mode)
     cli.processInitFiles(sessionState)
 
-    newHiveConf.foreach { kv =>
-      SparkSQLEnv.sqlContext.setConf(kv._1, kv._2)
+    // Respect the configurations set by --hiveconf from the command line
+    // (based on Hive's CliDriver).
+    val it = sessionState.getOverriddenConfigurations.entrySet().iterator()
+    while (it.hasNext) {
+      val kv = it.next()
+      SparkSQLEnv.sqlContext.setConf(kv.getKey, kv.getValue)
     }
 
     if (sessionState.execString != null) {
@@ -325,7 +329,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
       sessionState.close()
       System.exit(0)
     }
-    if (tokens(0).toLowerCase(Locale.ROOT).equals("source") ||
+    if (tokens(0).toLowerCase(Locale.ENGLISH).equals("source") ||
       cmd_trimmed.startsWith("!") || isRemoteMode) {
       val start = System.currentTimeMillis()
       super.processCmd(cmd)

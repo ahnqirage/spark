@@ -127,7 +127,9 @@ object GenerateColumnAccessor extends CodeGenerator[Seq[DataType], ColumnarItera
       } else {
         val groupedAccessorsItr = initializeAccessors.grouped(numberOfStatementsThreshold)
         val groupedExtractorsItr = extractors.grouped(numberOfStatementsThreshold)
-        val accessorNames = groupedAccessorsItr.zipWithIndex.map { case (body, i) =>
+        var groupedAccessorsLength = 0
+        groupedAccessorsItr.zipWithIndex.foreach { case (body, i) =>
+          groupedAccessorsLength += 1
           val funcName = s"accessors$i"
           val funcCode = s"""
              |private void $funcName() {
@@ -136,7 +138,7 @@ object GenerateColumnAccessor extends CodeGenerator[Seq[DataType], ColumnarItera
            """.stripMargin
           ctx.addNewFunction(funcName, funcCode)
         }
-        val extractorNames = groupedExtractorsItr.zipWithIndex.map { case (body, i) =>
+        groupedExtractorsItr.zipWithIndex.foreach { case (body, i) =>
           val funcName = s"extractors$i"
           val funcCode = s"""
              |private void $funcName() {

@@ -51,7 +51,6 @@ public class JavaDCTExample {
       new StructField("features", new VectorUDT(), false, Metadata.empty()),
     });
     Dataset<Row> df = spark.createDataFrame(data, schema);
-
     DCT dct = new DCT()
       .setInputCol("features")
       .setOutputCol("featuresDCT")
@@ -61,7 +60,6 @@ public class JavaDCTExample {
 
     dctDf.select("featuresDCT").show(false);
     // $example off$
-
     spark.stop();
   }
 }

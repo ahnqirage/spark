@@ -473,7 +473,7 @@ abstract class BinaryComparison extends BinaryOperator with Predicate {
     }
   }
 
-  protected lazy val ordering: Ordering[Any] = TypeUtils.getInterpretedOrdering(left.dataType)
+  protected lazy val ordering = TypeUtils.getInterpretedOrdering(left.dataType)
 }
 
 
@@ -515,6 +515,23 @@ object Equality {
 case class EqualTo(left: Expression, right: Expression)
     extends BinaryComparison with NullIntolerant {
 
+  override def inputType: AbstractDataType = AnyDataType
+
+  override def checkInputDataTypes(): TypeCheckResult = {
+    super.checkInputDataTypes() match {
+      case TypeCheckResult.TypeCheckSuccess =>
+        // TODO: although map type is not orderable, technically map type should be able to be used
+        // in equality comparison, remove this type check once we support it.
+        if (left.dataType.existsRecursively(_.isInstanceOf[MapType])) {
+          TypeCheckResult.TypeCheckFailure("Cannot use map type in EqualTo, but the actual " +
+            s"input type is ${left.dataType.catalogString}.")
+        } else {
+          TypeCheckResult.TypeCheckSuccess
+        }
+      case failure => failure
+    }
+  }
+
   override def symbol: String = "="
 
   protected override def nullSafeEval(left: Any, right: Any): Any = ordering.equiv(left, right)
@@ -549,6 +566,23 @@ case class EqualTo(left: Expression, right: Expression)
        true
   """)
 case class EqualNullSafe(left: Expression, right: Expression) extends BinaryComparison {
+
+  override def inputType: AbstractDataType = AnyDataType
+
+  override def checkInputDataTypes(): TypeCheckResult = {
+    super.checkInputDataTypes() match {
+      case TypeCheckResult.TypeCheckSuccess =>
+        // TODO: although map type is not orderable, technically map type should be able to be used
+        // in equality comparison, remove this type check once we support it.
+        if (left.dataType.existsRecursively(_.isInstanceOf[MapType])) {
+          TypeCheckResult.TypeCheckFailure("Cannot use map type in EqualNullSafe, but the actual " +
+            s"input type is ${left.dataType.catalogString}.")
+        } else {
+          TypeCheckResult.TypeCheckSuccess
+        }
+      case failure => failure
+    }
+  }
 
   override def symbol: String = "<=>"
 

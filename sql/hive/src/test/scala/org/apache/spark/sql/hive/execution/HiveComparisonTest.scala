@@ -20,7 +20,6 @@ package org.apache.spark.sql.hive.execution
 import java.io._
 import java.nio.charset.StandardCharsets
 import java.util
-import java.util.Locale
 
 import scala.util.control.NonFatal
 
@@ -31,8 +30,8 @@ import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util._
-import org.apache.spark.sql.execution.SQLExecution
 import org.apache.spark.sql.execution.command._
+import org.apache.spark.sql.hive.{InsertIntoHiveTable => LogicalInsertIntoHiveTable}
 import org.apache.spark.sql.hive.test.{TestHive, TestHiveQueryExecution}
 
 /**
@@ -341,11 +340,58 @@ abstract class HiveComparisonTest
 
         // Run w/ catalyst
         val catalystResults = queryList.zip(hiveResults).map { case (queryString, hive) =>
-          val query = new TestHiveQueryExecution(queryString.replace("../../data", testDataPath))
-          def getResult(): Seq[String] = {
-            SQLExecution.withNewExecutionId(query.sparkSession, query)(query.hiveResultString())
-          }
-          try { (query, prepareAnswer(query, getResult())) } catch {
+          var query: TestHiveQueryExecution = null
+          try {
+            query = {
+              val originalQuery = new TestHiveQueryExecution(
+                queryString.replace("../../data", testDataPath))
+              val containsCommands = originalQuery.analyzed.collectFirst {
+                case _: Command => ()
+                case _: InsertIntoTable => ()
+                case _: LogicalInsertIntoHiveTable => ()
+              }.nonEmpty
+
+              if (containsCommands) {
+                originalQuery
+              } else {
+                val convertedSQL = try {
+                  new SQLBuilder(originalQuery.analyzed).toSQL
+                } catch {
+                  case NonFatal(e) => fail(
+                    s"""Cannot convert the following HiveQL query plan back to SQL query string:
+                        |
+                        |# Original HiveQL query string:
+                        |$queryString
+                        |
+                        |# Resolved query plan:
+                        |${originalQuery.analyzed.treeString}
+                     """.stripMargin, e)
+                }
+
+                try {
+                  val queryExecution = new TestHiveQueryExecution(convertedSQL)
+                  // Trigger the analysis of this converted SQL query.
+                  queryExecution.analyzed
+                  queryExecution
+                } catch {
+                  case NonFatal(e) => fail(
+                    s"""Failed to analyze the converted SQL string:
+                        |
+                        |# Original HiveQL query string:
+                        |$queryString
+                        |
+                        |# Resolved query plan:
+                        |${originalQuery.analyzed.treeString}
+                        |
+                        |# Converted SQL query string:
+                        |$convertedSQL
+                     """.stripMargin, e)
+                }
+              }
+            }
+
+            (query, prepareAnswer(query, query.hiveResultString()))
+          } catch {
             case e: Throwable =>
               val errorMessage =
                 s"""
@@ -371,7 +417,6 @@ abstract class HiveComparisonTest
             if ((!hiveQuery.logical.isInstanceOf[ExplainCommand]) &&
                 (!hiveQuery.logical.isInstanceOf[ShowFunctionsCommand]) &&
                 (!hiveQuery.logical.isInstanceOf[DescribeFunctionCommand]) &&
-                (!hiveQuery.logical.isInstanceOf[DescribeTableCommand]) &&
                 preparedHive != catalyst) {
 
               val hivePrintOut = s"== HIVE - ${preparedHive.size} row(s) ==" +: preparedHive

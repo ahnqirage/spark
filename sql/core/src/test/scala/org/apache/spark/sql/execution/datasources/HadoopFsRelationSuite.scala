@@ -36,7 +36,18 @@ class HadoopFsRelationSuite extends QueryTest with SharedSQLContext {
       })
       val totalSize = allFiles.map(_.length()).sum
       val df = spark.read.parquet(dir.toString)
-      assert(df.queryExecution.logical.stats.sizeInBytes === BigInt(totalSize))
+      assert(df.queryExecution.logical.statistics.sizeInBytes === BigInt(totalSize))
     }
+  }
+
+  test("file filtering") {
+    assert(!HadoopFsRelation.shouldFilterOut("abcd"))
+    assert(HadoopFsRelation.shouldFilterOut(".ab"))
+    assert(HadoopFsRelation.shouldFilterOut("_cd"))
+
+    assert(!HadoopFsRelation.shouldFilterOut("_metadata"))
+    assert(!HadoopFsRelation.shouldFilterOut("_common_metadata"))
+    assert(HadoopFsRelation.shouldFilterOut("_ab_metadata"))
+    assert(HadoopFsRelation.shouldFilterOut("_cd_common_metadata"))
   }
 }

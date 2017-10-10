@@ -20,7 +20,7 @@ package org.apache.spark.ml.feature
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.feature.{IDFModel => OldIDFModel}
 import org.apache.spark.mllib.linalg.VectorImplicits._
@@ -63,7 +63,7 @@ class IDFSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRead
     })
     val expected = scaleDataWithIDF(data, idf)
 
-    val df = data.zip(expected).toSeq.toDF("features", "expected")
+    val df = spark.createDataFrame(data.zip(expected)).toDF("features", "expected")
 
     val idfEst = new IDF()
       .setInputCol("features")
@@ -91,7 +91,7 @@ class IDFSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRead
     })
     val expected = scaleDataWithIDF(data, idf)
 
-    val df = data.zip(expected).toSeq.toDF("features", "expected")
+    val df = spark.createDataFrame(data.zip(expected)).toDF("features", "expected")
 
     val idfModel = new IDF()
       .setInputCol("features")

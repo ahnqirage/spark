@@ -47,10 +47,10 @@ import org.apache.spark.sql.execution.{ShuffledRowRDD, SparkPlan}
  *    partitions.
  *
  * The workflow of this coordinator is described as follows:
- *  - Before the execution of a [[SparkPlan]], for a [[ShuffleExchangeExec]] operator,
+ *  - Before the execution of a [[SparkPlan]], for a [[ShuffleExchange]] operator,
  *    if an [[ExchangeCoordinator]] is assigned to it, it registers itself to this coordinator.
  *    This happens in the `doPrepare` method.
- *  - Once we start to execute a physical plan, a [[ShuffleExchangeExec]] registered to this
+ *  - Once we start to execute a physical plan, a [[ShuffleExchange]] registered to this
  *    coordinator will call `postShuffleRDD` to get its corresponding post-shuffle
  *    [[ShuffledRowRDD]].
  *    If this coordinator has made the decision on how to shuffle data, this [[ShuffleExchangeExec]]
@@ -61,8 +61,8 @@ import org.apache.spark.sql.execution.{ShuffledRowRDD, SparkPlan}
  *    post-shuffle partitions and pack multiple pre-shuffle partitions with continuous indices
  *    to a single post-shuffle partition whenever necessary.
  *  - Finally, this coordinator will create post-shuffle [[ShuffledRowRDD]]s for all registered
- *    [[ShuffleExchangeExec]]s. So, when a [[ShuffleExchangeExec]] calls `postShuffleRDD`, this
- *    coordinator can lookup the corresponding [[RDD]].
+ *    [[ShuffleExchange]]s. So, when a [[ShuffleExchange]] calls `postShuffleRDD`, this coordinator
+ *    can lookup the corresponding [[RDD]].
  *
  * The strategy used to determine the number of post-shuffle partitions is described as follows.
  * To determine the number of post-shuffle partitions, we have a target input size for a
@@ -101,8 +101,8 @@ class ExchangeCoordinator(
   @volatile private[this] var estimated: Boolean = false
 
   /**
-   * Registers a [[ShuffleExchangeExec]] operator to this coordinator. This method is only allowed
-   * to be called in the `doPrepare` method of a [[ShuffleExchangeExec]] operator.
+   * Registers a [[ShuffleExchange]] operator to this coordinator. This method is only allowed to
+   * be called in the `doPrepare` method of a [[ShuffleExchange]] operator.
    */
   @GuardedBy("this")
   def registerExchange(exchange: ShuffleExchangeExec): Unit = synchronized {

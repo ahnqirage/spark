@@ -17,19 +17,17 @@
 
 package org.apache.spark.sql.execution.command
 
-import java.util.UUID
-
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.catalyst.errors.TreeNodeException
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.catalyst.plans.{logical, QueryPlan}
+import org.apache.spark.sql.catalyst.plans.QueryPlan
+import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.debug._
-import org.apache.spark.sql.execution.metric.SQLMetric
-import org.apache.spark.sql.execution.streaming.{IncrementalExecution, OffsetSeqMetadata}
+import org.apache.spark.sql.execution.streaming.IncrementalExecution
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types._
 
@@ -38,18 +36,7 @@ import org.apache.spark.sql.types._
  * wrapped in `ExecutedCommand` during execution.
  */
 trait RunnableCommand extends logical.Command {
-
-  // The map used to record the metrics of running the command. This will be passed to
-  // `ExecutedCommand` during query planning.
-  lazy val metrics: Map[String, SQLMetric] = Map.empty
-
-  def run(sparkSession: SparkSession, children: Seq[SparkPlan]): Seq[Row] = {
-    throw new NotImplementedError
-  }
-
-  def run(sparkSession: SparkSession): Seq[Row] = {
-    throw new NotImplementedError
-  }
+  def run(sparkSession: SparkSession): Seq[Row]
 }
 
 /**
@@ -59,10 +46,7 @@ trait RunnableCommand extends logical.Command {
  * @param cmd the `RunnableCommand` this operator will run.
  * @param children the children physical plans ran by the `RunnableCommand`.
  */
-case class ExecutedCommandExec(cmd: RunnableCommand, children: Seq[SparkPlan]) extends SparkPlan {
-
-  override lazy val metrics: Map[String, SQLMetric] = cmd.metrics
-
+case class ExecutedCommandExec(cmd: RunnableCommand) extends SparkPlan {
   /**
    * A concrete command should override this lazy field to wrap up any side effects caused by the
    * command or any other computation that should be evaluated exactly once. The value of this field
@@ -82,7 +66,7 @@ case class ExecutedCommandExec(cmd: RunnableCommand, children: Seq[SparkPlan]) e
     rows.map(converter(_).asInstanceOf[InternalRow])
   }
 
-  override def innerChildren: Seq[QueryPlan[_]] = cmd.innerChildren
+  override protected def innerChildren: Seq[QueryPlan[_]] = cmd :: Nil
 
   override def output: Seq[Attribute] = cmd.output
 
@@ -130,9 +114,7 @@ case class ExplainCommand(
       if (logicalPlan.isStreaming) {
         // This is used only by explaining `Dataset/DataFrame` created by `spark.readStream`, so the
         // output mode does not matter since there is no `Sink`.
-        new IncrementalExecution(
-          sparkSession, logicalPlan, OutputMode.Append(), "<unknown>",
-          UUID.randomUUID, 0, OffsetSeqMetadata(0, 0))
+        new IncrementalExecution(sparkSession, logicalPlan, OutputMode.Append(), "<unknown>", 0)
       } else {
         sparkSession.sessionState.executePlan(logicalPlan)
       }
@@ -143,28 +125,6 @@ case class ExplainCommand(
         queryExecution.toString
       } else if (cost) {
         queryExecution.stringWithStats
-      } else {
-        queryExecution.simpleString
-      }
-    Seq(Row(outputString))
-  } catch { case cause: TreeNodeException[_] =>
-    ("Error occurred during query planning: \n" + cause.getMessage).split("\n").map(Row(_))
-  }
-}
-
-/** An explain command for users to see how a streaming batch is executed. */
-case class StreamingExplainCommand(
-    queryExecution: IncrementalExecution,
-    extended: Boolean) extends RunnableCommand {
-
-  override val output: Seq[Attribute] =
-    Seq(AttributeReference("plan", StringType, nullable = true)())
-
-  // Run through the optimizer to generate the physical plan.
-  override def run(sparkSession: SparkSession): Seq[Row] = try {
-    val outputString =
-      if (extended) {
-        queryExecution.toString
       } else {
         queryExecution.simpleString
       }

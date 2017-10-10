@@ -52,7 +52,7 @@ public class JavaDataFrameSuite {
     for (int i = 0; i < 10; i++) {
       jsonObjects.add("{\"key\":" + i + ", \"value\":\"str" + i + "\"}");
     }
-    df = hc.read().json(hc.createDataset(jsonObjects, Encoders.STRING()));
+    df = hc.read().json(sc.parallelize(jsonObjects));
     df.createOrReplaceTempView("window_table");
   }
 

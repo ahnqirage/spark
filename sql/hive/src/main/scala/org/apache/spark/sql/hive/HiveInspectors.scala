@@ -344,6 +344,9 @@ private[hive] trait HiveInspectors {
         (_: Any) => null // always be null for void object inspector
     }
 
+    case _: VoidObjectInspector =>
+      (_: Any) => null // always be null for void object inspector
+
     case soi: StandardStructObjectInspector =>
       val schema = dataType.asInstanceOf[StructType]
       val wrappers = soi.getAllStructFieldRefs.asScala.zip(schema.fields).map {
@@ -725,8 +728,108 @@ private[hive] trait HiveInspectors {
         (value: Any, row: InternalRow, ordinal: Int) => row(ordinal) = unwrapper(value)
     }
 
-  def wrap(a: Any, oi: ObjectInspector, dataType: DataType): AnyRef = {
-    wrapperFor(oi, dataType)(a).asInstanceOf[AnyRef]
+  /**
+   * Converts native catalyst types to the types expected by Hive
+   * @param a the value to be wrapped
+   * @param oi This ObjectInspector associated with the value returned by this function, and
+   *           the ObjectInspector should also be consistent with those returned from
+   *           toInspector: DataType => ObjectInspector and
+   *           toInspector: Expression => ObjectInspector
+   *
+   * Strictly follows the following order in wrapping (constant OI has the higher priority):
+   *   Constant object inspector => return the bundled value of Constant object inspector
+   *   Check whether the `a` is null => return null if true
+   *   If object inspector prefers writable object => return a Writable for the given data `a`
+   *   Map the catalyst data to the boxed java primitive
+   *
+   *  NOTICE: the complex data type requires recursive wrapping.
+   */
+  def wrap(a: Any, oi: ObjectInspector, dataType: DataType): AnyRef = oi match {
+    case x: ConstantObjectInspector => x.getWritableConstantValue
+    case _ if a == null => null
+    case x: PrimitiveObjectInspector => x match {
+      // TODO we don't support the HiveVarcharObjectInspector yet.
+      case _: StringObjectInspector if x.preferWritable() => getStringWritable(a)
+      case _: StringObjectInspector => a.asInstanceOf[UTF8String].toString()
+      case _: IntObjectInspector if x.preferWritable() => getIntWritable(a)
+      case _: IntObjectInspector => a.asInstanceOf[java.lang.Integer]
+      case _: BooleanObjectInspector if x.preferWritable() => getBooleanWritable(a)
+      case _: BooleanObjectInspector => a.asInstanceOf[java.lang.Boolean]
+      case _: FloatObjectInspector if x.preferWritable() => getFloatWritable(a)
+      case _: FloatObjectInspector => a.asInstanceOf[java.lang.Float]
+      case _: DoubleObjectInspector if x.preferWritable() => getDoubleWritable(a)
+      case _: DoubleObjectInspector => a.asInstanceOf[java.lang.Double]
+      case _: LongObjectInspector if x.preferWritable() => getLongWritable(a)
+      case _: LongObjectInspector => a.asInstanceOf[java.lang.Long]
+      case _: ShortObjectInspector if x.preferWritable() => getShortWritable(a)
+      case _: ShortObjectInspector => a.asInstanceOf[java.lang.Short]
+      case _: ByteObjectInspector if x.preferWritable() => getByteWritable(a)
+      case _: ByteObjectInspector => a.asInstanceOf[java.lang.Byte]
+      case _: HiveDecimalObjectInspector if x.preferWritable() =>
+        getDecimalWritable(a.asInstanceOf[Decimal])
+      case _: HiveDecimalObjectInspector =>
+        HiveDecimal.create(a.asInstanceOf[Decimal].toJavaBigDecimal)
+      case _: BinaryObjectInspector if x.preferWritable() => getBinaryWritable(a)
+      case _: BinaryObjectInspector => a.asInstanceOf[Array[Byte]]
+      case _: DateObjectInspector if x.preferWritable() => getDateWritable(a)
+      case _: DateObjectInspector => DateTimeUtils.toJavaDate(a.asInstanceOf[Int])
+      case _: TimestampObjectInspector if x.preferWritable() => getTimestampWritable(a)
+      case _: TimestampObjectInspector => DateTimeUtils.toJavaTimestamp(a.asInstanceOf[Long])
+    }
+    case x: SettableStructObjectInspector =>
+      val fieldRefs = x.getAllStructFieldRefs
+      val structType = dataType.asInstanceOf[StructType]
+      val row = a.asInstanceOf[InternalRow]
+      // 1. create the pojo (most likely) object
+      val result = x.create()
+      var i = 0
+      val size = fieldRefs.size
+      while (i < size) {
+        // 2. set the property for the pojo
+        val tpe = structType(i).dataType
+        x.setStructFieldData(
+          result,
+          fieldRefs.get(i),
+          wrap(row.get(i, tpe), fieldRefs.get(i).getFieldObjectInspector, tpe))
+        i += 1
+      }
+
+      result
+    case x: StructObjectInspector =>
+      val fieldRefs = x.getAllStructFieldRefs
+      val structType = dataType.asInstanceOf[StructType]
+      val row = a.asInstanceOf[InternalRow]
+      val result = new java.util.ArrayList[AnyRef](fieldRefs.size)
+      var i = 0
+      val size = fieldRefs.size
+      while (i < size) {
+        val tpe = structType(i).dataType
+        result.add(wrap(row.get(i, tpe), fieldRefs.get(i).getFieldObjectInspector, tpe))
+        i += 1
+      }
+
+      result
+    case x: ListObjectInspector =>
+      val list = new java.util.ArrayList[Object]
+      val tpe = dataType.asInstanceOf[ArrayType].elementType
+      a.asInstanceOf[ArrayData].foreach(tpe, (_, e) =>
+        list.add(wrap(e, x.getListElementObjectInspector, tpe))
+      )
+      list
+    case x: MapObjectInspector =>
+      val keyType = dataType.asInstanceOf[MapType].keyType
+      val valueType = dataType.asInstanceOf[MapType].valueType
+      val map = a.asInstanceOf[MapData]
+
+      // Some UDFs seem to assume we pass in a HashMap.
+      val hashMap = new java.util.HashMap[Any, Any](map.numElements())
+
+      map.foreach(keyType, valueType, (k, v) =>
+        hashMap.put(wrap(k, x.getMapKeyObjectInspector, keyType),
+          wrap(v, x.getMapValueObjectInspector, valueType))
+      )
+
+      hashMap
   }
 
   def wrap(
@@ -735,9 +838,9 @@ private[hive] trait HiveInspectors {
       cache: Array[AnyRef],
       dataTypes: Array[DataType]): Array[AnyRef] = {
     var i = 0
-    val length = wrappers.length
+    val length = inspectors.length
     while (i < length) {
-      cache(i) = wrappers(i)(row.get(i, dataTypes(i))).asInstanceOf[AnyRef]
+      cache(i) = wrap(row.get(i, dataTypes(i)), inspectors(i), dataTypes(i))
       i += 1
     }
     cache
@@ -749,9 +852,9 @@ private[hive] trait HiveInspectors {
       cache: Array[AnyRef],
       dataTypes: Array[DataType]): Array[AnyRef] = {
     var i = 0
-    val length = wrappers.length
+    val length = inspectors.length
     while (i < length) {
-      cache(i) = wrappers(i)(row(i)).asInstanceOf[AnyRef]
+      cache(i) = wrap(row(i), inspectors(i), dataTypes(i))
       i += 1
     }
     cache

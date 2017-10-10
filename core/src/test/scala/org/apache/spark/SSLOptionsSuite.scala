@@ -105,7 +105,6 @@ class SSLOptionsSuite extends SparkFunSuite with BeforeAndAfterAll {
     val conf = new SparkConf
     conf.set("spark.ssl.enabled", "true")
     conf.set("spark.ssl.ui.enabled", "false")
-    conf.set("spark.ssl.ui.port", "4242")
     conf.set("spark.ssl.keyStore", keyStorePath)
     conf.set("spark.ssl.keyStorePassword", "password")
     conf.set("spark.ssl.ui.keyStorePassword", "12345")

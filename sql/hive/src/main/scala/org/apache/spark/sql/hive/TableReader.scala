@@ -238,11 +238,9 @@ class HadoopTableReader(
       // Fill all partition keys to the given MutableRow object
       fillPartitionKeys(partValues, mutableRow)
 
-      val tableProperties = tableDesc.getProperties
+      val tableProperties = relation.tableDesc.getProperties
 
-      // Create local references so that the outer object isn't serialized.
-      val localTableDesc = tableDesc
-      createHadoopRdd(localTableDesc, inputPathStr, ifc).mapPartitions { iter =>
+      createHadoopRdd(tableDesc, inputPathStr, ifc).mapPartitions { iter =>
         val hconf = broadcastedHiveConf.value.value
         val deserializer = localDeserializer.newInstance()
         // SPARK-13709: For SerDes like AvroSerDe, some essential information (e.g. Avro schema

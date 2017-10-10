@@ -52,47 +52,21 @@ case class WindowSpecDefinition(
   override def foldable: Boolean = false
   override def dataType: DataType = throw new UnsupportedOperationException("dataType")
 
-  override def checkInputDataTypes(): TypeCheckResult = {
-    frameSpecification match {
-      case UnspecifiedFrame =>
-        TypeCheckFailure(
-          "Cannot use an UnspecifiedFrame. This should have been converted during analysis. " +
-            "Please file a bug report.")
-      case f: SpecifiedWindowFrame if f.frameType == RangeFrame && !f.isUnbounded &&
-          orderSpec.isEmpty =>
-        TypeCheckFailure(
-          "A range window frame cannot be used in an unordered window specification.")
-      case f: SpecifiedWindowFrame if f.frameType == RangeFrame && f.isValueBound &&
-          orderSpec.size > 1 =>
-        TypeCheckFailure(
-          s"A range window frame with value boundaries cannot be used in a window specification " +
-            s"with multiple order by expressions: ${orderSpec.mkString(",")}")
-      case f: SpecifiedWindowFrame if f.frameType == RangeFrame && f.isValueBound &&
-          !isValidFrameType(f.valueBoundary.head.dataType) =>
-        TypeCheckFailure(
-          s"The data type '${orderSpec.head.dataType}' used in the order specification does " +
-            s"not match the data type '${f.valueBoundary.head.dataType}' which is used in the " +
-            "range frame.")
-      case _ => TypeCheckSuccess
-    }
-  }
-
   override def sql: String = {
-    def toSql(exprs: Seq[Expression], prefix: String): Seq[String] = {
-      Seq(exprs).filter(_.nonEmpty).map(_.map(_.sql).mkString(prefix, ", ", ""))
+    val partition = if (partitionSpec.isEmpty) {
+      ""
+    } else {
+      "PARTITION BY " + partitionSpec.map(_.sql).mkString(", ") + " "
     }
-
-    val elements =
-      toSql(partitionSpec, "PARTITION BY ") ++
-        toSql(orderSpec, "ORDER BY ") ++
-        Seq(frameSpecification.sql)
-    elements.mkString("(", " ", ")")
   }
 
-  private def isValidFrameType(ft: DataType): Boolean = (orderSpec.head.dataType, ft) match {
-    case (DateType, IntegerType) => true
-    case (TimestampType, CalendarIntervalType) => true
-    case (a, b) => a == b
+    val order = if (orderSpec.isEmpty) {
+      ""
+    } else {
+      "ORDER BY " + orderSpec.map(_.sql).mkString(", ") + " "
+    }
+
+    s"($partition$order${frameSpecification.toString})"
   }
 }
 
@@ -332,7 +306,7 @@ abstract class OffsetWindowFunction
   val input: Expression
 
   /**
-   * Default result value for the function when the `offset`th row does not exist.
+   * Default result value for the function when the 'offset'th row does not exist.
    */
   val default: Expression
 
@@ -388,23 +362,22 @@ abstract class OffsetWindowFunction
 }
 
 /**
- * The Lead function returns the value of `input` at the `offset`th row after the current row in
+ * The Lead function returns the value of 'x' at the 'offset'th row after the current row in
  * the window. Offsets start at 0, which is the current row. The offset must be constant
- * integer value. The default offset is 1. When the value of `input` is null at the `offset`th row,
- * null is returned. If there is no such offset row, the `default` expression is evaluated.
+ * integer value. The default offset is 1. When the value of 'x' is null at the 'offset'th row,
+ * null is returned. If there is no such offset row, the default expression is evaluated.
  *
  * @param input expression to evaluate `offset` rows after the current row.
  * @param offset rows to jump ahead in the partition.
  * @param default to use when the offset is larger than the window. The default value is null.
  */
-@ExpressionDescription(
-  usage = """
-    _FUNC_(input[, offset[, default]]) - Returns the value of `input` at the `offset`th row
-      after the current row in the window. The default value of `offset` is 1 and the default
-      value of `default` is null. If the value of `input` at the `offset`th row is null,
-      null is returned. If there is no such an offset row (e.g., when the offset is 1, the last
-      row of the window does not have any subsequent row), `default` is returned.
-  """)
+@ExpressionDescription(usage =
+  """_FUNC_(input, offset, default) - LEAD returns the value of 'x' at the 'offset'th row
+     after the current row in the window.
+     The default value of 'offset' is 1 and the default value of 'default' is null.
+     If the value of 'x' at the 'offset'th row is null, null is returned.
+     If there is no such offset row (e.g. when the offset is 1, the last row of the window
+     does not have any subsequent row), 'default' is returned.""")
 case class Lead(input: Expression, offset: Expression, default: Expression)
     extends OffsetWindowFunction {
 
@@ -418,23 +391,22 @@ case class Lead(input: Expression, offset: Expression, default: Expression)
 }
 
 /**
- * The Lag function returns the value of `input` at the `offset`th row before the current row in
+ * The Lag function returns the value of 'x' at the 'offset'th row before the current row in
  * the window. Offsets start at 0, which is the current row. The offset must be constant
- * integer value. The default offset is 1. When the value of `input` is null at the `offset`th row,
- * null is returned. If there is no such offset row, the `default` expression is evaluated.
+ * integer value. The default offset is 1. When the value of 'x' is null at the 'offset'th row,
+ * null is returned. If there is no such offset row, the default expression is evaluated.
  *
- * @param input expression to evaluate `offset` rows before the current row.
+ * @param input expression to evaluate 'offset' rows before the current row.
  * @param offset rows to jump back in the partition.
  * @param default to use when the offset row does not exist.
  */
-@ExpressionDescription(
-  usage = """
-    _FUNC_(input[, offset[, default]]) - Returns the value of `input` at the `offset`th row
-      before the current row in the window. The default value of `offset` is 1 and the default
-      value of `default` is null. If the value of `input` at the `offset`th row is null,
-      null is returned. If there is no such offset row (e.g., when the offset is 1, the first
-      row of the window does not have any previous row), `default` is returned.
-  """)
+@ExpressionDescription(usage =
+  """_FUNC_(input, offset, default) - LAG returns the value of 'x' at the 'offset'th row
+     before the current row in the window.
+     The default value of 'offset' is 1 and the default value of 'default' is null.
+     If the value of 'x' at the 'offset'th row is null, null is returned.
+     If there is no such offset row (e.g. when the offset is 1, the first row of the window
+     does not have any previous row), 'default' is returned.""")
 case class Lag(input: Expression, offset: Expression, default: Expression)
     extends OffsetWindowFunction {
 

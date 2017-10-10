@@ -41,7 +41,8 @@ class BinarizerSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
 
   test("Binarize continuous features with default parameter") {
     val defaultBinarized: Array[Double] = data.map(x => if (x > 0.0) 1.0 else 0.0)
-    val dataFrame: DataFrame = data.zip(defaultBinarized).toSeq.toDF("feature", "expected")
+    val dataFrame: DataFrame = spark.createDataFrame(
+      data.zip(defaultBinarized)).toDF("feature", "expected")
 
     val binarizer: Binarizer = new Binarizer()
       .setInputCol("feature")
@@ -56,7 +57,8 @@ class BinarizerSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
   test("Binarize continuous features with setter") {
     val threshold: Double = 0.2
     val thresholdBinarized: Array[Double] = data.map(x => if (x > threshold) 1.0 else 0.0)
-    val dataFrame: DataFrame = data.zip(thresholdBinarized).toSeq.toDF("feature", "expected")
+    val dataFrame: DataFrame = spark.createDataFrame(
+        data.zip(thresholdBinarized)).toDF("feature", "expected")
 
     val binarizer: Binarizer = new Binarizer()
       .setInputCol("feature")
@@ -71,7 +73,7 @@ class BinarizerSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
 
   test("Binarize vector of continuous features with default parameter") {
     val defaultBinarized: Array[Double] = data.map(x => if (x > 0.0) 1.0 else 0.0)
-    val dataFrame: DataFrame = Seq(
+    val dataFrame: DataFrame = spark.createDataFrame(Seq(
       (Vectors.dense(data), Vectors.dense(defaultBinarized))
     ).toDF("feature", "expected")
 
@@ -88,7 +90,7 @@ class BinarizerSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
   test("Binarize vector of continuous features with setter") {
     val threshold: Double = 0.2
     val defaultBinarized: Array[Double] = data.map(x => if (x > threshold) 1.0 else 0.0)
-    val dataFrame: DataFrame = Seq(
+    val dataFrame: DataFrame = spark.createDataFrame(Seq(
       (Vectors.dense(data), Vectors.dense(defaultBinarized))
     ).toDF("feature", "expected")
 

@@ -22,9 +22,10 @@ import java.util.Locale
 import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 
-import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.sql.api.r.SQLUtils._
 import org.apache.spark.sql.catalyst.analysis.{Star, UnresolvedAlias, UnresolvedAttribute, UnresolvedFunction}
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, FlatMapGroupsInR, Pivot}
@@ -42,6 +43,8 @@ import org.apache.spark.sql.types.StructType
  * some first-order statistics such as `mean`, `sum` for convenience.
  *
  * @note This class was named `GroupedData` in Spark 1.x.
+ *
+ * This class was named `GroupedData` in Spark 1.x.
  *
  * @since 2.0.0
  */
@@ -132,7 +135,7 @@ class RelationalGroupedDataset protected[sql](
 
   /**
    * (Scala-specific) Compute aggregates by specifying the column names and
-   * aggregate methods. The resulting `DataFrame` will also contain the grouping columns.
+   * aggregate methods. The resulting [[DataFrame]] will also contain the grouping columns.
    *
    * The available aggregate methods are `avg`, `max`, `min`, `sum`, `count`.
    * {{{
@@ -224,7 +227,7 @@ class RelationalGroupedDataset protected[sql](
   def agg(expr: Column, exprs: Column*): DataFrame = {
     toDF((expr +: exprs).map {
       case typed: TypedColumn[_, _] =>
-        typed.withInputType(df.exprEnc, df.logicalPlan.output).expr
+        typed.withInputType(df.exprEnc.deserializer, df.logicalPlan.output).expr
       case c => c.expr
     })
   }
@@ -393,6 +396,49 @@ class RelationalGroupedDataset protected[sql](
   def pivot(pivotColumn: String, values: java.util.List[Any]): RelationalGroupedDataset = {
     pivot(pivotColumn, values.asScala)
   }
+
+  /**
+   * Applies the given serialized R function `func` to each group of data. For each unique group,
+   * the function will be passed the group key and an iterator that contains all of the elements in
+   * the group. The function can return an iterator containing elements of an arbitrary type which
+   * will be returned as a new [[DataFrame]].
+   *
+   * This function does not support partial aggregation, and as a result requires shuffling all
+   * the data in the [[Dataset]]. If an application intends to perform an aggregation over each
+   * key, it is best to use the reduce function or an
+   * [[org.apache.spark.sql.expressions#Aggregator Aggregator]].
+   *
+   * Internally, the implementation will spill to disk if any given group is too large to fit into
+   * memory.  However, users must take care to avoid materializing the whole iterator for a group
+   * (for example, by calling `toList`) unless they are sure that this is possible given the memory
+   * constraints of their cluster.
+   *
+   * @since 2.0.0
+   */
+  private[sql] def flatMapGroupsInR(
+      f: Array[Byte],
+      packageNames: Array[Byte],
+      broadcastVars: Array[Broadcast[Object]],
+      outputSchema: StructType): DataFrame = {
+      val groupingNamedExpressions = groupingExprs.map(alias)
+      val groupingCols = groupingNamedExpressions.map(Column(_))
+      val groupingDataFrame = df.select(groupingCols : _*)
+      val groupingAttributes = groupingNamedExpressions.map(_.toAttribute)
+      Dataset.ofRows(
+        df.sparkSession,
+        FlatMapGroupsInR(
+          f,
+          packageNames,
+          broadcastVars,
+          outputSchema,
+          groupingDataFrame.exprEnc.deserializer,
+          df.exprEnc.deserializer,
+          df.exprEnc.schema,
+          groupingAttributes,
+          df.logicalPlan.output,
+          df.logicalPlan))
+  }
+}
 
   /**
    * Applies the given serialized R function `func` to each group of data. For each unique group,

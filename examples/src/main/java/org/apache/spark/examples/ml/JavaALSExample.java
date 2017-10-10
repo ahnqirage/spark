@@ -87,7 +87,11 @@ public class JavaALSExample {
     // $example on$
     JavaRDD<Rating> ratingsRDD = spark
       .read().textFile("data/mllib/als/sample_movielens_ratings.txt").javaRDD()
-      .map(Rating::parseRating);
+      .map(new Function<String, Rating>() {
+        public Rating call(String str) {
+          return Rating.parseRating(str);
+        }
+      });
     Dataset<Row> ratings = spark.createDataFrame(ratingsRDD, Rating.class);
     Dataset<Row>[] splits = ratings.randomSplit(new double[]{0.8, 0.2});
     Dataset<Row> training = splits[0];
@@ -103,8 +107,6 @@ public class JavaALSExample {
     ALSModel model = als.fit(training);
 
     // Evaluate the model by computing the RMSE on the test data
-    // Note we set cold start strategy to 'drop' to ensure we don't get NaN evaluation metrics
-    model.setColdStartStrategy("drop");
     Dataset<Row> predictions = model.transform(test);
 
     RegressionEvaluator evaluator = new RegressionEvaluator()
@@ -119,9 +121,6 @@ public class JavaALSExample {
     // Generate top 10 user recommendations for each movie
     Dataset<Row> movieRecs = model.recommendForAllItems(10);
     // $example off$
-    userRecs.show();
-    movieRecs.show();
-
     spark.stop();
   }
 }

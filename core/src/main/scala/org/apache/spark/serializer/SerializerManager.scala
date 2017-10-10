@@ -78,8 +78,6 @@ private[spark] class SerializerManager(
    * loaded yet. */
   private lazy val compressionCodec: CompressionCodec = CompressionCodec.createCodec(conf)
 
-  def encryptionEnabled: Boolean = encryptionKey.isDefined
-
   def canUseKryo(ct: ClassTag[_]): Boolean = {
     primitiveAndPrimitiveArrayClassTags.contains(ct) || ct == stringClassTag
   }
@@ -175,9 +173,7 @@ private[spark] class SerializerManager(
   }
 
   /** Serializes into a chunked byte buffer. */
-  def dataSerialize[T: ClassTag](
-      blockId: BlockId,
-      values: Iterator[T]): ChunkedByteBuffer = {
+  def dataSerialize[T: ClassTag](blockId: BlockId, values: Iterator[T]): ChunkedByteBuffer = {
     dataSerializeWithExplicitClassTag(blockId, values, implicitly[ClassTag[T]])
   }
 

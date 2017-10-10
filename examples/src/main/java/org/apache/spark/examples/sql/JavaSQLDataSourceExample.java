@@ -19,10 +19,8 @@ package org.apache.spark.examples.sql;
 // $example on:schema_merging$
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 // $example off:schema_merging$
-import java.util.Properties;
 
 // $example on:basic_parquet_example$
 import org.apache.spark.api.java.function.MapFunction;
@@ -120,26 +118,6 @@ public class JavaSQLDataSourceExample {
     Dataset<Row> sqlDF =
       spark.sql("SELECT * FROM parquet.`examples/src/main/resources/users.parquet`");
     // $example off:direct_sql$
-    // $example on:write_sorting_and_bucketing$
-    peopleDF.write().bucketBy(42, "name").sortBy("age").saveAsTable("people_bucketed");
-    // $example off:write_sorting_and_bucketing$
-    // $example on:write_partitioning$
-    usersDF
-      .write()
-      .partitionBy("favorite_color")
-      .format("parquet")
-      .save("namesPartByColor.parquet");
-    // $example off:write_partitioning$
-    // $example on:write_partition_and_bucket$
-    peopleDF
-      .write()
-      .partitionBy("favorite_color")
-      .bucketBy(42, "name")
-      .saveAsTable("people_partitioned_bucketed");
-    // $example off:write_partition_and_bucket$
-
-    spark.sql("DROP TABLE IF EXISTS people_bucketed");
-    spark.sql("DROP TABLE IF EXISTS people_partitioned_bucketed");
   }
 
   private static void runBasicParquetExample(SparkSession spark) {
@@ -157,9 +135,11 @@ public class JavaSQLDataSourceExample {
     // Parquet files can also be used to create a temporary view and then used in SQL statements
     parquetFileDF.createOrReplaceTempView("parquetFile");
     Dataset<Row> namesDF = spark.sql("SELECT name FROM parquetFile WHERE age BETWEEN 13 AND 19");
-    Dataset<String> namesDS = namesDF.map(
-        (MapFunction<Row, String>) row -> "Name: " + row.getString(0),
-        Encoders.STRING());
+    Dataset<String> namesDS = namesDF.map(new MapFunction<Row, String>() {
+      public String call(Row row) {
+        return "Name: " + row.getString(0);
+      }
+    }, Encoders.STRING());
     namesDS.show();
     // +------------+
     // |       value|
@@ -233,26 +213,11 @@ public class JavaSQLDataSourceExample {
     // +------+
     // |Justin|
     // +------+
-
-    // Alternatively, a DataFrame can be created for a JSON dataset represented by
-    // a Dataset<String> storing one JSON object per string.
-    List<String> jsonData = Arrays.asList(
-            "{\"name\":\"Yin\",\"address\":{\"city\":\"Columbus\",\"state\":\"Ohio\"}}");
-    Dataset<String> anotherPeopleDataset = spark.createDataset(jsonData, Encoders.STRING());
-    Dataset<Row> anotherPeople = spark.read().json(anotherPeopleDataset);
-    anotherPeople.show();
-    // +---------------+----+
-    // |        address|name|
-    // +---------------+----+
-    // |[Columbus,Ohio]| Yin|
-    // +---------------+----+
     // $example off:json_dataset$
   }
 
   private static void runJdbcDatasetExample(SparkSession spark) {
     // $example on:jdbc_dataset$
-    // Note: JDBC loading and saving can be achieved via either the load/save or jdbc methods
-    // Loading data from a JDBC source
     Dataset<Row> jdbcDF = spark.read()
       .format("jdbc")
       .option("url", "jdbc:postgresql:dbserver")
@@ -260,29 +225,6 @@ public class JavaSQLDataSourceExample {
       .option("user", "username")
       .option("password", "password")
       .load();
-
-    Properties connectionProperties = new Properties();
-    connectionProperties.put("user", "username");
-    connectionProperties.put("password", "password");
-    Dataset<Row> jdbcDF2 = spark.read()
-      .jdbc("jdbc:postgresql:dbserver", "schema.tablename", connectionProperties);
-
-    // Saving data to a JDBC source
-    jdbcDF.write()
-      .format("jdbc")
-      .option("url", "jdbc:postgresql:dbserver")
-      .option("dbtable", "schema.tablename")
-      .option("user", "username")
-      .option("password", "password")
-      .save();
-
-    jdbcDF2.write()
-      .jdbc("jdbc:postgresql:dbserver", "schema.tablename", connectionProperties);
-
-    // Specifying create table column data types on write
-    jdbcDF.write()
-      .option("createTableColumnTypes", "name CHAR(64), comments VARCHAR(1024)")
-      .jdbc("jdbc:postgresql:dbserver", "schema.tablename", connectionProperties);
     // $example off:jdbc_dataset$
   }
 }

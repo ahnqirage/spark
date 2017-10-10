@@ -18,8 +18,7 @@
 package org.apache.spark.util
 
 import java.io._
-import java.lang.management.{LockInfo, ManagementFactory, MonitorInfo, ThreadInfo}
-import java.math.{MathContext, RoundingMode}
+import java.lang.management.{ManagementFactory, ThreadInfo}
 import java.net._
 import java.nio.ByteBuffer
 import java.nio.channels.{Channels, FileChannel}
@@ -41,7 +40,6 @@ import scala.util.Try
 import scala.util.control.{ControlThrowable, NonFatal}
 import scala.util.matching.Regex
 
-import _root_.io.netty.channel.unix.Errors.NativeIoException
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import com.google.common.io.{ByteStreams, Files => GFiles}
 import com.google.common.net.InetAddresses
@@ -57,7 +55,7 @@ import org.slf4j.Logger
 import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
-import org.apache.spark.internal.config._
+import org.apache.spark.internal.config.{DYN_ALLOCATION_INITIAL_EXECUTORS, DYN_ALLOCATION_MIN_EXECUTORS, EXECUTOR_INSTANCES}
 import org.apache.spark.network.util.JavaUtils
 import org.apache.spark.serializer.{DeserializationStream, SerializationStream, SerializerInstance}
 
@@ -89,7 +87,7 @@ private[spark] object Utils extends Logging {
 
   /**
    * The performance overhead of creating and logging strings for wide schemas can be large. To
-   * limit the impact, we bound the number of fields to include by default. This can be overridden
+   * limit the impact, we bound the number of fields to include by default. This can be overriden
    * by setting the 'spark.debug.maxToStringFields' conf in SparkEnv.
    */
   val DEFAULT_MAX_TO_STRING_FIELDS = 25
@@ -1538,11 +1536,10 @@ private[spark] object Utils extends Logging {
 
   /** Return uncompressed file length of a compressed file. */
   private def getCompressedFileLength(file: File): Long = {
-    var gzInputStream: GZIPInputStream = null
     try {
       // Uncompress .gz file to determine file size.
       var fileSize = 0L
-      gzInputStream = new GZIPInputStream(new FileInputStream(file))
+      val gzInputStream = new GZIPInputStream(new FileInputStream(file))
       val bufSize = 1024
       val buf = new Array[Byte](bufSize)
       var numBytes = ByteStreams.read(gzInputStream, buf, 0, bufSize)
@@ -1555,10 +1552,6 @@ private[spark] object Utils extends Logging {
       case e: Throwable =>
         logError(s"Cannot get file length of ${file}", e)
         throw e
-    } finally {
-      if (gzInputStream != null) {
-        gzInputStream.close()
-      }
     }
   }
 
@@ -1829,7 +1822,6 @@ private[spark] object Utils extends Logging {
    */
   def getIteratorZipWithIndex[T](iterator: Iterator[T], startIndex: Long): Iterator[(T, Long)] = {
     new Iterator[(T, Long)] {
-      require(startIndex >= 0, "startIndex should be >= 0.")
       var index: Long = startIndex - 1L
       def hasNext: Boolean = iterator.hasNext
       def next(): (T, Long) = {
@@ -1932,22 +1924,58 @@ private[spark] object Utils extends Logging {
   def terminateProcess(process: Process, timeoutMs: Long): Option[Int] = {
     // Politely destroy first
     process.destroy()
-    if (process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
+
+    if (waitForProcess(process, timeoutMs)) {
       // Successful exit
       Option(process.exitValue())
     } else {
+      // Java 8 added a new API which will more forcibly kill the process. Use that if available.
       try {
-        process.destroyForcibly()
+        classOf[Process].getMethod("destroyForcibly").invoke(process)
       } catch {
+        case _: NoSuchMethodException => return None // Not available; give up
         case NonFatal(e) => logWarning("Exception when attempting to kill process", e)
       }
       // Wait, again, although this really should return almost immediately
-      if (process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
+      if (waitForProcess(process, timeoutMs)) {
         Option(process.exitValue())
       } else {
         logWarning("Timed out waiting to forcibly kill process")
         None
       }
+    }
+  }
+
+  /**
+   * Wait for a process to terminate for at most the specified duration.
+   *
+   * @return whether the process actually terminated before the given timeout.
+   */
+  def waitForProcess(process: Process, timeoutMs: Long): Boolean = {
+    try {
+      // Use Java 8 method if available
+      classOf[Process].getMethod("waitFor", java.lang.Long.TYPE, classOf[TimeUnit])
+        .invoke(process, timeoutMs.asInstanceOf[java.lang.Long], TimeUnit.MILLISECONDS)
+        .asInstanceOf[Boolean]
+    } catch {
+      case _: NoSuchMethodException =>
+        // Otherwise implement it manually
+        var terminated = false
+        val startTime = System.currentTimeMillis
+        while (!terminated) {
+          try {
+            process.exitValue()
+            terminated = true
+          } catch {
+            case e: IllegalThreadStateException =>
+              // Process not terminated yet
+              if (System.currentTimeMillis - startTime > timeoutMs) {
+                return false
+              }
+              Thread.sleep(100)
+          }
+        }
+        true
     }
   }
 
@@ -2169,29 +2197,12 @@ private[spark] object Utils extends Logging {
   }
 
   private def threadInfoToThreadStackTrace(threadInfo: ThreadInfo): ThreadStackTrace = {
-    val monitors = threadInfo.getLockedMonitors.map(m => m.getLockedStackFrame -> m).toMap
-    val stackTrace = threadInfo.getStackTrace.map { frame =>
-      monitors.get(frame) match {
-        case Some(monitor) =>
-          monitor.getLockedStackFrame.toString + s" => holding ${monitor.lockString}"
-        case None =>
-          frame.toString
-      }
-    }.mkString("\n")
-
-    // use a set to dedup re-entrant locks that are held at multiple places
-    val heldLocks =
-      (threadInfo.getLockedSynchronizers ++ threadInfo.getLockedMonitors).map(_.lockString).toSet
-
+    val stackTrace = threadInfo.getStackTrace.map(_.toString).mkString("\n")
     ThreadStackTrace(
       threadId = threadInfo.getThreadId,
       threadName = threadInfo.getThreadName,
       threadState = threadInfo.getThreadState,
-      stackTrace = stackTrace,
-      blockedByThreadId =
-        if (threadInfo.getLockOwnerId < 0) None else Some(threadInfo.getLockOwnerId),
-      blockedByLock = Option(threadInfo.getLockInfo).map(_.lockString).getOrElse(""),
-      holdingLocks = heldLocks.toSeq)
+      stackTrace = stackTrace)
   }
 
   /**
@@ -2450,7 +2461,7 @@ private[spark] object Utils extends Logging {
       .getOrElse(UserGroupInformation.getCurrentUser().getShortUserName())
   }
 
-  val EMPTY_USER_GROUPS = Set.empty[String]
+  val EMPTY_USER_GROUPS = Set[String]()
 
   // Returns the groups to which the current user belongs.
   def getCurrentUserGroups(sparkConf: SparkConf, username: String): Set[String] = {
@@ -2599,185 +2610,24 @@ private[spark] object Utils extends Logging {
    * Unions two comma-separated lists of files and filters out empty strings.
    */
   def unionFileLists(leftList: Option[String], rightList: Option[String]): Set[String] = {
-    var allFiles = Set.empty[String]
+    var allFiles = Set[String]()
     leftList.foreach { value => allFiles ++= value.split(",") }
     rightList.foreach { value => allFiles ++= value.split(",") }
     allFiles.filter { _.nonEmpty }
   }
 
   /**
-   * Return the jar files pointed by the "spark.jars" property. Spark internally will distribute
-   * these jars through file server. In the YARN mode, it will return an empty list, since YARN
-   * has its own mechanism to distribute jars.
+   * In YARN mode this method returns a union of the jar files pointed by "spark.jars" and the
+   * "spark.yarn.dist.jars" properties, while in other modes it returns the jar files pointed by
+   * only the "spark.jars" property.
    */
-  def getUserJars(conf: SparkConf): Seq[String] = {
+  def getUserJars(conf: SparkConf, isShell: Boolean = false): Seq[String] = {
     val sparkJars = conf.getOption("spark.jars")
-    sparkJars.map(_.split(",")).map(_.filter(_.nonEmpty)).toSeq.flatten
-  }
-
-  /**
-   * Return the local jar files which will be added to REPL's classpath. These jar files are
-   * specified by --jars (spark.jars) or --packages, remote jars will be downloaded to local by
-   * SparkSubmit at first.
-   */
-  def getLocalUserJarsForShell(conf: SparkConf): Seq[String] = {
-    val localJars = conf.getOption("spark.repl.local.jars")
-    localJars.map(_.split(",")).map(_.filter(_.nonEmpty)).toSeq.flatten
-  }
-
-  private[spark] val REDACTION_REPLACEMENT_TEXT = "*********(redacted)"
-
-  /**
-   * Redact the sensitive values in the given map. If a map key matches the redaction pattern then
-   * its value is replaced with a dummy text.
-   */
-  def redact(conf: SparkConf, kvs: Seq[(String, String)]): Seq[(String, String)] = {
-    val redactionPattern = conf.get(SECRET_REDACTION_PATTERN)
-    redact(redactionPattern, kvs)
-  }
-
-  /**
-   * Redact the sensitive information in the given string.
-   */
-  def redact(conf: SparkConf, text: String): String = {
-    if (text == null || text.isEmpty || conf == null || !conf.contains(STRING_REDACTION_PATTERN)) {
-      text
+    if (conf.get("spark.master") == "yarn" && isShell) {
+      val yarnJars = conf.getOption("spark.yarn.dist.jars")
+      unionFileLists(sparkJars, yarnJars).toSeq
     } else {
-      val regex = conf.get(STRING_REDACTION_PATTERN).get
-      regex.replaceAllIn(text, REDACTION_REPLACEMENT_TEXT)
-    }
-  }
-
-  private def redact(redactionPattern: Regex, kvs: Seq[(String, String)]): Seq[(String, String)] = {
-    // If the sensitive information regex matches with either the key or the value, redact the value
-    // While the original intent was to only redact the value if the key matched with the regex,
-    // we've found that especially in verbose mode, the value of the property may contain sensitive
-    // information like so:
-    // "sun.java.command":"org.apache.spark.deploy.SparkSubmit ... \
-    // --conf spark.executorEnv.HADOOP_CREDSTORE_PASSWORD=secret_password ...
-    //
-    // And, in such cases, simply searching for the sensitive information regex in the key name is
-    // not sufficient. The values themselves have to be searched as well and redacted if matched.
-    // This does mean we may be accounting more false positives - for example, if the value of an
-    // arbitrary property contained the term 'password', we may redact the value from the UI and
-    // logs. In order to work around it, user would have to make the spark.redaction.regex property
-    // more specific.
-    kvs.map { case (key, value) =>
-      redactionPattern.findFirstIn(key)
-        .orElse(redactionPattern.findFirstIn(value))
-        .map { _ => (key, REDACTION_REPLACEMENT_TEXT) }
-        .getOrElse((key, value))
-    }
-  }
-
-  /**
-   * Looks up the redaction regex from within the key value pairs and uses it to redact the rest
-   * of the key value pairs. No care is taken to make sure the redaction property itself is not
-   * redacted. So theoretically, the property itself could be configured to redact its own value
-   * when printing.
-   */
-  def redact(kvs: Map[String, String]): Seq[(String, String)] = {
-    val redactionPattern = kvs.getOrElse(
-      SECRET_REDACTION_PATTERN.key,
-      SECRET_REDACTION_PATTERN.defaultValueString
-    ).r
-    redact(redactionPattern, kvs.toArray)
-  }
-
-  def stringToSeq(str: String): Seq[String] = {
-    str.split(",").map(_.trim()).filter(_.nonEmpty)
-  }
-}
-
-private[util] object CallerContext extends Logging {
-  val callerContextSupported: Boolean = {
-    SparkHadoopUtil.get.conf.getBoolean("hadoop.caller.context.enabled", false) && {
-      try {
-        Utils.classForName("org.apache.hadoop.ipc.CallerContext")
-        Utils.classForName("org.apache.hadoop.ipc.CallerContext$Builder")
-        true
-      } catch {
-        case _: ClassNotFoundException =>
-          false
-        case NonFatal(e) =>
-          logWarning("Fail to load the CallerContext class", e)
-          false
-      }
-    }
-  }
-}
-
-/**
- * An utility class used to set up Spark caller contexts to HDFS and Yarn. The `context` will be
- * constructed by parameters passed in.
- * When Spark applications run on Yarn and HDFS, its caller contexts will be written into Yarn RM
- * audit log and hdfs-audit.log. That can help users to better diagnose and understand how
- * specific applications impacting parts of the Hadoop system and potential problems they may be
- * creating (e.g. overloading NN). As HDFS mentioned in HDFS-9184, for a given HDFS operation, it's
- * very helpful to track which upper level job issues it.
- *
- * @param from who sets up the caller context (TASK, CLIENT, APPMASTER)
- *
- * The parameters below are optional:
- * @param upstreamCallerContext caller context the upstream application passes in
- * @param appId id of the app this task belongs to
- * @param appAttemptId attempt id of the app this task belongs to
- * @param jobId id of the job this task belongs to
- * @param stageId id of the stage this task belongs to
- * @param stageAttemptId attempt id of the stage this task belongs to
- * @param taskId task id
- * @param taskAttemptNumber task attempt id
- */
-private[spark] class CallerContext(
-  from: String,
-  upstreamCallerContext: Option[String] = None,
-  appId: Option[String] = None,
-  appAttemptId: Option[String] = None,
-  jobId: Option[Int] = None,
-  stageId: Option[Int] = None,
-  stageAttemptId: Option[Int] = None,
-  taskId: Option[Long] = None,
-  taskAttemptNumber: Option[Int] = None) extends Logging {
-
-  private val context = prepareContext("SPARK_" +
-    from +
-    appId.map("_" + _).getOrElse("") +
-    appAttemptId.map("_" + _).getOrElse("") +
-    jobId.map("_JId_" + _).getOrElse("") +
-    stageId.map("_SId_" + _).getOrElse("") +
-    stageAttemptId.map("_" + _).getOrElse("") +
-    taskId.map("_TId_" + _).getOrElse("") +
-    taskAttemptNumber.map("_" + _).getOrElse("") +
-    upstreamCallerContext.map("_" + _).getOrElse(""))
-
-  private def prepareContext(context: String): String = {
-    // The default max size of Hadoop caller context is 128
-    lazy val len = SparkHadoopUtil.get.conf.getInt("hadoop.caller.context.max.size", 128)
-    if (context == null || context.length <= len) {
-      context
-    } else {
-      val finalContext = context.substring(0, len)
-      logWarning(s"Truncated Spark caller context from $context to $finalContext")
-      finalContext
-    }
-  }
-
-  /**
-   * Set up the caller context [[context]] by invoking Hadoop CallerContext API of
-   * [[org.apache.hadoop.ipc.CallerContext]], which was added in hadoop 2.8.
-   */
-  def setCurrentContext(): Unit = {
-    if (CallerContext.callerContextSupported) {
-      try {
-        val callerContext = Utils.classForName("org.apache.hadoop.ipc.CallerContext")
-        val builder = Utils.classForName("org.apache.hadoop.ipc.CallerContext$Builder")
-        val builderInst = builder.getConstructor(classOf[String]).newInstance(context)
-        val hdfsContext = builder.getMethod("build").invoke(builderInst)
-        callerContext.getMethod("setCurrent", callerContext).invoke(null, hdfsContext)
-      } catch {
-        case NonFatal(e) =>
-          logWarning("Fail to set Spark caller context", e)
-      }
+      sparkJars.map(_.split(",")).map(_.filter(_.nonEmpty)).toSeq.flatten
     }
   }
 }

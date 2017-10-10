@@ -36,10 +36,11 @@ class NGramSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRe
     val nGram = new NGram()
       .setInputCol("inputTokens")
       .setOutputCol("nGrams")
-    val dataset = Seq(NGramTestData(
-      Array("Test", "for", "ngram", "."),
-      Array("Test for", "for ngram", "ngram .")
-    )).toDF()
+    val dataset = spark.createDataFrame(Seq(
+      NGramTestData(
+        Array("Test", "for", "ngram", "."),
+        Array("Test for", "for ngram", "ngram .")
+    )))
     testNGram(nGram, dataset)
   }
 
@@ -48,10 +49,11 @@ class NGramSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRe
       .setInputCol("inputTokens")
       .setOutputCol("nGrams")
       .setN(4)
-    val dataset = Seq(NGramTestData(
-      Array("a", "b", "c", "d", "e"),
-      Array("a b c d", "b c d e")
-    )).toDF()
+    val dataset = spark.createDataFrame(Seq(
+      NGramTestData(
+        Array("a", "b", "c", "d", "e"),
+        Array("a b c d", "b c d e")
+      )))
     testNGram(nGram, dataset)
   }
 
@@ -60,7 +62,11 @@ class NGramSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRe
       .setInputCol("inputTokens")
       .setOutputCol("nGrams")
       .setN(4)
-    val dataset = Seq(NGramTestData(Array(), Array())).toDF()
+    val dataset = spark.createDataFrame(Seq(
+      NGramTestData(
+        Array(),
+        Array()
+      )))
     testNGram(nGram, dataset)
   }
 
@@ -69,10 +75,11 @@ class NGramSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRe
       .setInputCol("inputTokens")
       .setOutputCol("nGrams")
       .setN(6)
-    val dataset = Seq(NGramTestData(
-      Array("a", "b", "c", "d", "e"),
-      Array()
-    )).toDF()
+    val dataset = spark.createDataFrame(Seq(
+      NGramTestData(
+        Array("a", "b", "c", "d", "e"),
+        Array()
+      )))
     testNGram(nGram, dataset)
   }
 

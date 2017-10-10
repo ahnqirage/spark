@@ -27,7 +27,8 @@ import numpy as np
 
 from py4j.java_gateway import JavaObject
 
-from pyspark.ml.linalg import DenseVector, Vector, Matrix
+from pyspark import since
+from pyspark.ml.linalg import DenseVector, Vector
 from pyspark.ml.util import Identifiable
 
 

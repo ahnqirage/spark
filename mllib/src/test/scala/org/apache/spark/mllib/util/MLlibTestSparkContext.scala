@@ -23,7 +23,7 @@ import org.scalatest.Suite
 
 import org.apache.spark.SparkContext
 import org.apache.spark.ml.util.TempDirectory
-import org.apache.spark.sql.{SparkSession, SQLContext, SQLImplicits}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.util.Utils
 
 trait MLlibTestSparkContext extends TempDirectory { self: Suite =>

@@ -27,8 +27,8 @@ in the UI to persisted storage.
 
 ## Viewing After the Fact
 
-It is still possible to construct the UI of an application through Spark's history server, 
-provided that the application's event logs exist.
+If Spark is run on Mesos or YARN, it is still possible to construct the UI of an
+application through Spark's history server, provided that the application's event logs exist.
 You can start the history server by executing:
 
     ./sbin/start-history-server.sh
@@ -270,7 +270,7 @@ In the API, an application is referenced by its application ID, `[app-id]`.
 When running on YARN, each application may have multiple attempts, but there are attempt IDs
 only for applications in cluster mode, not applications in client mode. Applications in YARN cluster mode
 can be identified by their `[attempt-id]`. In the API listed below, when running in YARN cluster mode,
-`[app-id]` will actually be `[base-app-id]/[attempt-id]`, where `[base-app-id]` is the YARN application ID.
+`[app-id]` will actually be `[base-app-id]/[attempt-id]`, where `[base-app-id]` is the YARN application ID.
 
 <table class="table">
   <tr><th>Endpoint</th><th>Meaning</th></tr>
@@ -292,11 +292,8 @@ can be identified by their `[attempt-id]`. In the API listed below, when running
     <br>Examples:
     <br><code>?minDate=2015-02-10</code>
     <br><code>?minDate=2015-02-03T16:42:40.000GMT</code>
-    <br><code>?maxDate=2015-02-11T20:41:30.000GMT</code>
-    <br><code>?minEndDate=2015-02-12</code>
-    <br><code>?minEndDate=2015-02-12T09:15:10.000GMT</code>
-    <br><code>?maxEndDate=2015-02-14T16:30:45.000GMT</code>
-    <br><code>?limit=10</code></td>
+    <br><code>?maxDate=[date]</code> latest date/time to list; uses same format as <code>minDate</code>.
+    <br><code>?limit=[limit]</code> limits the number of applications listed.</td>
   </tr>
   <tr>
     <td><code>/applications/[app-id]/jobs</code></td>

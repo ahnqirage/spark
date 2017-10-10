@@ -90,12 +90,6 @@ public class ExternalShuffleSecuritySuite {
   /** Creates an ExternalShuffleClient and attempts to register with the server. */
   private void validate(String appId, String secretKey, boolean encrypt)
         throws IOException, InterruptedException {
-    TransportConf testConf = conf;
-    if (encrypt) {
-      testConf = new TransportConf("shuffle", new MapConfigProvider(
-        ImmutableMap.of("spark.authenticate.enableSaslEncryption", "true")));
-    }
-
     ExternalShuffleClient client =
       new ExternalShuffleClient(testConf, new TestSecretKeyHolder(appId, secretKey), true, 5000);
     client.init(appId);

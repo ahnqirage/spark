@@ -26,8 +26,6 @@ rm -f $LOGFILE
 SPARK_TESTING=1 NOT_CRAN=true $FWDIR/../bin/spark-submit --driver-java-options "-Dlog4j.configuration=file:$FWDIR/log4j.properties" --conf spark.hadoop.fs.defaultFS="file:///" $FWDIR/pkg/tests/run-all.R 2>&1 | tee -a $LOGFILE
 FAILED=$((PIPESTATUS[0]||$FAILED))
 
-NUM_TEST_WARNING="$(grep -c -e 'Warnings ----------------' $LOGFILE)"
-
 # Also run the documentation tests for CRAN
 CRAN_CHECK_LOG_FILE=$FWDIR/cran-check.out
 rm -f $CRAN_CHECK_LOG_FILE
@@ -39,7 +37,7 @@ NUM_CRAN_WARNING="$(grep -c WARNING$ $CRAN_CHECK_LOG_FILE)"
 NUM_CRAN_ERROR="$(grep -c ERROR$ $CRAN_CHECK_LOG_FILE)"
 NUM_CRAN_NOTES="$(grep -c NOTE$ $CRAN_CHECK_LOG_FILE)"
 
-if [[ $FAILED != 0 || $NUM_TEST_WARNING != 0 ]]; then
+if [[ $FAILED != 0 ]]; then
     cat $LOGFILE
     echo -en "\033[31m"  # Red
     echo "Had test warnings or failures; see logs."

@@ -106,7 +106,7 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
       long numElementsForSpillThreshold,
       UnsafeInMemorySorter inMemorySorter) throws IOException {
     UnsafeExternalSorter sorter = new UnsafeExternalSorter(taskMemoryManager, blockManager,
-      serializerManager, taskContext, recordComparatorSupplier, prefixComparator, initialSize,
+      serializerManager, taskContext, recordComparator, prefixComparator, initialSize,
         numElementsForSpillThreshold, pageSizeBytes, inMemorySorter, false /* ignored */);
     sorter.spill(Long.MAX_VALUE, sorter);
     // The external sorter will be used to insert records, in-memory sorter is not needed.
@@ -126,7 +126,7 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
       long numElementsForSpillThreshold,
       boolean canUseRadixSort) {
     return new UnsafeExternalSorter(taskMemoryManager, blockManager, serializerManager,
-      taskContext, recordComparatorSupplier, prefixComparator, initialSize, pageSizeBytes,
+      taskContext, recordComparator, prefixComparator, initialSize, pageSizeBytes,
       numElementsForSpillThreshold, null, canUseRadixSort);
   }
 
@@ -152,6 +152,10 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
     // Use getSizeAsKb (not bytes) to maintain backwards compatibility for units
     // this.fileBufferSizeBytes = (int) conf.getSizeAsKb("spark.shuffle.file.buffer", "32k") * 1024
     this.fileBufferSizeBytes = 32 * 1024;
+    // The spill metrics are stored in a new ShuffleWriteMetrics,
+    // and then discarded (this fixes SPARK-16827).
+    // TODO: Instead, separate spill metrics should be stored and reported (tracked in SPARK-3577).
+    this.writeMetrics = new ShuffleWriteMetrics();
 
     if (existingInMemorySorter == null) {
       RecordComparator comparator = null;
@@ -408,7 +412,7 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
     pageCursor += uaoSize;
     Platform.copyMemory(recordBase, recordOffset, base, pageCursor, length);
     pageCursor += length;
-    inMemSorter.insertRecord(recordAddress, prefix, prefixIsNull);
+    inMemSorter.insertRecord(recordAddress, prefix);
   }
 
   /**

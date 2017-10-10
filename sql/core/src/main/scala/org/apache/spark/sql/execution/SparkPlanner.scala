@@ -45,6 +45,16 @@ class SparkPlanner(
       InMemoryScans ::
       BasicOperators :: Nil)
 
+  override def plan(plan: LogicalPlan): Iterator[SparkPlan] = {
+    super.plan(plan).map {
+      _.transformUp {
+        case PlanLater(p) =>
+          // TODO: use the first plan for now, but we will implement plan space exploaration later.
+          this.plan(p).next()
+      }
+    }
+  }
+
   /**
    * Override to add extra planning strategies to the planner. These strategies are tried after
    * the strategies defined in [[ExperimentalMethods]], and before the regular strategies.

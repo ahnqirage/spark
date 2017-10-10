@@ -216,7 +216,7 @@ private[joins] class UnsafeHashedRelation(
   }
 
   override def readExternal(in: ObjectInput): Unit = Utils.tryOrIOException {
-    read(() => in.readInt(), () => in.readLong(), in.readFully)
+    read(in.readInt, in.readLong, in.readFully)
   }
 
   private def read(
@@ -277,10 +277,8 @@ private[joins] class UnsafeHashedRelation(
   }
 
   override def read(kryo: Kryo, in: Input): Unit = Utils.tryOrIOException {
-    read(() => in.readInt(), () => in.readLong(), in.readBytes)
+    read(in.readInt, in.readLong, in.readBytes)
   }
-
-  override def getAverageProbesPerLookup: Double = binaryMap.getAverageProbesPerLookup
 }
 
 private[joins] object UnsafeHashedRelation {
@@ -482,8 +480,6 @@ private[execution] final class LongToUnsafeRowMap(val mm: TaskMemoryManager, cap
    */
   def getValue(key: Long, resultRow: UnsafeRow): UnsafeRow = {
     if (isDense) {
-      numKeyLookups += 1
-      numProbes += 1
       if (key >= minKey && key <= maxKey) {
         val value = array((key - minKey).toInt)
         if (value > 0) {
@@ -527,8 +523,6 @@ private[execution] final class LongToUnsafeRowMap(val mm: TaskMemoryManager, cap
    */
   def get(key: Long, resultRow: UnsafeRow): Iterator[UnsafeRow] = {
     if (isDense) {
-      numKeyLookups += 1
-      numProbes += 1
       if (key >= minKey && key <= maxKey) {
         val value = array((key - minKey).toInt)
         if (value > 0) {
@@ -596,8 +590,6 @@ private[execution] final class LongToUnsafeRowMap(val mm: TaskMemoryManager, cap
   private def updateIndex(key: Long, address: Long): Unit = {
     var pos = firstSlot(key)
     assert(numKeys < array.length / 2)
-    numKeyLookups += 1
-    numProbes += 1
     while (array(pos) != key && array(pos + 1) != 0) {
       pos = nextSlot(pos)
       numProbes += 1
@@ -712,8 +704,6 @@ private[execution] final class LongToUnsafeRowMap(val mm: TaskMemoryManager, cap
     writeLong(maxKey)
     writeLong(numKeys)
     writeLong(numValues)
-    writeLong(numKeyLookups)
-    writeLong(numProbes)
 
     writeLong(array.length)
     writeLongArray(writeBuffer, array, array.length)
@@ -755,14 +745,20 @@ private[execution] final class LongToUnsafeRowMap(val mm: TaskMemoryManager, cap
     maxKey = readLong()
     numKeys = readLong()
     numValues = readLong()
-    numKeyLookups = readLong()
-    numProbes = readLong()
 
     val length = readLong().toInt
     mask = length - 2
     array = readLongArray(readBuffer, length)
     val pageLength = readLong().toInt
     page = readLongArray(readBuffer, pageLength)
+  }
+
+  override def readExternal(in: ObjectInput): Unit = {
+    read(in.readBoolean, in.readLong, in.readFully)
+  }
+
+  override def read(kryo: Kryo, in: Input): Unit = {
+    read(in.readBoolean, in.readLong, in.readBytes)
   }
 
   override def readExternal(in: ObjectInput): Unit = {

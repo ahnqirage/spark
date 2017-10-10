@@ -26,7 +26,7 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
 import org.apache.spark.SparkContext
-import org.apache.spark.annotation.{DeveloperApi, Since}
+import org.apache.spark.annotation.{DeveloperApi, Experimental, Since}
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml._
 import org.apache.spark.ml.classification.{OneVsRest, OneVsRestModel}
@@ -44,11 +44,9 @@ private[util] sealed trait BaseReadWrite {
 
   /**
    * Sets the Spark SQLContext to use for saving/loading.
-   *
-   * @deprecated Use session instead. This method will be removed in 3.0.0.
    */
   @Since("1.6.0")
-  @deprecated("Use session instead. This method will be removed in 3.0.0.", "2.0.0")
+  @deprecated("Use session instead", "2.0.0")
   def context(sqlContext: SQLContext): this.type = {
     optionSparkSession = Option(sqlContext.sparkSession)
     this
@@ -83,6 +81,8 @@ private[util] sealed trait BaseReadWrite {
 }
 
 /**
+ * :: Experimental ::
+ *
  * Abstract class for utility classes that can save ML instances.
  */
 @Since("1.6.0")
@@ -124,8 +124,11 @@ abstract class MLWriter extends BaseReadWrite with Logging {
 }
 
 /**
- * Trait for classes that provide `MLWriter`.
+ * :: Experimental ::
+ *
+ * Trait for classes that provide [[MLWriter]].
  */
+@Experimental
 @Since("1.6.0")
 trait MLWritable {
 
@@ -146,13 +149,13 @@ trait MLWritable {
 /**
  * :: DeveloperApi ::
  *
- * Helper trait for making simple `Params` types writable.  If a `Params` class stores
+ * Helper trait for making simple [[Params]] types writable.  If a [[Params]] class stores
  * all data as [[org.apache.spark.ml.param.Param]] values, then extending this trait will provide
  * a default implementation of writing saved instances of the class.
  * This only handles simple [[org.apache.spark.ml.param.Param]] types; e.g., it will not handle
  * [[org.apache.spark.sql.Dataset]].
  *
- * @see `DefaultParamsReadable`, the counterpart to this trait
+ * @see  [[DefaultParamsReadable]], the counterpart to this trait
  */
 @DeveloperApi
 trait DefaultParamsWritable extends MLWritable { self: Params =>
@@ -161,6 +164,8 @@ trait DefaultParamsWritable extends MLWritable { self: Params =>
 }
 
 /**
+ * :: Experimental ::
+ *
  * Abstract class for utility classes that can load ML instances.
  *
  * @tparam T ML instance type
@@ -182,7 +187,9 @@ abstract class MLReader[T] extends BaseReadWrite {
 }
 
 /**
- * Trait for objects that provide `MLReader`.
+ * :: Experimental ::
+ *
+ * Trait for objects that provide [[MLReader]].
  *
  * @tparam T ML instance type
  */
@@ -208,14 +215,14 @@ trait MLReadable[T] {
 /**
  * :: DeveloperApi ::
  *
- * Helper trait for making simple `Params` types readable.  If a `Params` class stores
+ * Helper trait for making simple [[Params]] types readable.  If a [[Params]] class stores
  * all data as [[org.apache.spark.ml.param.Param]] values, then extending this trait will provide
  * a default implementation of reading saved instances of the class.
  * This only handles simple [[org.apache.spark.ml.param.Param]] types; e.g., it will not handle
  * [[org.apache.spark.sql.Dataset]].
  *
  * @tparam T ML instance type
- * @see `DefaultParamsWritable`, the counterpart to this trait
+ * @see  [[DefaultParamsWritable]], the counterpart to this trait
  */
 @DeveloperApi
 trait DefaultParamsReadable[T] extends MLReadable[T] {

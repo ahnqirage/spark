@@ -32,14 +32,9 @@ trait AnalysisTest extends PlanTest {
   protected val caseInsensitiveAnalyzer = makeAnalyzer(caseSensitive = false)
 
   private def makeAnalyzer(caseSensitive: Boolean): Analyzer = {
-    val conf = new SQLConf().copy(SQLConf.CASE_SENSITIVE -> caseSensitive)
-    val catalog = new SessionCatalog(new InMemoryCatalog, FunctionRegistry.builtin, conf)
-    catalog.createDatabase(
-      CatalogDatabase("default", "", new URI("loc"), Map.empty),
-      ignoreIfExists = false)
+    val conf = new SimpleCatalystConf(caseSensitive)
+    val catalog = new SessionCatalog(new InMemoryCatalog, EmptyFunctionRegistry, conf)
     catalog.createTempView("TaBlE", TestRelations.testRelation, overrideIfExists = true)
-    catalog.createTempView("TaBlE2", TestRelations.testRelation2, overrideIfExists = true)
-    catalog.createTempView("TaBlE3", TestRelations.testRelation3, overrideIfExists = true)
     new Analyzer(catalog, conf) {
       override val extendedResolutionRules = EliminateSubqueryAliases :: Nil
     }

@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql.execution.datasources.jdbc
 
-import java.sql.{Connection, Driver, DriverManager, JDBCType, PreparedStatement, ResultSet, ResultSetMetaData, SQLException}
-import java.util.Locale
+import java.sql.{Connection, Driver, DriverManager, PreparedStatement, SQLException}
+import java.util.Properties
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -44,6 +44,11 @@ import org.apache.spark.util.NextIterator
  * Util functions for JDBC tables.
  */
 object JdbcUtils extends Logging {
+
+  // the property names are case sensitive
+  val JDBC_BATCH_FETCH_SIZE = "fetchsize"
+  val JDBC_BATCH_INSERT_SIZE = "batchsize"
+
   /**
    * Returns a factory for creating connections to the given JDBC URL.
    *
@@ -114,32 +119,9 @@ object JdbcUtils extends Logging {
   /**
    * Returns an Insert SQL statement for inserting a row into the target table via JDBC conn.
    */
-  def getInsertStatement(
-      table: String,
-      rddSchema: StructType,
-      tableSchema: Option[StructType],
-      isCaseSensitive: Boolean,
-      dialect: JdbcDialect): String = {
-    val columns = if (tableSchema.isEmpty) {
-      rddSchema.fields.map(x => dialect.quoteIdentifier(x.name)).mkString(",")
-    } else {
-      val columnNameEquality = if (isCaseSensitive) {
-        org.apache.spark.sql.catalyst.analysis.caseSensitiveResolution
-      } else {
-        org.apache.spark.sql.catalyst.analysis.caseInsensitiveResolution
-      }
-      // The generated insert statement needs to follow rddSchema's column sequence and
-      // tableSchema's column names. When appending data into some case-sensitive DBMSs like
-      // PostgreSQL/Oracle, we need to respect the existing case-sensitive column names instead of
-      // RDD column names for user convenience.
-      val tableColumnNames = tableSchema.get.fieldNames
-      rddSchema.fields.map { col =>
-        val normalizedName = tableColumnNames.find(f => columnNameEquality(f, col.name)).getOrElse {
-          throw new AnalysisException(s"""Column "${col.name}" not found in schema $tableSchema""")
-        }
-        dialect.quoteIdentifier(normalizedName)
-      }.mkString(",")
-    }
+  def insertStatement(conn: Connection, table: String, rddSchema: StructType, dialect: JdbcDialect)
+      : PreparedStatement = {
+    val columns = rddSchema.fields.map(x => dialect.quoteIdentifier(x.name)).mkString(",")
     val placeholders = rddSchema.fields.map(_ => "?").mkString(",")
     s"INSERT INTO $table ($columns) VALUES ($placeholders)"
   }
@@ -594,8 +576,11 @@ object JdbcUtils extends Logging {
       rddSchema: StructType,
       insertStmt: String,
       batchSize: Int,
-      dialect: JdbcDialect,
-      isolationLevel: Int): Iterator[Byte] = {
+      dialect: JdbcDialect): Iterator[Byte] = {
+    require(batchSize >= 1,
+      s"Invalid value `${batchSize.toString}` for parameter " +
+      s"`${JdbcUtils.JDBC_BATCH_INSERT_SIZE}`. The minimum value is 1.")
+
     val conn = getConnection()
     var committed = false
 
@@ -629,11 +614,7 @@ object JdbcUtils extends Logging {
         conn.setAutoCommit(false) // Everything in the same db transaction.
         conn.setTransactionIsolation(finalIsolationLevel)
       }
-      val stmt = conn.prepareStatement(insertStmt)
-      val setters = rddSchema.fields.map(f => makeSetter(conn, dialect, f.dataType))
-      val nullTypes = rddSchema.fields.map(f => getJdbcType(f.dataType, dialect).jdbcNullType)
-      val numFields = rddSchema.fields.length
-
+      val stmt = insertStatement(conn, table, rddSchema, dialect)
       try {
         var rowCount = 0
         while (iterator.hasNext) {
@@ -664,22 +645,12 @@ object JdbcUtils extends Logging {
         conn.commit()
       }
       committed = true
-      Iterator.empty
     } catch {
       case e: SQLException =>
         val cause = e.getNextException
         if (cause != null && e.getCause != cause) {
-          // If there is no cause already, set 'next exception' as cause. If cause is null,
-          // it *may* be because no cause was set yet
           if (e.getCause == null) {
-            try {
-              e.initCause(cause)
-            } catch {
-              // Or it may be null because the cause *was* explicitly initialized, to *null*,
-              // in which case this fails. There is no other way to detect it.
-              // addSuppressed in this case as well.
-              case _: IllegalStateException => e.addSuppressed(cause)
-            }
+            e.initCause(cause)
           } else {
             e.addSuppressed(cause)
           }
@@ -714,13 +685,9 @@ object JdbcUtils extends Logging {
       createTableColumnTypes: Option[String] = None): String = {
     val sb = new StringBuilder()
     val dialect = JdbcDialects.get(url)
-    val userSpecifiedColTypesMap = createTableColumnTypes
-      .map(parseUserSpecifiedCreateTableColumnTypes(df, _))
-      .getOrElse(Map.empty[String, String])
-    df.schema.fields.foreach { field =>
+    df.schema.fields foreach { field =>
       val name = dialect.quoteIdentifier(field.name)
-      val typ = userSpecifiedColTypesMap
-        .getOrElse(field.name, getJdbcType(field.dataType, dialect).databaseTypeDefinition)
+      val typ: String = getJdbcType(field.dataType, dialect).databaseTypeDefinition
       val nullable = if (field.nullable) "" else "NOT NULL"
       sb.append(s", $name $typ $nullable")
     }
@@ -805,17 +772,10 @@ object JdbcUtils extends Logging {
     val table = options.table
     val dialect = JdbcDialects.get(url)
     val rddSchema = df.schema
-    val getConnection: () => Connection = createConnectionFactory(options)
-    val batchSize = options.batchSize
-    val isolationLevel = options.isolationLevel
-
-    val insertStmt = getInsertStatement(table, rddSchema, tableSchema, isCaseSensitive, dialect)
-    val repartitionedDF = options.numPartitions match {
-      case Some(n) if n <= 0 => throw new IllegalArgumentException(
-        s"Invalid value `$n` for parameter `${JDBCOptions.JDBC_NUM_PARTITIONS}` in table writing " +
-          "via JDBC. The minimum value is 1.")
-      case Some(n) if n < df.rdd.getNumPartitions => df.coalesce(n)
-      case _ => df
+    val getConnection: () => Connection = createConnectionFactory(url, properties)
+    val batchSize = properties.getProperty(JDBC_BATCH_INSERT_SIZE, "1000").toInt
+    df.foreachPartition { iterator =>
+      savePartition(getConnection, table, iterator, rddSchema, nullTypes, batchSize, dialect)
     }
     repartitionedDF.rdd.foreachPartition(iterator => savePartition(
       getConnection, table, iterator, rddSchema, insertStmt, batchSize, dialect, isolationLevel)

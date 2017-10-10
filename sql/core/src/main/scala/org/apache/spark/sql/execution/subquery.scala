@@ -44,7 +44,7 @@ abstract class ExecSubqueryExpression extends PlanExpression[SubqueryExec] {
  * This is the physical copy of ScalarSubquery to be used inside SparkPlan.
  */
 case class ScalarSubquery(
-    plan: SubqueryExec,
+    executedPlan: SparkPlan,
     exprId: ExprId)
   extends ExecSubqueryExpression {
 

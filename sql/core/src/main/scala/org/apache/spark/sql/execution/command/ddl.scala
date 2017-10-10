@@ -17,10 +17,9 @@
 
 package org.apache.spark.sql.execution.command
 
-import java.util.Locale
-
 import scala.collection.{GenMap, GenSeq}
 import scala.collection.parallel.ForkJoinTaskSupport
+import scala.concurrent.forkjoin.ForkJoinPool
 import scala.util.control.NonFatal
 
 import org.apache.hadoop.conf.Configuration
@@ -29,17 +28,14 @@ import org.apache.hadoop.mapred.{FileInputFormat, JobConf}
 
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.{NoSuchTableException, Resolver}
-import org.apache.spark.sql.catalyst.catalog._
+import org.apache.spark.sql.catalyst.catalog.{CatalogDatabase, CatalogTable, CatalogTablePartition, CatalogTableType, SessionCatalog}
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation, PartitioningUtils}
-import org.apache.spark.sql.execution.datasources.orc.OrcFileFormat
-import org.apache.spark.sql.execution.datasources.parquet.ParquetSchemaConverter
-import org.apache.spark.sql.internal.HiveSerDe
+import org.apache.spark.sql.execution.command.CreateDataSourceTableUtils._
+import org.apache.spark.sql.execution.datasources.BucketSpec
+import org.apache.spark.sql.execution.datasources.PartitioningUtils
 import org.apache.spark.sql.types._
-import org.apache.spark.util.{SerializableConfiguration, ThreadUtils}
+import org.apache.spark.util.SerializableConfiguration
 
 // Note: The definition of these commands are based on the ones described in
 // https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL
@@ -189,28 +185,25 @@ case class DropTableCommand(
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val catalog = sparkSession.sessionState.catalog
-
-    if (!catalog.isTemporaryTable(tableName) && catalog.tableExists(tableName)) {
-      // If the command DROP VIEW is to drop a table or DROP TABLE is to drop a view
-      // issue an exception.
-      catalog.getTableMetadata(tableName).tableType match {
-        case CatalogTableType.VIEW if !isView =>
-          throw new AnalysisException(
-            "Cannot drop a view with DROP TABLE. Please use DROP VIEW instead")
-        case o if o != CatalogTableType.VIEW && isView =>
-          throw new AnalysisException(
-            s"Cannot drop a table with DROP VIEW. Please use DROP TABLE instead")
-        case _ =>
-      }
-    }
+    // If the command DROP VIEW is to drop a table or DROP TABLE is to drop a view
+    // issue an exception.
+    catalog.getTableMetadataOption(tableName).map(_.tableType match {
+      case CatalogTableType.VIEW if !isView =>
+        throw new AnalysisException(
+          "Cannot drop a view with DROP TABLE. Please use DROP VIEW instead")
+      case o if o != CatalogTableType.VIEW && isView =>
+        throw new AnalysisException(
+          s"Cannot drop a table with DROP VIEW. Please use DROP TABLE instead")
+      case _ =>
+    })
     try {
-      sparkSession.sharedState.cacheManager.uncacheQuery(sparkSession.table(tableName))
+      sparkSession.sharedState.cacheManager.uncacheQuery(
+        sparkSession.table(tableName.quotedString))
     } catch {
-      case _: NoSuchTableException if ifExists =>
       case NonFatal(e) => log.warn(e.toString, e)
     }
     catalog.refreshTable(tableName)
-    catalog.dropTable(tableName, ifExists, purge)
+    catalog.dropTable(tableName, ifExists)
     Seq.empty[Row]
   }
 }
@@ -231,15 +224,13 @@ case class AlterTableSetPropertiesCommand(
   extends RunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
+    val ident = if (isView) "VIEW" else "TABLE"
     val catalog = sparkSession.sessionState.catalog
+    DDLUtils.verifyAlterTableType(catalog, tableName, isView)
+    DDLUtils.verifyTableProperties(properties.keys.toSeq, s"ALTER $ident")
     val table = catalog.getTableMetadata(tableName)
-    DDLUtils.verifyAlterTableType(catalog, table, isView)
-    // This overrides old properties and update the comment parameter of CatalogTable
-    // with the newly added/modified comment since CatalogTable also holds comment as its
-    // direct property.
-    val newTable = table.copy(
-      properties = table.properties ++ properties,
-      comment = properties.get("comment").orElse(table.comment))
+    // This overrides old properties
+    val newTable = table.copy(properties = table.properties ++ properties)
     catalog.alterTable(newTable)
     Seq.empty[Row]
   }
@@ -263,9 +254,11 @@ case class AlterTableUnsetPropertiesCommand(
   extends RunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
+    val ident = if (isView) "VIEW" else "TABLE"
     val catalog = sparkSession.sessionState.catalog
+    DDLUtils.verifyAlterTableType(catalog, tableName, isView)
+    DDLUtils.verifyTableProperties(propKeys, s"ALTER $ident")
     val table = catalog.getTableMetadata(tableName)
-    DDLUtils.verifyAlterTableType(catalog, table, isView)
     if (!ifExists) {
       propKeys.foreach { k =>
         if (!table.properties.contains(k) && k != "comment") {
@@ -376,9 +369,11 @@ case class AlterTableSerDePropertiesCommand(
     "ALTER TABLE attempted to set neither serde class name nor serde properties")
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
+    DDLUtils.verifyTableProperties(
+      serdeProperties.toSeq.flatMap(_.keys.toSeq),
+      "ALTER TABLE SERDEPROPERTIES")
     val catalog = sparkSession.sessionState.catalog
     val table = catalog.getTableMetadata(tableName)
-    DDLUtils.verifyAlterTableType(catalog, table, isView = false)
     // For datasource tables, disallow setting serde or specifying partition
     if (partSpec.isDefined && DDLUtils.isDatasourceTable(table)) {
       throw new AnalysisException("Operation not allowed: ALTER TABLE SET " +
@@ -392,14 +387,14 @@ case class AlterTableSerDePropertiesCommand(
     if (partSpec.isEmpty) {
       val newTable = table.withNewStorage(
         serde = serdeClassName.orElse(table.storage.serde),
-        properties = table.storage.properties ++ serdeProperties.getOrElse(Map()))
+        serdeProperties = table.storage.serdeProperties ++ serdeProperties.getOrElse(Map()))
       catalog.alterTable(newTable)
     } else {
       val spec = partSpec.get
       val part = catalog.getPartition(table.identifier, spec)
       val newPart = part.copy(storage = part.storage.copy(
         serde = serdeClassName.orElse(part.storage.serde),
-        properties = part.storage.properties ++ serdeProperties.getOrElse(Map())))
+        serdeProperties = part.storage.serdeProperties ++ serdeProperties.getOrElse(Map())))
       catalog.alterPartitions(table.identifier, Seq(newPart))
     }
     Seq.empty[Row]
@@ -427,8 +422,10 @@ case class AlterTableAddPartitionCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val catalog = sparkSession.sessionState.catalog
     val table = catalog.getTableMetadata(tableName)
-    DDLUtils.verifyAlterTableType(catalog, table, isView = false)
-    DDLUtils.verifyPartitionProviderIsHive(sparkSession, table, "ALTER TABLE ADD PARTITION")
+    if (DDLUtils.isDatasourceTable(table)) {
+      throw new AnalysisException(
+        "ALTER TABLE ADD PARTITION is not allowed for tables defined using the datasource API")
+    }
     val parts = partitionSpecsAndLocs.map { case (spec, location) =>
       val normalizedSpec = PartitioningUtils.normalizePartitionSpec(
         spec,
@@ -455,6 +452,7 @@ case class AlterTableAddPartitionCommand(
         catalog.alterTableStats(table.identifier, None)
       }
     }
+    catalog.createPartitions(table.identifier, parts, ignoreIfExists = ifNotExists)
     Seq.empty[Row]
   }
 
@@ -524,23 +522,11 @@ case class AlterTableDropPartitionCommand(
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val catalog = sparkSession.sessionState.catalog
     val table = catalog.getTableMetadata(tableName)
-    DDLUtils.verifyAlterTableType(catalog, table, isView = false)
-    DDLUtils.verifyPartitionProviderIsHive(sparkSession, table, "ALTER TABLE DROP PARTITION")
-
-    val normalizedSpecs = specs.map { spec =>
-      PartitioningUtils.normalizePartitionSpec(
-        spec,
-        table.partitionColumnNames,
-        table.identifier.quotedString,
-        sparkSession.sessionState.conf.resolver)
+    if (DDLUtils.isDatasourceTable(table)) {
+      throw new AnalysisException(
+        "ALTER TABLE DROP PARTITIONS is not allowed for tables defined using the datasource API")
     }
-
-    catalog.dropPartitions(
-      table.identifier, normalizedSpecs, ignoreIfNotExists = ifExists, purge = purge,
-      retainData = retainData)
-
-    CommandUtils.updateTableStats(sparkSession, table)
-
+    catalog.dropPartitions(table.identifier, specs, ignoreIfNotExists = ifExists)
     Seq.empty[Row]
   }
 
@@ -591,33 +577,28 @@ case class AlterTableRecoverPartitionsCommand(
     val catalog = spark.sessionState.catalog
     val table = catalog.getTableMetadata(tableName)
     val tableIdentWithDB = table.identifier.quotedString
-    DDLUtils.verifyAlterTableType(catalog, table, isView = false)
-    if (table.partitionColumnNames.isEmpty) {
+    if (DDLUtils.isDatasourceTable(table)) {
+      throw new AnalysisException(
+        s"Operation not allowed: $cmd on datasource tables: $tableIdentWithDB")
+    }
+    if (!DDLUtils.isTablePartitioned(table)) {
       throw new AnalysisException(
         s"Operation not allowed: $cmd only works on partitioned tables: $tableIdentWithDB")
     }
-
     if (table.storage.locationUri.isEmpty) {
       throw new AnalysisException(s"Operation not allowed: $cmd only works on table with " +
         s"location provided: $tableIdentWithDB")
     }
 
-    val root = new Path(table.location)
+    val root = new Path(table.storage.locationUri.get)
     logInfo(s"Recover all the partitions in $root")
     val fs = root.getFileSystem(spark.sparkContext.hadoopConfiguration)
 
     val threshold = spark.conf.get("spark.rdd.parallelListingThreshold", "10").toInt
     val hadoopConf = spark.sparkContext.hadoopConfiguration
     val pathFilter = getPathFilter(hadoopConf)
-
-    val evalPool = ThreadUtils.newForkJoinPool("AlterTableRecoverPartitionsCommand", 8)
-    val partitionSpecsAndLocs: Seq[(TablePartitionSpec, Path)] =
-      try {
-        scanPartitions(spark, fs, pathFilter, root, Map(), table.partitionColumnNames, threshold,
-          spark.sessionState.conf.resolver, new ForkJoinTaskSupport(evalPool)).seq
-      } finally {
-        evalPool.shutdown()
-      }
+    val partitionSpecsAndLocs = scanPartitions(
+      spark, fs, pathFilter, root, Map(), table.partitionColumnNames.map(_.toLowerCase), threshold)
     val total = partitionSpecsAndLocs.length
     logInfo(s"Found $total partitions in $root")
 
@@ -629,14 +610,11 @@ case class AlterTableRecoverPartitionsCommand(
     logInfo(s"Finished to gather the fast stats for all $total partitions.")
 
     addPartitions(spark, table, partitionSpecsAndLocs, partitionStats)
-    // Updates the table to indicate that its partition metadata is stored in the Hive metastore.
-    // This is always the case for Hive format tables, but is not true for Datasource tables created
-    // before Spark 2.1 unless they are converted via `msck repair table`.
-    spark.sessionState.catalog.alterTable(table.copy(tracksPartitionsInCatalog = true))
-    catalog.refreshTable(tableName)
     logInfo(s"Recovered all partitions ($total).")
     Seq.empty[Row]
   }
+
+  @transient private lazy val evalTaskSupport = new ForkJoinTaskSupport(new ForkJoinPool(8))
 
   private def scanPartitions(
       spark: SparkSession,
@@ -645,9 +623,7 @@ case class AlterTableRecoverPartitionsCommand(
       path: Path,
       spec: TablePartitionSpec,
       partitionNames: Seq[String],
-      threshold: Int,
-      resolver: Resolver,
-      evalTaskSupport: ForkJoinTaskSupport): GenSeq[(TablePartitionSpec, Path)] = {
+      threshold: Int): GenSeq[(TablePartitionSpec, Path)] = {
     if (partitionNames.isEmpty) {
       return Seq(spec -> path)
     }
@@ -666,20 +642,20 @@ case class AlterTableRecoverPartitionsCommand(
       val name = st.getPath.getName
       if (st.isDirectory && name.contains("=")) {
         val ps = name.split("=", 2)
-        val columnName = ExternalCatalogUtils.unescapePathName(ps(0))
+        val columnName = PartitioningUtils.unescapePathName(ps(0)).toLowerCase
         // TODO: Validate the value
-        val value = ExternalCatalogUtils.unescapePathName(ps(1))
-        if (resolver(columnName, partitionNames.head)) {
-          scanPartitions(spark, fs, filter, st.getPath, spec ++ Map(partitionNames.head -> value),
-            partitionNames.drop(1), threshold, resolver, evalTaskSupport)
+        val value = PartitioningUtils.unescapePathName(ps(1))
+        // comparing with case-insensitive, but preserve the case
+        if (columnName == partitionNames.head) {
+          scanPartitions(spark, fs, filter, st.getPath, spec ++ Map(columnName -> value),
+            partitionNames.drop(1), threshold)
         } else {
-          logWarning(
-            s"expected partition column ${partitionNames.head}, but got ${ps(0)}, ignoring it")
-          Seq.empty
+          logWarning(s"expect partition column ${partitionNames.head}, but got ${ps(0)}, ignore it")
+          Seq()
         }
       } else {
         logWarning(s"ignore ${new Path(path, name)}")
-        Seq.empty
+        Seq()
       }
     }
   }
@@ -745,7 +721,7 @@ case class AlterTableRecoverPartitionsCommand(
         // inherit table storage format (possibly except for location)
         CatalogTablePartition(
           spec,
-          table.storage.copy(locationUri = Some(location.toUri)),
+          table.storage.copy(locationUri = Some(location.toUri.toString)),
           params)
       }
       spark.sessionState.catalog.createPartitions(tableName, parts, ignoreIfExists = true)
@@ -784,7 +760,14 @@ case class AlterTableSetLocationCommand(
           sparkSession, table, "ALTER TABLE ... SET LOCATION")
         // Partition spec is specified, so we set the location only for this partition
         val part = catalog.getPartition(table.identifier, spec)
-        val newPart = part.copy(storage = part.storage.copy(locationUri = Some(locUri)))
+        val newPart =
+          if (DDLUtils.isDatasourceTable(table)) {
+            throw new AnalysisException(
+              "ALTER TABLE SET LOCATION for partition is not allowed for tables defined " +
+              "using the datasource API")
+          } else {
+            part.copy(storage = part.storage.copy(locationUri = Some(location)))
+          }
         catalog.alterPartitions(table.identifier, Seq(newPart))
       case None =>
         // No partition spec is specified, so we set the location for the table itself
@@ -798,14 +781,9 @@ case class AlterTableSetLocationCommand(
 
 
 object DDLUtils {
-  val HIVE_PROVIDER = "hive"
 
-  def isHiveTable(table: CatalogTable): Boolean = {
-    isHiveTable(table.provider)
-  }
-
-  def isHiveTable(provider: Option[String]): Boolean = {
-    provider.isDefined && provider.get.toLowerCase(Locale.ROOT) == HIVE_PROVIDER
+  def isDatasourceTable(props: Map[String, String]): Boolean = {
+    props.contains(DATASOURCE_PROVIDER)
   }
 
   def isDatasourceTable(table: CatalogTable): Boolean = {
@@ -857,35 +835,79 @@ object DDLUtils {
     }
   }
 
-  private[sql] def checkDataSchemaFieldNames(table: CatalogTable): Unit = {
-    table.provider.foreach {
-      _.toLowerCase(Locale.ROOT) match {
-        case HIVE_PROVIDER =>
-          val serde = table.storage.serde
-          if (serde == HiveSerDe.sourceToSerDe("orc").get.serde) {
-            OrcFileFormat.checkFieldNames(table.dataSchema)
-          } else if (serde == HiveSerDe.sourceToSerDe("parquet").get.serde ||
-              serde == Some("parquet.hive.serde.ParquetHiveSerDe")) {
-            ParquetSchemaConverter.checkFieldNames(table.dataSchema)
+  /**
+   * If the given table properties (or SerDe properties) contains datasource properties,
+   * throw an exception.
+   */
+  def verifyTableProperties(propKeys: Seq[String], operation: String): Unit = {
+    val datasourceKeys = propKeys.filter(_.startsWith(DATASOURCE_PREFIX))
+    if (datasourceKeys.nonEmpty) {
+      throw new AnalysisException(s"Operation not allowed: $operation property keys may not " +
+        s"start with '$DATASOURCE_PREFIX': ${datasourceKeys.mkString("[", ", ", "]")}")
+    }
+  }
+
+  def isTablePartitioned(table: CatalogTable): Boolean = {
+    table.partitionColumns.nonEmpty || table.properties.contains(DATASOURCE_SCHEMA_NUMPARTCOLS)
+  }
+
+  // A persisted data source table may not store its schema in the catalog. In this case, its schema
+  // will be inferred at runtime when the table is referenced.
+  def getSchemaFromTableProperties(metadata: CatalogTable): Option[StructType] = {
+    require(isDatasourceTable(metadata))
+    val props = metadata.properties
+    if (props.isDefinedAt(DATASOURCE_SCHEMA)) {
+      // Originally, we used spark.sql.sources.schema to store the schema of a data source table.
+      // After SPARK-6024, we removed this flag.
+      // Although we are not using spark.sql.sources.schema any more, we need to still support.
+      props.get(DATASOURCE_SCHEMA).map(DataType.fromJson(_).asInstanceOf[StructType])
+    } else {
+      metadata.properties.get(DATASOURCE_SCHEMA_NUMPARTS).map { numParts =>
+        val parts = (0 until numParts.toInt).map { index =>
+          val part = metadata.properties.get(s"$DATASOURCE_SCHEMA_PART_PREFIX$index").orNull
+          if (part == null) {
+            throw new AnalysisException(
+              "Could not read schema from the metastore because it is corrupted " +
+                s"(missing part $index of the schema, $numParts parts are expected).")
           }
-        case "parquet" => ParquetSchemaConverter.checkFieldNames(table.dataSchema)
-        case "orc" => OrcFileFormat.checkFieldNames(table.dataSchema)
-        case _ =>
+
+          part
+        }
+        // Stick all parts back to a single schema string.
+        DataType.fromJson(parts.mkString).asInstanceOf[StructType]
       }
     }
   }
 
-  /**
-   * Throws exception if outputPath tries to overwrite inputpath.
-   */
-  def verifyNotReadPath(query: LogicalPlan, outputPath: Path) : Unit = {
-    val inputPaths = query.collect {
-      case LogicalRelation(r: HadoopFsRelation, _, _, _) => r.location.rootPaths
-    }.flatten
+  private def getColumnNamesByType(
+      props: Map[String, String], colType: String, typeName: String): Seq[String] = {
+    require(isDatasourceTable(props))
 
-    if (inputPaths.contains(outputPath)) {
+    for {
+      numCols <- props.get(s"spark.sql.sources.schema.num${colType.capitalize}Cols").toSeq
+      index <- 0 until numCols.toInt
+    } yield props.getOrElse(
+      s"$DATASOURCE_SCHEMA_PREFIX${colType}Col.$index",
       throw new AnalysisException(
-        "Cannot overwrite a path that is also being read from.")
+        s"Corrupted $typeName in catalog: $numCols parts expected, but part $index is missing."
+      )
+    )
+  }
+
+  def getPartitionColumnsFromTableProperties(metadata: CatalogTable): Seq[String] = {
+    getColumnNamesByType(metadata.properties, "part", "partitioning columns")
+  }
+
+  def getBucketSpecFromTableProperties(metadata: CatalogTable): Option[BucketSpec] = {
+    if (isDatasourceTable(metadata)) {
+      metadata.properties.get(DATASOURCE_SCHEMA_NUMBUCKETS).map { numBuckets =>
+        BucketSpec(
+          numBuckets.toInt,
+          getColumnNamesByType(metadata.properties, "bucket", "bucketing columns"),
+          getColumnNamesByType(metadata.properties, "sort", "sorting columns"))
+      }
+    } else {
+      None
     }
   }
 }

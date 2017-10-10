@@ -175,11 +175,10 @@ class DateExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper {
   }
 
   test("Seconds") {
-    assert(Second(Literal.create(null, DateType), gmtId).resolved === false)
-    assert(Second(Cast(Literal(d), TimestampType, gmtId), gmtId).resolved === true)
-    checkEvaluation(Second(Cast(Literal(d), TimestampType, gmtId), gmtId), 0)
-    checkEvaluation(Second(Cast(Literal(sdf.format(d)), TimestampType, gmtId), gmtId), 15)
-    checkEvaluation(Second(Literal(ts), gmtId), 15)
+    assert(Second(Literal.create(null, DateType)).resolved === false)
+    checkEvaluation(Second(Cast(Literal(d), TimestampType)), 0)
+    checkEvaluation(Second(Cast(Literal(sdf.format(d)), TimestampType)), 15)
+    checkEvaluation(Second(Literal(ts)), 15)
 
     val c = Calendar.getInstance()
     for (tz <- Seq(TimeZoneGMT, TimeZonePST, TimeZoneJST)) {
@@ -251,11 +250,10 @@ class DateExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper {
   }
 
   test("Hour") {
-    assert(Hour(Literal.create(null, DateType), gmtId).resolved === false)
-    assert(Hour(Literal(ts), gmtId).resolved === true)
-    checkEvaluation(Hour(Cast(Literal(d), TimestampType, gmtId), gmtId), 0)
-    checkEvaluation(Hour(Cast(Literal(sdf.format(d)), TimestampType, gmtId), gmtId), 13)
-    checkEvaluation(Hour(Literal(ts), gmtId), 13)
+    assert(Hour(Literal.create(null, DateType)).resolved === false)
+    checkEvaluation(Hour(Cast(Literal(d), TimestampType)), 0)
+    checkEvaluation(Hour(Cast(Literal(sdf.format(d)), TimestampType)), 13)
+    checkEvaluation(Hour(Literal(ts)), 13)
 
     val c = Calendar.getInstance()
     for (tz <- Seq(TimeZoneGMT, TimeZonePST, TimeZoneJST)) {
@@ -277,12 +275,10 @@ class DateExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper {
   }
 
   test("Minute") {
-    assert(Minute(Literal.create(null, DateType), gmtId).resolved === false)
-    assert(Minute(Literal(ts), gmtId).resolved === true)
-    checkEvaluation(Minute(Cast(Literal(d), TimestampType, gmtId), gmtId), 0)
-    checkEvaluation(
-      Minute(Cast(Literal(sdf.format(d)), TimestampType, gmtId), gmtId), 10)
-    checkEvaluation(Minute(Literal(ts), gmtId), 10)
+    assert(Minute(Literal.create(null, DateType)).resolved === false)
+    checkEvaluation(Minute(Cast(Literal(d), TimestampType)), 0)
+    checkEvaluation(Minute(Cast(Literal(sdf.format(d)), TimestampType)), 10)
+    checkEvaluation(Minute(Literal(ts)), 10)
 
     val c = Calendar.getInstance()
     for (tz <- Seq(TimeZoneGMT, TimeZonePST, TimeZoneJST)) {

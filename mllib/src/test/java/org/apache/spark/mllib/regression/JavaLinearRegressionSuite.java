@@ -24,13 +24,13 @@ import org.junit.Test;
 
 import org.apache.spark.SharedSparkSession;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.util.LinearDataGenerator;
 
 public class JavaLinearRegressionSuite extends SharedSparkSession {
 
-  private static int validatePrediction(
-      List<LabeledPoint> validationData, LinearRegressionModel model) {
+  int validatePrediction(List<LabeledPoint> validationData, LinearRegressionModel model) {
     int numAccurate = 0;
     for (LabeledPoint point : validationData) {
       Double prediction = model.predict(point.features());

@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 
 import org.apache.spark.SparkFunSuite
-import org.apache.spark.sql.streaming.{ProcessingTime, Trigger}
+import org.apache.spark.sql.streaming.ProcessingTime
 
 class ProcessingTimeSuite extends SparkFunSuite {
 

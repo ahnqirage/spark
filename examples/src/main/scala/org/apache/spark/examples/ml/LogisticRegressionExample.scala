@@ -108,7 +108,7 @@ object LogisticRegressionExample {
     }
   }
 
-  def run(params: Params): Unit = {
+  def run(params: Params) {
     val spark = SparkSession
       .builder
       .appName(s"LogisticRegressionExample with $params")

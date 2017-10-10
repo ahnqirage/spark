@@ -17,10 +17,11 @@
 
 package org.apache.spark.deploy
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream, File, IOException}
+import java.io.{ByteArrayInputStream, DataInputStream, IOException}
+import java.lang.reflect.Method
 import java.security.PrivilegedExceptionAction
 import java.text.DateFormat
-import java.util.{Arrays, Comparator, Date, Locale}
+import java.util.{Arrays, Comparator, Date}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -38,6 +39,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 import org.apache.spark.{SparkConf, SparkException}
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.internal.Logging
+import org.apache.spark.internal.config._
 import org.apache.spark.util.Utils
 
 /**
@@ -240,10 +242,6 @@ class SparkHadoopUtil extends Logging {
     if (isGlobPath(pattern)) globPath(pattern) else Seq(pattern)
   }
 
-  def globPathIfNecessary(fs: FileSystem, pattern: Path): Seq[Path] = {
-    if (isGlobPath(pattern)) globPath(fs, pattern) else Seq(pattern)
-  }
-
   /**
    * Lists all the files in a directory with the specified prefix, and does not end with the
    * given suffix. The returned {{FileStatus}} instances are sorted by the modification times of
@@ -274,6 +272,29 @@ class SparkHadoopUtil extends Logging {
         Array.empty
     }
   }
+
+  /**
+   * How much time is remaining (in millis) from now to (fraction * renewal time for the token that
+   * is valid the latest)?
+   * This will return -ve (or 0) value if the fraction of validity has already expired.
+   */
+  def getTimeFromNowToRenewal(
+      sparkConf: SparkConf,
+      fraction: Double,
+      credentials: Credentials): Long = {
+    val now = System.currentTimeMillis()
+
+    val renewalInterval = sparkConf.get(TOKEN_RENEWAL_INTERVAL).get
+
+    credentials.getAllTokens.asScala
+      .filter(_.getKind == DelegationTokenIdentifier.HDFS_DELEGATION_KIND)
+      .map { t =>
+        val identifier = new DelegationTokenIdentifier()
+        identifier.readFields(new DataInputStream(new ByteArrayInputStream(t.getIdentifier)))
+        (identifier.getIssueDate + fraction * renewalInterval).toLong - now
+      }.foldLeft(0L)(math.max)
+  }
+
 
   private[spark] def getSuffixForCredentialsPath(credentialsPath: Path): Int = {
     val fileName = credentialsPath.getName
@@ -345,7 +366,7 @@ class SparkHadoopUtil extends Logging {
     if (credentials != null) {
       credentials.getAllTokens.asScala.map(tokenToString)
     } else {
-      Seq.empty
+      Seq()
     }
   }
 
@@ -358,7 +379,7 @@ class SparkHadoopUtil extends Logging {
    * @return a printable string value.
    */
   private[spark] def tokenToString(token: Token[_ <: TokenIdentifier]): String = {
-    val df = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.US)
+    val df = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
     val buffer = new StringBuilder(128)
     buffer.append(token.toString)
     try {
@@ -374,31 +395,9 @@ class SparkHadoopUtil extends Logging {
       }
     } catch {
       case e: IOException =>
-        logDebug(s"Failed to decode $token: $e", e)
+        logDebug("Failed to decode $token: $e", e)
     }
     buffer.toString
-  }
-
-  private[spark] def checkAccessPermission(status: FileStatus, mode: FsAction): Boolean = {
-    val perm = status.getPermission
-    val ugi = UserGroupInformation.getCurrentUser
-
-    if (ugi.getShortUserName == status.getOwner) {
-      if (perm.getUserAction.implies(mode)) {
-        return true
-      }
-    } else if (ugi.getGroupNames.contains(status.getGroup)) {
-      if (perm.getGroupAction.implies(mode)) {
-        return true
-      }
-    } else if (perm.getOtherAction.implies(mode)) {
-      return true
-    }
-
-    logDebug(s"Permission denied: user=${ugi.getShortUserName}, " +
-      s"path=${status.getPath}:${status.getOwner}:${status.getGroup}" +
-      s"${if (status.isDirectory) "d" else "-"}$perm")
-    false
   }
 }
 

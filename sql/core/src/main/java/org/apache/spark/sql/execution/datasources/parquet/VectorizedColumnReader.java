@@ -138,7 +138,7 @@ public class VectorizedColumnReader {
    */
   void readBatch(int total, WritableColumnVector column) throws IOException {
     int rowId = 0;
-    WritableColumnVector dictionaryIds = null;
+    ColumnVector dictionaryIds = null;
     if (dictionary != null) {
       // SPARK-16334: We only maintain a single dictionary per row batch, so that it can be used to
       // decode all previous dictionary encoded pages if we ever encounter a non-dictionary encoded
@@ -157,9 +157,6 @@ public class VectorizedColumnReader {
         // Read and decode dictionary ids.
         defColumn.readIntegers(
             num, dictionaryIds, column, rowId, maxDefLevel, (VectorizedValuesReader) dataColumn);
-
-        // Timestamp values encoded as INT64 can't be lazily decoded as we need to post process
-        // the values to add microseconds precision.
         if (column.hasDictionary() || (rowId == 0 &&
             (descriptor.getType() == PrimitiveType.PrimitiveTypeName.INT32 ||
             (descriptor.getType() == PrimitiveType.PrimitiveTypeName.INT64  &&
@@ -231,19 +228,19 @@ public class VectorizedColumnReader {
             DecimalType.is32BitDecimalType(column.dataType())) {
           for (int i = rowId; i < rowId + num; ++i) {
             if (!column.isNullAt(i)) {
-              column.putInt(i, dictionary.decodeToInt(dictionaryIds.getDictId(i)));
+              column.putInt(i, dictionary.decodeToInt(dictionaryIds.getInt(i)));
             }
           }
         } else if (column.dataType() == DataTypes.ByteType) {
           for (int i = rowId; i < rowId + num; ++i) {
             if (!column.isNullAt(i)) {
-              column.putByte(i, (byte) dictionary.decodeToInt(dictionaryIds.getDictId(i)));
+              column.putByte(i, (byte) dictionary.decodeToInt(dictionaryIds.getInt(i)));
             }
           }
         } else if (column.dataType() == DataTypes.ShortType) {
           for (int i = rowId; i < rowId + num; ++i) {
             if (!column.isNullAt(i)) {
-              column.putShort(i, (short) dictionary.decodeToInt(dictionaryIds.getDictId(i)));
+              column.putShort(i, (short) dictionary.decodeToInt(dictionaryIds.getInt(i)));
             }
           }
         } else {
@@ -256,18 +253,10 @@ public class VectorizedColumnReader {
             DecimalType.is64BitDecimalType(column.dataType())) {
           for (int i = rowId; i < rowId + num; ++i) {
             if (!column.isNullAt(i)) {
-              column.putLong(i, dictionary.decodeToLong(dictionaryIds.getDictId(i)));
+              column.putLong(i, dictionary.decodeToLong(dictionaryIds.getInt(i)));
             }
           }
-        } else if (column.dataType() == DataTypes.TimestampType) {
-          for (int i = rowId; i < rowId + num; ++i) {
-            if (!column.isNullAt(i)) {
-              column.putLong(i,
-                DateTimeUtils.fromMillis(dictionary.decodeToLong(dictionaryIds.getDictId(i))));
-            }
-          }
-        }
-        else {
+        } else {
           throw new UnsupportedOperationException("Unimplemented type: " + column.dataType());
         }
         break;
@@ -275,7 +264,7 @@ public class VectorizedColumnReader {
       case FLOAT:
         for (int i = rowId; i < rowId + num; ++i) {
           if (!column.isNullAt(i)) {
-            column.putFloat(i, dictionary.decodeToFloat(dictionaryIds.getDictId(i)));
+            column.putFloat(i, dictionary.decodeToFloat(dictionaryIds.getInt(i)));
           }
         }
         break;
@@ -283,7 +272,7 @@ public class VectorizedColumnReader {
       case DOUBLE:
         for (int i = rowId; i < rowId + num; ++i) {
           if (!column.isNullAt(i)) {
-            column.putDouble(i, dictionary.decodeToDouble(dictionaryIds.getDictId(i)));
+            column.putDouble(i, dictionary.decodeToDouble(dictionaryIds.getInt(i)));
           }
         }
         break;
@@ -292,7 +281,7 @@ public class VectorizedColumnReader {
           for (int i = rowId; i < rowId + num; ++i) {
             // TODO: Convert dictionary of Binaries to dictionary of Longs
             if (!column.isNullAt(i)) {
-              Binary v = dictionary.decodeToBinary(dictionaryIds.getDictId(i));
+              Binary v = dictionary.decodeToBinary(dictionaryIds.getInt(i));
               column.putLong(i, ParquetRowConverter.binaryToSQLTimestamp(v));
             }
           }
@@ -307,7 +296,7 @@ public class VectorizedColumnReader {
         // the length and offset.
         for (int i = rowId; i < rowId + num; ++i) {
           if (!column.isNullAt(i)) {
-            Binary v = dictionary.decodeToBinary(dictionaryIds.getDictId(i));
+            Binary v = dictionary.decodeToBinary(dictionaryIds.getInt(i));
             column.putByteArray(i, v.getBytes());
           }
         }
@@ -317,21 +306,21 @@ public class VectorizedColumnReader {
         if (DecimalType.is32BitDecimalType(column.dataType())) {
           for (int i = rowId; i < rowId + num; ++i) {
             if (!column.isNullAt(i)) {
-              Binary v = dictionary.decodeToBinary(dictionaryIds.getDictId(i));
+              Binary v = dictionary.decodeToBinary(dictionaryIds.getInt(i));
               column.putInt(i, (int) ParquetRowConverter.binaryToUnscaledLong(v));
             }
           }
         } else if (DecimalType.is64BitDecimalType(column.dataType())) {
           for (int i = rowId; i < rowId + num; ++i) {
             if (!column.isNullAt(i)) {
-              Binary v = dictionary.decodeToBinary(dictionaryIds.getDictId(i));
+              Binary v = dictionary.decodeToBinary(dictionaryIds.getInt(i));
               column.putLong(i, ParquetRowConverter.binaryToUnscaledLong(v));
             }
           }
         } else if (DecimalType.isByteArrayDecimalType(column.dataType())) {
           for (int i = rowId; i < rowId + num; ++i) {
             if (!column.isNullAt(i)) {
-              Binary v = dictionary.decodeToBinary(dictionaryIds.getDictId(i));
+              Binary v = dictionary.decodeToBinary(dictionaryIds.getInt(i));
               column.putByteArray(i, v.getBytes());
             }
           }

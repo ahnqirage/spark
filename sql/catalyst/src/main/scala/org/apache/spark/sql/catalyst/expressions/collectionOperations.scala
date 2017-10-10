@@ -64,11 +64,7 @@ case class Size(child: Expression) extends UnaryExpression with ExpectsInputType
  */
 @ExpressionDescription(
   usage = "_FUNC_(map) - Returns an unordered array containing the keys of the map.",
-  examples = """
-    Examples:
-      > SELECT _FUNC_(map(1, 'a', 2, 'b'));
-       [1,2]
-  """)
+  extended = " > SELECT _FUNC_(map(1, 'a', 2, 'b'));\n [1,2]")
 case class MapKeys(child: Expression)
   extends UnaryExpression with ExpectsInputTypes {
 
@@ -92,11 +88,7 @@ case class MapKeys(child: Expression)
  */
 @ExpressionDescription(
   usage = "_FUNC_(map) - Returns an unordered array containing the values of the map.",
-  examples = """
-    Examples:
-      > SELECT _FUNC_(map(1, 'a', 2, 'b'));
-       ["a","b"]
-  """)
+  extended = " > SELECT _FUNC_(map(1, 'a', 2, 'b'));\n [\"a\",\"b\"]")
 case class MapValues(child: Expression)
   extends UnaryExpression with ExpectsInputTypes {
 

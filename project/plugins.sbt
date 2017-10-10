@@ -9,7 +9,7 @@ addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
 
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "1.0.0")
 
-addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "0.1.17")
+addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "0.1.11")
 
 // sbt 1.0.0 support: https://github.com/AlpineNow/junit_xml_listener/issues/6
 addSbtPlugin("com.alpinenow" % "junit_xml_listener" % "0.5.1")
@@ -27,7 +27,6 @@ libraryDependencies += "org.ow2.asm"  % "asm" % "5.1"
 
 libraryDependencies += "org.ow2.asm"  % "asm-commons" % "5.1"
 
-// sbt 1.0.0 support: https://github.com/ihji/sbt-antlr4/issues/14
 addSbtPlugin("com.simplytyped" % "sbt-antlr4" % "0.7.11")
 
 // Spark uses a custom fork of the sbt-pom-reader plugin which contains a patch to fix issues

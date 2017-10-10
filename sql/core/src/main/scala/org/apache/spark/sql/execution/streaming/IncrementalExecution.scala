@@ -17,17 +17,11 @@
 
 package org.apache.spark.sql.execution.streaming
 
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicInteger
-
-import org.apache.spark.internal.Logging
-import org.apache.spark.sql.{AnalysisException, SparkSession, Strategy}
-import org.apache.spark.sql.catalyst.expressions.CurrentBatchTimestamp
+import org.apache.spark.sql.{InternalOutputModes, SparkSession}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.plans.physical.{AllTuples, ClusteredDistribution, HashPartitioning, SinglePartition}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.{QueryExecution, SparkPlan, SparkPlanner, UnaryExecNode}
-import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
 import org.apache.spark.sql.streaming.OutputMode
 
 /**
@@ -39,10 +33,13 @@ class IncrementalExecution(
     logicalPlan: LogicalPlan,
     val outputMode: OutputMode,
     val checkpointLocation: String,
-    val runId: UUID,
-    val currentBatchId: Long,
-    val offsetSeqMetadata: OffsetSeqMetadata)
-  extends QueryExecution(sparkSession, logicalPlan) with Logging {
+    val currentBatchId: Long)
+  extends QueryExecution(sparkSession, logicalPlan) {
+
+  // TODO: make this always part of planning.
+  val stateStrategy = sparkSession.sessionState.planner.StatefulAggregationStrategy +:
+    sparkSession.sessionState.planner.StreamingRelationStrategy +:
+    sparkSession.sessionState.experimentalMethods.extraStrategies
 
   // Modified planner with stateful operations.
   override val planner: SparkPlanner = new SparkPlanner(
@@ -90,15 +87,17 @@ class IncrementalExecution(
   val state = new Rule[SparkPlan] {
 
     override def apply(plan: SparkPlan): SparkPlan = plan transform {
-      case StateStoreSaveExec(keys, None, None, None,
+      case StateStoreSaveExec(keys, None, None,
              UnaryExecNode(agg,
-               StateStoreRestoreExec(_, None, child))) =>
-        val aggStateInfo = nextStatefulOperationStateInfo
+               StateStoreRestoreExec(keys2, None, child))) =>
+        val stateId = OperatorStateId(checkpointLocation, operatorId, currentBatchId)
+        val returnAllStates = if (outputMode == InternalOutputModes.Complete) true else false
+        operatorId += 1
+
         StateStoreSaveExec(
           keys,
-          Some(aggStateInfo),
-          Some(outputMode),
-          Some(offsetSeqMetadata.batchWatermarkMs),
+          Some(stateId),
+          Some(returnAllStates),
           agg.withNewChildren(
             StateStoreRestoreExec(
               keys,

@@ -24,7 +24,7 @@ import com.google.common.io.Files
 import org.apache.spark.sql.{AnalysisException, QueryTest, Row, SaveMode}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTable, CatalogTableType}
+import org.apache.spark.sql.execution.command.CreateDataSourceTableUtils._
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.test.SQLTestUtils
 import org.apache.spark.sql.types.StructType
@@ -116,14 +116,23 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
 
   test("show tblproperties of data source tables - basic") {
     checkAnswer(
-      sql("SHOW TBLPROPERTIES parquet_tab1").filter(s"key = 'my_key1'"),
-      Row("my_key1", "v1") :: Nil
+      sql("SHOW TBLPROPERTIES parquet_tab1").filter(s"key = '$DATASOURCE_PROVIDER'"),
+      Row(DATASOURCE_PROVIDER, "org.apache.spark.sql.parquet.DefaultSource") :: Nil
     )
 
     checkAnswer(
-      sql(s"SHOW TBLPROPERTIES parquet_tab1('my_key1')"),
-      Row("v1") :: Nil
+      sql(s"SHOW TBLPROPERTIES parquet_tab1($DATASOURCE_PROVIDER)"),
+      Row("org.apache.spark.sql.parquet.DefaultSource") :: Nil
     )
+
+    checkAnswer(
+      sql("SHOW TBLPROPERTIES parquet_tab1").filter(s"key = '$DATASOURCE_SCHEMA_NUMPARTS'"),
+      Row(DATASOURCE_SCHEMA_NUMPARTS, "1") :: Nil
+    )
+
+    checkAnswer(
+      sql(s"SHOW TBLPROPERTIES parquet_tab1('$DATASOURCE_SCHEMA_NUMPARTS')"),
+      Row("1"))
   }
 
   test("show tblproperties for datasource table - errors") {
@@ -357,6 +366,94 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
     }
   }
 
+  test("Truncate Table") {
+    withTable("non_part_table", "part_table") {
+      sql(
+        """
+          |CREATE TABLE non_part_table (employeeID INT, employeeName STRING)
+          |ROW FORMAT DELIMITED
+          |FIELDS TERMINATED BY '|'
+          |LINES TERMINATED BY '\n'
+        """.stripMargin)
+
+      val testData = hiveContext.getHiveFile("data/files/employee.dat").getCanonicalPath
+
+      sql(s"""LOAD DATA LOCAL INPATH "$testData" INTO TABLE non_part_table""")
+      checkAnswer(
+        sql("SELECT * FROM non_part_table WHERE employeeID = 16"),
+        Row(16, "john") :: Nil)
+
+      val testResults = sql("SELECT * FROM non_part_table").collect()
+
+      sql("TRUNCATE TABLE non_part_table")
+      checkAnswer(sql("SELECT * FROM non_part_table"), Seq.empty[Row])
+
+      sql(
+        """
+          |CREATE TABLE part_table (employeeID INT, employeeName STRING)
+          |PARTITIONED BY (c STRING, d STRING)
+          |ROW FORMAT DELIMITED
+          |FIELDS TERMINATED BY '|'
+          |LINES TERMINATED BY '\n'
+        """.stripMargin)
+
+      sql(s"""LOAD DATA LOCAL INPATH "$testData" INTO TABLE part_table PARTITION(c="1", d="1")""")
+      checkAnswer(
+        sql("SELECT employeeID, employeeName FROM part_table WHERE c = '1' AND d = '1'"),
+        testResults)
+
+      sql(s"""LOAD DATA LOCAL INPATH "$testData" INTO TABLE part_table PARTITION(c="1", d="2")""")
+      checkAnswer(
+        sql("SELECT employeeID, employeeName FROM part_table WHERE c = '1' AND d = '2'"),
+        testResults)
+
+      sql(s"""LOAD DATA LOCAL INPATH "$testData" INTO TABLE part_table PARTITION(c="2", d="2")""")
+      checkAnswer(
+        sql("SELECT employeeID, employeeName FROM part_table WHERE c = '2' AND d = '2'"),
+        testResults)
+
+      sql("TRUNCATE TABLE part_table PARTITION(c='1', d='1')")
+      checkAnswer(
+        sql("SELECT employeeID, employeeName FROM part_table WHERE c = '1' AND d = '1'"),
+        Seq.empty[Row])
+      checkAnswer(
+        sql("SELECT employeeID, employeeName FROM part_table WHERE c = '1' AND d = '2'"),
+        testResults)
+
+      sql("TRUNCATE TABLE part_table PARTITION(c='1')")
+      checkAnswer(
+        sql("SELECT employeeID, employeeName FROM part_table WHERE c = '1'"),
+        Seq.empty[Row])
+
+      sql("TRUNCATE TABLE part_table")
+      checkAnswer(
+        sql("SELECT employeeID, employeeName FROM part_table"),
+        Seq.empty[Row])
+    }
+  }
+
+  test("show columns") {
+    checkAnswer(
+      sql("SHOW COLUMNS IN parquet_tab3"),
+      Row("col1") :: Row("col 2") :: Nil)
+
+    checkAnswer(
+      sql("SHOW COLUMNS IN default.parquet_tab3"),
+      Row("col1") :: Row("col 2") :: Nil)
+
+    checkAnswer(
+      sql("SHOW COLUMNS IN parquet_tab3 FROM default"),
+      Row("col1") :: Row("col 2") :: Nil)
+
+    checkAnswer(
+      sql("SHOW COLUMNS IN parquet_tab4 IN default"),
+      Row("price") :: Row("qty") :: Row("year") :: Row("month") :: Nil)
+
+    val message = intercept[NoSuchTableException] {
+      sql("SHOW COLUMNS IN badtable FROM default")
+    }.getMessage
+    assert(message.contains("'badtable' not found in database"))
+  }
 
   test("show partitions - show everything") {
     checkAnswer(

@@ -160,7 +160,7 @@ class SQLConfEntrySuite extends SparkFunSuite {
 
   test("optionalConf") {
     val key = "spark.sql.SQLConfEntrySuite.optional"
-    val confEntry = buildConf(key)
+    val confEntry = SQLConfigBuilder(key)
       .stringConf
       .createOptional
 

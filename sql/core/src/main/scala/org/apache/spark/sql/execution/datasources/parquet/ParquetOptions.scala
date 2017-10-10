@@ -21,14 +21,13 @@ import java.util.Locale
 
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
-import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.internal.SQLConf
 
 /**
  * Options for the Parquet data source.
  */
 private[parquet] class ParquetOptions(
-    @transient private val parameters: CaseInsensitiveMap[String],
+    @transient private val parameters: Map[String, String],
     @transient private val sqlConf: SQLConf)
   extends Serializable {
 
@@ -60,7 +59,7 @@ private[parquet] class ParquetOptions(
   val mergeSchema: Boolean = parameters
     .get(MERGE_SCHEMA)
     .map(_.toBoolean)
-    .getOrElse(sqlConf.isParquetSchemaMergingEnabled)
+    .getOrElse(sqlConf.getConf(SQLConf.PARQUET_SCHEMA_MERGING_ENABLED))
 }
 
 

@@ -39,27 +39,16 @@ SparkContext._ensure_initialized()
 
 try:
     # Try to access HiveConf, it will raise exception if Hive is not added
-    conf = SparkConf()
-    if conf.get('spark.sql.catalogImplementation', 'hive').lower() == 'hive':
-        SparkContext._jvm.org.apache.hadoop.hive.conf.HiveConf()
-        spark = SparkSession.builder\
-            .enableHiveSupport()\
-            .getOrCreate()
-    else:
-        spark = SparkSession.builder.getOrCreate()
+    SparkContext._jvm.org.apache.hadoop.hive.conf.HiveConf()
+    spark = SparkSession.builder\
+        .enableHiveSupport()\
+        .getOrCreate()
 except py4j.protocol.Py4JError:
-    if conf.get('spark.sql.catalogImplementation', '').lower() == 'hive':
-        warnings.warn("Fall back to non-hive support because failing to access HiveConf, "
-                      "please make sure you build spark with hive")
     spark = SparkSession.builder.getOrCreate()
 except TypeError:
-    if conf.get('spark.sql.catalogImplementation', '').lower() == 'hive':
-        warnings.warn("Fall back to non-hive support because failing to access HiveConf, "
-                      "please make sure you build spark with hive")
     spark = SparkSession.builder.getOrCreate()
 
 sc = spark.sparkContext
-sql = spark.sql
 atexit.register(lambda: sc.stop())
 
 # for compatibility

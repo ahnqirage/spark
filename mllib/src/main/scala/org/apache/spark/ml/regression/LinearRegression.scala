@@ -38,6 +38,7 @@ import org.apache.spark.ml.param.{Param, ParamMap, ParamValidators}
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.evaluation.RegressionMetrics
+import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
 import org.apache.spark.mllib.linalg.VectorImplicits._
 import org.apache.spark.mllib.stat.MultivariateOnlineSummarizer
 import org.apache.spark.mllib.util.MLUtils
@@ -214,19 +215,16 @@ class LinearRegression @Since("1.3.0") (@Since("1.3.0") override val uid: String
     val w = if (!isDefined(weightCol) || $(weightCol).isEmpty) lit(1.0) else col($(weightCol))
 
     val instances: RDD[Instance] = dataset.select(
-      col($(labelCol)), w, col($(featuresCol))).rdd.map {
+      col($(labelCol)).cast(DoubleType), w, col($(featuresCol))).rdd.map {
       case Row(label: Double, weight: Double, features: Vector) =>
         Instance(label, weight, features)
     }
 
-    val instr = Instrumentation.create(this, dataset)
-    instr.logParams(labelCol, featuresCol, weightCol, predictionCol, solver, tol,
-      elasticNetParam, fitIntercept, maxIter, regParam, standardization, aggregationDepth)
-    instr.logNumFeatures(numFeatures)
-
-    if (($(solver) == Auto &&
-      numFeatures <= WeightedLeastSquares.MAX_NUM_FEATURES) || $(solver) == Normal) {
-      // For low dimensional data, WeightedLeastSquares is more efficient since the
+    if (($(solver) == "auto" && $(elasticNetParam) == 0.0 &&
+      numFeatures <= WeightedLeastSquares.MAX_NUM_FEATURES) || $(solver) == "normal") {
+      require($(elasticNetParam) == 0.0, "Only L2 regularization can be used when normal " +
+        "solver is used.'")
+      // For low dimensional data, WeightedLeastSquares is more efficiently since the
       // training algorithm only requires one pass through the data. (SPARK-10668)
 
       val optimizer = new WeightedLeastSquares($(fitIntercept), $(regParam),
@@ -251,7 +249,7 @@ class LinearRegression @Since("1.3.0") (@Since("1.3.0") override val uid: String
       return lrModel
     }
 
-    val handlePersistence = dataset.storageLevel == StorageLevel.NONE
+    val handlePersistence = dataset.rdd.getStorageLevel == StorageLevel.NONE
     if (handlePersistence) instances.persist(StorageLevel.MEMORY_AND_DISK)
 
     val (featuresSummarizer, ySummarizer) = {
@@ -301,10 +299,7 @@ class LinearRegression @Since("1.3.0") (@Since("1.3.0") override val uid: String
           model,
           Array(0D),
           Array(0D))
-
-        model.setSummary(Some(trainingSummary))
-        instr.logSuccess(model)
-        return model
+        return model.setSummary(trainingSummary)
       } else {
         require($(regParam) == 0.0, "The standard deviation of the label is zero. " +
           "Model cannot be regularized.")
@@ -320,6 +315,13 @@ class LinearRegression @Since("1.3.0") (@Since("1.3.0") override val uid: String
     val featuresStd = featuresSummarizer.variance.toArray.map(math.sqrt)
     val bcFeaturesMean = instances.context.broadcast(featuresMean)
     val bcFeaturesStd = instances.context.broadcast(featuresStd)
+
+    if (!$(fitIntercept) && (0 until numFeatures).exists { i =>
+      featuresStd(i) == 0.0 && featuresMean(i) != 0.0 }) {
+      logWarning("Fitting LinearRegressionModel without intercept on dataset with " +
+        "constant nonzero column, Spark MLlib outputs zero coefficients for constant nonzero " +
+        "columns. This behavior is the same as R glmnet but different from LIBSVM.")
+    }
 
     if (!$(fitIntercept) && (0 until numFeatures).exists { i =>
       featuresStd(i) == 0.0 && featuresMean(i) != 0.0 }) {
@@ -393,8 +395,10 @@ class LinearRegression @Since("1.3.0") (@Since("1.3.0") override val uid: String
         throw new SparkException(msg)
       }
 
-      bcFeaturesMean.destroy(blocking = false)
-      bcFeaturesStd.destroy(blocking = false)
+      if (!state.actuallyConverged) {
+        logWarning("LinearRegression training finished but the result " +
+          s"is not converged because: ${state.convergedReason.get.reason}")
+      }
 
       /*
          The coefficients are trained in the scaled space; we're converting them back to
@@ -662,6 +666,9 @@ class LinearRegressionSummary private[regression] (
     private val privateModel: LinearRegressionModel,
     private val diagInvAtWA: Array[Double]) extends Serializable {
 
+  @deprecated("The model field is deprecated and will be removed in 2.1.0.", "2.0.0")
+  val model: LinearRegressionModel = privateModel
+
   @transient private val metrics = new RegressionMetrics(
     predictions
       .select(col(predictionCol), col(labelCol).cast(DoubleType))
@@ -733,8 +740,7 @@ class LinearRegressionSummary private[regression] (
   lazy val numInstances: Long = predictions.count()
 
   /** Degrees of freedom */
-  @Since("2.2.0")
-  val degreesOfFreedom: Long = if (privateModel.getFitIntercept) {
+  private val degreesOfFreedom: Long = if (privateModel.getFitIntercept) {
     numInstances - privateModel.coefficients.size - 1
   } else {
     numInstances - privateModel.coefficients.size
@@ -901,51 +907,37 @@ class LinearRegressionSummary private[regression] (
  * so they can be precomputed.
  *
  * Now, the first derivative of the objective function in scaled space is
- *
- * <blockquote>
- *    $$
- *    \frac{\partial L}{\partial w_i} = diff/N (x_i - \bar{x_i}) / \hat{x_i}
- *    $$
- * </blockquote>
- *
- * However, $(x_i - \bar{x_i})$ will densify the computation, so it's not
+ * {{{
+ * \frac{\partial L}{\partial w_i} = diff/N (x_i - \bar{x_i}) / \hat{x_i}
+ * }}}
+ * However, ($x_i - \bar{x_i}$) will densify the computation, so it's not
  * an ideal formula when the training dataset is sparse format.
  *
- * This can be addressed by adding the dense $\bar{x_i} / \hat{x_i}$ terms
+ * This can be addressed by adding the dense \bar{x_i} / \hat{x_i} terms
  * in the end by keeping the sum of diff. The first derivative of total
  * objective function from all the samples is
- *
- *
- * <blockquote>
- *    $$
- *    \begin{align}
- *       \frac{\partial L}{\partial w_i} &=
- *           1/N \sum_j diff_j (x_{ij} - \bar{x_i}) / \hat{x_i} \\
- *         &= 1/N ((\sum_j diff_j x_{ij} / \hat{x_i}) - diffSum \bar{x_i} / \hat{x_i}) \\
- *         &= 1/N ((\sum_j diff_j x_{ij} / \hat{x_i}) + correction_i)
- *    \end{align}
- *    $$
- * </blockquote>
- *
- * where $correction_i = - diffSum \bar{x_i} / \hat{x_i}$
+ * {{{
+ * \frac{\partial L}{\partial w_i} =
+ *     1/N \sum_j diff_j (x_{ij} - \bar{x_i}) / \hat{x_i}
+ *   = 1/N ((\sum_j diff_j x_{ij} / \hat{x_i}) - diffSum \bar{x_i} / \hat{x_i})
+ *   = 1/N ((\sum_j diff_j x_{ij} / \hat{x_i}) + correction_i)
+ * }}},
+ * where correction_i = - diffSum \bar{x_i} / \hat{x_i}
  *
  * A simple math can show that diffSum is actually zero, so we don't even
  * need to add the correction terms in the end. From the definition of diff,
- *
- * <blockquote>
- *    $$
- *    \begin{align}
- *       diffSum &= \sum_j (\sum_i w_i(x_{ij} - \bar{x_i})
- *                    / \hat{x_i} - (y_j - \bar{y}) / \hat{y}) \\
- *         &= N * (\sum_i w_i(\bar{x_i} - \bar{x_i}) / \hat{x_i} - (\bar{y} - \bar{y}) / \hat{y}) \\
- *         &= 0
- *    \end{align}
- *    $$
- * </blockquote>
+ * {{{
+ * diffSum = \sum_j (\sum_i w_i(x_{ij} - \bar{x_i}) / \hat{x_i} - (y_j - \bar{y}) / \hat{y})
+ *         = N * (\sum_i w_i(\bar{x_i} - \bar{x_i}) / \hat{x_i} - (\bar{y} - \bar{y}) / \hat{y})
+ *         = 0
+ * }}}
  *
  * As a result, the first derivative of the total objective function only depends on
  * the training dataset, which can be easily computed in distributed fashion, and is
  * sparse format friendly.
+ * {{{
+ * \frac{\partial L}{\partial w_i} = 1/N ((\sum_j diff_j x_{ij} / \hat{x_i})
+ * }}},
  *
  * <blockquote>
  *    $$

@@ -34,9 +34,12 @@ import org.apache.hadoop.mapreduce._
 import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat, FileSplit}
 
 import org.apache.spark.TaskContext
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.internal.Logging
+import org.apache.spark.rdd.{HadoopRDD, RDD}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.execution.command.CreateDataSourceTableUtils
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.hive.{HiveInspectors, HiveShim}
 import org.apache.spark.sql.sources.{Filter, _}
@@ -44,10 +47,11 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.util.SerializableConfiguration
 
 /**
- * `FileFormat` for reading ORC files. If this is moved or renamed, please update
- * `DataSource`'s backwardCompatibilityMap.
+ * [[FileFormat]] for reading ORC files. If this is moved or renamed, please update
+ * [[DataSource]]'s backwardCompatibilityMap.
  */
-class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable {
+class OrcFileFormat
+  extends FileFormat with DataSourceRegister with Serializable {
 
   override def shortName(): String = "orc"
 
@@ -68,7 +72,7 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
       job: Job,
       options: Map[String, String],
       dataSchema: StructType): OutputWriterFactory = {
-    val orcOptions = new OrcOptions(options, sparkSession.sessionState.conf)
+    val orcOptions = new OrcOptions(options)
 
     val configuration = job.getConfiguration
 
@@ -120,7 +124,7 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
     if (sparkSession.sessionState.conf.orcFilterPushDown) {
       // Sets pushed predicates
       OrcFilters.createFilter(requiredSchema, filters.toArray).foreach { f =>
-        hadoopConf.set(OrcRelation.SARG_PUSHDOWN, f.toKryo)
+        hadoopConf.set(OrcTableScan.SARG_PUSHDOWN, f.toKryo)
         hadoopConf.setBoolean(ConfVars.HIVEOPTINDEXFILTER.varname, true)
       }
     }
@@ -198,11 +202,6 @@ private[orc] class OrcSerializer(dataSchema: StructType, conf: Configuration)
 
   private[this] val cachedOrcStruct = structOI.create().asInstanceOf[OrcStruct]
 
-  // Wrapper functions used to wrap Spark SQL input arguments into Hive specific format
-  private[this] val wrappers = dataSchema.zip(structOI.getAllStructFieldRefs().asScala.toSeq).map {
-    case (f, i) => wrapperFor(i.getFieldObjectInspector, f.dataType)
-  }
-
   private[this] def wrapOrcStruct(
       struct: OrcStruct,
       oi: SettableStructObjectInspector,
@@ -215,8 +214,10 @@ private[orc] class OrcSerializer(dataSchema: StructType, conf: Configuration)
       oi.setStructFieldData(
         struct,
         fieldRefs.get(i),
-        wrappers(i)(row.get(i, dataSchema(i).dataType))
-      )
+        wrap(
+          row.get(i, dataSchema(i).dataType),
+          fieldRefs.get(i).getFieldObjectInspector,
+          dataSchema(i).dataType))
       i += 1
     }
   }
@@ -224,11 +225,14 @@ private[orc] class OrcSerializer(dataSchema: StructType, conf: Configuration)
 
 private[orc] class OrcOutputWriter(
     path: String,
+    bucketId: Option[Int],
     dataSchema: StructType,
     context: TaskAttemptContext)
   extends OutputWriter {
 
-  private[this] val serializer = new OrcSerializer(dataSchema, context.getConfiguration)
+  private[this] val conf = context.getConfiguration
+
+  private[this] val serializer = new OrcSerializer(dataSchema, conf)
 
   // `OrcRecordWriter.close()` creates an empty file if no rows are written at all.  We use this
   // flag to decide whether `OrcRecordWriter.close()` needs to be called.
@@ -236,15 +240,31 @@ private[orc] class OrcOutputWriter(
 
   private lazy val recordWriter: RecordWriter[NullWritable, Writable] = {
     recordWriterInstantiated = true
+    val uniqueWriteJobId = conf.get(CreateDataSourceTableUtils.DATASOURCE_WRITEJOBUUID)
+    val taskAttemptId = context.getTaskAttemptID
+    val partition = taskAttemptId.getTaskID.getId
+    val bucketString = bucketId.map(BucketingUtils.bucketIdToString).getOrElse("")
+    val compressionExtension = {
+      val name = conf.get(OrcRelation.ORC_COMPRESSION)
+      OrcRelation.extensionsForCompressionCodecNames.getOrElse(name, "")
+    }
+    // It has the `.orc` extension at the end because (de)compression tools
+    // such as gunzip would not be able to decompress this as the compression
+    // is not applied on this whole file but on each "stream" in ORC format.
+    val filename = f"part-r-$partition%05d-$uniqueWriteJobId$bucketString$compressionExtension.orc"
+
     new OrcOutputFormat().getRecordWriter(
-      new Path(path).getFileSystem(context.getConfiguration),
-      context.getConfiguration.asInstanceOf[JobConf],
-      path,
+      new Path(path, filename).getFileSystem(conf),
+      conf.asInstanceOf[JobConf],
+      new Path(path, filename).toString,
       Reporter.NULL
     ).asInstanceOf[RecordWriter[NullWritable, Writable]]
   }
 
-  override def write(row: InternalRow): Unit = {
+  override def write(row: Row): Unit =
+    throw new UnsupportedOperationException("call writeInternal")
+
+  override protected[sql] def writeInternal(row: InternalRow): Unit = {
     recordWriter.write(NullWritable.get(), serializer.serialize(row))
   }
 
@@ -255,12 +275,76 @@ private[orc] class OrcOutputWriter(
   }
 }
 
-private[orc] object OrcRelation extends HiveInspectors {
-  // The references of Hive's classes will be minimized.
-  val ORC_COMPRESSION = "orc.compress"
+private[orc] case class OrcTableScan(
+    @transient sparkSession: SparkSession,
+    attributes: Seq[Attribute],
+    filters: Array[Filter],
+    @transient inputPaths: Seq[FileStatus])
+  extends Logging
+  with HiveInspectors {
+
+  def execute(): RDD[InternalRow] = {
+    val job = Job.getInstance(sparkSession.sessionState.newHadoopConf())
+    val conf = job.getConfiguration
+
+    // Figure out the actual schema from the ORC source (without partition columns) so that we
+    // can pick the correct ordinals.  Note that this assumes that all files have the same schema.
+    val orcFormat = new OrcFileFormat
+    val dataSchema =
+      orcFormat
+        .inferSchema(sparkSession, Map.empty, inputPaths)
+        .getOrElse(sys.error("Failed to read schema from target ORC files."))
+
+    // Tries to push down filters if ORC filter push-down is enabled
+    if (sparkSession.sessionState.conf.orcFilterPushDown) {
+      OrcFilters.createFilter(dataSchema, filters).foreach { f =>
+        conf.set(OrcTableScan.SARG_PUSHDOWN, f.toKryo)
+        conf.setBoolean(ConfVars.HIVEOPTINDEXFILTER.varname, true)
+      }
+    }
+
+    // Sets requested columns
+    OrcRelation.setRequiredColumns(conf, dataSchema, StructType.fromAttributes(attributes))
+
+    if (inputPaths.isEmpty) {
+      // the input path probably be pruned, return an empty RDD.
+      return sparkSession.sparkContext.emptyRDD[InternalRow]
+    }
+    FileInputFormat.setInputPaths(job, inputPaths.map(_.getPath): _*)
+
+    val inputFormatClass =
+      classOf[OrcInputFormat]
+        .asInstanceOf[Class[_ <: MapRedInputFormat[NullWritable, Writable]]]
+
+    val rdd = sparkSession.sparkContext.hadoopRDD(
+      conf.asInstanceOf[JobConf],
+      inputFormatClass,
+      classOf[NullWritable],
+      classOf[Writable]
+    ).asInstanceOf[HadoopRDD[NullWritable, Writable]]
+
+    val wrappedConf = new SerializableConfiguration(conf)
+
+    rdd.mapPartitionsWithInputSplit { case (split: OrcSplit, iterator) =>
+      val writableIterator = iterator.map(_._2)
+      val maybeStructOI = OrcFileOperator.getObjectInspector(split.getPath.toString, Some(conf))
+      OrcRelation.unwrapOrcStructs(
+        wrappedConf.value,
+        StructType.fromAttributes(attributes),
+        maybeStructOI,
+        writableIterator
+      )
+    }
+  }
+}
 
   // This constant duplicates `OrcInputFormat.SARG_PUSHDOWN`, which is unfortunately not public.
   private[orc] val SARG_PUSHDOWN = "sarg.pushdown"
+}
+
+private[orc] object OrcRelation extends HiveInspectors {
+  // The references of Hive's classes will be minimized.
+  val ORC_COMPRESSION = "orc.compress"
 
   // The extensions for ORC compression codecs
   val extensionsForCompressionCodecNames = Map(

@@ -22,11 +22,11 @@ from pyspark import since, keyword_only
 from pyspark.ml import Estimator, Model
 from pyspark.ml.param.shared import *
 from pyspark.ml.regression import DecisionTreeModel, DecisionTreeRegressionModel, \
-    RandomForestParams, TreeEnsembleModel, TreeEnsembleParams
+    RandomForestParams, TreeEnsembleModels, TreeEnsembleParams
 from pyspark.ml.util import *
 from pyspark.ml.wrapper import JavaEstimator, JavaModel, JavaParams
 from pyspark.ml.wrapper import JavaWrapper
-from pyspark.ml.common import inherit_doc, _java2py, _py2java
+from pyspark.ml.common import inherit_doc
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import udf, when
 from pyspark.sql.types import ArrayType, DoubleType
@@ -319,7 +319,7 @@ class LogisticRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredicti
         super(LogisticRegression, self).__init__()
         self._java_obj = self._new_java_obj(
             "org.apache.spark.ml.classification.LogisticRegression", self.uid)
-        self._setDefault(maxIter=100, regParam=0.0, tol=1E-6, threshold=0.5, family="auto")
+        self._setDefault(maxIter=100, regParam=0.0, tol=1E-6, threshold=0.5)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
         self._checkThresholdConsistency()
@@ -782,6 +782,9 @@ class BinaryLogisticRegressionSummary(LogisticRegressionSummary):
         .. seealso:: `Wikipedia reference \
         <http://en.wikipedia.org/wiki/Receiver_operating_characteristic>`_
 
+        .. seealso:: `Wikipedia reference \
+        <http://en.wikipedia.org/wiki/Receiver_operating_characteristic>`_
+
         .. note:: This ignores instance weights (setting all to 1.0) from
             `LogisticRegression.weightCol`. This will change in later Spark
             versions.
@@ -937,10 +940,6 @@ class DecisionTreeClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPred
     1
     >>> model.featureImportances
     SparseVector(1, {0: 1.0})
-    >>> model.numFeatures
-    1
-    >>> model.numClasses
-    2
     >>> print(model.toDebugString)
     DecisionTreeClassificationModel (uid=...) of depth 1 with 3 nodes...
     >>> test0 = spark.createDataFrame([(Vectors.dense(-1.0),)], ["features"])
@@ -1116,8 +1115,7 @@ class RandomForestClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPred
             "org.apache.spark.ml.classification.RandomForestClassifier", self.uid)
         self._setDefault(maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                          maxMemoryInMB=256, cacheNodeIds=False, checkpointInterval=10,
-                         impurity="gini", numTrees=20, featureSubsetStrategy="auto",
-                         subsamplingRate=1.0)
+                         impurity="gini", numTrees=20, featureSubsetStrategy="auto")
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
@@ -1194,6 +1192,16 @@ class GBTClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol
 
     .. note:: Multiclass labels are not currently supported.
 
+    The implementation is based upon: J.H. Friedman. "Stochastic Gradient Boosting." 1999.
+
+    Notes on Gradient Boosting vs. TreeBoost:
+    - This implementation is for Stochastic Gradient Boosting, not for TreeBoost.
+    - Both algorithms learn tree ensembles by minimizing loss functions.
+    - TreeBoost (Friedman, 1999) additionally modifies the outputs at tree leaf nodes
+    based on the loss function, whereas the original gradient boosting method does not.
+    - We expect to implement TreeBoost in the future:
+    `SPARK-4240 <https://issues.apache.org/jira/browse/SPARK-4240>`_
+
     >>> from numpy import allclose
     >>> from pyspark.ml.linalg import Vectors
     >>> from pyspark.ml.feature import StringIndexer
@@ -1263,7 +1271,7 @@ class GBTClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol
             "org.apache.spark.ml.classification.GBTClassifier", self.uid)
         self._setDefault(maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                          maxMemoryInMB=256, cacheNodeIds=False, checkpointInterval=10,
-                         lossType="logistic", maxIter=20, stepSize=0.1, subsamplingRate=1.0)
+                         lossType="logistic", maxIter=20, stepSize=0.1)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
@@ -1333,7 +1341,7 @@ class GBTClassificationModel(TreeEnsembleModel, JavaPredictionModel, JavaMLWrita
 
 @inherit_doc
 class NaiveBayes(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, HasProbabilityCol,
-                 HasRawPredictionCol, HasThresholds, HasWeightCol, JavaMLWritable, JavaMLReadable):
+                 HasRawPredictionCol, HasThresholds, JavaMLWritable, JavaMLReadable):
     """
     Naive Bayes Classifiers.
     It supports both Multinomial and Bernoulli NB. `Multinomial NB
@@ -1347,10 +1355,10 @@ class NaiveBayes(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, H
     >>> from pyspark.sql import Row
     >>> from pyspark.ml.linalg import Vectors
     >>> df = spark.createDataFrame([
-    ...     Row(label=0.0, weight=0.1, features=Vectors.dense([0.0, 0.0])),
-    ...     Row(label=0.0, weight=0.5, features=Vectors.dense([0.0, 1.0])),
-    ...     Row(label=1.0, weight=1.0, features=Vectors.dense([1.0, 0.0]))])
-    >>> nb = NaiveBayes(smoothing=1.0, modelType="multinomial", weightCol="weight")
+    ...     Row(label=0.0, features=Vectors.dense([0.0, 0.0])),
+    ...     Row(label=0.0, features=Vectors.dense([0.0, 1.0])),
+    ...     Row(label=1.0, features=Vectors.dense([1.0, 0.0]))])
+    >>> nb = NaiveBayes(smoothing=1.0, modelType="multinomial")
     >>> model = nb.fit(df)
     >>> model.pi
     DenseVector([-0.81..., -0.58...])
@@ -1397,11 +1405,11 @@ class NaiveBayes(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, H
     @keyword_only
     def __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                  probabilityCol="probability", rawPredictionCol="rawPrediction", smoothing=1.0,
-                 modelType="multinomial", thresholds=None, weightCol=None):
+                 modelType="multinomial", thresholds=None):
         """
         __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                  probabilityCol="probability", rawPredictionCol="rawPrediction", smoothing=1.0, \
-                 modelType="multinomial", thresholds=None, weightCol=None)
+                 modelType="multinomial", thresholds=None)
         """
         super(NaiveBayes, self).__init__()
         self._java_obj = self._new_java_obj(
@@ -1414,11 +1422,11 @@ class NaiveBayes(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, H
     @since("1.5.0")
     def setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                   probabilityCol="probability", rawPredictionCol="rawPrediction", smoothing=1.0,
-                  modelType="multinomial", thresholds=None, weightCol=None):
+                  modelType="multinomial", thresholds=None):
         """
         setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                   probabilityCol="probability", rawPredictionCol="rawPrediction", smoothing=1.0, \
-                  modelType="multinomial", thresholds=None, weightCol=None)
+                  modelType="multinomial", thresholds=None)
         Sets params for Naive Bayes.
         """
         kwargs = self._input_kwargs
@@ -1482,10 +1490,11 @@ class NaiveBayesModel(JavaModel, JavaClassificationModel, JavaMLWritable, JavaML
 
 @inherit_doc
 class MultilayerPerceptronClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol,
-                                     HasMaxIter, HasTol, HasSeed, HasStepSize, HasSolver,
-                                     JavaMLWritable, JavaMLReadable, HasProbabilityCol,
-                                     HasRawPredictionCol):
+                                     HasMaxIter, HasTol, HasSeed, HasStepSize, JavaMLWritable,
+                                     JavaMLReadable):
     """
+    .. note:: Experimental
+
     Classifier trainer based on the Multilayer Perceptron.
     Each layer has sigmoid activation function, output layer has softmax.
     Number of inputs has to be equal to the size of feature vectors.
@@ -1552,33 +1561,29 @@ class MultilayerPerceptronClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol,
 
     @keyword_only
     def __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction",
-                 maxIter=100, tol=1e-6, seed=None, layers=None, blockSize=128, stepSize=0.03,
-                 solver="l-bfgs", initialWeights=None, probabilityCol="probability",
-                 rawPredicitionCol="rawPrediction"):
+                 maxIter=100, tol=1e-4, seed=None, layers=None, blockSize=128, stepSize=0.03,
+                 solver="l-bfgs", initialWeights=None):
         """
         __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
-                 maxIter=100, tol=1e-6, seed=None, layers=None, blockSize=128, stepSize=0.03, \
-                 solver="l-bfgs", initialWeights=None, probabilityCol="probability", \
-                 rawPredicitionCol="rawPrediction")
+                 maxIter=100, tol=1e-4, seed=None, layers=None, blockSize=128, stepSize=0.03, \
+                 solver="l-bfgs", initialWeights=None)
         """
         super(MultilayerPerceptronClassifier, self).__init__()
         self._java_obj = self._new_java_obj(
             "org.apache.spark.ml.classification.MultilayerPerceptronClassifier", self.uid)
-        self._setDefault(maxIter=100, tol=1E-6, blockSize=128, stepSize=0.03, solver="l-bfgs")
+        self._setDefault(maxIter=100, tol=1E-4, blockSize=128, stepSize=0.03, solver="l-bfgs")
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
     @keyword_only
     @since("1.6.0")
     def setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction",
-                  maxIter=100, tol=1e-6, seed=None, layers=None, blockSize=128, stepSize=0.03,
-                  solver="l-bfgs", initialWeights=None, probabilityCol="probability",
-                  rawPredicitionCol="rawPrediction"):
+                  maxIter=100, tol=1e-4, seed=None, layers=None, blockSize=128, stepSize=0.03,
+                  solver="l-bfgs", initialWeights=None):
         """
         setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
-                  maxIter=100, tol=1e-6, seed=None, layers=None, blockSize=128, stepSize=0.03, \
-                  solver="l-bfgs", initialWeights=None, probabilityCol="probability", \
-                  rawPredicitionCol="rawPrediction"):
+                  maxIter=100, tol=1e-4, seed=None, layers=None, blockSize=128, stepSize=0.03, \
+                  solver="l-bfgs", initialWeights=None)
         Sets params for MultilayerPerceptronClassifier.
         """
         kwargs = self._input_kwargs
@@ -1630,6 +1635,42 @@ class MultilayerPerceptronClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol,
         return self.getOrDefault(self.stepSize)
 
     @since("2.0.0")
+    def setSolver(self, value):
+        """
+        Sets the value of :py:attr:`solver`.
+        """
+        return self._set(solver=value)
+
+    @since("2.0.0")
+    def getSolver(self):
+        """
+        Gets the value of solver or its default value.
+        """
+        return self.getOrDefault(self.solver)
+
+    @since("2.0.0")
+    def setInitialWeights(self, value):
+        """
+        Sets the value of :py:attr:`initialWeights`.
+        """
+        return self._set(initialWeights=value)
+
+    @since("2.0.0")
+    def getInitialWeights(self):
+        """
+        Gets the value of initialWeights or its default value.
+        """
+        return self.getOrDefault(self.initialWeights)
+
+
+    @since("2.0.0")
+    def getStepSize(self):
+        """
+        Gets the value of stepSize or its default value.
+        """
+        return self.getOrDefault(self.stepSize)
+
+    @since("2.0.0")
     def setInitialWeights(self, value):
         """
         Sets the value of :py:attr:`initialWeights`.
@@ -1647,6 +1688,8 @@ class MultilayerPerceptronClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol,
 class MultilayerPerceptronClassificationModel(JavaModel, JavaClassificationModel, JavaMLWritable,
                                               JavaMLReadable):
     """
+    .. note:: Experimental
+
     Model fitted by MultilayerPerceptronClassifier.
 
     .. versionadded:: 1.6.0
@@ -1706,9 +1749,11 @@ class OneVsRest(Estimator, OneVsRestParams, HasParallelism, JavaMLReadable, Java
 
     >>> from pyspark.sql import Row
     >>> from pyspark.ml.linalg import Vectors
-    >>> data_path = "data/mllib/sample_multiclass_classification_data.txt"
-    >>> df = spark.read.format("libsvm").load(data_path)
-    >>> lr = LogisticRegression(regParam=0.01)
+    >>> df = sc.parallelize([
+    ...     Row(label=0.0, features=Vectors.dense(1.0, 0.8)),
+    ...     Row(label=1.0, features=Vectors.sparse(2, [], [])),
+    ...     Row(label=2.0, features=Vectors.dense(0.5, 0.5))]).toDF()
+    >>> lr = LogisticRegression(maxIter=5, regParam=0.01)
     >>> ovr = OneVsRest(classifier=lr)
     >>> model = ovr.fit(df)
     >>> model.models[0].coefficients
@@ -1745,7 +1790,6 @@ class OneVsRest(Estimator, OneVsRestParams, HasParallelism, JavaMLReadable, Java
                  classifier=None, weightCol=None)
         """
         super(OneVsRest, self).__init__()
-        self._setDefault(parallelism=1)
         kwargs = self._input_kwargs
         self._set(**kwargs)
 
@@ -1777,7 +1821,7 @@ class OneVsRest(Estimator, OneVsRestParams, HasParallelism, JavaMLReadable, Java
                 weightCol = self.getWeightCol()
             else:
                 warnings.warn("weightCol is ignored, "
-                              "as it is not supported by {} now.".format(classifier))
+                              "as it is not supported by {0} now.".format(classifier))
 
         if weightCol:
             multiclassLabeled = dataset.select(labelCol, featuresCol, weightCol)

@@ -520,10 +520,8 @@ private[spark] class MesosClusterScheduler(
     val defaultConf = conf.getAllWithPrefix("spark.mesos.dispatcher.driverDefault.").toMap
     val driverConf = desc.conf.getAll
       .filter { case (key, _) => !replicatedOptionsBlacklist.contains(key) }
-      .toMap
-    (defaultConf ++ driverConf).foreach { case (key, value) =>
-      options ++= Seq("--conf", s""""$key=${shellEscape(value)}"""".stripMargin) }
-
+      .foreach { case (key, value) =>
+        options ++= Seq("--conf", s""""$key=${shellEscape(value)}"""".stripMargin) }
     options
   }
 

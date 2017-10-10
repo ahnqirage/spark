@@ -19,16 +19,16 @@ package org.apache.spark.sql.execution
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import scala.collection.JavaConverters._
-
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.SubqueryExpression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK
 
@@ -71,7 +71,7 @@ class CacheManager extends Logging {
 
   /** Clears all cached tables. */
   def clearCache(): Unit = writeLock {
-    cachedData.asScala.foreach(_.cachedRepresentation.cachedColumnBuffers.unpersist())
+    cachedData.foreach(_.cachedRepresentation.cachedColumnBuffers.unpersist())
     cachedData.clear()
   }
 
@@ -94,35 +94,29 @@ class CacheManager extends Logging {
       logWarning("Asked to cache already cached data.")
     } else {
       val sparkSession = query.sparkSession
-      cachedData.add(CachedData(
-        planToCache,
-        InMemoryRelation(
-          sparkSession.sessionState.conf.useCompression,
-          sparkSession.sessionState.conf.columnBatchSize,
-          storageLevel,
-          sparkSession.sessionState.executePlan(planToCache).executedPlan,
-          tableName)))
+      cachedData +=
+        CachedData(
+          planToCache,
+          InMemoryRelation(
+            sparkSession.sessionState.conf.useCompression,
+            sparkSession.sessionState.conf.columnBatchSize,
+            storageLevel,
+            sparkSession.sessionState.executePlan(planToCache).executedPlan,
+            tableName))
     }
   }
 
   /**
-   * Un-cache all the cache entries that refer to the given plan.
+   * Tries to remove the data for the given [[Dataset]] from the cache.
+   * No operation, if it's already uncached.
    */
-  def uncacheQuery(query: Dataset[_], blocking: Boolean = true): Unit = writeLock {
-    uncacheQuery(query.sparkSession, query.logicalPlan, blocking)
-  }
-
-  /**
-   * Un-cache all the cache entries that refer to the given plan.
-   */
-  def uncacheQuery(spark: SparkSession, plan: LogicalPlan, blocking: Boolean): Unit = writeLock {
-    val it = cachedData.iterator()
-    while (it.hasNext) {
-      val cd = it.next()
-      if (cd.plan.find(_.sameResult(plan)).isDefined) {
-        cd.cachedRepresentation.cachedColumnBuffers.unpersist(blocking)
-        it.remove()
-      }
+  def uncacheQuery(query: Dataset[_], blocking: Boolean = true): Boolean = writeLock {
+    val planToCache = query.queryExecution.analyzed
+    val dataIndex = cachedData.indexWhere(cd => planToCache.sameResult(cd.plan))
+    val found = dataIndex >= 0
+    if (found) {
+      cachedData(dataIndex).cachedRepresentation.cachedColumnBuffers.unpersist(blocking)
+      cachedData.remove(dataIndex)
     }
   }
 
@@ -158,17 +152,17 @@ class CacheManager extends Logging {
 
   /** Optionally returns cached data for the given [[Dataset]] */
   def lookupCachedData(query: Dataset[_]): Option[CachedData] = readLock {
-    lookupCachedData(query.logicalPlan)
+    lookupCachedData(query.queryExecution.analyzed)
   }
 
   /** Optionally returns cached data for the given [[LogicalPlan]]. */
   def lookupCachedData(plan: LogicalPlan): Option[CachedData] = readLock {
-    cachedData.asScala.find(cd => plan.sameResult(cd.plan))
+    cachedData.find(cd => plan.sameResult(cd.plan))
   }
 
   /** Replaces segments of the given logical plan with cached versions where possible. */
   def useCachedData(plan: LogicalPlan): LogicalPlan = {
-    val newPlan = plan transformDown {
+    plan transformDown {
       case currentFragment =>
         lookupCachedData(currentFragment)
           .map(_.cachedRepresentation.withOutput(currentFragment.output))
@@ -200,14 +194,51 @@ class CacheManager extends Logging {
    * in the plan. If found, we refresh the metadata and return true. Otherwise, this method returns
    * false.
    */
+  def invalidateCache(plan: LogicalPlan): Unit = writeLock {
+    cachedData.foreach {
+      case data if data.plan.collect { case p if p.sameResult(plan) => p }.nonEmpty =>
+        data.cachedRepresentation.recache()
+      case _ =>
+    }
+  }
+
+  /**
+   * Invalidates the cache of any data that contains `resourcePath` in one or more
+   * `HadoopFsRelation` node(s) as part of its logical plan.
+   */
+  def invalidateCachedPath(
+      sparkSession: SparkSession, resourcePath: String): Unit = writeLock {
+    val (fs, qualifiedPath) = {
+      val path = new Path(resourcePath)
+      val fs = path.getFileSystem(sparkSession.sessionState.newHadoopConf())
+      (fs, path.makeQualified(fs.getUri, fs.getWorkingDirectory))
+    }
+
+    cachedData.foreach {
+      case data if data.plan.find(lookupAndRefresh(_, fs, qualifiedPath)).isDefined =>
+        val dataIndex = cachedData.indexWhere(cd => data.plan.sameResult(cd.plan))
+        if (dataIndex >= 0) {
+          data.cachedRepresentation.cachedColumnBuffers.unpersist(blocking = true)
+          cachedData.remove(dataIndex)
+        }
+        sparkSession.sharedState.cacheManager.cacheQuery(Dataset.ofRows(sparkSession, data.plan))
+      case _ => // Do Nothing
+    }
+  }
+
+  /**
+   * Traverses a given `plan` and searches for the occurrences of `qualifiedPath` in the
+   * [[org.apache.spark.sql.execution.datasources.FileCatalog]] of any [[HadoopFsRelation]] nodes
+   * in the plan. If found, we refresh the metadata and return true. Otherwise, this method returns
+   * false.
+   */
   private def lookupAndRefresh(plan: LogicalPlan, fs: FileSystem, qualifiedPath: Path): Boolean = {
     plan match {
       case lr: LogicalRelation => lr.relation match {
         case hr: HadoopFsRelation =>
-          val prefixToInvalidate = qualifiedPath.toString
-          val invalidate = hr.location.rootPaths
-            .map(_.makeQualified(fs.getUri, fs.getWorkingDirectory).toString)
-            .exists(_.startsWith(prefixToInvalidate))
+          val invalidate = hr.location.paths
+            .map(_.makeQualified(fs.getUri, fs.getWorkingDirectory))
+            .contains(qualifiedPath)
           if (invalidate) hr.location.refresh()
           invalidate
         case _ => false

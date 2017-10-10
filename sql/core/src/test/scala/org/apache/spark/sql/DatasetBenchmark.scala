@@ -31,49 +31,6 @@ object DatasetBenchmark {
 
   case class Data(l: Long, s: String)
 
-  def backToBackMapLong(spark: SparkSession, numRows: Long, numChains: Int): Benchmark = {
-    import spark.implicits._
-
-    val rdd = spark.sparkContext.range(0, numRows)
-    val ds = spark.range(0, numRows)
-    val df = ds.toDF("l")
-    val func = (l: Long) => l + 1
-
-    val benchmark = new Benchmark("back-to-back map long", numRows)
-
-    benchmark.addCase("RDD") { iter =>
-      var res = rdd
-      var i = 0
-      while (i < numChains) {
-        res = res.map(func)
-        i += 1
-      }
-      res.foreach(_ => Unit)
-    }
-
-    benchmark.addCase("DataFrame") { iter =>
-      var res = df
-      var i = 0
-      while (i < numChains) {
-        res = res.select($"l" + 1 as "l")
-        i += 1
-      }
-      res.queryExecution.toRdd.foreach(_ => Unit)
-    }
-
-    benchmark.addCase("Dataset") { iter =>
-      var res = ds.as[Long]
-      var i = 0
-      while (i < numChains) {
-        res = res.map(func)
-        i += 1
-      }
-      res.queryExecution.toRdd.foreach(_ => Unit)
-    }
-
-    benchmark
-  }
-
   def backToBackMap(spark: SparkSession, numRows: Long, numChains: Int): Benchmark = {
     import spark.implicits._
 
@@ -107,49 +64,6 @@ object DatasetBenchmark {
       var i = 0
       while (i < numChains) {
         res = res.map(func)
-        i += 1
-      }
-      res.queryExecution.toRdd.foreach(_ => Unit)
-    }
-
-    benchmark
-  }
-
-  def backToBackFilterLong(spark: SparkSession, numRows: Long, numChains: Int): Benchmark = {
-    import spark.implicits._
-
-    val rdd = spark.sparkContext.range(1, numRows)
-    val ds = spark.range(1, numRows)
-    val df = ds.toDF("l")
-    val func = (l: Long) => l % 2L == 0L
-
-    val benchmark = new Benchmark("back-to-back filter Long", numRows)
-
-    benchmark.addCase("RDD") { iter =>
-      var res = rdd
-      var i = 0
-      while (i < numChains) {
-        res = res.filter(func)
-        i += 1
-      }
-      res.foreach(_ => Unit)
-    }
-
-    benchmark.addCase("DataFrame") { iter =>
-      var res = df
-      var i = 0
-      while (i < numChains) {
-        res = res.filter($"l" % 2L === 0L)
-        i += 1
-      }
-      res.queryExecution.toRdd.foreach(_ => Unit)
-    }
-
-    benchmark.addCase("Dataset") { iter =>
-      var res = ds.as[Long]
-      var i = 0
-      while (i < numChains) {
-        res = res.filter(func)
         i += 1
       }
       res.queryExecution.toRdd.foreach(_ => Unit)
@@ -251,11 +165,9 @@ object DatasetBenchmark {
     val numRows = 100000000
     val numChains = 10
 
-    val benchmark0 = backToBackMapLong(spark, numRows, numChains)
-    val benchmark1 = backToBackMap(spark, numRows, numChains)
-    val benchmark2 = backToBackFilterLong(spark, numRows, numChains)
-    val benchmark3 = backToBackFilter(spark, numRows, numChains)
-    val benchmark4 = aggregate(spark, numRows)
+    val benchmark = backToBackMap(spark, numRows, numChains)
+    val benchmark2 = backToBackFilter(spark, numRows, numChains)
+    val benchmark3 = aggregate(spark, numRows)
 
     /*
     OpenJDK 64-Bit Server VM 1.8.0_111-8u111-b14-2ubuntu0.16.04.2-b14 on Linux 4.4.0-47-generic

@@ -65,14 +65,14 @@ trait PlanTest extends SparkFunSuite with PredicateHelper {
    */
   protected def normalizePlan(plan: LogicalPlan): LogicalPlan = {
     plan transform {
-      case Filter(condition: Expression, child: LogicalPlan) =>
-        Filter(splitConjunctivePredicates(condition).map(rewriteEqual).sortBy(_.hashCode())
+      case filter @ Filter(condition: Expression, child: LogicalPlan) =>
+        Filter(splitConjunctivePredicates(condition).map(rewriteEqual(_)).sortBy(_.hashCode())
           .reduce(And), child)
       case sample: Sample =>
-        sample.copy(seed = 0L)
-      case Join(left, right, joinType, condition) if condition.isDefined =>
+        sample.copy(seed = 0L)(true)
+      case join @ Join(left, right, joinType, condition) if condition.isDefined =>
         val newCondition =
-          splitConjunctivePredicates(condition.get).map(rewriteEqual).sortBy(_.hashCode())
+          splitConjunctivePredicates(condition.get).map(rewriteEqual(_)).sortBy(_.hashCode())
             .reduce(And)
         Join(left, right, joinType, Some(newCondition))
     }

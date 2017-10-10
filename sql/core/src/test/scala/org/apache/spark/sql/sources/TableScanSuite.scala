@@ -248,34 +248,32 @@ class TableScanSuite extends DataSourceTest with SharedSQLContext {
 
     assert(expectedSchema == spark.table("tableWithSchema").schema)
 
-    withSQLConf(SQLConf.SUPPORT_QUOTED_REGEX_COLUMN_NAME.key -> "false") {
-        checkAnswer(
-          sql(
-            """SELECT
-            | `string$%Field`,
-            | cast(binaryField as string),
-            | booleanField,
-            | byteField,
-            | shortField,
-            | int_Field,
-            | `longField_:,<>=+/~^`,
-            | floatField,
-            | doubleField,
-            | decimalField1,
-            | decimalField2,
-            | dateField,
-            | timestampField,
-            | varcharField,
-            | charField,
-            | arrayFieldSimple,
-            | arrayFieldComplex,
-            | mapFieldSimple,
-            | mapFieldComplex,
-            | structFieldSimple,
-            | structFieldComplex FROM tableWithSchema""".stripMargin),
-        tableWithSchemaExpected
-      )
-    }
+    checkAnswer(
+      sql(
+        """SELECT
+          | `string$%Field`,
+          | cast(binaryField as string),
+          | booleanField,
+          | byteField,
+          | shortField,
+          | int_Field,
+          | `longField_:,<>=+/~^`,
+          | floatField,
+          | doubleField,
+          | decimalField1,
+          | decimalField2,
+          | dateField,
+          | timestampField,
+          | varcharField,
+          | charField,
+          | arrayFieldSimple,
+          | arrayFieldComplex,
+          | mapFieldSimple,
+          | mapFieldComplex,
+          | structFieldSimple,
+          | structFieldComplex FROM tableWithSchema""".stripMargin),
+      tableWithSchemaExpected
+    )
   }
 
   sqlTest(
@@ -355,50 +353,29 @@ class TableScanSuite extends DataSourceTest with SharedSQLContext {
   test("exceptions") {
     // Make sure we do throw correct exception when users use a relation provider that
     // only implements the RelationProvider or the SchemaRelationProvider.
-    Seq("TEMPORARY VIEW", "TABLE").foreach { tableType =>
-      val schemaNotAllowed = intercept[Exception] {
-        sql(
-          s"""
-             |CREATE $tableType relationProvierWithSchema (i int)
-             |USING org.apache.spark.sql.sources.SimpleScanSource
-             |OPTIONS (
-             |  From '1',
-             |  To '10'
-             |)
-           """.stripMargin)
-      }
-      assert(schemaNotAllowed.getMessage.contains("does not allow user-specified schemas"))
-
-      val schemaNeeded = intercept[Exception] {
-        sql(
-          s"""
-             |CREATE $tableType schemaRelationProvierWithoutSchema
-             |USING org.apache.spark.sql.sources.AllDataTypesScanSource
-             |OPTIONS (
-             |  From '1',
-             |  To '10'
-             |)
-           """.stripMargin)
-      }
-      assert(schemaNeeded.getMessage.contains("A schema needs to be specified when using"))
+    val schemaNotAllowed = intercept[Exception] {
+      sql(
+        """
+          |CREATE TEMPORARY VIEW relationProvierWithSchema (i int)
+          |USING org.apache.spark.sql.sources.SimpleScanSource
+          |OPTIONS (
+          |  From '1',
+          |  To '10'
+          |)
+        """.stripMargin)
     }
-  }
+    assert(schemaNotAllowed.getMessage.contains("does not allow user-specified schemas"))
 
-  test("read the data source tables that do not extend SchemaRelationProvider") {
-    Seq("TEMPORARY VIEW", "TABLE").foreach { tableType =>
-      val tableName = "relationProvierWithSchema"
-      withTable (tableName) {
-        sql(
-          s"""
-             |CREATE $tableType $tableName
-             |USING org.apache.spark.sql.sources.SimpleScanSource
-             |OPTIONS (
-             |  From '1',
-             |  To '10'
-             |)
-           """.stripMargin)
-        checkAnswer(spark.table(tableName), spark.range(1, 11).toDF())
-      }
+    val schemaNeeded = intercept[Exception] {
+      sql(
+        """
+          |CREATE TEMPORARY VIEW schemaRelationProvierWithoutSchema
+          |USING org.apache.spark.sql.sources.AllDataTypesScanSource
+          |OPTIONS (
+          |  From '1',
+          |  To '10'
+          |)
+        """.stripMargin)
     }
   }
 

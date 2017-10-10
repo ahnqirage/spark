@@ -164,8 +164,7 @@ class WriteAheadLogBackedBlockRDD[T: ClassTag](
       }
       serializerManager
         .dataDeserializeStream(
-          blockId,
-          new ChunkedByteBuffer(dataRead).toInputStream())(elementClassTag)
+          blockId, new ChunkedByteBuffer(dataRead).toInputStream())(elementClassTag)
         .asInstanceOf[Iterator[T]]
     }
 

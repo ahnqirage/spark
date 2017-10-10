@@ -46,9 +46,7 @@ case class CreateFunctionCommand(
     functionName: String,
     className: String,
     resources: Seq[FunctionResource],
-    isTemp: Boolean,
-    ifNotExists: Boolean,
-    replace: Boolean)
+    isTemp: Boolean)
   extends RunnableCommand {
 
   if (ifNotExists && replace) {
@@ -72,6 +70,10 @@ case class CreateFunctionCommand(
     val catalog = sparkSession.sessionState.catalog
     val func = CatalogFunction(FunctionIdentifier(functionName, databaseName), className, resources)
     if (isTemp) {
+      if (databaseName.isDefined) {
+        throw new AnalysisException(s"Specifying a database in CREATE TEMPORARY FUNCTION " +
+          s"is not allowed: '${databaseName.get}'")
+      }
       // We first load resources and then put the builder in the function registry.
       catalog.loadFunctionResources(resources)
       catalog.registerFunction(func, overrideIfExists = replace)
@@ -118,7 +120,7 @@ case class DescribeFunctionCommand(
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     // Hard code "<>", "!=", "between", and "case" for now as there is no corresponding functions.
-    functionName.funcName.toLowerCase(Locale.ROOT) match {
+    functionName.funcName.toLowerCase match {
       case "<>" =>
         Row(s"Function: $functionName") ::
           Row("Usage: expr1 <> expr2 - " +
@@ -132,15 +134,12 @@ case class DescribeFunctionCommand(
           Row("Usage: expr1 [NOT] BETWEEN expr2 AND expr3 - " +
             "evaluate if `expr1` is [not] in between `expr2` and `expr3`.") :: Nil
       case "case" =>
-        Row("Function: case") ::
-          Row("Usage: CASE expr1 WHEN expr2 THEN expr3 " +
-            "[WHEN expr4 THEN expr5]* [ELSE expr6] END - " +
-            "When `expr1` = `expr2`, returns `expr3`; " +
-            "when `expr1` = `expr4`, return `expr5`; else return `expr6`.") :: Nil
+        Row(s"Function: case") ::
+          Row(s"Usage: CASE a WHEN b THEN c [WHEN d THEN e]* [ELSE f] END - " +
+            s"When a = b, returns c; when a = d, return e; else return f") :: Nil
       case _ =>
         try {
           val info = sparkSession.sessionState.catalog.lookupFunctionInfo(functionName)
-          val name = if (info.getDb != null) info.getDb + "." + info.getName else info.getName
           val result =
             Row(s"Function: $name") ::
               Row(s"Class: ${info.getClassName}") ::
@@ -179,7 +178,7 @@ case class DropFunctionCommand(
         throw new AnalysisException(s"Specifying a database in DROP TEMPORARY FUNCTION " +
           s"is not allowed: '${databaseName.get}'")
       }
-      if (FunctionRegistry.builtin.functionExists(FunctionIdentifier(functionName))) {
+      if (FunctionRegistry.builtin.functionExists(functionName)) {
         throw new AnalysisException(s"Cannot drop native function '$functionName'")
       }
       catalog.dropTempFunction(functionName, ifExists)
@@ -226,6 +225,8 @@ case class ShowFunctionsCommand(
           case (f, "USER") if showUserFunctions => f.unquotedString
           case (f, "SYSTEM") if showSystemFunctions => f.unquotedString
         }
-    functionNames.sorted.map(Row(_))
+    // The session catalog caches some persistent functions in the FunctionRegistry
+    // so there can be duplicates.
+    functionNames.distinct.sorted.map(Row(_))
   }
 }

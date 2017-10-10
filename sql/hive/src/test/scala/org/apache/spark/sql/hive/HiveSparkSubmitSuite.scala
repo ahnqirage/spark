@@ -18,6 +18,8 @@
 package org.apache.spark.sql.hive
 
 import java.io.{BufferedWriter, File, FileWriter}
+import java.sql.Timestamp
+import java.util.Date
 
 import scala.tools.nsc.Properties
 
@@ -28,8 +30,7 @@ import org.apache.spark._
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{QueryTest, Row, SparkSession}
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
-import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.execution.command.DDLUtils
+import org.apache.spark.sql.catalyst.catalog.{CatalogFunction, FunctionResource, JarResource}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.hive.test.{TestHive, TestHiveContext}
 import org.apache.spark.sql.types.{DecimalType, StructType}
@@ -289,41 +290,44 @@ class HiveSparkSubmitSuite
     runSparkSubmit(args)
   }
 
-  test("SPARK-18360: default table path of tables in default database should depend on the " +
-    "location of default database") {
-    val unusedJar = TestUtils.createJarWithClasses(Seq.empty)
-    val args = Seq(
-      "--class", SPARK_18360.getClass.getName.stripSuffix("$"),
-      "--name", "SPARK-18360",
-      "--master", "local-cluster[2,1,1024]",
-      "--conf", "spark.ui.enabled=false",
-      "--conf", "spark.master.rest.enabled=false",
-      "--driver-java-options", "-Dderby.system.durability=test",
-      unusedJar.toString)
-    runSparkSubmit(args)
-  }
+  // NOTE: This is an expensive operation in terms of time (10 seconds+). Use sparingly.
+  // This is copied from org.apache.spark.deploy.SparkSubmitSuite
+  private def runSparkSubmit(args: Seq[String]): Unit = {
+    val sparkHome = sys.props.getOrElse("spark.test.home", fail("spark.test.home is not set!"))
+    val history = ArrayBuffer.empty[String]
+    val commands = Seq("./bin/spark-submit") ++ args
+    val commandLine = commands.mkString("'", "' '", "'")
 
-  test("SPARK-18989: DESC TABLE should not fail with format class not found") {
-    val unusedJar = TestUtils.createJarWithClasses(Seq.empty)
+    val builder = new ProcessBuilder(commands: _*).directory(new File(sparkHome))
+    val env = builder.environment()
+    env.put("SPARK_TESTING", "1")
+    env.put("SPARK_HOME", sparkHome)
 
-    val argsForCreateTable = Seq(
-      "--class", SPARK_18989_CREATE_TABLE.getClass.getName.stripSuffix("$"),
-      "--name", "SPARK-18947",
-      "--master", "local-cluster[2,1,1024]",
-      "--conf", "spark.ui.enabled=false",
-      "--conf", "spark.master.rest.enabled=false",
-      "--jars", TestHive.getHiveFile("hive-contrib-0.13.1.jar").getCanonicalPath,
-      unusedJar.toString)
-    runSparkSubmit(argsForCreateTable)
+    def captureOutput(source: String)(line: String): Unit = {
+      // This test suite has some weird behaviors when executed on Jenkins:
+      //
+      // 1. Sometimes it gets extremely slow out of unknown reason on Jenkins.  Here we add a
+      //    timestamp to provide more diagnosis information.
+      // 2. Log lines are not correctly redirected to unit-tests.log as expected, so here we print
+      //    them out for debugging purposes.
+      val logLine = s"${new Timestamp(new Date().getTime)} - $source> $line"
+      // scalastyle:off println
+      println(logLine)
+      // scalastyle:on println
+      history += logLine
+    }
 
-    val argsForShowTables = Seq(
-      "--class", SPARK_18989_DESC_TABLE.getClass.getName.stripSuffix("$"),
-      "--name", "SPARK-18947",
-      "--master", "local-cluster[2,1,1024]",
-      "--conf", "spark.ui.enabled=false",
-      "--conf", "spark.master.rest.enabled=false",
-      unusedJar.toString)
-    runSparkSubmit(argsForShowTables)
+    // HiveExternalCatalog is used when Hive support is enabled.
+    val actualMetastoreURL =
+      spark.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog].client
+        .getConf("javax.jdo.option.ConnectionURL", "this_is_a_wrong_URL")
+    logInfo(s"javax.jdo.option.ConnectionURL is $actualMetastoreURL")
+
+    if (actualMetastoreURL != expectedMetastoreURL) {
+      throw new Exception(
+        s"Expected value of javax.jdo.option.ConnectionURL is $expectedMetastoreURL. But, " +
+          s"the actual value is $actualMetastoreURL")
+    }
   }
 }
 
@@ -351,9 +355,10 @@ object SetMetastoreURLTest extends Logging {
         s"spark.sql.test.expectedMetastoreURL should be set.")
     }
 
-    // HiveExternalCatalog is used when Hive support is enabled.
+    // HiveSharedState is used when Hive support is enabled.
     val actualMetastoreURL =
-      spark.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog].client
+      spark.sharedState.asInstanceOf[HiveSharedState]
+        .metadataHive
         .getConf("javax.jdo.option.ConnectionURL", "this_is_a_wrong_URL")
     logInfo(s"javax.jdo.option.ConnectionURL is $actualMetastoreURL")
 
@@ -369,7 +374,11 @@ object SetWarehouseLocationTest extends Logging {
   def main(args: Array[String]): Unit = {
     Utils.configTestLog4j("INFO")
 
-    val sparkConf = new SparkConf(loadDefaults = true).set("spark.ui.enabled", "false")
+    val sparkConf = new SparkConf(loadDefaults = true)
+    val builder = SparkSession.builder()
+      .config(sparkConf)
+      .config("spark.ui.enabled", "false")
+      .enableHiveSupport()
     val providedExpectedWarehouseLocation =
       sparkConf.getOption("spark.sql.test.expectedWarehouseDir")
 
@@ -378,7 +387,7 @@ object SetWarehouseLocationTest extends Logging {
         // If spark.sql.test.expectedWarehouseDir is set, the warehouse dir is set
         // through spark-summit. So, neither spark.sql.warehouse.dir nor
         // hive.metastore.warehouse.dir is set at here.
-        (new TestHiveContext(new SparkContext(sparkConf)).sparkSession, warehouseDir)
+        (builder.getOrCreate(), warehouseDir)
       case None =>
         val warehouseLocation = Utils.createTempDir()
         warehouseLocation.delete()
@@ -388,10 +397,10 @@ object SetWarehouseLocationTest extends Logging {
         // spark.sql.warehouse.dir and hive.metastore.warehouse.dir.
         // We are expecting that the value of spark.sql.warehouse.dir will override the
         // value of hive.metastore.warehouse.dir.
-        val session = new TestHiveContext(new SparkContext(sparkConf
-          .set("spark.sql.warehouse.dir", warehouseLocation.toString)
-          .set("hive.metastore.warehouse.dir", hiveWarehouseLocation.toString)))
-          .sparkSession
+        val session = builder
+          .config("spark.sql.warehouse.dir", warehouseLocation.toString)
+          .config("hive.metastore.warehouse.dir", hiveWarehouseLocation.toString)
+          .getOrCreate()
         (session, warehouseLocation.toString)
 
     }
@@ -412,8 +421,8 @@ object SetWarehouseLocationTest extends Logging {
       val tableMetadata =
         catalog.getTableMetadata(TableIdentifier("testLocation", Some("default")))
       val expectedLocation =
-        CatalogUtils.stringToURI(s"file:${expectedWarehouseLocation.toString}/testlocation")
-      val actualLocation = tableMetadata.location
+        "file:" + expectedWarehouseLocation.toString + "/testlocation"
+      val actualLocation = tableMetadata.storage.locationUri.get
       if (actualLocation != expectedLocation) {
         throw new Exception(
           s"Expected table location is $expectedLocation. But, it is actually $actualLocation")
@@ -427,9 +436,9 @@ object SetWarehouseLocationTest extends Logging {
       sparkSession.sql("create table testLocation (a int)")
       val tableMetadata =
         catalog.getTableMetadata(TableIdentifier("testLocation", Some("testLocationDB")))
-      val expectedLocation = CatalogUtils.stringToURI(
-        s"file:${expectedWarehouseLocation.toString}/testlocationdb.db/testlocation")
-      val actualLocation = tableMetadata.location
+      val expectedLocation =
+        "file:" + expectedWarehouseLocation.toString + "/testlocationdb.db/testlocation"
+      val actualLocation = tableMetadata.storage.locationUri.get
       if (actualLocation != expectedLocation) {
         throw new Exception(
           s"Expected table location is $expectedLocation. But, it is actually $actualLocation")

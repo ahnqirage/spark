@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.expressions
 
-import org.apache.spark.annotation.{Experimental, InterfaceStability}
+import org.apache.spark.annotation.Experimental
 import org.apache.spark.sql.{Dataset, Encoder, TypedColumn}
 import org.apache.spark.sql.catalyst.encoders.encoderFor
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Complete}
@@ -25,7 +25,7 @@ import org.apache.spark.sql.execution.aggregate.TypedAggregateExpression
 
 /**
  * :: Experimental ::
- * A base class for user-defined aggregations, which can be used in `Dataset` operations to take
+ * A base class for user-defined aggregations, which can be used in [[Dataset]] operations to take
  * all of the elements of a group and reduce them to a single value.
  *
  * For example, the following aggregator extracts an `int` from a specific class and adds them up:
@@ -51,7 +51,6 @@ import org.apache.spark.sql.execution.aggregate.TypedAggregateExpression
  * @since 1.6.0
  */
 @Experimental
-@InterfaceStability.Evolving
 abstract class Aggregator[-IN, BUF, OUT] extends Serializable {
 
   /**

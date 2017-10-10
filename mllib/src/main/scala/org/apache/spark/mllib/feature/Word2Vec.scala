@@ -36,7 +36,6 @@ import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.util.{Loader, Saveable}
 import org.apache.spark.rdd._
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.util.BoundedPriorityQueue
 import org.apache.spark.util.Utils
 import org.apache.spark.util.random.XORShiftRandom
 
@@ -454,6 +453,9 @@ class Word2Vec extends Serializable with Logging {
       bcSyn1Global.destroy(false)
     }
     newSentences.unpersist()
+    expTable.destroy()
+    bcVocab.destroy()
+    bcVocabHash.destroy()
 
     val wordArray = vocab.map(_.word)
     new Word2VecModel(wordArray.zipWithIndex.toMap, syn0Global)
@@ -596,25 +598,14 @@ class Word2VecModel private[spark] (
       i += 1
     }
 
-    val pq = new BoundedPriorityQueue[(String, Float)](num + 1)(Ordering.by(_._2))
-
-    var j = 0
-    while (j < numWords) {
-      pq += Tuple2(wordList(j), cosineVec(j))
-      j += 1
-    }
-
-    val scored = pq.toSeq.sortBy(-_._2)
+    val scored = wordList.zip(cosVec).toSeq.sortBy(-_._2)
 
     val filtered = wordOpt match {
-      case Some(w) => scored.filter(tup => w != tup._1)
+      case Some(w) => scored.take(num + 1).filter(tup => w != tup._1)
       case None => scored
     }
 
-    filtered
-      .take(num)
-      .map { case (word, score) => (word, score.toDouble) }
-      .toArray
+    filtered.take(num).toArray
   }
 
   /**

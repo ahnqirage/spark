@@ -105,12 +105,6 @@ class UDTForCaseClass extends UserDefinedType[UDTCaseClass] {
   }
 }
 
-case class PrimitiveValueClass(wrapped: Int) extends AnyVal
-case class ReferenceValueClass(wrapped: ReferenceValueClass.Container) extends AnyVal
-object ReferenceValueClass {
-  case class Container(data: Int)
-}
-
 class ExpressionEncoderSuite extends PlanTest with AnalysisTest {
   OuterScopes.addOuterScope(this)
 

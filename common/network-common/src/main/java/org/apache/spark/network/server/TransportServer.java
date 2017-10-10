@@ -135,10 +135,6 @@ public class TransportServer implements Closeable {
     logger.debug("Shuffle server started on port: {}", port);
   }
 
-  public MetricSet getAllMetrics() {
-    return metrics;
-  }
-
   @Override
   public void close() {
     if (channelFuture != null) {

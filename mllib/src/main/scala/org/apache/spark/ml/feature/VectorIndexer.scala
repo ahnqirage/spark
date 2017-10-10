@@ -59,7 +59,7 @@ private[ml] trait VectorIndexerParams extends Params with HasInputCol with HasOu
 }
 
 /**
- * Class for indexing categorical feature columns in a dataset of `Vector`.
+ * Class for indexing categorical feature columns in a dataset of [[Vector]].
  *
  * This has 2 usage modes:
  *  - Automatically identify categorical features (default behavior)

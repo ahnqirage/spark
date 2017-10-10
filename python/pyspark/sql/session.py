@@ -33,7 +33,7 @@ from pyspark.sql.conf import RuntimeConfig
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.readwriter import DataFrameReader
 from pyspark.sql.streaming import DataStreamReader
-from pyspark.sql.types import Row, DataType, StringType, StructType, _make_type_verifier, \
+from pyspark.sql.types import Row, DataType, StringType, StructType, _verify_type, \
     _infer_schema, _has_nulltype, _merge_type, _create_converter, _parse_datatype_string
 from pyspark.sql.utils import install_exception_handler
 
@@ -176,7 +176,7 @@ class SparkSession(object):
                         sc._conf.set(key, value)
                     session = SparkSession(sc)
                 for key, value in self._options.items():
-                    session._jsparkSession.sessionState().conf().setConfString(key, value)
+                    session.conf.set(key, value)
                 for key, value in self._options.items():
                     session.sparkContext._conf.set(key, value)
                 return session
@@ -220,17 +220,6 @@ class SparkSession(object):
         if SparkSession._instantiatedSession is None \
                 or SparkSession._instantiatedSession._sc._jsc is None:
             SparkSession._instantiatedSession = self
-
-    def _repr_html_(self):
-        return """
-            <div>
-                <p><b>SparkSession - {catalogImplementation}</b></p>
-                {sc_HTML}
-            </div>
-        """.format(
-            catalogImplementation=self.conf.get("spark.sql.catalogImplementation"),
-            sc_HTML=self.sparkContext._repr_html_()
-        )
 
     @since(2.0)
     def newSession(self):
@@ -427,8 +416,9 @@ class SparkSession(object):
         from ``data``, which should be an RDD of :class:`Row`,
         or :class:`namedtuple`, or :class:`dict`.
 
-        When ``schema`` is :class:`pyspark.sql.types.DataType` or a datatype string, it must match
-        the real data, or an exception will be thrown at runtime. If the given schema is not
+        When ``schema`` is :class:`pyspark.sql.types.DataType` or
+        :class:`pyspark.sql.types.StringType`, it must match the
+        real data, or an exception will be thrown at runtime. If the given schema is not
         :class:`pyspark.sql.types.StructType`, it will be wrapped into a
         :class:`pyspark.sql.types.StructType` as its only field, and the field name will be "value",
         each record will also be wrapped into a tuple, which can be converted to row later.
@@ -438,7 +428,8 @@ class SparkSession(object):
 
         :param data: an RDD of any kind of SQL data representation(e.g. row, tuple, int, boolean,
             etc.), or :class:`list`, or :class:`pandas.DataFrame`.
-        :param schema: a :class:`pyspark.sql.types.DataType` or a datatype string or a list of
+        :param schema: a :class:`pyspark.sql.types.DataType` or a
+            :class:`pyspark.sql.types.StringType` or a list of
             column names, default is ``None``.  The data type string format equals to
             :class:`pyspark.sql.types.DataType.simpleString`, except that top level struct type can
             omit the ``struct<>`` and atomic types use ``typeName()`` as their format, e.g. use
@@ -448,7 +439,7 @@ class SparkSession(object):
         :param verifySchema: verify data types of every row against schema.
         :return: :class:`DataFrame`
 
-        .. versionchanged:: 2.1
+        .. versionchanged:: 2.0.1
            Added verifySchema.
 
         >>> l = [('Alice', 1)]
@@ -514,21 +505,19 @@ class SparkSession(object):
                 schema = [str(x) for x in data.columns]
             data = [r.tolist() for r in data.to_records(index=False)]
 
+        verify_func = _verify_type if verifySchema else lambda _, t: True
         if isinstance(schema, StructType):
             verify_func = _make_type_verifier(schema) if verifySchema else lambda _: True
 
             def prepare(obj):
-                verify_func(obj)
+                verify_func(obj, schema)
                 return obj
         elif isinstance(schema, DataType):
             dataType = schema
             schema = StructType().add("value", schema)
 
-            verify_func = _make_type_verifier(
-                dataType, name="field value") if verifySchema else lambda _: True
-
             def prepare(obj):
-                verify_func(obj)
+                verify_func(obj, dataType)
                 return obj,
         else:
             if isinstance(schema, list):
@@ -590,7 +579,7 @@ class SparkSession(object):
         Returns a :class:`DataStreamReader` that can be used to read data streams
         as a streaming :class:`DataFrame`.
 
-        .. note:: Evolving.
+        .. note:: Experimental.
 
         :return: :class:`DataStreamReader`
         """
@@ -602,7 +591,7 @@ class SparkSession(object):
         """Returns a :class:`StreamingQueryManager` that allows managing all the
         :class:`StreamingQuery` StreamingQueries active on `this` context.
 
-        .. note:: Evolving.
+        .. note:: Experimental.
 
         :return: :class:`StreamingQueryManager`
         """

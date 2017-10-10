@@ -27,8 +27,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode, ExpressionCanonicalizer}
 import org.apache.spark.sql.catalyst.plans.physical._
 import org.apache.spark.sql.execution.metric.SQLMetrics
-import org.apache.spark.sql.types.LongType
-import org.apache.spark.util.ThreadUtils
+import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.util.random.{BernoulliCellSampler, PoissonSampler}
 
 /** Physical plan for Project. */
@@ -248,8 +247,6 @@ case class SampleExec(
     child: SparkPlan) extends UnaryExecNode with CodegenSupport {
   override def output: Seq[Attribute] = child.output
 
-  override def outputPartitioning: Partitioning = child.outputPartitioning
-
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
 
@@ -287,6 +284,8 @@ case class SampleExec(
       val samplerClass = classOf[PoissonSampler[UnsafeRow]].getName
       val initSampler = ctx.freshName("initSampler")
       ctx.copyResult = true
+      ctx.addMutableState(s"$samplerClass<UnsafeRow>", sampler,
+        s"$initSampler();")
 
       val initSamplerFuncName = ctx.addNewFunction(initSampler,
         s"""
@@ -339,11 +338,10 @@ case class SampleExec(
 case class RangeExec(range: org.apache.spark.sql.catalyst.plans.logical.Range)
   extends LeafExecNode with CodegenSupport {
 
-  val start: Long = range.start
-  val end: Long = range.end
-  val step: Long = range.step
-  val numSlices: Int = range.numSlices.getOrElse(sparkContext.defaultParallelism)
-  val numElements: BigInt = range.numElements
+  def start: Long = range.start
+  def step: Long = range.step
+  def numSlices: Int = range.numSlices.getOrElse(sparkContext.defaultParallelism)
+  def numElements: BigInt = range.numElements
 
   override val output: Seq[Attribute] = range.output
 
@@ -549,7 +547,7 @@ case class RangeExec(range: org.apache.spark.sql.catalyst.plans.logical.Range)
       }
   }
 
-  override def simpleString: String = s"Range ($start, $end, step=$step, splits=$numSlices)"
+  override def simpleString: String = range.simpleString
 }
 
 /**

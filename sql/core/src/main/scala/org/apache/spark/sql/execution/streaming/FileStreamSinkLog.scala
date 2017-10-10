@@ -17,8 +17,6 @@
 
 package org.apache.spark.sql.execution.streaming
 
-import java.net.URI
-
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.json4s.NoTypeHints
 import org.json4s.jackson.Serialization
@@ -66,6 +64,19 @@ object SinkFileStatus {
   }
 }
 
+object SinkFileStatus {
+  def apply(f: FileStatus): SinkFileStatus = {
+    SinkFileStatus(
+      path = f.getPath.toUri.toString,
+      size = f.getLen,
+      isDir = f.isDirectory,
+      modificationTime = f.getModificationTime,
+      blockReplication = f.getReplication,
+      blockSize = f.getBlockSize,
+      action = FileStreamSinkLog.ADD_ACTION)
+  }
+}
+
 /**
  * A special log for [[FileStreamSink]]. It will write one log file for each batch. The first line
  * of the log file is the version number, and there are multiple JSON lines following. Each JSON
@@ -79,23 +90,33 @@ object SinkFileStatus {
  * (drops the deleted files).
  */
 class FileStreamSinkLog(
-    metadataLogVersion: Int,
+    metadataLogVersion: String,
     sparkSession: SparkSession,
     path: String)
   extends CompactibleFileStreamLog[SinkFileStatus](metadataLogVersion, sparkSession, path) {
 
   private implicit val formats = Serialization.formats(NoTypeHints)
 
-  protected override val fileCleanupDelayMs = sparkSession.sessionState.conf.fileSinkLogCleanupDelay
+  protected override val fileCleanupDelayMs =
+    sparkSession.conf.get(SQLConf.FILE_SINK_LOG_CLEANUP_DELAY)
 
-  protected override val isDeletingExpiredLog = sparkSession.sessionState.conf.fileSinkLogDeletion
+  protected override val isDeletingExpiredLog =
+    sparkSession.conf.get(SQLConf.FILE_SINK_LOG_DELETION)
 
-  protected override val defaultCompactInterval =
-    sparkSession.sessionState.conf.fileSinkLogCompactInterval
+  protected override val compactInterval =
+    sparkSession.conf.get(SQLConf.FILE_SINK_LOG_COMPACT_INTERVAL)
 
-  require(defaultCompactInterval > 0,
-    s"Please set ${SQLConf.FILE_SINK_LOG_COMPACT_INTERVAL.key} (was $defaultCompactInterval) " +
+  require(compactInterval > 0,
+    s"Please set ${SQLConf.FILE_SINK_LOG_COMPACT_INTERVAL.key} (was $compactInterval) " +
       "to a positive value.")
+
+  protected override def serializeData(data: SinkFileStatus): String = {
+    write(data)
+  }
+
+  protected override def deserializeData(encodedString: String): SinkFileStatus = {
+    read[SinkFileStatus](encodedString)
+  }
 
   override def compactLogs(logs: Seq[SinkFileStatus]): Seq[SinkFileStatus] = {
     val deletedFiles = logs.filter(_.action == FileStreamSinkLog.DELETE_ACTION).map(_.path).toSet
@@ -108,7 +129,7 @@ class FileStreamSinkLog(
 }
 
 object FileStreamSinkLog {
-  val VERSION = 1
+  val VERSION = "v1"
   val DELETE_ACTION = "delete"
   val ADD_ACTION = "add"
 }

@@ -28,7 +28,7 @@ import org.apache.spark.mllib.fpm.FPGrowth.FreqItemset
 import org.apache.spark.rdd.RDD
 
 /**
- * Generates association rules from a `RDD[FreqItemset[Item]]`. This method only generates
+ * Generates association rules from a [[RDD[FreqItemset[Item]]]. This method only generates
  * association rules which have a single item as the consequent.
  *
  */

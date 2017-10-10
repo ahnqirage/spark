@@ -24,15 +24,12 @@ import java.util.{ArrayList => JArrayList, List => JList, Locale, Map => JMap, S
 import java.util.concurrent.TimeUnit
 
 import scala.collection.JavaConverters._
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.api.{EnvironmentContext, Function => HiveFunction, FunctionType}
-import org.apache.hadoop.hive.metastore.api.{MetaException, PrincipalType, ResourceType, ResourceUri}
+import org.apache.hadoop.hive.metastore.api.{Function => HiveFunction, FunctionType, NoSuchObjectException, PrincipalType, ResourceType, ResourceUri}
 import org.apache.hadoop.hive.ql.Driver
-import org.apache.hadoop.hive.ql.io.AcidUtils
 import org.apache.hadoop.hive.ql.metadata.{Hive, HiveException, Partition, Table}
 import org.apache.hadoop.hive.ql.plan.AddPartitionDesc
 import org.apache.hadoop.hive.ql.processors.{CommandProcessor, CommandProcessorFactory}
@@ -43,12 +40,13 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchPermanentFunctionException
-import org.apache.spark.sql.catalyst.catalog.{CatalogFunction, CatalogTablePartition, CatalogUtils, FunctionResource, FunctionResourceType}
+import org.apache.spark.sql.catalyst.catalog.{CatalogFunction, CatalogTablePartition, FunctionResource, FunctionResourceType}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{IntegralType, StringType}
 import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.Utils
+
 
 /**
  * A shim that defines the interface between [[HiveClientImpl]] and the underlying Hive library used
@@ -85,10 +83,6 @@ private[client] sealed abstract class Shim {
   def getDriverResults(driver: Driver): Seq[String]
 
   def getMetastoreClientConnectRetryDelayMillis(conf: HiveConf): Long
-
-  def alterTable(hive: Hive, tableName: String, table: Table): Unit
-
-  def alterPartitions(hive: Hive, tableName: String, newParts: JList[Partition]): Unit
 
   def createPartitions(
       hive: Hive,
@@ -290,8 +284,7 @@ private[client] class Shim_v0_12 extends Shim with Logging {
       ignoreIfExists: Boolean): Unit = {
     val table = hive.getTable(database, tableName)
     parts.foreach { s =>
-      val location = s.storage.locationUri.map(
-        uri => new Path(table.getPath, new Path(uri))).orNull
+      val location = s.storage.locationUri.map(new Path(table.getPath, _)).orNull
       val params = if (s.parameters.nonEmpty) s.parameters.asJava else null
       val spec = s.spec.asJava
       if (hive.getPartition(table, spec, false) != null && ignoreIfExists) {
@@ -439,6 +432,27 @@ private[client] class Shim_v0_12 extends Shim with Logging {
     None
   }
 
+  override def createFunction(hive: Hive, db: String, func: CatalogFunction): Unit = {
+    throw new AnalysisException("Hive 0.12 doesn't support creating permanent functions. " +
+      "Please use Hive 0.13 or higher.")
+  }
+
+  def dropFunction(hive: Hive, db: String, name: String): Unit = {
+    throw new NoSuchPermanentFunctionException(db, name)
+  }
+
+  def renameFunction(hive: Hive, db: String, oldName: String, newName: String): Unit = {
+    throw new NoSuchPermanentFunctionException(db, oldName)
+  }
+
+  def alterFunction(hive: Hive, db: String, func: CatalogFunction): Unit = {
+    throw new NoSuchPermanentFunctionException(db, func.identifier.funcName)
+  }
+
+  def getFunctionOption(hive: Hive, db: String, name: String): Option[CatalogFunction] = {
+    None
+  }
+
   def listFunctions(hive: Hive, db: String, pattern: String): Seq[String] = {
     Seq.empty[String]
   }
@@ -493,8 +507,7 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
       ignoreIfExists: Boolean): Unit = {
     val addPartitionDesc = new AddPartitionDesc(db, table, ignoreIfExists)
     parts.zipWithIndex.foreach { case (s, i) =>
-      addPartitionDesc.addPartition(
-        s.spec.asJava, s.storage.locationUri.map(CatalogUtils.URIToString(_)).orNull)
+      addPartitionDesc.addPartition(s.spec.asJava, s.storage.locationUri.orNull)
       if (s.parameters.nonEmpty) {
         addPartitionDesc.getPartition(i).setPartParams(s.parameters.asJava)
       }
@@ -507,8 +520,8 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
 
   private def toHiveFunction(f: CatalogFunction, db: String): HiveFunction = {
     val resourceUris = f.resources.map { resource =>
-      new ResourceUri(ResourceType.valueOf(
-        resource.resourceType.resourceType.toUpperCase(Locale.ROOT)), resource.uri)
+      new ResourceUri(
+        ResourceType.valueOf(resource.resourceType.resourceType.toUpperCase()), resource.uri)
     }
     new HiveFunction(
       f.identifier.funcName,
@@ -552,7 +565,7 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
       }
       FunctionResource(FunctionResourceType.fromString(resourceType), uri.getUri())
     }
-    CatalogFunction(name, hf.getClassName, resources)
+    new CatalogFunction(name, hf.getClassName, resources)
   }
 
   override def getFunctionOption(hive: Hive, db: String, name: String): Option[CatalogFunction] = {

@@ -39,8 +39,8 @@ class GradientBoostedTreesSuite extends SparkFunSuite with MLlibTestSparkContext
     val numIterations = 20
     val trainRdd = sc.parallelize(OldGBTSuite.trainData, 2).map(_.asML)
     val validateRdd = sc.parallelize(OldGBTSuite.validateData, 2).map(_.asML)
-    val trainDF = trainRdd.toDF()
-    val validateDF = validateRdd.toDF()
+    val trainDF = spark.createDataFrame(trainRdd)
+    val validateDF = spark.createDataFrame(validateRdd)
 
     val algos = Array(Regression, Regression, Classification)
     val losses = Array(SquaredError, AbsoluteError, LogLoss)

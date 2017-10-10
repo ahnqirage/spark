@@ -202,7 +202,8 @@ object LogisticRegressionModel extends Loader[LogisticRegressionModel] {
  * Train a classification model for Binary Logistic Regression
  * using Stochastic Gradient Descent. By default L2 regularization is used,
  * which can be changed via `LogisticRegressionWithSGD.optimizer`.
- *
+ * NOTE: Labels used in Logistic Regression should be {0, 1, ..., k - 1}
+ * for k classes multi-label classification problem.
  * Using [[LogisticRegressionWithLBFGS]] is recommended over this.
  *
  * @note Labels used in Logistic Regression should be {0, 1, ..., k - 1}
@@ -437,9 +438,8 @@ class LogisticRegressionWithLBFGS
         lr.setStandardization(useFeatureScaling)
         if (userSuppliedWeights) {
           val uid = Identifiable.randomUID("logreg-static")
-          lr.setInitialModel(new org.apache.spark.ml.classification.LogisticRegressionModel(uid,
-            new DenseMatrix(1, initialWeights.size, initialWeights.toArray),
-            Vectors.dense(1.0).asML, 2, false))
+          lr.setInitialModel(new org.apache.spark.ml.classification.LogisticRegressionModel(
+            uid, initialWeights.asML, 1.0))
         }
         lr.setFitIntercept(addIntercept)
         lr.setMaxIter(optimizer.getNumIterations())

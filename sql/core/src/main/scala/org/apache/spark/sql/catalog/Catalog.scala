@@ -88,7 +88,8 @@ abstract class Catalog {
   def listFunctions(dbName: String): Dataset[Function]
 
   /**
-   * Returns a list of columns for the given table/view or temporary view.
+   * Returns a list of columns for the given table in the current database or
+   * the given temporary table.
    *
    * @param tableName is either a qualified or unqualified name that designates a table/view.
    *                  If no database identifier is provided, it refers to a temporary view or
@@ -414,47 +415,13 @@ abstract class Catalog {
       options: Map[String, String]): DataFrame
 
   /**
-   * Drops the local temporary view with the given view name in the catalog.
+   * Drops the temporary view with the given view name in the catalog.
    * If the view has been cached before, then it will also be uncached.
    *
-   * Local temporary view is session-scoped. Its lifetime is the lifetime of the session that
-   * created it, i.e. it will be automatically dropped when the session terminates. It's not
-   * tied to any databases, i.e. we can't use `db1.view1` to reference a local temporary view.
-   *
-   * Note that, the return type of this method was Unit in Spark 2.0, but changed to Boolean
-   * in Spark 2.1.
-   *
-   * @param viewName the name of the temporary view to be dropped.
-   * @return true if the view is dropped successfully, false otherwise.
+   * @param viewName the name of the view to be dropped.
    * @since 2.0.0
    */
-  def dropTempView(viewName: String): Boolean
-
-  /**
-   * Drops the global temporary view with the given view name in the catalog.
-   * If the view has been cached before, then it will also be uncached.
-   *
-   * Global temporary view is cross-session. Its lifetime is the lifetime of the Spark application,
-   * i.e. it will be automatically dropped when the application terminates. It's tied to a system
-   * preserved database `global_temp`, and we must use the qualified name to refer a global temp
-   * view, e.g. `SELECT * FROM global_temp.view1`.
-   *
-   * @param viewName the unqualified name of the temporary view to be dropped.
-   * @return true if the view is dropped successfully, false otherwise.
-   * @since 2.1.0
-   */
-  def dropGlobalTempView(viewName: String): Boolean
-
-  /**
-   * Recovers all the partitions in the directory of a table and update the catalog.
-   * Only works with a partitioned table, and not a view.
-   *
-   * @param tableName is either a qualified or unqualified name that designates a table.
-   *                  If no database identifier is provided, it refers to a table in the
-   *                  current database.
-   * @since 2.1.1
-   */
-  def recoverPartitions(tableName: String): Unit
+  def dropTempView(viewName: String): Unit
 
   /**
    * Returns true if the table is currently cached in-memory.
@@ -506,25 +473,21 @@ abstract class Catalog {
   def clearCache(): Unit
 
   /**
-   * Invalidates and refreshes all the cached data and metadata of the given table. For performance
-   * reasons, Spark SQL or the external data source library it uses might cache certain metadata
-   * about a table, such as the location of blocks. When those change outside of Spark SQL, users
-   * should call this function to invalidate the cache.
+   * Invalidate and refresh all the cached metadata of the given table. For performance reasons,
+   * Spark SQL or the external data source library it uses might cache certain metadata about a
+   * table, such as the location of blocks. When those change outside of Spark SQL, users should
+   * call this function to invalidate the cache.
    *
    * If this table is cached as an InMemoryRelation, drop the original cached version and make the
    * new version cached lazily.
    *
-   * @param tableName is either a qualified or unqualified name that designates a table/view.
-   *                  If no database identifier is provided, it refers to a temporary view or
-   *                  a table/view in the current database.
    * @since 2.0.0
    */
   def refreshTable(tableName: String): Unit
 
   /**
-   * Invalidates and refreshes all the cached data (and the associated metadata) for any `Dataset`
-   * that contains the given data source path. Path matching is by prefix, i.e. "/" would invalidate
-   * everything that is cached.
+   * Invalidate and refresh all the cached data (and the associated metadata) for any dataframe that
+   * contains the given data source path.
    *
    * @since 2.0.0
    */

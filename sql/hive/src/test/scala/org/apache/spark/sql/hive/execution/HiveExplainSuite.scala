@@ -115,10 +115,10 @@ class HiveExplainSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
       "src")
   }
 
-  test("SPARK-17409: The EXPLAIN output of CTAS only shows the analyzed plan") {
+  test("SPARK-17230: The EXPLAIN output of CTAS only shows the analyzed plan") {
     withTempView("jt") {
-      val ds = (1 to 10).map(i => s"""{"a":$i, "b":"str$i"}""").toDS()
-      spark.read.json(ds).createOrReplaceTempView("jt")
+      val rdd = sparkContext.parallelize((1 to 10).map(i => s"""{"a":$i, "b":"str$i"}"""))
+      spark.read.json(rdd).createOrReplaceTempView("jt")
       val outputs = sql(
         s"""
            |EXPLAIN EXTENDED
@@ -136,7 +136,7 @@ class HiveExplainSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
       }
 
       val physicalIndex = outputs.indexOf("== Physical Plan ==")
-      assert(outputs.substring(physicalIndex).contains("Subquery"),
+      assert(outputs.substring(physicalIndex).contains("SubqueryAlias"),
         "Physical Plan should contain SubqueryAlias since the query should not be optimized")
     }
   }

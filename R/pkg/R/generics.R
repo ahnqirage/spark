@@ -417,16 +417,6 @@ setGeneric("attach")
 #' @export
 setGeneric("cache", function(x) { standardGeneric("cache") })
 
-#' @rdname checkpoint
-#' @export
-setGeneric("checkpoint", function(x, eager = TRUE) { standardGeneric("checkpoint") })
-
-#' @rdname coalesce
-#' @param x a SparkDataFrame.
-#' @param ... additional argument(s).
-#' @export
-setGeneric("coalesce", function(x, ...) { standardGeneric("coalesce") })
-
 #' @rdname collect
 #' @export
 setGeneric("collect", function(x, ...) { standardGeneric("collect") })
@@ -478,7 +468,7 @@ setGeneric("corr", function(x, ...) {standardGeneric("corr") })
 #' @export
 setGeneric("covar_samp", function(col1, col2) {standardGeneric("covar_samp") })
 
-#' @rdname cov
+#' @rdname covar_pop
 #' @export
 setGeneric("covar_pop", function(col1, col2) {standardGeneric("covar_pop") })
 
@@ -488,14 +478,6 @@ setGeneric("createOrReplaceTempView",
            function(x, viewName) {
              standardGeneric("createOrReplaceTempView")
            })
-
-# @rdname crossJoin
-# @export
-setGeneric("crossJoin", function(x, y) { standardGeneric("crossJoin") })
-
-#' @rdname cube
-#' @export
-setGeneric("cube", function(x, ...) { standardGeneric("cube") })
 
 #' @rdname dapply
 #' @export
@@ -517,11 +499,7 @@ setGeneric("gapply", function(x, ...) { standardGeneric("gapply") })
 #' @export
 setGeneric("gapplyCollect", function(x, ...) { standardGeneric("gapplyCollect") })
 
-# @rdname getNumPartitions
-# @export
-setGeneric("getNumPartitions", function(x) { standardGeneric("getNumPartitions") })
-
-#' @rdname describe
+#' @rdname summary
 #' @export
 setGeneric("describe", function(x, col, ...) { standardGeneric("describe") })
 
@@ -705,6 +683,10 @@ setGeneric("write.json", function(x, path, ...) { standardGeneric("write.json") 
 #' @export
 setGeneric("write.orc", function(x, path, ...) { standardGeneric("write.orc") })
 
+#' @rdname write.orc
+#' @export
+setGeneric("write.orc", function(x, path) { standardGeneric("write.orc") })
+
 #' @rdname write.parquet
 #' @export
 setGeneric("write.parquet", function(x, path, ...) {
@@ -741,10 +723,6 @@ setGeneric("selectExpr", function(x, expr, ...) { standardGeneric("selectExpr") 
 #' @export
 setGeneric("showDF", function(x, ...) { standardGeneric("showDF") })
 
-# @rdname storageLevel
-# @export
-setGeneric("storageLevel", function(x) { standardGeneric("storageLevel") })
-
 #' @rdname subset
 #' @export
 setGeneric("subset", function(x, ...) { standardGeneric("subset") })
@@ -769,11 +747,7 @@ setGeneric("union", function(x, y) { standardGeneric("union") })
 #' @export
 setGeneric("unionAll", function(x, y) { standardGeneric("unionAll") })
 
-#' @rdname unionByName
-#' @export
-setGeneric("unionByName", function(x, y) { standardGeneric("unionByName") })
-
-#' @rdname unpersist
+#' @rdname unpersist-methods
 #' @export
 setGeneric("unpersist", function(x, ...) { standardGeneric("unpersist") })
 
@@ -805,6 +779,10 @@ setGeneric("randomSplit", function(x, weights, seed) { standardGeneric("randomSp
 #' @rdname broadcast
 #' @export
 setGeneric("broadcast", function(x) { standardGeneric("broadcast") })
+
+#' @rdname randomSplit
+#' @export
+setGeneric("randomSplit", function(x, weights, seed) { standardGeneric("randomSplit") })
 
 ###################### Column Methods ##########################
 
@@ -866,7 +844,7 @@ setGeneric("rlike", function(x, ...) { standardGeneric("rlike") })
 #' @export
 setGeneric("startsWith", function(x, prefix) { standardGeneric("startsWith") })
 
-#' @rdname column_nonaggregate_functions
+#' @rdname when
 #' @export
 #' @name NULL
 setGeneric("when", function(condition, value) { standardGeneric("when") })
@@ -878,10 +856,6 @@ setGeneric("otherwise", function(x, value) { standardGeneric("otherwise") })
 #' @rdname over
 #' @export
 setGeneric("over", function(x, window) { standardGeneric("over") })
-
-#' @rdname eq_null_safe
-#' @export
-setGeneric("%<=>%", function(x, value) { standardGeneric("%<=>%") })
 
 ###################### WindowSpec Methods ##########################
 
@@ -963,16 +937,6 @@ setGeneric("cbrt", function(x) { standardGeneric("cbrt") })
 #' @name NULL
 setGeneric("ceil", function(x) { standardGeneric("ceil") })
 
-#' @rdname column_aggregate_functions
-#' @export
-#' @name NULL
-setGeneric("collect_list", function(x) { standardGeneric("collect_list") })
-
-#' @rdname column_aggregate_functions
-#' @export
-#' @name NULL
-setGeneric("collect_set", function(x) { standardGeneric("collect_set") })
-
 #' @rdname column
 #' @export
 setGeneric("column", function(x) { standardGeneric("column") })
@@ -1017,9 +981,9 @@ setGeneric("create_map", function(x, ...) { standardGeneric("create_map") })
 #' @name NULL
 setGeneric("hash", function(x, ...) { standardGeneric("hash") })
 
-#' @rdname column_window_functions
+#' @param x empty. Should be used with no argument.
+#' @rdname cume_dist
 #' @export
-#' @name NULL
 setGeneric("cume_dist", function(x = "missing") { standardGeneric("cume_dist") })
 
 #' @rdname column_datetime_diff_functions
@@ -1057,9 +1021,9 @@ setGeneric("dayofyear", function(x) { standardGeneric("dayofyear") })
 #' @name NULL
 setGeneric("decode", function(x, charset) { standardGeneric("decode") })
 
-#' @rdname column_window_functions
+#' @param x empty. Should be used with no argument.
+#' @rdname dense_rank
 #' @export
-#' @name NULL
 setGeneric("dense_rank", function(x = "missing") { standardGeneric("dense_rank") })
 
 #' @rdname column_string_functions
@@ -1237,7 +1201,13 @@ setGeneric("md5", function(x) { standardGeneric("md5") })
 #' @name NULL
 setGeneric("minute", function(x) { standardGeneric("minute") })
 
-#' @rdname column_nonaggregate_functions
+#' @param x empty. Should be used with no argument.
+#' @rdname monotonically_increasing_id
+#' @export
+setGeneric("monotonically_increasing_id",
+           function(x = "missing") { standardGeneric("monotonically_increasing_id") })
+
+#' @rdname month
 #' @export
 #' @name NULL
 setGeneric("monotonically_increasing_id",
@@ -1286,9 +1256,9 @@ setGeneric("ntile", function(x) { standardGeneric("ntile") })
 #' @name NULL
 setGeneric("n_distinct", function(x, ...) { standardGeneric("n_distinct") })
 
-#' @rdname column_window_functions
+#' @param x empty. Should be used with no argument.
+#' @rdname percent_rank
 #' @export
-#' @name NULL
 setGeneric("percent_rank", function(x = "missing") { standardGeneric("percent_rank") })
 
 #' @rdname column_math_functions
@@ -1296,12 +1266,11 @@ setGeneric("percent_rank", function(x = "missing") { standardGeneric("percent_ra
 #' @name NULL
 setGeneric("pmod", function(y, x) { standardGeneric("pmod") })
 
-#' @rdname column_collection_functions
+#' @rdname posexplode
 #' @export
-#' @name NULL
 setGeneric("posexplode", function(x) { standardGeneric("posexplode") })
 
-#' @rdname column_collection_functions
+#' @rdname quarter
 #' @export
 #' @name NULL
 setGeneric("posexplode_outer", function(x) { standardGeneric("posexplode_outer") })
@@ -1349,12 +1318,11 @@ setGeneric("reverse", function(x) { standardGeneric("reverse") })
 
 #' @rdname column_math_functions
 #' @export
-#' @name NULL
 setGeneric("rint", function(x) { standardGeneric("rint") })
 
-#' @rdname column_window_functions
+#' @param x empty. Should be used with no argument.
+#' @rdname row_number
 #' @export
-#' @name NULL
 setGeneric("row_number", function(x = "missing") { standardGeneric("row_number") })
 
 #' @rdname column_string_functions
@@ -1402,7 +1370,7 @@ setGeneric("shiftRight", function(y, x) { standardGeneric("shiftRight") })
 #' @name NULL
 setGeneric("shiftRightUnsigned", function(y, x) { standardGeneric("shiftRightUnsigned") })
 
-#' @rdname column_math_functions
+#' @rdname sign
 #' @export
 #' @name NULL
 setGeneric("signum", function(x) { standardGeneric("signum") })
@@ -1432,12 +1400,12 @@ setGeneric("split_string", function(x, pattern) { standardGeneric("split_string"
 #' @name NULL
 setGeneric("soundex", function(x) { standardGeneric("soundex") })
 
-#' @rdname column_nonaggregate_functions
+#' @param x empty. Should be used with no argument.
+#' @rdname spark_partition_id
 #' @export
-#' @name NULL
 setGeneric("spark_partition_id", function(x = "missing") { standardGeneric("spark_partition_id") })
 
-#' @rdname column_aggregate_functions
+#' @rdname sd
 #' @export
 #' @name NULL
 setGeneric("stddev", function(x) { standardGeneric("stddev") })
@@ -1649,31 +1617,7 @@ setGeneric("spark.randomForest",
 
 #' @rdname spark.survreg
 #' @export
-setGeneric("spark.survreg", function(data, formula, ...) { standardGeneric("spark.survreg") })
-
-#' @rdname spark.svmLinear
-#' @export
-setGeneric("spark.svmLinear", function(data, formula, ...) { standardGeneric("spark.svmLinear") })
-
-#' @rdname spark.lda
-#' @export
-setGeneric("spark.posterior", function(object, newData) { standardGeneric("spark.posterior") })
-
-#' @rdname spark.lda
-#' @export
-setGeneric("spark.perplexity", function(object, data) { standardGeneric("spark.perplexity") })
-
-#' @rdname spark.fpGrowth
-#' @export
-setGeneric("spark.fpGrowth", function(data, ...) { standardGeneric("spark.fpGrowth") })
-
-#' @rdname spark.fpGrowth
-#' @export
-setGeneric("spark.freqItemsets", function(object) { standardGeneric("spark.freqItemsets") })
-
-#' @rdname spark.fpGrowth
-#' @export
-setGeneric("spark.associationRules", function(object) { standardGeneric("spark.associationRules") })
+setGeneric("spark.survreg", function(data, formula) { standardGeneric("spark.survreg") })
 
 #' @param object a fitted ML model object.
 #' @param path the directory where the model is saved.

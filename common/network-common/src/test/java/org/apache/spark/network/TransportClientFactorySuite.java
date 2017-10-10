@@ -90,16 +90,19 @@ public class TransportClientFactorySuite {
 
     // Launch a bunch of threads to create new clients.
     for (int i = 0; i < attempts.length; i++) {
-      attempts[i] = new Thread(() -> {
-        try {
-          TransportClient client =
-            factory.createClient(TestUtils.getLocalHost(), server1.getPort());
-          assertTrue(client.isActive());
-          clients.add(client);
-        } catch (IOException e) {
-          failed.incrementAndGet();
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
+      attempts[i] = new Thread() {
+        @Override
+        public void run() {
+          try {
+            TransportClient client =
+              factory.createClient(TestUtils.getLocalHost(), server1.getPort());
+            assertTrue(client.isActive());
+            clients.add(client);
+          } catch (IOException e) {
+            failed.incrementAndGet();
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
         }
       });
 

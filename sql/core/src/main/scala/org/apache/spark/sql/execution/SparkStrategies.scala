@@ -18,7 +18,7 @@
 package org.apache.spark.sql.execution
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{execution, AnalysisException, Strategy}
+import org.apache.spark.sql.{AnalysisException, Strategy}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.expressions._
@@ -30,7 +30,7 @@ import org.apache.spark.sql.execution.columnar.{InMemoryRelation, InMemoryTableS
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
 import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight}
-import org.apache.spark.sql.execution.streaming._
+import org.apache.spark.sql.execution.streaming.{MemoryPlan, StreamingExecutionRelation, StreamingRelation, StreamingRelationExec}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.streaming.StreamingQuery
 
@@ -62,24 +62,24 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
    */
   object SpecialLimits extends Strategy {
     override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-      case ReturnAnswer(rootPlan) => rootPlan match {
-        case Limit(IntegerLiteral(limit), Sort(order, true, child)) =>
-          TakeOrderedAndProjectExec(limit, order, child.output, planLater(child)) :: Nil
-        case Limit(IntegerLiteral(limit), Project(projectList, Sort(order, true, child))) =>
-          TakeOrderedAndProjectExec(limit, order, projectList, planLater(child)) :: Nil
-        case Limit(IntegerLiteral(limit), child) =>
-          // With whole stage codegen, Spark releases resources only when all the output data of the
-          // query plan are consumed. It's possible that `CollectLimitExec` only consumes a little
-          // data from child plan and finishes the query without releasing resources. Here we wrap
-          // the child plan with `LocalLimitExec`, to stop the processing of whole stage codegen and
-          // trigger the resource releasing work, after we consume `limit` rows.
-          CollectLimitExec(limit, LocalLimitExec(limit, planLater(child))) :: Nil
+      case logical.ReturnAnswer(rootPlan) => rootPlan match {
+        case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+          execution.TakeOrderedAndProjectExec(limit, order, child.output, planLater(child)) :: Nil
+        case logical.Limit(
+            IntegerLiteral(limit),
+            logical.Project(projectList, logical.Sort(order, true, child))) =>
+          execution.TakeOrderedAndProjectExec(
+            limit, order, projectList, planLater(child)) :: Nil
+        case logical.Limit(IntegerLiteral(limit), child) =>
+          execution.CollectLimitExec(limit, planLater(child)) :: Nil
         case other => planLater(other) :: Nil
       }
-      case Limit(IntegerLiteral(limit), Sort(order, true, child)) =>
-        TakeOrderedAndProjectExec(limit, order, child.output, planLater(child)) :: Nil
-      case Limit(IntegerLiteral(limit), Project(projectList, Sort(order, true, child))) =>
-        TakeOrderedAndProjectExec(limit, order, projectList, planLater(child)) :: Nil
+      case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+        execution.TakeOrderedAndProjectExec(limit, order, child.output, planLater(child)) :: Nil
+      case logical.Limit(
+          IntegerLiteral(limit), logical.Project(projectList, logical.Sort(order, true, child))) =>
+        execution.TakeOrderedAndProjectExec(
+          limit, order, projectList, planLater(child)) :: Nil
       case _ => Nil
     }
   }
@@ -112,9 +112,8 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
      * Matches a plan whose output should be small enough to be used in broadcast join.
      */
     private def canBroadcast(plan: LogicalPlan): Boolean = {
-      plan.stats(conf).hints.isBroadcastable.getOrElse(false) ||
-        (plan.stats(conf).sizeInBytes >= 0 &&
-          plan.stats(conf).sizeInBytes <= conf.autoBroadcastJoinThreshold)
+      plan.statistics.isBroadcastable ||
+        plan.statistics.sizeInBytes <= conf.autoBroadcastJoinThreshold
     }
 
     /**
@@ -139,7 +138,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
     }
 
     private def canBuildRight(joinType: JoinType): Boolean = joinType match {
-      case _: InnerLike | LeftOuter | LeftSemi | LeftAnti => true
+      case Inner | LeftOuter | LeftSemi | LeftAnti => true
       case j: ExistenceJoin => true
       case _ => false
     }
@@ -211,7 +210,8 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
           }
         // This join could be very slow or OOM
         joins.BroadcastNestedLoopJoinExec(
-          planLater(left), planLater(right), buildSide, joinType, condition) :: Nil
+          planLater(left), planLater(right), buildSide, joinType, condition,
+          withinBroadcastThreshold = false) :: Nil
 
       // --- Cases where this strategy does not apply ---------------------------------------------
 
@@ -220,7 +220,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   }
 
   /**
-   * Used to plan streaming aggregation queries that are computed incrementally as part of a
+   * Used to plan aggregation queries that are computed incrementally as part of a
    * [[StreamingQuery]]. Currently this rule is injected into the planner
    * on-demand, only when planning in a [[org.apache.spark.sql.execution.streaming.StreamExecution]]
    */
@@ -292,7 +292,18 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         }
 
         val aggregateOperator =
-          if (functionsWithDistinct.isEmpty) {
+          if (aggregateExpressions.map(_.aggregateFunction).exists(!_.supportsPartial)) {
+            if (functionsWithDistinct.nonEmpty) {
+              sys.error("Distinct columns cannot exist in Aggregate operator containing " +
+                "aggregate functions which don't support partial aggregation.")
+            } else {
+              aggregate.AggUtils.planAggregateWithoutPartial(
+                groupingExpressions,
+                aggregateExpressions,
+                resultExpressions,
+                planLater(child))
+            }
+          } else if (functionsWithDistinct.isEmpty) {
             aggregate.AggUtils.planAggregateWithoutDistinct(
               groupingExpressions,
               aggregateExpressions,
@@ -343,24 +354,6 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
     }
   }
 
-  /**
-   * Strategy to convert [[FlatMapGroupsWithState]] logical operator to physical operator
-   * in streaming plans. Conversion for batch plans is handled by [[BasicOperators]].
-   */
-  object FlatMapGroupsWithStateStrategy extends Strategy {
-    override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-      case FlatMapGroupsWithState(
-        func, keyDeser, valueDeser, groupAttr, dataAttr, outputAttr, stateEnc, outputMode, _,
-        timeout, child) =>
-        val execPlan = FlatMapGroupsWithStateExec(
-          func, keyDeser, valueDeser, groupAttr, dataAttr, outputAttr, None, stateEnc, outputMode,
-          timeout, batchTimestampMs = None, eventTimeWatermark = None, planLater(child))
-        execPlan :: Nil
-      case _ =>
-        Nil
-    }
-  }
-
   // Can we automate these 'pass through' operations?
   object BasicOperators extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
@@ -392,7 +385,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case logical.FlatMapGroupsInR(f, p, b, is, os, key, value, grouping, data, objAttr, child) =>
         execution.FlatMapGroupsInRExec(f, p, b, is, os, key, value, grouping,
           data, objAttr, planLater(child)) :: Nil
-      case logical.MapElements(f, _, _, objAttr, child) =>
+      case logical.MapElements(f, objAttr, child) =>
         execution.MapElementsExec(f, objAttr, planLater(child)) :: Nil
       case logical.AppendColumns(f, _, _, in, out, child) =>
         execution.AppendColumnsExec(f, in, out, planLater(child)) :: Nil
@@ -441,17 +434,60 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.GenerateExec(
           generator, join = join, outer = outer, g.qualifiedGeneratorOutput,
           planLater(child)) :: Nil
-      case _: logical.OneRowRelation =>
+      case logical.OneRowRelation =>
         execution.RDDScanExec(Nil, singleRowRdd, "OneRowRelation") :: Nil
-      case r: logical.Range =>
+      case r : logical.Range =>
         execution.RangeExec(r) :: Nil
-      case logical.RepartitionByExpression(expressions, child, numPartitions) =>
-        exchange.ShuffleExchangeExec(HashPartitioning(
-          expressions, numPartitions), planLater(child)) :: Nil
-      case ExternalRDD(outputObjAttr, rdd) => ExternalRDDScanExec(outputObjAttr, rdd) :: Nil
-      case r: LogicalRDD =>
-        RDDScanExec(r.output, r.rdd, "ExistingRDD", r.outputPartitioning, r.outputOrdering) :: Nil
-      case h: ResolvedHint => planLater(h.child) :: Nil
+      case logical.RepartitionByExpression(expressions, child, nPartitions) =>
+        exchange.ShuffleExchange(HashPartitioning(
+          expressions, nPartitions.getOrElse(numPartitions)), planLater(child)) :: Nil
+      case LogicalRDD(output, rdd) => RDDScanExec(output, rdd, "ExistingRDD") :: Nil
+      case BroadcastHint(child) => planLater(child) :: Nil
+      case _ => Nil
+    }
+  }
+
+  object DDLStrategy extends Strategy {
+    def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+      case c: CreateTableUsing if c.temporary && !c.allowExisting =>
+        logWarning(
+          s"CREATE TEMPORARY TABLE ${c.tableIdent.identifier} USING... is deprecated, " +
+            s"please use CREATE TEMPORARY VIEW viewName USING... instead")
+        ExecutedCommandExec(
+          CreateTempViewUsing(
+            c.tableIdent, c.userSpecifiedSchema, replace = true, c.provider, c.options)) :: Nil
+
+      case c: CreateTableUsing if !c.temporary =>
+        val cmd =
+          CreateDataSourceTableCommand(
+            c.tableIdent,
+            c.userSpecifiedSchema,
+            c.provider,
+            c.options,
+            c.partitionColumns,
+            c.bucketSpec,
+            c.allowExisting,
+            c.managedIfNoPath)
+        ExecutedCommandExec(cmd) :: Nil
+
+      case c: CreateTableUsing if c.temporary && c.allowExisting =>
+        throw new AnalysisException(
+          "allowExisting should be set to false when creating a temporary table.")
+
+      case c: CreateTableUsingAsSelect =>
+        val cmd =
+          CreateDataSourceTableAsSelectCommand(
+            c.tableIdent,
+            c.provider,
+            c.partitionColumns,
+            c.bucketSpec,
+            c.mode,
+            c.options,
+            c.query)
+        ExecutedCommandExec(cmd) :: Nil
+
+      case c: CreateTempViewUsing =>
+        ExecutedCommandExec(c) :: Nil
       case _ => Nil
     }
   }

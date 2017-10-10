@@ -44,17 +44,10 @@ public class JavaMinMaxScalerExample {
       .getOrCreate();
 
     // $example on$
-    List<Row> data = Arrays.asList(
-        RowFactory.create(0, Vectors.dense(1.0, 0.1, -1.0)),
-        RowFactory.create(1, Vectors.dense(2.0, 1.1, 1.0)),
-        RowFactory.create(2, Vectors.dense(3.0, 10.1, 3.0))
-    );
-    StructType schema = new StructType(new StructField[]{
-        new StructField("id", DataTypes.IntegerType, false, Metadata.empty()),
-        new StructField("features", new VectorUDT(), false, Metadata.empty())
-    });
-    Dataset<Row> dataFrame = spark.createDataFrame(data, schema);
-
+    Dataset<Row> dataFrame = spark
+      .read()
+      .format("libsvm")
+      .load("data/mllib/sample_libsvm_data.txt");
     MinMaxScaler scaler = new MinMaxScaler()
       .setInputCol("features")
       .setOutputCol("scaledFeatures");
@@ -68,7 +61,6 @@ public class JavaMinMaxScalerExample {
         + scaler.getMax() + "]");
     scaledData.select("features", "scaledFeatures").show();
     // $example off$
-
     spark.stop();
   }
 }

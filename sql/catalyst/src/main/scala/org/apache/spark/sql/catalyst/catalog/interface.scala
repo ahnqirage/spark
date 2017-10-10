@@ -17,12 +17,8 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import java.net.URI
 import java.util.Date
-
-import scala.collection.mutable
-
-import com.google.common.base.Objects
+import javax.annotation.Nullable
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, InternalRow, TableIdentifier}
@@ -56,34 +52,51 @@ case class CatalogStorageFormat(
     outputFormat: Option[String],
     serde: Option[String],
     compressed: Boolean,
-    properties: Map[String, String]) {
+    serdeProperties: Map[String, String]) {
 
   override def toString: String = {
-    toLinkedHashMap.map { case ((key, value)) =>
-      if (value.isEmpty) key else s"$key: $value"
-    }.mkString("Storage(", ", ", ")")
+    val serdePropsToString = CatalogUtils.maskCredentials(serdeProperties) match {
+      case props if props.isEmpty => ""
+      case props => "Properties: " + props.map(p => p._1 + "=" + p._2).mkString("[", ", ", "]")
+    }
+    val output =
+      Seq(locationUri.map("Location: " + _).getOrElse(""),
+        inputFormat.map("InputFormat: " + _).getOrElse(""),
+        outputFormat.map("OutputFormat: " + _).getOrElse(""),
+        if (compressed) "Compressed" else "",
+        serde.map("Serde: " + _).getOrElse(""),
+        serdePropsToString)
+    output.filter(_.nonEmpty).mkString("Storage(", ", ", ")")
   }
 
-  def toLinkedHashMap: mutable.LinkedHashMap[String, String] = {
-    val map = new mutable.LinkedHashMap[String, String]()
-    locationUri.foreach(l => map.put("Location", l.toString))
-    serde.foreach(map.put("Serde Library", _))
-    inputFormat.foreach(map.put("InputFormat", _))
-    outputFormat.foreach(map.put("OutputFormat", _))
-    if (compressed) map.put("Compressed", "")
-    CatalogUtils.maskCredentials(properties) match {
-      case props if props.isEmpty => // No-op
-      case props =>
-        map.put("Storage Properties", props.map(p => p._1 + "=" + p._2).mkString("[", ", ", "]"))
-    }
-    map
-  }
 }
 
 object CatalogStorageFormat {
   /** Empty storage format for default values and copies. */
   val empty = CatalogStorageFormat(locationUri = None, inputFormat = None,
-    outputFormat = None, serde = None, compressed = false, properties = Map.empty)
+    outputFormat = None, serde = None, compressed = false, serdeProperties = Map.empty)
+}
+
+/**
+ * A column in a table.
+ */
+case class CatalogColumn(
+    name: String,
+    // This may be null when used to create views. TODO: make this type-safe; this is left
+    // as a string due to issues in converting Hive varchars to and from SparkSQL strings.
+    @Nullable dataType: String,
+    nullable: Boolean = true,
+    comment: Option[String] = None) {
+
+  override def toString: String = {
+    val output =
+      Seq(s"`$name`",
+        dataType,
+        if (!nullable) "NOT NULL" else "",
+        comment.map("(" + _ + ")").getOrElse(""))
+    output.filter(_.nonEmpty).mkString(" ")
+  }
+
 }
 
 /**
@@ -91,39 +104,22 @@ object CatalogStorageFormat {
  *
  * @param spec partition spec values indexed by column name
  * @param storage storage format of the partition
- * @param parameters some parameters for the partition
- * @param stats optional statistics (number of rows, total size, etc.)
+ * @param parameters some parameters for the partition, for example, stats.
  */
 case class CatalogTablePartition(
     spec: CatalogTypes.TablePartitionSpec,
     storage: CatalogStorageFormat,
-    parameters: Map[String, String] = Map.empty,
-    stats: Option[CatalogStatistics] = None) {
+    parameters: Map[String, String] = Map.empty) {
 
-  def toLinkedHashMap: mutable.LinkedHashMap[String, String] = {
-    val map = new mutable.LinkedHashMap[String, String]()
-    val specString = spec.map { case (k, v) => s"$k=$v" }.mkString(", ")
-    map.put("Partition Values", s"[$specString]")
-    map ++= storage.toLinkedHashMap
-    if (parameters.nonEmpty) {
-      map.put("Partition Parameters", s"{${parameters.map(p => p._1 + "=" + p._2).mkString(", ")}}")
+    override def toString: String = {
+      val output =
+        Seq(
+          s"Partition Values: [${spec.values.mkString(", ")}]",
+          s"$storage",
+          s"Partition Parameters:{${parameters.map(p => p._1 + "=" + p._2).mkString(", ")}}")
+      output.filter(_.nonEmpty).mkString("CatalogPartition(\n\t", "\n\t", ")")
     }
-    stats.foreach(s => map.put("Partition Statistics", s.simpleString))
-    map
-  }
-
-  override def toString: String = {
-    toLinkedHashMap.map { case ((key, value)) =>
-      if (value.isEmpty) key else s"$key: $value"
-    }.mkString("CatalogPartition(\n\t", "\n\t", ")")
-  }
-
-  /** Readable string representation for the CatalogTablePartition. */
-  def simpleString: String = {
-    toLinkedHashMap.map { case ((key, value)) =>
-      if (value.isEmpty) key else s"$key: $value"
-    }.mkString("", "\n", "")
-  }
+}
 
   /** Return the partition location, assuming it is specified. */
   def location: URI = storage.locationUri.getOrElse {
@@ -193,23 +189,8 @@ case class BucketSpec(
  * Note that Hive's metastore also tracks skewed columns. We should consider adding that in the
  * future once we have a better understanding of how we want to handle skewed columns.
  *
- * @param provider the name of the data source provider for this table, e.g. parquet, json, etc.
- *                 Can be None if this table is a View, should be "hive" for hive serde tables.
  * @param unsupportedFeatures is a list of string descriptions of features that are used by the
  *        underlying table but not supported by Spark SQL yet.
- * @param tracksPartitionsInCatalog whether this table's partition metadata is stored in the
- *                                  catalog. If false, it is inferred automatically based on file
- *                                  structure.
- * @param schemaPreservesCase Whether or not the schema resolved for this table is case-sensitive.
- *                           When using a Hive Metastore, this flag is set to false if a case-
- *                           sensitive schema was unable to be read from the table properties.
- *                           Used to trigger case-sensitive schema inference at query time, when
- *                           configured.
- * @param ignoredProperties is a list of table properties that are used by the underlying table
- *                          but ignored by Spark SQL yet.
- * @param createVersion records the version of Spark that created this table metadata. The default
- *                      is an empty string. We expect it will be read from the catalog or filled by
- *                      ExternalCatalog.createTable. For temporary views, the value will be empty.
  */
 case class CatalogTable(
     identifier: TableIdentifier,
@@ -218,7 +199,9 @@ case class CatalogTable(
     schema: StructType,
     provider: Option[String] = None,
     partitionColumnNames: Seq[String] = Seq.empty,
-    bucketSpec: Option[BucketSpec] = None,
+    sortColumnNames: Seq[String] = Seq.empty,
+    bucketColumnNames: Seq[String] = Seq.empty,
+    numBuckets: Int = -1,
     owner: String = "",
     createTime: Long = System.currentTimeMillis,
     lastAccessTime: Long = -1,
@@ -227,10 +210,7 @@ case class CatalogTable(
     stats: Option[CatalogStatistics] = None,
     viewText: Option[String] = None,
     comment: Option[String] = None,
-    unsupportedFeatures: Seq[String] = Seq.empty,
-    tracksPartitionsInCatalog: Boolean = false,
-    schemaPreservesCase: Boolean = true,
-    ignoredProperties: Map[String, String] = Map.empty) {
+    unsupportedFeatures: Seq[String] = Seq.empty) {
 
   import CatalogTable._
 
@@ -296,7 +276,33 @@ case class CatalogTable(
       serde: Option[String] = storage.serde,
       properties: Map[String, String] = storage.properties): CatalogTable = {
     copy(storage = CatalogStorageFormat(
-      locationUri, inputFormat, outputFormat, serde, compressed, properties))
+      locationUri, inputFormat, outputFormat, serde, compressed, serdeProperties))
+  }
+
+  override def toString: String = {
+    val tableProperties = properties.map(p => p._1 + "=" + p._2).mkString("[", ", ", "]")
+    val partitionColumns = partitionColumnNames.map("`" + _ + "`").mkString("[", ", ", "]")
+    val sortColumns = sortColumnNames.map("`" + _ + "`").mkString("[", ", ", "]")
+    val bucketColumns = bucketColumnNames.map("`" + _ + "`").mkString("[", ", ", "]")
+
+    val output =
+      Seq(s"Table: ${identifier.quotedString}",
+        if (owner.nonEmpty) s"Owner: $owner" else "",
+        s"Created: ${new Date(createTime).toString}",
+        s"Last Access: ${new Date(lastAccessTime).toString}",
+        s"Type: ${tableType.name}",
+        if (schema.nonEmpty) s"Schema: ${schema.mkString("[", ", ", "]")}" else "",
+        if (partitionColumnNames.nonEmpty) s"Partition Columns: $partitionColumns" else "",
+        if (numBuckets != -1) s"Num Buckets: $numBuckets" else "",
+        if (bucketColumnNames.nonEmpty) s"Bucket Columns: $bucketColumns" else "",
+        if (sortColumnNames.nonEmpty) s"Sort Columns: $sortColumns" else "",
+        viewOriginalText.map("Original View: " + _).getOrElse(""),
+        viewText.map("View: " + _).getOrElse(""),
+        comment.map("Comment: " + _).getOrElse(""),
+        if (properties.nonEmpty) s"Properties: $tableProperties" else "",
+        s"$storage")
+
+    output.filter(_.nonEmpty).mkString("CatalogTable(\n\t", "\n\t", ")")
   }
 
 
@@ -427,45 +433,30 @@ case class UnresolvedCatalogRelation(tableMeta: CatalogTable) extends LeafNode {
  *
  * TODO: remove this after we completely make hive as a data source.
  */
-case class HiveTableRelation(
-    tableMeta: CatalogTable,
-    dataCols: Seq[AttributeReference],
-    partitionCols: Seq[AttributeReference]) extends LeafNode with MultiInstanceRelation {
-  assert(tableMeta.identifier.database.isDefined)
-  assert(tableMeta.partitionSchema.sameType(partitionCols.toStructType))
-  assert(tableMeta.dataSchema.sameType(dataCols.toStructType))
+case class SimpleCatalogRelation(
+    databaseName: String,
+    metadata: CatalogTable,
+    alias: Option[String] = None)
+  extends LeafNode with CatalogRelation {
 
-  // The partition column should always appear after data columns.
-  override def output: Seq[AttributeReference] = dataCols ++ partitionCols
+  override def catalogTable: CatalogTable = metadata
 
-  def isPartitioned: Boolean = partitionCols.nonEmpty
+  override lazy val resolved: Boolean = false
 
-  override def equals(relation: Any): Boolean = relation match {
-    case other: HiveTableRelation => tableMeta == other.tableMeta && output == other.output
-    case _ => false
-  }
-
-  override def hashCode(): Int = {
-    Objects.hashCode(tableMeta.identifier, output)
-  }
-
-  override def preCanonicalized: LogicalPlan = copy(tableMeta = CatalogTable(
-    identifier = tableMeta.identifier,
-    tableType = tableMeta.tableType,
-    storage = CatalogStorageFormat.empty,
-    schema = tableMeta.schema,
-    partitionColumnNames = tableMeta.partitionColumnNames,
-    bucketSpec = tableMeta.bucketSpec,
-    createTime = -1
-  ))
-
-  override def computeStats(conf: SQLConf): Statistics = {
-    tableMeta.stats.map(_.toPlanStats(output)).getOrElse {
-      throw new IllegalStateException("table stats must be specified.")
+  override val output: Seq[Attribute] = {
+    val cols = catalogTable.schema
+      .filter { c => !catalogTable.partitionColumnNames.contains(c.name) }
+    (cols ++ catalogTable.partitionColumns).map { f =>
+      AttributeReference(
+        f.name,
+        CatalystSqlParser.parseDataType(f.dataType),
+        // Since data can be dumped in randomly with no validation, everything is nullable.
+        nullable = true
+      )(qualifier = Some(alias.getOrElse(metadata.identifier.table)))
     }
   }
 
-  override def newInstance(): HiveTableRelation = copy(
-    dataCols = dataCols.map(_.newInstance()),
-    partitionCols = partitionCols.map(_.newInstance()))
+  require(
+    metadata.identifier.database == Some(databaseName),
+    "provided database does not match the one specified in the table definition")
 }

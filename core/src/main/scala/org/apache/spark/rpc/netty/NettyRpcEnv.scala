@@ -419,9 +419,14 @@ private[netty] class NettyRpcEnv(
     }
 
   }
+
+  override def isInRPCThread: Boolean = NettyRpcEnv.rpcThreadFlag.value
 }
 
 private[netty] object NettyRpcEnv extends Logging {
+
+  private[netty] val rpcThreadFlag = new DynamicVariable[Boolean](false)
+
   /**
    * When deserializing the [[NettyRpcEndpointRef]], it needs a reference to [[NettyRpcEnv]].
    * Use `currentEnv` to wrap the deserialization codes. E.g.,
@@ -652,7 +657,7 @@ private[netty] class NettyRpcHandler(
     val addr = client.getChannel().remoteAddress().asInstanceOf[InetSocketAddress]
     assert(addr != null)
     val clientAddr = RpcAddress(addr.getHostString, addr.getPort)
-    val requestMessage = RequestMessage(nettyEnv, client, message)
+    val requestMessage = nettyEnv.deserialize[RequestMessage](client, message)
     if (requestMessage.senderAddress == null) {
       // Create a new message with the socket address of the client as the sender.
       new RequestMessage(clientAddr, requestMessage.receiver, requestMessage.content)

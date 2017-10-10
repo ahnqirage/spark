@@ -24,9 +24,7 @@ import com.fasterxml.jackson.core._
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.TypeCoercion
-import org.apache.spark.sql.catalyst.json.JacksonUtils.nextUntil
-import org.apache.spark.sql.catalyst.json.JSONOptions
-import org.apache.spark.sql.catalyst.util.{DropMalformedMode, FailFastMode, ParseMode, PermissiveMode}
+import org.apache.spark.sql.execution.datasources.json.JacksonUtils.nextUntil
 import org.apache.spark.sql.types._
 import org.apache.spark.util.Utils
 
@@ -67,8 +65,8 @@ private[sql] object JsonInferSchema {
           }
         }
       }
-    }.fold(StructType(Nil))(
-      compatibleRootType(columnNameOfCorruptRecord, parseMode))
+    }.fold(StructType(Seq()))(
+      compatibleRootType(columnNameOfCorruptRecords, shouldHandleCorruptRecord))
 
     canonicalizeType(rootType) match {
       case Some(st: StructType) => st
@@ -81,6 +79,12 @@ private[sql] object JsonInferSchema {
   private[this] val structFieldComparator = new Comparator[StructField] {
     override def compare(o1: StructField, o2: StructField): Int = {
       o1.name.compareTo(o2.name)
+    }
+  }
+
+  private[this] val structFieldComparator = new Comparator[StructField] {
+    override def compare(o1: StructField, o2: StructField): Int = {
+      o1.name.compare(o2.name)
     }
   }
 
@@ -208,27 +212,17 @@ private[sql] object JsonInferSchema {
 
   private def withCorruptField(
       struct: StructType,
-      other: DataType,
-      columnNameOfCorruptRecords: String,
-      parseMode: ParseMode) = parseMode match {
-    case PermissiveMode =>
-      // If we see any other data type at the root level, we get records that cannot be
-      // parsed. So, we use the struct as the data type and add the corrupt field to the schema.
-      if (!struct.fieldNames.contains(columnNameOfCorruptRecords)) {
-        // If this given struct does not have a column used for corrupt records,
-        // add this field.
-        val newFields: Array[StructField] =
-          StructField(columnNameOfCorruptRecords, StringType, nullable = true) +: struct.fields
-        // Note: other code relies on this sorting for correctness, so don't remove it!
-        java.util.Arrays.sort(newFields, structFieldComparator)
-        StructType(newFields)
-      } else {
-        // Otherwise, just return this struct.
-        struct
-      }
-
-    case DropMalformedMode =>
-      // If corrupt record handling is disabled we retain the valid schema and discard the other.
+      columnNameOfCorruptRecords: String): StructType = {
+    if (!struct.fieldNames.contains(columnNameOfCorruptRecords)) {
+      // If this given struct does not have a column used for corrupt records,
+      // add this field.
+      val newFields: Array[StructField] =
+        StructField(columnNameOfCorruptRecords, StringType, nullable = true) +: struct.fields
+      // Note: other code relies on this sorting for correctness, so don't remove it!
+      java.util.Arrays.sort(newFields, structFieldComparator)
+      StructType(newFields)
+    } else {
+      // Otherwise, just return this struct.
       struct
 
     case FailFastMode =>
@@ -268,7 +262,7 @@ private[sql] object JsonInferSchema {
    * Returns the most general data type for two given data types.
    */
   def compatibleType(t1: DataType, t2: DataType): DataType = {
-    TypeCoercion.findTightestCommonType(t1, t2).getOrElse {
+    TypeCoercion.findTightestCommonTypeOfTwo(t1, t2).getOrElse {
       // t1 or t2 is a StructType, ArrayType, or an unexpected type.
       (t1, t2) match {
         // Double support larger range than fixed decimal, DecimalType.Maximum should be enough

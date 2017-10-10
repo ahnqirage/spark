@@ -18,7 +18,7 @@
 package org.apache.spark.deploy.master
 
 import java.text.SimpleDateFormat
-import java.util.{Date, Locale}
+import java.util.Date
 import java.util.concurrent.{ScheduledFuture, TimeUnit}
 
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
@@ -36,7 +36,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.MetricsSystem
 import org.apache.spark.rpc._
 import org.apache.spark.serializer.{JavaSerializer, Serializer}
-import org.apache.spark.util.{SparkUncaughtExceptionHandler, ThreadUtils, Utils}
+import org.apache.spark.util.{ThreadUtils, Utils}
 
 private[deploy] class Master(
     override val rpcEnv: RpcEnv,

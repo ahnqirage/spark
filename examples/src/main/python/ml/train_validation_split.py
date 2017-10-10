@@ -35,7 +35,6 @@ if __name__ == "__main__":
         .builder\
         .appName("TrainValidationSplit")\
         .getOrCreate()
-
     # $example on$
     # Prepare training and test data.
     data = spark.read.format("libsvm")\

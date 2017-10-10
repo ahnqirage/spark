@@ -47,7 +47,6 @@ object GeneratePredicate extends CodeGenerator[Expression, Predicate] {
   protected def create(predicate: Expression): Predicate = {
     val ctx = newCodeGenContext()
     val eval = predicate.genCode(ctx)
-
     val codeBody = s"""
       public SpecificPredicate generate(Object[] references) {
         return new SpecificPredicate(references);

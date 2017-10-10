@@ -20,10 +20,19 @@ package org.apache.spark.sql.sources
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
 
-class BucketedWriteWithHiveSupportSuite extends BucketedWriteSuite with TestHiveSingleton {
-  protected override def beforeAll(): Unit = {
-    super.beforeAll()
-    assume(spark.sparkContext.conf.get(CATALOG_IMPLEMENTATION) == "hive")
+class HiveDataFrameSuite extends QueryTest with TestHiveSingleton {
+  test("table name with schema") {
+    // regression test for SPARK-11778
+    spark.sql("create schema usrdb")
+    spark.sql("create table usrdb.test(c int)")
+    spark.read.table("usrdb.test")
+    spark.sql("drop table usrdb.test")
+    spark.sql("drop schema usrdb")
+  }
+
+  test("SPARK-15887: hive-site.xml should be loaded") {
+    val hiveClient = spark.sharedState.asInstanceOf[HiveSharedState].metadataHive
+    assert(hiveClient.getConf("hive.in.test", "") == "true")
   }
 
   override protected def fileFormatsToTest: Seq[String] = Seq("parquet", "orc")

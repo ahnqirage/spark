@@ -61,7 +61,7 @@ class PolynomialExpansionSuite
     Vectors.sparse(19, Array.empty, Array.empty))
 
   test("Polynomial expansion with default parameter") {
-    val df = data.zip(twoDegreeExpansion).toSeq.toDF("features", "expected")
+    val df = spark.createDataFrame(data.zip(twoDegreeExpansion)).toDF("features", "expected")
 
     val polynomialExpansion = new PolynomialExpansion()
       .setInputCol("features")
@@ -78,7 +78,7 @@ class PolynomialExpansionSuite
   }
 
   test("Polynomial expansion with setter") {
-    val df = data.zip(threeDegreeExpansion).toSeq.toDF("features", "expected")
+    val df = spark.createDataFrame(data.zip(threeDegreeExpansion)).toDF("features", "expected")
 
     val polynomialExpansion = new PolynomialExpansion()
       .setInputCol("features")
@@ -96,7 +96,7 @@ class PolynomialExpansionSuite
   }
 
   test("Polynomial expansion with degree 1 is identity on vectors") {
-    val df = data.zip(data).toSeq.toDF("features", "expected")
+    val df = spark.createDataFrame(data.zip(data)).toDF("features", "expected")
 
     val polynomialExpansion = new PolynomialExpansion()
       .setInputCol("features")
@@ -126,7 +126,8 @@ class PolynomialExpansionSuite
       (Vectors.dense(1.0, 2.0, 3.0, 4.0, 5.0, 6.0), 8007, 12375)
     )
 
-    val df = data.toSeq.toDF("features", "expectedPoly10size", "expectedPoly11size")
+    val df = spark.createDataFrame(data)
+      .toDF("features", "expectedPoly10size", "expectedPoly11size")
 
     val t = new PolynomialExpansion()
       .setInputCol("features")

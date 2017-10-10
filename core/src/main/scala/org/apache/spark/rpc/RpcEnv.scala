@@ -147,6 +147,11 @@ private[spark] abstract class RpcEnv(conf: SparkConf) {
    * @param uri URI with location of the file.
    */
   def openChannel(uri: String): ReadableByteChannel
+
+  /**
+   * Return if the current thread is a RPC thread.
+   */
+  def isInRPCThread: Boolean
 }
 
 /**

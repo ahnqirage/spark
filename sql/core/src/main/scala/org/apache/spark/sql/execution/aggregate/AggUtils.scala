@@ -27,6 +27,26 @@ import org.apache.spark.sql.internal.SQLConf
  * Utility functions used by the query planner to convert our plan to new aggregation code path.
  */
 object AggUtils {
+
+  def planAggregateWithoutPartial(
+      groupingExpressions: Seq[NamedExpression],
+      aggregateExpressions: Seq[AggregateExpression],
+      resultExpressions: Seq[NamedExpression],
+      child: SparkPlan): Seq[SparkPlan] = {
+
+    val completeAggregateExpressions = aggregateExpressions.map(_.copy(mode = Complete))
+    val completeAggregateAttributes = completeAggregateExpressions.map(_.resultAttribute)
+    SortAggregateExec(
+      requiredChildDistributionExpressions = Some(groupingExpressions),
+      groupingExpressions = groupingExpressions,
+      aggregateExpressions = completeAggregateExpressions,
+      aggregateAttributes = completeAggregateAttributes,
+      initialInputBufferOffset = 0,
+      resultExpressions = resultExpressions,
+      child = child
+    ) :: Nil
+  }
+
   private def createAggregate(
       requiredChildDistributionExpressions: Option[Seq[Expression]] = None,
       groupingExpressions: Seq[NamedExpression] = Nil,
@@ -47,28 +67,14 @@ object AggUtils {
         resultExpressions = resultExpressions,
         child = child)
     } else {
-      val objectHashEnabled = child.sqlContext.conf.useObjectHashAggregation
-      val useObjectHash = ObjectHashAggregateExec.supportsAggregate(aggregateExpressions)
-
-      if (objectHashEnabled && useObjectHash) {
-        ObjectHashAggregateExec(
-          requiredChildDistributionExpressions = requiredChildDistributionExpressions,
-          groupingExpressions = groupingExpressions,
-          aggregateExpressions = aggregateExpressions,
-          aggregateAttributes = aggregateAttributes,
-          initialInputBufferOffset = initialInputBufferOffset,
-          resultExpressions = resultExpressions,
-          child = child)
-      } else {
-        SortAggregateExec(
-          requiredChildDistributionExpressions = requiredChildDistributionExpressions,
-          groupingExpressions = groupingExpressions,
-          aggregateExpressions = aggregateExpressions,
-          aggregateAttributes = aggregateAttributes,
-          initialInputBufferOffset = initialInputBufferOffset,
-          resultExpressions = resultExpressions,
-          child = child)
-      }
+      SortAggregateExec(
+        requiredChildDistributionExpressions = requiredChildDistributionExpressions,
+        groupingExpressions = groupingExpressions,
+        aggregateExpressions = aggregateExpressions,
+        aggregateAttributes = aggregateAttributes,
+        initialInputBufferOffset = initialInputBufferOffset,
+        resultExpressions = resultExpressions,
+        child = child)
     }
   }
 
@@ -308,13 +314,8 @@ object AggUtils {
     }
     // Note: stateId and returnAllStates are filled in later with preparation rules
     // in IncrementalExecution.
-    val saved =
-      StateStoreSaveExec(
-        groupingAttributes,
-        stateInfo = None,
-        outputMode = None,
-        eventTimeWatermark = None,
-        partialMerged2)
+    val saved = StateStoreSaveExec(
+      groupingAttributes, stateId = None, returnAllStates = None, partialMerged2)
 
     val finalAndCompleteAggregate: SparkPlan = {
       val finalAggregateExpressions = functionsWithoutDistinct.map(_.copy(mode = Final))

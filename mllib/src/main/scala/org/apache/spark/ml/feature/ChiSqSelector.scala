@@ -27,7 +27,6 @@ import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.feature
-import org.apache.spark.mllib.feature.{ChiSqSelector => OldChiSqSelector}
 import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
 import org.apache.spark.mllib.regression.{LabeledPoint => OldLabeledPoint}
 import org.apache.spark.rdd.RDD
@@ -42,11 +41,9 @@ private[feature] trait ChiSqSelectorParams extends Params
   with HasFeaturesCol with HasOutputCol with HasLabelCol {
 
   /**
-   * Number of features that selector will select, ordered by ascending p-value. If the
+   * Number of features that selector will select (ordered by statistic value descending). If the
    * number of features is less than numTopFeatures, then this will select all features.
-   * Only applicable when selectorType = "numTopFeatures".
    * The default value of numTopFeatures is 50.
-   *
    * @group param
    */
   @Since("1.6.0")
@@ -165,26 +162,6 @@ final class ChiSqSelector @Since("1.6.0") (@Since("1.6.0") override val uid: Str
   def setNumTopFeatures(value: Int): this.type = set(numTopFeatures, value)
 
   /** @group setParam */
-  @Since("2.1.0")
-  def setPercentile(value: Double): this.type = set(percentile, value)
-
-  /** @group setParam */
-  @Since("2.1.0")
-  def setFpr(value: Double): this.type = set(fpr, value)
-
-  /** @group setParam */
-  @Since("2.2.0")
-  def setFdr(value: Double): this.type = set(fdr, value)
-
-  /** @group setParam */
-  @Since("2.2.0")
-  def setFwe(value: Double): this.type = set(fwe, value)
-
-  /** @group setParam */
-  @Since("2.1.0")
-  def setSelectorType(value: String): this.type = set(selectorType, value)
-
-  /** @group setParam */
   @Since("1.6.0")
   def setFeaturesCol(value: String): this.type = set(featuresCol, value)
 
@@ -204,15 +181,8 @@ final class ChiSqSelector @Since("1.6.0") (@Since("1.6.0") override val uid: Str
         case Row(label: Double, features: Vector) =>
           OldLabeledPoint(label, OldVectors.fromML(features))
       }
-    val selector = new feature.ChiSqSelector()
-      .setSelectorType($(selectorType))
-      .setNumTopFeatures($(numTopFeatures))
-      .setPercentile($(percentile))
-      .setFpr($(fpr))
-      .setFdr($(fdr))
-      .setFwe($(fwe))
-    val model = selector.fit(input)
-    copyValues(new ChiSqSelectorModel(uid, model).setParent(this))
+    val chiSqSelector = new feature.ChiSqSelector($(numTopFeatures)).fit(input)
+    copyValues(new ChiSqSelectorModel(uid, chiSqSelector).setParent(this))
   }
 
   @Since("1.6.0")
@@ -250,7 +220,7 @@ final class ChiSqSelectorModel private[ml] (
 
   import ChiSqSelectorModel._
 
-  /** list of indices to select (filter). */
+  /** list of indices to select (filter). Must be ordered asc */
   @Since("1.6.0")
   val selectedFeatures: Array[Int] = chiSqSelector.selectedFeatures
 
@@ -261,6 +231,13 @@ final class ChiSqSelectorModel private[ml] (
   /** @group setParam */
   @Since("1.6.0")
   def setOutputCol(value: String): this.type = set(outputCol, value)
+
+  /**
+   * @group setParam
+   */
+  @Since("1.6.0")
+  @deprecated("labelCol is not used by ChiSqSelectorModel.", "2.0.0")
+  def setLabelCol(value: String): this.type = set(labelCol, value)
 
   @Since("2.0.0")
   override def transform(dataset: Dataset[_]): DataFrame = {

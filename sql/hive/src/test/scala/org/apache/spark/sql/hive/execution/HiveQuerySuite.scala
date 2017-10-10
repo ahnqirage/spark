@@ -27,7 +27,7 @@ import scala.util.Try
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars
 import org.scalatest.BeforeAndAfter
 
-import org.apache.spark.{SparkFiles, TestUtils}
+import org.apache.spark.SparkFiles
 import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.parser.ParseException
@@ -789,8 +789,51 @@ class HiveQuerySuite extends HiveComparisonTest with SQLTestUtils with BeforeAnd
       // If the table was not created, the following assertion would fail
       assert(Try(table(tableName)).isSuccess)
 
-      // If the CREATE TABLE command got executed again, the following assertion would fail
-      assert(Try(q0.count()).isSuccess)
+    // Describe a table
+    assertResult(
+      Array(
+        Row("key", "int", null),
+        Row("value", "string", null),
+        Row("dt", "string", null),
+        Row("# Partition Information", "", ""),
+        Row("# col_name", "data_type", "comment"),
+        Row("dt", "string", null))
+    ) {
+      sql("DESCRIBE test_describe_commands1")
+        .select('col_name, 'data_type, 'comment)
+        .collect()
+    }
+
+    // Describe a table with a fully qualified table name
+    assertResult(
+      Array(
+        Row("key", "int", null),
+        Row("value", "string", null),
+        Row("dt", "string", null),
+        Row("# Partition Information", "", ""),
+        Row("# col_name", "data_type", "comment"),
+        Row("dt", "string", null))
+    ) {
+      sql("DESCRIBE default.test_describe_commands1")
+        .select('col_name, 'data_type, 'comment)
+        .collect()
+    }
+
+    // Describe a temporary view.
+    val testData =
+      TestHive.sparkContext.parallelize(
+        TestData(1, "str1") ::
+        TestData(1, "str2") :: Nil)
+    testData.toDF().createOrReplaceTempView("test_describe_commands2")
+
+    assertResult(
+      Array(
+        Row("a", "int", null),
+        Row("b", "string", null))
+    ) {
+      sql("DESCRIBE test_describe_commands2")
+        .select('col_name, 'data_type, 'comment)
+        .collect()
     }
   }
 

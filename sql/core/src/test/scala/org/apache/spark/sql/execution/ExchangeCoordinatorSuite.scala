@@ -272,7 +272,7 @@ class ExchangeCoordinatorSuite extends SparkFunSuite with BeforeAndAfterAll {
         sparkConf.set(SQLConf.SHUFFLE_MIN_NUM_POSTSHUFFLE_PARTITIONS.key, "-1")
     }
 
-    val spark = SparkSession.builder()
+    val spark = SparkSession.builder
       .config(sparkConf)
       .getOrCreate()
     try f(spark) finally spark.stop()
@@ -377,7 +377,7 @@ class ExchangeCoordinatorSuite extends SparkFunSuite with BeforeAndAfterAll {
     }
 
     test(s"determining the number of reducers: complex query 1$testNameNote") {
-      val test: (SparkSession) => Unit = { spark: SparkSession =>
+      val test = { spark: SparkSession =>
         val df1 =
           spark
             .range(0, 1000, 1, numInputPartitions)
@@ -429,7 +429,7 @@ class ExchangeCoordinatorSuite extends SparkFunSuite with BeforeAndAfterAll {
     }
 
     test(s"determining the number of reducers: complex query 2$testNameNote") {
-      val test: (SparkSession) => Unit = { spark: SparkSession =>
+      val test = { spark: SparkSession =>
         val df1 =
           spark
             .range(0, 1000, 1, numInputPartitions)

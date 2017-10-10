@@ -60,8 +60,6 @@ case class HiveTableScanExec(
   require(partitionPruningPred.isEmpty || relation.isPartitioned,
     "Partition pruning predicates only supported for partitioned tables.")
 
-  override def conf: SQLConf = sparkSession.sessionState.conf
-
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
 
@@ -193,9 +191,8 @@ case class HiveTableScanExec(
     val numOutputRows = longMetric("numOutputRows")
     // Avoid to serialize MetastoreRelation because schema is lazy. (see SPARK-15649)
     val outputSchema = schema
-    rdd.mapPartitionsWithIndexInternal { (index, iter) =>
+    rdd.mapPartitionsInternal { iter =>
       val proj = UnsafeProjection.create(outputSchema)
-      proj.initialize(index)
       iter.map { r =>
         numOutputRows += 1
         proj(r)

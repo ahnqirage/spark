@@ -20,13 +20,11 @@ package org.apache.spark.ml.util
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml._
 import org.apache.spark.ml.evaluation.Evaluator
-import org.apache.spark.ml.feature.{Instance, LabeledPoint}
-import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param.ParamMap
-import org.apache.spark.ml.param.shared.{HasFeaturesCol, HasLabelCol, HasWeightCol}
 import org.apache.spark.ml.recommendation.{ALS, ALSModel}
 import org.apache.spark.ml.tree.impl.TreeTests
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
@@ -52,24 +50,11 @@ object MLTestingUtils extends SparkFunSuite {
       genRegressionDFWithNumericLabelCol(spark)
     }
 
-    val finalEstimator = estimator match {
-      case weighted: Estimator[M] with HasWeightCol =>
-        weighted.set(weighted.weightCol, "weight")
-        weighted
-      case _ => estimator
-    }
-
-    val expected = finalEstimator.fit(dfs(DoubleType))
-
-    val actuals = dfs.keys.filter(_ != DoubleType).map { t =>
-      finalEstimator.fit(dfs(t))
-    }
-
     actuals.foreach(actual => check(expected, actual))
 
     val dfWithStringLabels = spark.createDataFrame(Seq(
-      ("0", 1, Vectors.dense(0, 2, 3), 0.0)
-    )).toDF("label", "weight", "features", "censor")
+      ("0", Vectors.dense(0, 2, 3), 0.0)
+    )).toDF("label", "features", "censor")
     val thrown = intercept[IllegalArgumentException] {
       estimator.fit(dfWithStringLabels)
     }
@@ -115,6 +100,30 @@ object MLTestingUtils extends SparkFunSuite {
       s"$column must be of type NumericType but was actually of type StringType"))
   }
 
+  def checkNumericTypesALS(
+      estimator: ALS,
+      spark: SparkSession,
+      column: String,
+      baseType: NumericType)
+      (check: (ALSModel, ALSModel) => Unit)
+      (check2: (ALSModel, ALSModel, DataFrame) => Unit): Unit = {
+    val dfs = genRatingsDFWithNumericCols(spark, column)
+    val expected = estimator.fit(dfs(baseType))
+    val actuals = dfs.keys.filter(_ != baseType).map(t => (t, estimator.fit(dfs(t))))
+    actuals.foreach { case (_, actual) => check(expected, actual) }
+    actuals.foreach { case (t, actual) => check2(expected, actual, dfs(t)) }
+
+    val baseDF = dfs(baseType)
+    val others = baseDF.columns.toSeq.diff(Seq(column)).map(col(_))
+    val cols = Seq(col(column).cast(StringType)) ++ others
+    val strDF = baseDF.select(cols: _*)
+    val thrown = intercept[IllegalArgumentException] {
+      estimator.fit(strDF)
+    }
+    assert(thrown.getMessage.contains(
+      s"$column must be of type NumericType but was actually of type StringType"))
+  }
+
   def checkNumericTypes[T <: Evaluator](evaluator: T, spark: SparkSession): Unit = {
     val dfs = genEvaluatorDFWithNumericLabelCol(spark, "label", "prediction")
     val expected = evaluator.evaluate(dfs(DoubleType))
@@ -134,8 +143,7 @@ object MLTestingUtils extends SparkFunSuite {
   def genClassifDFWithNumericLabelCol(
       spark: SparkSession,
       labelColName: String = "label",
-      featuresColName: String = "features",
-      weightColName: String = "weight"): Map[NumericType, DataFrame] = {
+      featuresColName: String = "features"): Map[NumericType, DataFrame] = {
     val df = spark.createDataFrame(Seq(
       (0, Vectors.dense(0, 2, 3)),
       (1, Vectors.dense(0, 3, 1)),
@@ -160,6 +168,7 @@ object MLTestingUtils extends SparkFunSuite {
       featuresColName: String = "features",
       censorColName: String = "censor"): Map[NumericType, DataFrame] = {
     val df = spark.createDataFrame(Seq(
+      (0, Vectors.dense(0)),
       (1, Vectors.dense(1)),
       (2, Vectors.dense(2)),
       (3, Vectors.dense(3)),
@@ -188,6 +197,26 @@ object MLTestingUtils extends SparkFunSuite {
     )).toDF("user", "item", "rating")
 
     val others = df.columns.toSeq.diff(Seq(column)).map(col)
+    val types: Seq[NumericType] =
+      Seq(ShortType, LongType, IntegerType, FloatType, ByteType, DoubleType, DecimalType(10, 0))
+    types.map { t =>
+      val cols = Seq(col(column).cast(t)) ++ others
+      t -> df.select(cols: _*)
+    }.toMap
+  }
+
+  def genRatingsDFWithNumericCols(
+      spark: SparkSession,
+      column: String): Map[NumericType, DataFrame] = {
+    val df = spark.createDataFrame(Seq(
+      (0, 10, 1.0),
+      (1, 20, 2.0),
+      (2, 30, 3.0),
+      (3, 40, 4.0),
+      (4, 50, 5.0)
+    )).toDF("user", "item", "rating")
+
+    val others = df.columns.toSeq.diff(Seq(column)).map(col(_))
     val types: Seq[NumericType] =
       Seq(ShortType, LongType, IntegerType, FloatType, ByteType, DoubleType, DecimalType(10, 0))
     types.map { t =>

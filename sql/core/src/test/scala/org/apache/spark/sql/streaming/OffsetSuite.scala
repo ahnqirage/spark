@@ -38,8 +38,14 @@ class LongOffsetSuite extends OffsetSuite {
   val three = LongOffset(3)
   compare(one, two)
 
-  compare(LongOffset(SerializedOffset(one.json)),
-          LongOffset(SerializedOffset(three.json)))
+  compare(
+    one = CompositeOffset.fill(LongOffset(0), LongOffset(1)),
+    two = CompositeOffset.fill(LongOffset(1), LongOffset(2)))
+
+  compare(
+    one = CompositeOffset.fill(LongOffset(1), LongOffset(1)),
+    two = CompositeOffset.fill(LongOffset(1), LongOffset(2)))
+
 }
 
 

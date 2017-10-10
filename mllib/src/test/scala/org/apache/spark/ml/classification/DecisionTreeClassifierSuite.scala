@@ -348,7 +348,7 @@ class DecisionTreeClassifierSuite
   }
 
   test("Fitting without numClasses in metadata") {
-    val df: DataFrame = TreeTests.featureImportanceData(sc).toDF()
+    val df: DataFrame = spark.createDataFrame(TreeTests.featureImportanceData(sc))
     val dt = new DecisionTreeClassifier().setMaxDepth(1)
     dt.fit(df)
   }

@@ -43,9 +43,7 @@ private[clustering] trait KMeansParams extends Params with HasMaxIter with HasFe
   with HasSeed with HasPredictionCol with HasTol {
 
   /**
-   * The number of clusters to create (k). Must be &gt; 1. Note that it is possible for fewer than
-   * k clusters to be returned, for example, if there are fewer than k distinct points to cluster.
-   * Default: 2.
+   * The number of clusters to create (k). Must be > 1. Default: 2.
    * @group param
    */
   @Since("1.5.0")
@@ -231,7 +229,10 @@ object KMeansModel extends MLReadable[KMeansModel] {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
 
-      val clusterCenters = if (majorVersion(metadata.sparkVersion) >= 2) {
+      val versionRegex = "([0-9]+)\\.(.+)".r
+      val versionRegex(major, _) = metadata.sparkVersion
+
+      val clusterCenters = if (major.toInt >= 2) {
         val data: Dataset[Data] = sparkSession.read.parquet(dataPath).as[Data]
         data.collect().sortBy(_.clusterIdx).map(_.clusterCenter).map(OldVectors.fromML)
       } else {
@@ -303,6 +304,9 @@ class KMeans @Since("1.5.0") (
   @Since("2.0.0")
   override def fit(dataset: Dataset[_]): KMeansModel = {
     transformSchema(dataset.schema, logging = true)
+    val rdd: RDD[OldVector] = dataset.select(col($(featuresCol))).rdd.map {
+      case Row(point: Vector) => OldVectors.fromML(point)
+    }
 
     val handlePersistence = dataset.storageLevel == StorageLevel.NONE
     val instances: RDD[OldVector] = dataset.select(col($(featuresCol))).rdd.map {

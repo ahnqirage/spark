@@ -17,8 +17,8 @@
 
 package org.apache.spark.deploy.history
 
-import java.io.{File, FileNotFoundException, IOException}
-import java.util.{Date, UUID}
+import java.io.{FileNotFoundException, IOException, OutputStream}
+import java.util.UUID
 import java.util.concurrent.{Executors, ExecutorService, Future, TimeUnit}
 import java.util.zip.{ZipEntry, ZipOutputStream}
 
@@ -42,7 +42,6 @@ import org.apache.spark.deploy.history.config._
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler._
 import org.apache.spark.scheduler.ReplayListenerBus._
-import org.apache.spark.status.api.v1
 import org.apache.spark.ui.SparkUI
 import org.apache.spark.util.{Clock, SystemClock, ThreadUtils, Utils}
 import org.apache.spark.util.kvstore._
@@ -154,6 +153,8 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
         openDB()
     }
   }.getOrElse(new InMemoryStore())
+
+  private val pendingReplayTasksCount = new java.util.concurrent.atomic.AtomicInteger(0)
 
   /**
    * Return a runnable that performs the given operation on the event logs.
@@ -280,6 +281,14 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
 
   override def getLastUpdatedTime(): Long = lastScanTime.get()
 
+  override def getApplicationInfo(appId: String): Option[FsApplicationHistoryInfo] = {
+    applications.get(appId)
+  }
+
+  override def getEventLogsUnderProcess(): Int = pendingReplayTasksCount.get()
+
+  override def getLastUpdatedTime(): Long = lastScanTime.get()
+
   override def getAppUI(appId: String, attemptId: Option[String]): Option[LoadedAppUI] = {
     try {
       val appInfo = load(appId)
@@ -299,19 +308,21 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
           val fileStatus = fs.getFileStatus(new Path(logDir, attempt.logPath))
 
           val appListener = replay(fileStatus, isApplicationCompleted(fileStatus), replayBus)
-          assert(appListener.appId.isDefined)
-          ui.appSparkVersion = appListener.appSparkVersion.getOrElse("")
-          ui.getSecurityManager.setAcls(HISTORY_UI_ACLS_ENABLE)
-          // make sure to set admin acls before view acls so they are properly picked up
-          val adminAcls = HISTORY_UI_ADMIN_ACLS + "," + appListener.adminAcls.getOrElse("")
-          ui.getSecurityManager.setAdminAcls(adminAcls)
-          ui.getSecurityManager.setViewAcls(attempt.info.sparkUser,
-            appListener.viewAcls.getOrElse(""))
-          val adminAclsGroups = HISTORY_UI_ADMIN_ACLS_GROUPS + "," +
-            appListener.adminAclsGroups.getOrElse("")
-          ui.getSecurityManager.setAdminAclsGroups(adminAclsGroups)
-          ui.getSecurityManager.setViewAclsGroups(appListener.viewAclsGroups.getOrElse(""))
-          LoadedAppUI(ui, () => updateProbe(appId, attemptId, attempt.fileSize))
+
+          if (appListener.appId.isDefined) {
+            val uiAclsEnabled = conf.getBoolean("spark.history.ui.acls.enable", false)
+            ui.getSecurityManager.setAcls(uiAclsEnabled)
+            // make sure to set admin acls before view acls so they are properly picked up
+            ui.getSecurityManager.setAdminAcls(appListener.adminAcls.getOrElse(""))
+            ui.getSecurityManager.setViewAcls(attempt.sparkUser,
+              appListener.viewAcls.getOrElse(""))
+            ui.getSecurityManager.setAdminAclsGroups(appListener.adminAclsGroups.getOrElse(""))
+            ui.getSecurityManager.setViewAclsGroups(appListener.viewAclsGroups.getOrElse(""))
+            Some(LoadedAppUI(ui, updateProbe(appId, attemptId, attempt.fileSize)))
+          } else {
+            None
+          }
+
         }
     } catch {
       case _: FileNotFoundException => None
@@ -493,7 +504,46 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
       }
 
       val logPath = fileStatus.getPath()
+
       val appCompleted = isApplicationCompleted(fileStatus)
+
+      val appListener = replay(fileStatus, appCompleted, new ReplayListenerBus(), eventsFilter)
+
+      // Without an app ID, new logs will render incorrectly in the listing page, so do not list or
+      // try to show their UI.
+      if (appListener.appId.isDefined) {
+        val attemptInfo = new FsApplicationAttemptInfo(
+          logPath.getName(),
+          appListener.appName.getOrElse(NOT_STARTED),
+          appListener.appId.getOrElse(logPath.getName()),
+          appListener.appAttemptId,
+          appListener.startTime.getOrElse(-1L),
+          appListener.endTime.getOrElse(-1L),
+          fileStatus.getModificationTime(),
+          appListener.sparkUser.getOrElse(NOT_STARTED),
+          appCompleted,
+          fileStatus.getLen()
+        )
+        fileToAppInfo(logPath) = attemptInfo
+        logDebug(s"Application log ${attemptInfo.logPath} loaded successfully: $attemptInfo")
+        Some(attemptInfo)
+      } else {
+        logWarning(s"Failed to load application log ${fileStatus.getPath}. " +
+          "The application may have not started.")
+        None
+      }
+
+    } catch {
+      case e: Exception =>
+        logError(
+          s"Exception encountered when attempting to load application log ${fileStatus.getPath}",
+          e)
+        None
+    }
+
+    if (newAttempts.isEmpty) {
+      return
+    }
 
       // Use loading time as lastUpdated since some filesystems don't update modifiedTime
       // each time file is updated. However use modifiedTime for completed jobs so lastUpdated
@@ -602,6 +652,35 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
   }
 
   /**
+   * Comparison function that defines the sort order for the application listing.
+   *
+   * @return Whether `i1` should precede `i2`.
+   */
+  private def compareAppInfo(
+      i1: FsApplicationHistoryInfo,
+      i2: FsApplicationHistoryInfo): Boolean = {
+    val a1 = i1.attempts.head
+    val a2 = i2.attempts.head
+    if (a1.endTime != a2.endTime) a1.endTime >= a2.endTime else a1.startTime >= a2.startTime
+  }
+
+  /**
+   * Comparison function that defines the sort order for application attempts within the same
+   * application. Order is: attempts are sorted by descending start time.
+   * Most recent attempt state matches with current state of the app.
+   *
+   * Normally applications should have a single running attempt; but failure to call sc.stop()
+   * may cause multiple running attempts to show up.
+   *
+   * @return Whether `a1` should precede `a2`.
+   */
+  private def compareAttemptInfo(
+      a1: FsApplicationAttemptInfo,
+      a2: FsApplicationAttemptInfo): Boolean = {
+    a1.startTime >= a2.startTime
+  }
+
+  /**
    * Replays the events in the specified log file on the supplied `ReplayListenerBus`. Returns
    * an `ApplicationEventListener` instance with event data captured from the replay.
    * `ReplayEventsFilter` determines what events are replayed and can therefore limit the
@@ -625,7 +704,6 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
       val appListener = new ApplicationEventListener
       bus.addListener(appListener)
       bus.replay(logInput, logPath.toString, !appCompleted, eventsFilter)
-      logInfo(s"Finished replaying $logPath")
       appListener
     } finally {
       logInput.close()
@@ -747,20 +825,15 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
 }
 
 private[history] object FsHistoryProvider {
+  val DEFAULT_LOG_DIR = "file:/tmp/spark-events"
+
+  private val NOT_STARTED = "<Not Started>"
+
   private val SPARK_HISTORY_FS_NUM_REPLAY_THREADS = "spark.history.fs.numReplayThreads"
 
   private val APPL_START_EVENT_PREFIX = "{\"Event\":\"SparkListenerApplicationStart\""
 
   private val APPL_END_EVENT_PREFIX = "{\"Event\":\"SparkListenerApplicationEnd\""
-
-  private val LOG_START_EVENT_PREFIX = "{\"Event\":\"SparkListenerLogStart\""
-
-  /**
-   * Current version of the data written to the listing database. When opening an existing
-   * db, if the version does not match this value, the FsHistoryProvider will throw away
-   * all data and re-generate the listing data from the event logs.
-   */
-  private[history] val CURRENT_LISTING_VERSION = 1L
 }
 
 /**

@@ -281,16 +281,7 @@ private[spark] object JsonProtocol {
     ("Getting Result Time" -> taskInfo.gettingResultTime) ~
     ("Finish Time" -> taskInfo.finishTime) ~
     ("Failed" -> taskInfo.failed) ~
-    ("Killed" -> taskInfo.killed) ~
-    ("Accumulables" -> accumulablesToJson(taskInfo.accumulables))
-  }
-
-  private lazy val accumulableBlacklist = Set("internal.metrics.updatedBlockStatuses")
-
-  def accumulablesToJson(accumulables: Traversable[AccumulableInfo]): JArray = {
-    JArray(accumulables
-        .filterNot(_.name.exists(accumulableBlacklist.contains))
-        .toList.map(accumulableInfoToJson))
+    ("Accumulables" -> JArray(taskInfo.accumulables.toList.map(accumulableInfoToJson)))
   }
 
   def accumulableInfoToJson(accumulableInfo: AccumulableInfo): JValue = {

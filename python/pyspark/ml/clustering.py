@@ -151,7 +151,7 @@ class GaussianMixture(JavaEstimator, HasFeaturesCol, HasPredictionCol, HasMaxIte
     While this process is generally guaranteed to converge, it is not guaranteed
     to find a global optimum.
 
-    .. note:: For high-dimensional data (with many features), this algorithm may perform poorly.
+    Note: For high-dimensional data (with many features), this algorithm may perform poorly.
           This is due to high-dimensional data (a) making it difficult to cluster at all
           (based on statistical/theoretical arguments) and (b) numerical issues with
           Gaussian distributions.
@@ -180,10 +180,15 @@ class GaussianMixture(JavaEstimator, HasFeaturesCol, HasPredictionCol, HasMaxIte
     >>> weights = model.weights
     >>> len(weights)
     3
-    >>> model.gaussiansDF.select("mean").head()
-    Row(mean=DenseVector([0.825, 0.8675]))
-    >>> model.gaussiansDF.select("cov").head()
-    Row(cov=DenseMatrix(2, 2, [0.0056, -0.0051, -0.0051, 0.0046], False))
+    >>> model.gaussiansDF.show()
+    +--------------------+--------------------+
+    |                mean|                 cov|
+    +--------------------+--------------------+
+    |[0.82500000140229...|0.005625000000006...|
+    |[-0.4777098016092...|0.167969502720916...|
+    |[-0.4472625243352...|0.167304119758233...|
+    +--------------------+--------------------+
+    ...
     >>> transformed = model.transform(df).select("features", "prediction")
     >>> rows = transformed.collect()
     >>> rows[4].prediction == rows[5].prediction
@@ -202,10 +207,15 @@ class GaussianMixture(JavaEstimator, HasFeaturesCol, HasPredictionCol, HasMaxIte
     False
     >>> model2.weights == model.weights
     True
-    >>> model2.gaussiansDF.select("mean").head()
-    Row(mean=DenseVector([0.825, 0.8675]))
-    >>> model2.gaussiansDF.select("cov").head()
-    Row(cov=DenseMatrix(2, 2, [0.0056, -0.0051, -0.0051, 0.0046], False))
+    >>> model2.gaussiansDF.show()
+    +--------------------+--------------------+
+    |                mean|                 cov|
+    +--------------------+--------------------+
+    |[0.82500000140229...|0.005625000000006...|
+    |[-0.4777098016092...|0.167969502720916...|
+    |[-0.4472625243352...|0.167304119758233...|
+    +--------------------+--------------------+
+    ...
 
     .. versionadded:: 2.0.0
     """
@@ -413,7 +423,7 @@ class KMeans(JavaEstimator, HasFeaturesCol, HasPredictionCol, HasMaxIter, HasTol
         """
         super(KMeans, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.clustering.KMeans", self.uid)
-        self._setDefault(k=2, initMode="k-means||", initSteps=2, tol=1e-4, maxIter=20)
+        self._setDefault(k=2, initMode="k-means||", initSteps=5, tol=1e-4, maxIter=20)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 

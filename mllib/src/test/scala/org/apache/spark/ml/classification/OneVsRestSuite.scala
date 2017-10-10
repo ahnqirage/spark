@@ -25,7 +25,6 @@ import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param.{ParamMap, ParamsSuite}
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MetadataUtils, MLTestingUtils}
-import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
@@ -58,7 +57,7 @@ class OneVsRestSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
     val xVariance = Array(0.6856, 0.1899, 3.116, 0.581)
     rdd = sc.parallelize(generateMultinomialLogisticInput(
       coefficients, xMean, xVariance, true, nPoints, 42), 2)
-    dataset = rdd.toDF()
+    dataset = spark.createDataFrame(rdd)
   }
 
   test("params") {
@@ -195,7 +194,7 @@ class OneVsRestSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
   }
 
   test("SPARK-21306: OneVsRest should support setWeightCol") {
-    val dataset2 = dataset.withColumn("weight", lit(1))
+    val dataset2 = dataset.withColumn("weight", lit(1.0))
     // classifier inherits hasWeightCol
     val ova = new OneVsRest().setWeightCol("weight").setClassifier(new LogisticRegression())
     assert(ova.fit(dataset2) !== null)

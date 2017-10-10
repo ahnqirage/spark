@@ -21,10 +21,7 @@ import copy
 
 from pyspark import since
 from pyspark.ml.param import Params
-from pyspark.ml.param.shared import *
 from pyspark.ml.common import inherit_doc
-from pyspark.sql.functions import udf
-from pyspark.sql.types import StructField, StructType, DoubleType
 
 
 @inherit_doc

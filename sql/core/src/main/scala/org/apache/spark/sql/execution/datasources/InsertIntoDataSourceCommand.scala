@@ -33,7 +33,7 @@ case class InsertIntoDataSourceCommand(
     overwrite: Boolean)
   extends RunnableCommand {
 
-  override def innerChildren: Seq[QueryPlan[_]] = Seq(query)
+  override protected def innerChildren: Seq[QueryPlan[_]] = Seq(query)
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val relation = logicalRelation.relation.asInstanceOf[InsertableRelation]
@@ -42,9 +42,8 @@ case class InsertIntoDataSourceCommand(
     val df = sparkSession.internalCreateDataFrame(data.queryExecution.toRdd, logicalRelation.schema)
     relation.insert(df, overwrite)
 
-    // Re-cache all cached plans(including this relation itself, if it's cached) that refer to this
-    // data source relation.
-    sparkSession.sharedState.cacheManager.recacheByPlan(sparkSession, logicalRelation)
+    // Invalidate the cache.
+    sparkSession.sharedState.cacheManager.invalidateCache(logicalRelation)
 
     Seq.empty[Row]
   }

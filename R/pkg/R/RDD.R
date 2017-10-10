@@ -460,7 +460,7 @@ setMethod("countByValue",
           signature(x = "RDD"),
           function(x) {
             ones <- lapply(x, function(item) { list(item, 1L) })
-            collectRDD(reduceByKey(ones, `+`, getNumPartitionsRDD(x)))
+            collectRDD(reduceByKey(ones, `+`, getNumPartitions(x)))
           })
 
 #' Apply a function to all elements
@@ -1028,7 +1028,7 @@ setMethod("repartitionRDD",
           signature(x = "RDD"),
           function(x, numPartitions) {
             if (!is.null(numPartitions) && is.numeric(numPartitions)) {
-              coalesceRDD(x, numPartitions, TRUE)
+              coalesce(x, numPartitions, TRUE)
             } else {
               stop("Please, specify the number of partitions")
             }

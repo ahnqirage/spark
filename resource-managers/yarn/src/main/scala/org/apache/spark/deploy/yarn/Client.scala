@@ -162,9 +162,8 @@ private[spark] class Client(
       val newApp = yarnClient.createApplication()
       val newAppResponse = newApp.getNewApplicationResponse()
       appId = newAppResponse.getApplicationId()
-
-      new CallerContext("CLIENT", sparkConf.get(APP_CALLER_CONTEXT),
-        Option(appId.toString)).setCurrentContext()
+      reportLauncherState(SparkAppHandle.State.SUBMITTED)
+      launcherBackend.setAppId(appId.toString)
 
       // Verify whether the cluster has enough resources for our AM
       verifyClusterResources(newAppResponse)
@@ -423,6 +422,11 @@ private[spark] class Client(
     // same name but different path files are added multiple time, YARN will fail to launch
     // containers for the app with an internal error.
     val distributedNames = new HashSet[String]
+    YarnSparkHadoopUtil.get.obtainTokenForHiveMetastore(sparkConf, hadoopConf, credentials)
+    YarnSparkHadoopUtil.get.obtainTokenForHBase(sparkConf, hadoopConf, credentials)
+    if (credentials != null) {
+      logDebug(YarnSparkHadoopUtil.get.dumpTokens(credentials).mkString("\n"))
+    }
 
     val replication = sparkConf.get(STAGING_FILE_REPLICATION).map(_.toShort)
       .getOrElse(fs.getDefaultReplication(destDir))
@@ -987,6 +991,7 @@ private[spark] class Client(
     amContainer.setApplicationACLs(
       YarnSparkHadoopUtil.getApplicationAclsForYarn(securityManager).asJava)
     setupSecurityToken(amContainer)
+
     amContainer
   }
 
@@ -1158,7 +1163,7 @@ private[spark] class Client(
         val pyArchivesFile = new File(pyLibPath, "pyspark.zip")
         require(pyArchivesFile.exists(),
           s"$pyArchivesFile not found; cannot run pyspark application in YARN mode.")
-        val py4jFile = new File(pyLibPath, "py4j-0.10.6-src.zip")
+        val py4jFile = new File(pyLibPath, "py4j-0.10.3-src.zip")
         require(py4jFile.exists(),
           s"$py4jFile not found; cannot run pyspark application in YARN mode.")
         Seq(pyArchivesFile.getAbsolutePath(), py4jFile.getAbsolutePath())

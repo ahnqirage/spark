@@ -22,14 +22,14 @@ import scala.util.Random
 import breeze.linalg.{DenseVector => BDV, Vector => BV}
 import breeze.stats.distributions.{Multinomial => BrzMultinomial}
 
-import org.apache.spark.{SparkException, SparkFunSuite}
-import org.apache.spark.ml.classification.NaiveBayes.{Bernoulli, Multinomial}
+import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.classification.NaiveBayesSuite._
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
+import org.apache.spark.mllib.classification.NaiveBayes.{Bernoulli, Multinomial}
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
@@ -52,8 +52,7 @@ class NaiveBayesSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
       Array(0.40, 0.40, 0.40, 0.40)  // label 2
     ).map(_.map(math.log))
 
-    dataset = generateNaiveBayesInput(pi, theta, 100, seed).toDF()
-    bernoulliDataset = generateNaiveBayesInput(pi, theta, 100, seed, "bernoulli").toDF()
+    dataset = spark.createDataFrame(generateNaiveBayesInput(pi, theta, 100, 42))
   }
 
   def validatePrediction(predictionAndLabels: DataFrame): Unit = {
@@ -142,8 +141,8 @@ class NaiveBayesSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
     val pi = Vectors.dense(piArray)
     val theta = new DenseMatrix(3, 4, thetaArray.flatten, true)
 
-    val testDataset =
-      generateNaiveBayesInput(piArray, thetaArray, nPoints, seed, "multinomial").toDF()
+    val testDataset = spark.createDataFrame(generateNaiveBayesInput(
+      piArray, thetaArray, nPoints, 42, "multinomial"))
     val nb = new NaiveBayes().setSmoothing(1.0).setModelType("multinomial")
     val model = nb.fit(testDataset)
 
@@ -151,8 +150,8 @@ class NaiveBayesSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
     assert(model.hasParent)
     MLTestingUtils.checkCopyAndUids(nb, model)
 
-    val validationDataset =
-      generateNaiveBayesInput(piArray, thetaArray, nPoints, 17, "multinomial").toDF()
+    val validationDataset = spark.createDataFrame(generateNaiveBayesInput(
+      piArray, thetaArray, nPoints, 17, "multinomial"))
 
     val predictionAndLabels = model.transform(validationDataset).select("prediction", "label")
     validatePrediction(predictionAndLabels)
@@ -199,16 +198,16 @@ class NaiveBayesSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
     val pi = Vectors.dense(piArray)
     val theta = new DenseMatrix(3, 12, thetaArray.flatten, true)
 
-    val testDataset =
-      generateNaiveBayesInput(piArray, thetaArray, nPoints, 45, "bernoulli").toDF()
+    val testDataset = spark.createDataFrame(generateNaiveBayesInput(
+      piArray, thetaArray, nPoints, 45, "bernoulli"))
     val nb = new NaiveBayes().setSmoothing(1.0).setModelType("bernoulli")
     val model = nb.fit(testDataset)
 
     validateModelFit(pi, theta, model)
     assert(model.hasParent)
 
-    val validationDataset =
-      generateNaiveBayesInput(piArray, thetaArray, nPoints, 20, "bernoulli").toDF()
+    val validationDataset = spark.createDataFrame(generateNaiveBayesInput(
+      piArray, thetaArray, nPoints, 20, "bernoulli"))
 
     val predictionAndLabels = model.transform(validationDataset).select("prediction", "label")
     validatePrediction(predictionAndLabels)
@@ -332,8 +331,8 @@ object NaiveBayesSuite {
     sample: Int = 10): Seq[LabeledPoint] = {
     val D = theta(0).length
     val rnd = new Random(seed)
-    val _pi = pi.map(math.exp)
-    val _theta = theta.map(row => row.map(math.exp))
+    val _pi = pi.map(math.pow(math.E, _))
+    val _theta = theta.map(row => row.map(math.pow(math.E, _)))
 
     for (i <- 0 until nPoints) yield {
       val y = calcLabel(rnd.nextDouble(), _pi)

@@ -17,18 +17,17 @@
 
 package org.apache.spark.sql.streaming
 
-import java.util.UUID
-
-import org.apache.spark.annotation.InterfaceStability
+import org.apache.spark.annotation.Experimental
 import org.apache.spark.scheduler.SparkListenerEvent
 
 /**
+ * :: Experimental ::
  * Interface for listening to events related to [[StreamingQuery StreamingQueries]].
  * @note The methods are not thread-safe as they may be called from different threads.
  *
  * @since 2.0.0
  */
-@InterfaceStability.Evolving
+@Experimental
 abstract class StreamingQueryListener {
 
   import StreamingQueryListener._
@@ -50,7 +49,7 @@ abstract class StreamingQueryListener {
    * @note This method is asynchronous. The status in [[StreamingQuery]] will always be
    *       latest no matter when this method is called. Therefore, the status of [[StreamingQuery]]
    *       may be changed before/when you process the event. E.g., you may find [[StreamingQuery]]
-   *       is terminated when you are processing `QueryProgressEvent`.
+   *       is terminated when you are processing [[QueryProgressEvent]].
    * @since 2.0.0
    */
   def onQueryProgress(event: QueryProgressEvent): Unit
@@ -64,52 +63,48 @@ abstract class StreamingQueryListener {
 
 
 /**
+ * :: Experimental ::
  * Companion object of [[StreamingQueryListener]] that defines the listener events.
  * @since 2.0.0
  */
-@InterfaceStability.Evolving
+@Experimental
 object StreamingQueryListener {
 
   /**
+   * :: Experimental ::
    * Base type of [[StreamingQueryListener]] events
    * @since 2.0.0
    */
-  @InterfaceStability.Evolving
+  @Experimental
   trait Event extends SparkListenerEvent
 
   /**
+   * :: Experimental ::
    * Event representing the start of a query
-   * @param id An unique query id that persists across restarts. See `StreamingQuery.id()`.
-   * @param runId A query id that is unique for every start/restart. See `StreamingQuery.runId()`.
-   * @param name User-specified name of the query, null if not specified.
-   * @since 2.1.0
+   * @since 2.0.0
    */
-  @InterfaceStability.Evolving
-  class QueryStartedEvent private[sql](
-      val id: UUID,
-      val runId: UUID,
-      val name: String) extends Event
+  @Experimental
+  class QueryStartedEvent private[sql](val queryStatus: StreamingQueryStatus) extends Event
 
   /**
-   * Event representing any progress updates in a query.
-   * @param progress The query progress updates.
-   * @since 2.1.0
+   * :: Experimental ::
+   * Event representing any progress updates in a query
+   * @since 2.0.0
    */
-  @InterfaceStability.Evolving
-  class QueryProgressEvent private[sql](val progress: StreamingQueryProgress) extends Event
+  @Experimental
+  class QueryProgressEvent private[sql](val queryStatus: StreamingQueryStatus) extends Event
 
   /**
-   * Event representing that termination of a query.
+   * :: Experimental ::
+   * Event representing that termination of a query
    *
-   * @param id An unique query id that persists across restarts. See `StreamingQuery.id()`.
-   * @param runId A query id that is unique for every start/restart. See `StreamingQuery.runId()`.
-   * @param exception The exception message of the query if the query was terminated
+   * @param queryStatus Information about the status of the query.
+   * @param exception The exception message of the [[StreamingQuery]] if the query was terminated
    *                  with an exception. Otherwise, it will be `None`.
-   * @since 2.1.0
+   * @since 2.0.0
    */
-  @InterfaceStability.Evolving
+  @Experimental
   class QueryTerminatedEvent private[sql](
-      val id: UUID,
-      val runId: UUID,
+      val queryStatus: StreamingQueryStatus,
       val exception: Option[String]) extends Event
 }

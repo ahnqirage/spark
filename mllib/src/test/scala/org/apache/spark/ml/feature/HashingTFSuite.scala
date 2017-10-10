@@ -37,7 +37,9 @@ class HashingTFSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
   }
 
   test("hashingTF") {
-    val df = Seq((0, "a a b b c d".split(" ").toSeq)).toDF("id", "words")
+    val df = spark.createDataFrame(Seq(
+      (0, "a a b b c d".split(" ").toSeq)
+    )).toDF("id", "words")
     val n = 100
     val hashingTF = new HashingTF()
       .setInputCol("words")
@@ -55,7 +57,9 @@ class HashingTFSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
   }
 
   test("applying binary term freqs") {
-    val df = Seq((0, "a a b c c c".split(" ").toSeq)).toDF("id", "words")
+    val df = spark.createDataFrame(Seq(
+      (0, "a a b c c c".split(" ").toSeq)
+    )).toDF("id", "words")
     val n = 100
     val hashingTF = new HashingTF()
         .setInputCol("words")

@@ -26,13 +26,9 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.util.DynamicVariable
 
-import com.codahale.metrics.{Counter, MetricRegistry, Timer}
-
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.internal.Logging
+import org.apache.spark.{SparkContext, SparkException}
 import org.apache.spark.internal.config._
-import org.apache.spark.metrics.MetricsSystem
-import org.apache.spark.metrics.source.Source
+import org.apache.spark.util.Utils
 
 /**
  * Asynchronously passes SparkListenerEvents to registered SparkListeners.
@@ -41,13 +37,24 @@ import org.apache.spark.metrics.source.Source
  * has started will events be actually propagated to all attached listeners. This listener bus
  * is stopped when `stop()` is called, and it will drop further events after stopping.
  */
-private[spark] class LiveListenerBus(conf: SparkConf) {
+private[spark] class LiveListenerBus(val sparkContext: SparkContext) extends SparkListenerBus {
+
+  self =>
 
   import LiveListenerBus._
 
-  private var sparkContext: SparkContext = _
+  // Cap the capacity of the event queue so we get an explicit error (rather than
+  // an OOM exception) if it's perpetually being added to more quickly than it's being drained.
+  private lazy val EVENT_QUEUE_CAPACITY = validateAndGetQueueSize()
+  private lazy val eventQueue = new LinkedBlockingQueue[SparkListenerEvent](EVENT_QUEUE_CAPACITY)
 
-  private[spark] val metrics = new LiveListenerBusMetrics(conf)
+  private def validateAndGetQueueSize(): Int = {
+    val queueSize = sparkContext.conf.get(LISTENER_BUS_EVENT_QUEUE_SIZE)
+    if (queueSize <= 0) {
+      throw new SparkException("spark.scheduler.listenerbus.eventqueue.size must be > 0!")
+    }
+    queueSize
+  }
 
   // Indicate if `start()` is called
   private val started = new AtomicBoolean(false)
@@ -60,47 +67,40 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
   /** When `droppedEventsCounter` was logged last time in milliseconds. */
   @volatile private var lastReportTimestamp = 0L
 
-  private val queues = new CopyOnWriteArrayList[AsyncEventQueue]()
+  // Indicate if we are processing some event
+  // Guarded by `self`
+  private var processingEvent = false
 
-  /** Add a listener to queue shared by all non-internal listeners. */
-  def addToSharedQueue(listener: SparkListenerInterface): Unit = {
-    addToQueue(listener, SHARED_QUEUE)
-  }
+  private val logDroppedEvent = new AtomicBoolean(false)
 
-  /** Add a listener to the executor management queue. */
-  def addToManagementQueue(listener: SparkListenerInterface): Unit = {
-    addToQueue(listener, EXECUTOR_MANAGEMENT_QUEUE)
-  }
+  // A counter that represents the number of events produced and consumed in the queue
+  private val eventLock = new Semaphore(0)
 
-  /** Add a listener to the application status queue. */
-  def addToStatusQueue(listener: SparkListenerInterface): Unit = {
-    addToQueue(listener, APP_STATUS_QUEUE)
-  }
-
-  /** Add a listener to the event log queue. */
-  def addToEventLogQueue(listener: SparkListenerInterface): Unit = {
-    addToQueue(listener, EVENT_LOG_QUEUE)
-  }
-
-  /**
-   * Add a listener to a specific queue, creating a new queue if needed. Queues are independent
-   * of each other (each one uses a separate thread for delivering events), allowing slower
-   * listeners to be somewhat isolated from others.
-   */
-  private def addToQueue(listener: SparkListenerInterface, queue: String): Unit = synchronized {
-    if (stopped.get()) {
-      throw new IllegalStateException("LiveListenerBus is stopped.")
-    }
-
-    queues.asScala.find(_.name == queue) match {
-      case Some(queue) =>
-        queue.addListener(listener)
-
-      case None =>
-        val newQueue = new AsyncEventQueue(queue, conf, metrics)
-        newQueue.addListener(listener)
-        if (started.get()) {
-          newQueue.start(sparkContext)
+  private val listenerThread = new Thread(name) {
+    setDaemon(true)
+    override def run(): Unit = Utils.tryOrStopSparkContext(sparkContext) {
+      LiveListenerBus.withinListenerThread.withValue(true) {
+        while (true) {
+          eventLock.acquire()
+          self.synchronized {
+            processingEvent = true
+          }
+          try {
+            val event = eventQueue.poll
+            if (event == null) {
+              // Get out of the while loop and shutdown the daemon thread
+              if (!stopped.get) {
+                throw new IllegalStateException("Polling `null` from eventQueue means" +
+                  " the listener bus has been stopped. So `stopped` must be true")
+              }
+              return
+            }
+            postToAll(event)
+          } finally {
+            self.synchronized {
+              processingEvent = false
+            }
+          }
         }
         queues.add(newQueue)
     }
@@ -139,7 +139,6 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
    * listens for any additional events asynchronously while the listener bus is still running.
    * This should only be called once.
    *
-   * @param sc Used to stop the SparkContext in case the listener thread dies.
    */
   def start(): Unit = {
     if (started.compareAndSet(false, true)) {
@@ -161,6 +160,23 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
     } else {
       onDropEvent(event)
       droppedEventsCounter.incrementAndGet()
+    }
+
+    val droppedEvents = droppedEventsCounter.get
+    if (droppedEvents > 0) {
+      // Don't log too frequently
+      if (System.currentTimeMillis() - lastReportTimestamp >= 60 * 1000) {
+        // There may be multiple threads trying to decrease droppedEventsCounter.
+        // Use "compareAndSet" to make sure only one thread can win.
+        // And if another thread is increasing droppedEventsCounter, "compareAndSet" will fail and
+        // then that thread will update it.
+        if (droppedEventsCounter.compareAndSet(droppedEvents, 0)) {
+          val prevLastReportTimestamp = lastReportTimestamp
+          lastReportTimestamp = System.currentTimeMillis()
+          logWarning(s"Dropped $droppedEvents SparkListenerEvents since " +
+            new java.util.Date(prevLastReportTimestamp))
+        }
+      }
     }
 
     this.sparkContext = sc

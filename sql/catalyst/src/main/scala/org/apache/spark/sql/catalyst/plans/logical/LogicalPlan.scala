@@ -302,6 +302,7 @@ abstract class UnaryNode extends LogicalPlan {
           case expr: Expression if expr.semanticEquals(e) =>
             a.toAttribute
         })
+        allConstraints += EqualNullSafe(e, a.toAttribute)
       case _ => // Don't change.
     }
 
@@ -323,8 +324,7 @@ abstract class UnaryNode extends LogicalPlan {
       sizeInBytes = 1
     }
 
-    // Don't propagate rowCount and attributeStats, since they are not estimated here.
-    Statistics(sizeInBytes = sizeInBytes, hints = child.stats(conf).hints)
+    child.statistics.copy(sizeInBytes = sizeInBytes)
   }
 }
 

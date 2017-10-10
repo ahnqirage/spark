@@ -87,19 +87,9 @@ objectFile <- function(sc, path, minPartitions = NULL) {
 #' in the list are split into \code{numSlices} slices and distributed to nodes
 #' in the cluster.
 #'
-#' If size of serialized slices is larger than spark.r.maxAllocationLimit or (200MB), the function
-#' will write it to disk and send the file name to JVM. Also to make sure each slice is not
+#' If size of serialized slices is larger than spark.r.maxAllocationLimit or (200MB), the function 
+#' will write it to disk and send the file name to JVM. Also to make sure each slice is not 
 #' larger than that limit, number of slices may be increased.
-#'
-#' In 2.2.0 we are changing how the numSlices are used/computed to handle
-#' 1 < (length(coll) / numSlices) << length(coll) better, and to get the exact number of slices.
-#' This change affects both createDataFrame and spark.lapply.
-#' In the specific one case that it is used to convert R native object into SparkDataFrame, it has
-#' always been kept at the default of 1. In the case the object is large, we are explicitly setting
-#' the parallism to numSlices (which is still 1).
-#'
-#' Specifically, we are changing to split positions to match the calculation in positions() of
-#' ParallelCollectionRDD in Spark.
 #'
 #' @param sc SparkContext to use
 #' @param coll collection to parallelize
@@ -140,27 +130,9 @@ parallelize <- function(sc, coll, numSlices = 1) {
   objectSize <- object.size(coll)
 
   # For large objects we make sure the size of each slice is also smaller than sizeLimit
-  numSerializedSlices <- max(numSlices, ceiling(objectSize / sizeLimit))
-  if (numSerializedSlices > length(coll))
-    numSerializedSlices <- length(coll)
-
-  # Generate the slice ids to put each row
-  # For instance, for numSerializedSlices of 22, length of 50
-  #  [1]  0  0  2  2  4  4  6  6  6  9  9 11 11 13 13 15 15 15 18 18 20 20 22 22 22
-  # [26] 25 25 27 27 29 29 31 31 31 34 34 36 36 38 38 40 40 40 43 43 45 45 47 47 47
-  # Notice the slice group with 3 slices (ie. 6, 15, 22) are roughly evenly spaced.
-  # We are trying to reimplement the calculation in the positions method in ParallelCollectionRDD
-  splits <- if (numSerializedSlices > 0) {
-    unlist(lapply(0: (numSerializedSlices - 1), function(x) {
-      # nolint start
-      start <- trunc((x * length(coll)) / numSerializedSlices)
-      end <- trunc(((x + 1) * length(coll)) / numSerializedSlices)
-      # nolint end
-      rep(start, end - start)
-    }))
-  } else {
-    1
-  }
+  numSlices <- max(numSlices, ceiling(objectSize / sizeLimit))
+  if (numSlices > length(coll))
+    numSlices <- length(coll)
 
   slices <- split(coll, splits)
 
@@ -295,71 +267,6 @@ setCheckpointDirSC <- function(sc, dirName) {
   invisible(callJMethod(sc, "setCheckpointDir", suppressWarnings(normalizePath(dirName))))
 }
 
-#' Add a file or directory to be downloaded with this Spark job on every node.
-#'
-#' The path passed can be either a local file, a file in HDFS (or other Hadoop-supported
-#' filesystems), or an HTTP, HTTPS or FTP URI. To access the file in Spark jobs,
-#' use spark.getSparkFiles(fileName) to find its download location.
-#'
-#' A directory can be given if the recursive option is set to true.
-#' Currently directories are only supported for Hadoop-supported filesystems.
-#' Refer Hadoop-supported filesystems at \url{https://wiki.apache.org/hadoop/HCFS}.
-#'
-#' @rdname spark.addFile
-#' @param path The path of the file to be added
-#' @param recursive Whether to add files recursively from the path. Default is FALSE.
-#' @export
-#' @examples
-#'\dontrun{
-#' spark.addFile("~/myfile")
-#'}
-#' @note spark.addFile since 2.1.0
-spark.addFile <- function(path, recursive = FALSE) {
-  sc <- getSparkContext()
-  invisible(callJMethod(sc, "addFile", suppressWarnings(normalizePath(path)), recursive))
-}
-
-#' Get the root directory that contains files added through spark.addFile.
-#'
-#' @rdname spark.getSparkFilesRootDirectory
-#' @return the root directory that contains files added through spark.addFile
-#' @export
-#' @examples
-#'\dontrun{
-#' spark.getSparkFilesRootDirectory()
-#'}
-#' @note spark.getSparkFilesRootDirectory since 2.1.0
-spark.getSparkFilesRootDirectory <- function() { # nolint
-  if (Sys.getenv("SPARKR_IS_RUNNING_ON_WORKER") == "") {
-    # Running on driver.
-    callJStatic("org.apache.spark.SparkFiles", "getRootDirectory")
-  } else {
-    # Running on worker.
-    Sys.getenv("SPARKR_SPARKFILES_ROOT_DIR")
-  }
-}
-
-#' Get the absolute path of a file added through spark.addFile.
-#'
-#' @rdname spark.getSparkFiles
-#' @param fileName The name of the file added through spark.addFile
-#' @return the absolute path of a file added through spark.addFile.
-#' @export
-#' @examples
-#'\dontrun{
-#' spark.getSparkFiles("myfile")
-#'}
-#' @note spark.getSparkFiles since 2.1.0
-spark.getSparkFiles <- function(fileName) {
-  if (Sys.getenv("SPARKR_IS_RUNNING_ON_WORKER") == "") {
-    # Running on driver.
-    callJStatic("org.apache.spark.SparkFiles", "get", as.character(fileName))
-  } else {
-    # Running on worker.
-    file.path(spark.getSparkFilesRootDirectory(), as.character(fileName))
-  }
-}
-
 #' Run a function over a list of elements, distributing the computations with Spark
 #'
 #' Run a function over a list of elements, distributing the computations with Spark. Applies a
@@ -420,24 +327,5 @@ spark.lapply <- function(list, func) {
 #' @note setLogLevel since 2.0.0
 setLogLevel <- function(level) {
   sc <- getSparkContext()
-  invisible(callJMethod(sc, "setLogLevel", level))
-}
-
-#' Set checkpoint directory
-#'
-#' Set the directory under which SparkDataFrame are going to be checkpointed. The directory must be
-#' a HDFS path if running on a cluster.
-#'
-#' @rdname setCheckpointDir
-#' @param directory Directory path to checkpoint to
-#' @seealso \link{checkpoint}
-#' @export
-#' @examples
-#'\dontrun{
-#' setCheckpointDir("/checkpoint")
-#'}
-#' @note setCheckpointDir since 2.2.0
-setCheckpointDir <- function(directory) {
-  sc <- getSparkContext()
-  invisible(callJMethod(sc, "setCheckpointDir", suppressWarnings(normalizePath(directory))))
+  callJMethod(sc, "setLogLevel", level)
 }

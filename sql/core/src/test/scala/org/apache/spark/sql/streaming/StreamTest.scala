@@ -26,8 +26,10 @@ import scala.reflect.ClassTag
 import scala.util.Random
 import scala.util.control.NonFatal
 
-import org.scalatest.{Assertions, BeforeAndAfterAll}
-import org.scalatest.concurrent.{Eventually, Signaler, ThreadSignaler, TimeLimits}
+import org.scalatest.Assertions
+import org.scalatest.concurrent.{Eventually, Timeouts}
+import org.scalatest.concurrent.AsyncAssertions.Waiter
+import org.scalatest.concurrent.Eventually._
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.Span
@@ -38,10 +40,9 @@ import org.apache.spark.sql.catalyst.encoders.{encoderFor, ExpressionEncoder, Ro
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.streaming._
-import org.apache.spark.sql.execution.streaming.state.StateStore
 import org.apache.spark.sql.streaming.StreamingQueryListener._
 import org.apache.spark.sql.test.SharedSQLContext
-import org.apache.spark.util.{Clock, SystemClock, Utils}
+import org.apache.spark.util.{Clock, ManualClock, SystemClock, Utils}
 
 /**
  * A framework for implementing tests for streaming queries and sources.
@@ -67,13 +68,7 @@ import org.apache.spark.util.{Clock, SystemClock, Utils}
  * avoid hanging forever in the case of failures. However, individual suites can change this
  * by overriding `streamingTimeout`.
  */
-trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with BeforeAndAfterAll {
-
-  implicit val defaultSignaler: Signaler = ThreadSignaler
-  override def afterAll(): Unit = {
-    super.afterAll()
-    StateStore.stop() // stop the state store maintenance thread and unload store providers
-  }
+trait StreamTest extends QueryTest with SharedSQLContext with Timeouts {
 
   /** How long to wait for an active stream to catch up when checking a result. */
   val streamingTimeout = 10.seconds
@@ -165,11 +160,12 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
 
   /** Starts the stream, resuming if data has already been processed. It must not be running. */
   case class StartStream(
-      trigger: Trigger = Trigger.ProcessingTime(0),
-      triggerClock: Clock = new SystemClock,
-      additionalConfs: Map[String, String] = Map.empty,
-      checkpointLocation: String = null)
+      trigger: Trigger = ProcessingTime(0),
+      triggerClock: Clock = new SystemClock)
     extends StreamAction
+
+  /** Advance the trigger clock's time manually. */
+  case class AdvanceManualClock(timeToAdd: Long) extends StreamAction
 
   /** Advance the trigger clock's time manually. */
   case class AdvanceManualClock(timeToAdd: Long) extends StreamAction
@@ -185,8 +181,7 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
       assertFailure: Throwable => Unit = _ => {},
       isFatalError: Boolean = false) extends StreamAction {
     val causeClass: Class[T] = implicitly[ClassTag[T]].runtimeClass.asInstanceOf[Class[T]]
-    override def toString(): String =
-      s"ExpectFailure[${causeClass.getName}, isFatalError: $isFatalError]"
+    override def toString(): String = s"ExpectFailure[${causeClass.getName}]"
   }
 
   /** Assert that a body is true */
@@ -217,11 +212,26 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
     }
   }
 
-  /** Execute arbitrary code */
-  object Execute {
-    def apply(func: StreamExecution => Any): AssertOnQuery =
-      AssertOnQuery(query => { func(query); true })
+  case class AssertOnLastQueryStatus(condition: StreamingQueryStatus => Unit)
+    extends StreamAction
+
+  class StreamManualClock(time: Long = 0L) extends ManualClock(time) {
+    private var waitStartTime: Option[Long] = None
+
+    override def waitTillTime(targetTime: Long): Long = synchronized {
+      try {
+        waitStartTime = Some(getTimeMillis())
+        super.waitTillTime(targetTime)
+      } finally {
+        waitStartTime = None
+      }
+    }
+
+    def isStreamWaitingAt(time: Long): Boolean = synchronized {
+      waitStartTime == Some(time)
+    }
   }
+
 
   /**
    * Executes the specified actions on the given streaming DataFrame and provides helpful
@@ -232,12 +242,7 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
    */
   def testStream(
       _stream: Dataset[_],
-      outputMode: OutputMode = OutputMode.Append)(actions: StreamAction*): Unit = synchronized {
-    import org.apache.spark.sql.streaming.util.StreamManualClock
-
-    // `synchronized` is added to prevent the user from calling multiple `testStream`s concurrently
-    // because this method assumes there is only one active query in its `StreamingQueryListener`
-    // and it may not work correctly when multiple `testStream`s run concurrently.
+      outputMode: OutputMode = OutputMode.Append)(actions: StreamAction*): Unit = {
 
     val stream = _stream.toDF()
     val sparkSession = stream.sparkSession  // use the session in DF, not the default session
@@ -246,7 +251,6 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
     var lastStream: StreamExecution = null
     val awaiting = new mutable.HashMap[Int, Offset]() // source index -> offset to wait for
     val sink = new MemorySink(stream.schema, outputMode)
-    val resetConfValues = mutable.Map[String, Option[String]]()
 
     @volatile
     var streamThreadDeathCause: Throwable = null
@@ -350,14 +354,16 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
          """.stripMargin)
     }
 
+    val testThread = Thread.currentThread()
+    val metadataRoot = Utils.createTempDir(namePrefix = "streaming.metadata").getCanonicalPath
+    val statusCollector = new QueryStatusCollector
     var manualClockExpectedTime = -1L
-    val defaultCheckpointLocation =
-      Utils.createTempDir(namePrefix = "streaming.metadata").getCanonicalPath
     try {
+      spark.streams.addListener(statusCollector)
       startedTest.foreach { action =>
         logInfo(s"Processing test stream action: $action")
         action match {
-          case StartStream(trigger, triggerClock, additionalConfs, checkpointLocation) =>
+          case StartStream(trigger, triggerClock) =>
             verify(currentStream == null, "stream already running")
             verify(triggerClock.isInstanceOf[SystemClock]
               || triggerClock.isInstanceOf[StreamManualClock],
@@ -365,20 +371,9 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
             if (triggerClock.isInstanceOf[StreamManualClock]) {
               manualClockExpectedTime = triggerClock.asInstanceOf[StreamManualClock].getTimeMillis()
             }
-            val metadataRoot = Option(checkpointLocation).getOrElse(defaultCheckpointLocation)
-
-            additionalConfs.foreach(pair => {
-              val value =
-                if (sparkSession.conf.contains(pair._1)) {
-                  Some(sparkSession.conf.get(pair._1))
-                } else None
-              resetConfValues(pair._1) = value
-              sparkSession.conf.set(pair._1, pair._2)
-            })
-
             lastStream = currentStream
             currentStream =
-              sparkSession
+              spark
                 .streams
                 .startQuery(
                   None,
@@ -388,16 +383,13 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
                   outputMode,
                   trigger = trigger,
                   triggerClock = triggerClock)
-                .asInstanceOf[StreamingQueryWrapper]
-                .streamingQuery
-            // Wait until the initialization finishes, because some tests need to use `logicalPlan`
-            // after starting the query.
-            try {
-              currentStream.awaitInitialization(streamingTimeout.toMillis)
-            } catch {
-              case _: StreamingQueryException =>
-                // Ignore the exception. `StopStream` or `ExpectFailure` will catch it as well.
-            }
+                .asInstanceOf[StreamExecution]
+            currentStream.microBatchThread.setUncaughtExceptionHandler(
+              new UncaughtExceptionHandler {
+                override def uncaughtException(t: Thread, e: Throwable): Unit = {
+                  streamDeathCause = e
+                }
+              })
 
           case AdvanceManualClock(timeToAdd) =>
             verify(currentStream != null,
@@ -406,12 +398,10 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
                    s"can not advance clock of type ${currentStream.triggerClock.getClass}")
             val clock = currentStream.triggerClock.asInstanceOf[StreamManualClock]
             assert(manualClockExpectedTime >= 0)
-
             // Make sure we don't advance ManualClock too early. See SPARK-16002.
             eventually("StreamManualClock has not yet entered the waiting state") {
               assert(clock.isStreamWaitingAt(manualClockExpectedTime))
             }
-
             clock.advance(timeToAdd)
             manualClockExpectedTime += timeToAdd
             verify(clock.getTimeMillis() === manualClockExpectedTime,
@@ -492,6 +482,13 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
           case a: Assert =>
             val streamToAssert = Option(currentStream).getOrElse(lastStream)
             verify({ a.run(); true }, s"Assert failed: ${a.message}")
+
+          case a: AssertOnLastQueryStatus =>
+            Eventually.eventually(timeout(streamingTimeout)) {
+              require(statusCollector.lastTriggerStatus.nonEmpty)
+            }
+            val status = statusCollector.lastTriggerStatus.get
+            verify({ a.condition(status); true }, "Assert on last query status failed")
 
           case a: AddData =>
             try {
@@ -589,13 +586,7 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
       if (currentStream != null && currentStream.microBatchThread.isAlive) {
         currentStream.stop()
       }
-
-      // Rollback prev configuration values
-      resetConfValues.foreach {
-        case (key, Some(value)) => sparkSession.conf.set(key, value)
-        case (key, None) => sparkSession.conf.unset(key)
-      }
-      sparkSession.streams.removeListener(listener)
+      spark.streams.removeListener(statusCollector)
     }
   }
 
@@ -726,6 +717,60 @@ trait StreamTest extends QueryTest with SharedSQLContext with TimeLimits with Be
           assert(thrownException.cause.getClass === e.t.runtimeClass,
             "exception of incorrect type was throw")
       }
+    }
+  }
+
+
+  class QueryStatusCollector extends StreamingQueryListener {
+    // to catch errors in the async listener events
+    @volatile private var asyncTestWaiter = new Waiter
+
+    @volatile var startStatus: StreamingQueryStatus = null
+    @volatile var terminationStatus: StreamingQueryStatus = null
+    @volatile var terminationException: Option[String] = null
+
+    private val progressStatuses = new mutable.ArrayBuffer[StreamingQueryStatus]
+
+    /** Get the info of the last trigger that processed data */
+    def lastTriggerStatus: Option[StreamingQueryStatus] = synchronized {
+      progressStatuses.filter { i =>
+        i.triggerDetails.get("isTriggerActive").toBoolean == false &&
+          i.triggerDetails.get("isDataPresentInTrigger").toBoolean == true
+      }.lastOption
+    }
+
+    def reset(): Unit = {
+      startStatus = null
+      terminationStatus = null
+      progressStatuses.clear()
+      asyncTestWaiter = new Waiter
+    }
+
+    def checkAsyncErrors(): Unit = {
+      asyncTestWaiter.await(timeout(10 seconds))
+    }
+
+
+    override def onQueryStarted(queryStarted: QueryStartedEvent): Unit = {
+      asyncTestWaiter {
+        startStatus = queryStarted.queryStatus
+      }
+    }
+
+    override def onQueryProgress(queryProgress: QueryProgressEvent): Unit = {
+      asyncTestWaiter {
+        assert(startStatus != null, "onQueryProgress called before onQueryStarted")
+        synchronized { progressStatuses += queryProgress.queryStatus }
+      }
+    }
+
+    override def onQueryTerminated(queryTerminated: QueryTerminatedEvent): Unit = {
+      asyncTestWaiter {
+        assert(startStatus != null, "onQueryTerminated called before onQueryStarted")
+        terminationStatus = queryTerminated.queryStatus
+        terminationException = queryTerminated.exception
+      }
+      asyncTestWaiter.dismiss()
     }
   }
 }

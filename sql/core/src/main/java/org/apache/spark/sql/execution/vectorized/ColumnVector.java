@@ -16,9 +16,18 @@
  */
 package org.apache.spark.sql.execution.vectorized;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.parquet.column.Dictionary;
+import org.apache.parquet.io.api.Binary;
+
+import org.apache.spark.memory.MemoryMode;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.util.ArrayData;
 import org.apache.spark.sql.catalyst.util.MapData;
+import org.apache.spark.sql.internal.SQLConf;
 import org.apache.spark.sql.types.*;
 import org.apache.spark.unsafe.types.CalendarInterval;
 import org.apache.spark.unsafe.types.UTF8String;
@@ -106,9 +115,8 @@ public abstract class ColumnVector implements AutoCloseable {
             list[i] = get(i, dt);
           }
         }
-        return list;
-      } catch(Exception e) {
-        throw new RuntimeException("Could not get the array", e);
+      } else {
+        throw new UnsupportedOperationException("Type " + dt);
       }
     }
 
@@ -117,7 +125,7 @@ public abstract class ColumnVector implements AutoCloseable {
 
     @Override
     public boolean getBoolean(int ordinal) {
-      return data.getBoolean(offset + ordinal);
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -125,7 +133,7 @@ public abstract class ColumnVector implements AutoCloseable {
 
     @Override
     public short getShort(int ordinal) {
-      return data.getShort(offset + ordinal);
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -136,7 +144,7 @@ public abstract class ColumnVector implements AutoCloseable {
 
     @Override
     public float getFloat(int ordinal) {
-      return data.getFloat(offset + ordinal);
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -181,42 +189,7 @@ public abstract class ColumnVector implements AutoCloseable {
 
     @Override
     public Object get(int ordinal, DataType dataType) {
-      if (dataType instanceof BooleanType) {
-        return getBoolean(ordinal);
-      } else if (dataType instanceof ByteType) {
-        return getByte(ordinal);
-      } else if (dataType instanceof ShortType) {
-        return getShort(ordinal);
-      } else if (dataType instanceof IntegerType) {
-        return getInt(ordinal);
-      } else if (dataType instanceof LongType) {
-        return getLong(ordinal);
-      } else if (dataType instanceof FloatType) {
-        return getFloat(ordinal);
-      } else if (dataType instanceof DoubleType) {
-        return getDouble(ordinal);
-      } else if (dataType instanceof StringType) {
-        return getUTF8String(ordinal);
-      } else if (dataType instanceof BinaryType) {
-        return getBinary(ordinal);
-      } else if (dataType instanceof DecimalType) {
-        DecimalType t = (DecimalType) dataType;
-        return getDecimal(ordinal, t.precision(), t.scale());
-      } else if (dataType instanceof DateType) {
-        return getInt(ordinal);
-      } else if (dataType instanceof TimestampType) {
-        return getLong(ordinal);
-      } else if (dataType instanceof ArrayType) {
-        return getArray(ordinal);
-      } else if (dataType instanceof StructType) {
-        return getStruct(ordinal, ((StructType)dataType).fields().length);
-      } else if (dataType instanceof MapType) {
-        return getMap(ordinal);
-      } else if (dataType instanceof CalendarIntervalType) {
-        return getInterval(ordinal);
-      } else {
-        throw new UnsupportedOperationException("Datatype not supported " + dataType);
-      }
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -250,6 +223,46 @@ public abstract class ColumnVector implements AutoCloseable {
     }
     dictionary = null;
   }
+
+  /**
+   * Cleans up memory for this column. The column is not usable after this.
+   * TODO: this should probably have ref-counted semantics.
+   */
+  public abstract void close();
+
+  public void reserve(int requiredCapacity) {
+    if (requiredCapacity > capacity) {
+      int newCapacity = (int) Math.min(MAX_CAPACITY, requiredCapacity * 2L);
+      if (requiredCapacity <= newCapacity) {
+        try {
+          reserveInternal(newCapacity);
+        } catch (OutOfMemoryError outOfMemoryError) {
+          throwUnsupportedException(requiredCapacity, outOfMemoryError);
+        }
+      } else {
+        throwUnsupportedException(requiredCapacity, null);
+      }
+    }
+  }
+
+  private void throwUnsupportedException(int requiredCapacity, Throwable cause) {
+    String message = "Cannot reserve additional contiguous bytes in the vectorized reader " +
+        "(requested = " + requiredCapacity + " bytes). As a workaround, you can disable the " +
+        "vectorized reader by setting " + SQLConf.PARQUET_VECTORIZED_READER_ENABLED().key() +
+        " to false.";
+
+    if (cause != null) {
+      throw new RuntimeException(message, cause);
+    } else {
+      throw new RuntimeException(message);
+    }
+  }
+
+  /**
+   * Ensures that there is enough storage to store capcity elements. That is, the put() APIs
+   * must work for all rowIds < capcity.
+   */
+  protected abstract void reserveInternal(int capacity);
 
   /**
    * Returns the number of nulls in this column.
@@ -428,6 +441,22 @@ public abstract class ColumnVector implements AutoCloseable {
    * Returns true if this column is an array.
    */
   public final boolean isArray() { return resultArray != null; }
+
+  /**
+   * Marks this column as being constant.
+   */
+  public final void setIsConstant() { isConstant = true; }
+
+  /**
+   * Maximum number of rows that can be stored in this column.
+   */
+  protected int capacity;
+
+  /**
+   * Upper limit for the maximum capacity for this column.
+   */
+  @VisibleForTesting
+  protected int MAX_CAPACITY = Integer.MAX_VALUE;
 
   /**
    * Data type for this column.

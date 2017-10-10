@@ -37,7 +37,6 @@ from pyspark.sql.types import _parse_datatype_json_string
 from pyspark.sql.column import Column, _to_seq, _to_list, _to_java_column
 from pyspark.sql.readwriter import DataFrameWriter
 from pyspark.sql.streaming import DataStreamWriter
-from pyspark.sql.types import IntegralType
 from pyspark.sql.types import *
 
 __all__ = ["DataFrame", "DataFrameNaFunctions", "DataFrameStatFunctions"]
@@ -134,7 +133,7 @@ class DataFrame(object):
 
     @since(2.0)
     def createTempView(self, name):
-        """Creates a local temporary view with this DataFrame.
+        """Creates a temporary view with this DataFrame.
 
         The lifetime of this temporary table is tied to the :class:`SparkSession`
         that was used to create this :class:`DataFrame`.
@@ -156,7 +155,7 @@ class DataFrame(object):
 
     @since(2.0)
     def createOrReplaceTempView(self, name):
-        """Creates or replaces a local temporary view with this DataFrame.
+        """Creates or replaces a temporary view with this DataFrame.
 
         The lifetime of this temporary table is tied to the :class:`SparkSession`
         that was used to create this :class:`DataFrame`.
@@ -171,44 +170,6 @@ class DataFrame(object):
 
         """
         self._jdf.createOrReplaceTempView(name)
-
-    @since(2.1)
-    def createGlobalTempView(self, name):
-        """Creates a global temporary view with this DataFrame.
-
-        The lifetime of this temporary view is tied to this Spark application.
-        throws :class:`TempTableAlreadyExistsException`, if the view name already exists in the
-        catalog.
-
-        >>> df.createGlobalTempView("people")
-        >>> df2 = spark.sql("select * from global_temp.people")
-        >>> sorted(df.collect()) == sorted(df2.collect())
-        True
-        >>> df.createGlobalTempView("people")  # doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ...
-        AnalysisException: u"Temporary table 'people' already exists;"
-        >>> spark.catalog.dropGlobalTempView("people")
-
-        """
-        self._jdf.createGlobalTempView(name)
-
-    @since(2.2)
-    def createOrReplaceGlobalTempView(self, name):
-        """Creates or replaces a global temporary view using the given name.
-
-        The lifetime of this temporary view is tied to this Spark application.
-
-        >>> df.createOrReplaceGlobalTempView("people")
-        >>> df2 = df.filter(df.age > 3)
-        >>> df2.createOrReplaceGlobalTempView("people")
-        >>> df3 = spark.sql("select * from global_temp.people")
-        >>> sorted(df3.collect()) == sorted(df2.collect())
-        True
-        >>> spark.catalog.dropGlobalTempView("people")
-
-        """
-        self._jdf.createOrReplaceGlobalTempView(name)
 
     @property
     @since(1.4)
@@ -228,7 +189,7 @@ class DataFrame(object):
         Interface for saving the content of the streaming :class:`DataFrame` out into external
         storage.
 
-        .. note:: Evolving.
+        .. note:: Experimental.
 
         :return: :class:`DataStreamWriter`
         """
@@ -304,7 +265,7 @@ class DataFrame(object):
         :func:`collect`) will throw an :class:`AnalysisException` when there is a streaming
         source present.
 
-        .. note:: Evolving
+        .. note:: Experimental
         """
         return self._jdf.isStreaming()
 
@@ -849,6 +810,8 @@ class DataFrame(object):
         :param how: str, default ``inner``. Must be one of: ``inner``, ``cross``, ``outer``,
             ``full``, ``full_outer``, ``left``, ``left_outer``, ``right``, ``right_outer``,
             ``left_semi``, and ``left_anti``.
+
+        The following performs a full outer join between ``df1`` and ``df2``.
 
         The following performs a full outer join between ``df1`` and ``df2``.
 

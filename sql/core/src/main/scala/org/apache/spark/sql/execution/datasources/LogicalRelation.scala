@@ -45,10 +45,17 @@ case class LogicalRelation(
     com.google.common.base.Objects.hashCode(relation, output)
   }
 
-  // Only care about relation when canonicalizing.
-  override lazy val canonicalized: LogicalPlan = copy(
-    output = output.map(QueryPlan.normalizeExprId(_, output)),
-    catalogTable = None)
+  override def sameResult(otherPlan: LogicalPlan): Boolean = {
+    otherPlan.canonicalized match {
+      case LogicalRelation(otherRelation, _, _) => relation == otherRelation
+      case _ => false
+    }
+  }
+
+  // When comparing two LogicalRelations from within LogicalPlan.sameResult, we only need
+  // LogicalRelation.cleanArgs to return Seq(relation), since expectedOutputAttribute's
+  // expId can be different but the relation is still the same.
+  override lazy val cleanArgs: Seq[Any] = Seq(relation)
 
   override def computeStats(): Statistics = {
     catalogTable
@@ -65,22 +72,17 @@ case class LogicalRelation(
    * unique expression ids. We respect the `expectedOutputAttributes` and create
    * new instances of attributes in it.
    */
-  override def newInstance(): LogicalRelation = {
-    this.copy(output = output.map(_.newInstance()))
+  override def newInstance(): this.type = {
+    LogicalRelation(
+      relation,
+      expectedOutputAttributes.map(_.map(_.newInstance())),
+      metastoreTableIdentifier).asInstanceOf[this.type]
   }
 
   override def refresh(): Unit = relation match {
-    case fs: HadoopFsRelation => fs.location.refresh()
+    case fs: HadoopFsRelation => fs.refresh()
     case _ =>  // Do nothing.
   }
 
   override def simpleString: String = s"Relation[${Utils.truncatedString(output, ",")}] $relation"
-}
-
-object LogicalRelation {
-  def apply(relation: BaseRelation, isStreaming: Boolean = false): LogicalRelation =
-    LogicalRelation(relation, relation.schema.toAttributes, None, isStreaming)
-
-  def apply(relation: BaseRelation, table: CatalogTable): LogicalRelation =
-    LogicalRelation(relation, relation.schema.toAttributes, Some(table), false)
 }

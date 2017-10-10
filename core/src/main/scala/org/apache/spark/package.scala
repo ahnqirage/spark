@@ -42,6 +42,9 @@ import java.util.Properties
  * Developer API</span> are intended for advanced users want to extend Spark through lower
  * level interfaces. These are subject to changes or removal in minor releases.
  */
+
+import java.util.Properties
+
 package object spark {
 
   private object SparkBuildInfo {
@@ -56,9 +59,6 @@ package object spark {
 
       val resourceStream = Thread.currentThread().getContextClassLoader.
         getResourceAsStream("spark-version-info.properties")
-      if (resourceStream == null) {
-        throw new SparkException("Could not find spark-version-info.properties")
-      }
 
       try {
         val unknownProp = "<unknown>"
@@ -73,6 +73,8 @@ package object spark {
           props.getProperty("date", unknownProp)
         )
       } catch {
+        case npe: NullPointerException =>
+          throw new SparkException("Error while locating file spark-version-info.properties", npe)
         case e: Exception =>
           throw new SparkException("Error loading properties from spark-version-info.properties", e)
       } finally {

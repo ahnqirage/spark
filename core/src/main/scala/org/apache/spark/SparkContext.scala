@@ -19,7 +19,7 @@ package org.apache.spark
 
 import java.io._
 import java.lang.reflect.Constructor
-import java.net.URI
+import java.net.{MalformedURLException, URI}
 import java.util.{Arrays, Locale, Properties, ServiceLoader, UUID}
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicReference}
@@ -53,6 +53,7 @@ import org.apache.spark.rdd._
 import org.apache.spark.rpc.RpcEndpointRef
 import org.apache.spark.scheduler._
 import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, StandaloneSchedulerBackend}
+import org.apache.spark.scheduler.cluster.mesos.{MesosCoarseGrainedSchedulerBackend, MesosFineGrainedSchedulerBackend}
 import org.apache.spark.scheduler.local.LocalSchedulerBackend
 import org.apache.spark.storage._
 import org.apache.spark.storage.BlockManagerMessages.TriggerThreadDump
@@ -245,7 +246,7 @@ class SparkContext(config: SparkConf) extends Logging {
   def isStopped: Boolean = stopped.get()
 
   // An asynchronous listener bus for Spark events
-  private[spark] def listenerBus: LiveListenerBus = _listenerBus
+  private[spark] val listenerBus = new LiveListenerBus(this)
 
   // This function allows components created by SparkEnv to be mocked in unit tests:
   private[spark] def createSparkEnv(
@@ -351,8 +352,8 @@ class SparkContext(config: SparkConf) extends Logging {
    * Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN
    */
   def setLogLevel(logLevel: String) {
-    // let's allow lowercase or mixed case too
-    val upperCased = logLevel.toUpperCase(Locale.ROOT)
+    // let's allow lowcase or mixed case too
+    val upperCased = logLevel.toUpperCase(Locale.ENGLISH)
     require(SparkContext.VALID_LOG_LEVELS.contains(upperCased),
       s"Supplied level $logLevel did not match one of:" +
         s" ${SparkContext.VALID_LOG_LEVELS.mkString(",")}")
@@ -1409,7 +1410,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * @note Accumulators must be registered before use, or it will throw exception.
    */
   def register(acc: AccumulatorV2[_, _], name: String): Unit = {
-    acc.register(this, name = Option(name))
+    acc.register(this, name = Some(name))
   }
 
   /**
@@ -1449,7 +1450,7 @@ class SparkContext(config: SparkConf) extends Logging {
   }
 
   /**
-   * Create and register a `CollectionAccumulator`, which starts with empty list and accumulates
+   * Create and register a [[CollectionAccumulator]], which starts with empty list and accumulates
    * inputs by adding them into the list.
    */
   def collectionAccumulator[T]: CollectionAccumulator[T] = {
@@ -1459,7 +1460,7 @@ class SparkContext(config: SparkConf) extends Logging {
   }
 
   /**
-   * Create and register a `CollectionAccumulator`, which starts with empty list and accumulates
+   * Create and register a [[CollectionAccumulator]], which starts with empty list and accumulates
    * inputs by adding them into the list.
    */
   def collectionAccumulator[T](name: String): CollectionAccumulator[T] = {
@@ -1600,7 +1601,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * @return whether the request is acknowledged by the cluster manager.
    */
   @DeveloperApi
-  def requestTotalExecutors(
+  override def requestTotalExecutors(
       numExecutors: Int,
       localityAwareTasks: Int,
       hostToLocalTaskCount: scala.collection.immutable.Map[String, Int]
@@ -1830,9 +1831,16 @@ class SparkContext(config: SparkConf) extends Logging {
         val uri = new URI(path)
         // SPARK-17650: Make sure this is a valid URL before adding it to the list of dependencies
         Utils.validateURL(uri)
-        uri.getScheme match {
+        key = uri.getScheme match {
           // A JAR file which exists only on the driver node
-          case null | "file" => addJarFile(new File(uri.getPath))
+          case null | "file" =>
+            try {
+              env.rpcEnv.fileServer.addJar(new File(uri.getPath))
+            } catch {
+              case exc: FileNotFoundException =>
+                logError(s"Jar not found at $path")
+                null
+            }
           // A JAR file which exists locally on every worker node
           case "local" => "file:" + uri.getPath
           case _ => path
@@ -1854,30 +1862,25 @@ class SparkContext(config: SparkConf) extends Logging {
   def listJars(): Seq[String] = addedJars.keySet.toSeq
 
   /**
-   * When stopping SparkContext inside Spark components, it's easy to cause dead-lock since Spark
-   * may wait for some internal threads to finish. It's better to use this method to stop
-   * SparkContext instead.
-   */
-  private[spark] def stopInNewThread(): Unit = {
-    new Thread("stop-spark-context") {
-      setDaemon(true)
-
-      override def run(): Unit = {
-        try {
-          SparkContext.this.stop()
-        } catch {
-          case e: Throwable =>
-            logError(e.getMessage, e)
-            throw e
-        }
-      }
-    }.start()
-  }
-
-  /**
    * Shut down the SparkContext.
    */
   def stop(): Unit = {
+    if (env.rpcEnv.isInRPCThread) {
+      // `stop` will block until all RPC threads exit, so we cannot call stop inside a RPC thread.
+      // We should launch a new thread to call `stop` to avoid dead-lock.
+      new Thread("stop-spark-context") {
+        setDaemon(true)
+
+        override def run(): Unit = {
+          _stop()
+        }
+      }.start()
+    } else {
+      _stop()
+    }
+  }
+
+  private def _stop() {
     if (LiveListenerBus.withinListenerThread.value) {
       throw new SparkException(s"Cannot stop SparkContext within listener bus thread.")
     }
@@ -2389,7 +2392,7 @@ class SparkContext(config: SparkConf) extends Logging {
         }
     }
 
-    listenerBus.start(this, _env.metricsSystem)
+    listenerBus.start()
     _listenerBusStarted = true
   }
 
@@ -2513,6 +2516,9 @@ object SparkContext extends Logging {
           logWarning("Using an existing SparkContext; some configuration may not take effect.")
         }
       }
+      if (config.getAll.nonEmpty) {
+        logWarning("Use an existing SparkContext, some configuration may not take effect.")
+      }
       activeContext.get()
     }
   }
@@ -2534,6 +2540,13 @@ object SparkContext extends Logging {
         setActiveContext(new SparkContext(), allowMultipleContexts = false)
       }
       activeContext.get()
+    }
+  }
+
+  /** Return the current active [[SparkContext]] if any. */
+  private[spark] def getActive: Option[SparkContext] = {
+    SPARK_CONTEXT_CONSTRUCTOR_LOCK.synchronized {
+      Option(activeContext.get())
     }
   }
 
@@ -2753,6 +2766,18 @@ object SparkContext extends Logging {
         backend.shutdownCallback = (backend: StandaloneSchedulerBackend) => {
           localCluster.stop()
         }
+        (backend, scheduler)
+
+      case MESOS_REGEX(mesosUrl) =>
+        MesosNativeLibrary.load()
+        val scheduler = new TaskSchedulerImpl(sc)
+        val coarseGrained = sc.conf.getBoolean("spark.mesos.coarse", defaultValue = true)
+        val backend = if (coarseGrained) {
+          new MesosCoarseGrainedSchedulerBackend(scheduler, sc, mesosUrl, sc.env.securityManager)
+        } else {
+          new MesosFineGrainedSchedulerBackend(scheduler, sc, mesosUrl)
+        }
+        scheduler.initialize(backend)
         (backend, scheduler)
 
       case masterUrl =>

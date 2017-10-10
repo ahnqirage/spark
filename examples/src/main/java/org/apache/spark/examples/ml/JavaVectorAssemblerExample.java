@@ -59,7 +59,6 @@ public class JavaVectorAssemblerExample {
         "'features'");
     output.select("features", "clicked").show(false);
     // $example off$
-
     spark.stop();
   }
 }

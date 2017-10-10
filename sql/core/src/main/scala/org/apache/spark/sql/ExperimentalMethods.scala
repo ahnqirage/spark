@@ -42,8 +42,10 @@ class ExperimentalMethods private[sql]() {
    *
    * @since 1.3.0
    */
+  @Experimental
   @volatile var extraStrategies: Seq[Strategy] = Nil
 
+  @Experimental
   @volatile var extraOptimizations: Seq[Rule[LogicalPlan]] = Nil
 
   override def clone(): ExperimentalMethods = {

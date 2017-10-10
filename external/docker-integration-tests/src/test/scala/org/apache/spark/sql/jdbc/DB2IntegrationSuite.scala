@@ -50,19 +50,18 @@ class DB2IntegrationSuite extends DockerJDBCIntegrationSuite {
     conn.prepareStatement("INSERT INTO tbl VALUES (17,'dave')").executeUpdate()
 
     conn.prepareStatement("CREATE TABLE numbers ( small SMALLINT, med INTEGER, big BIGINT, "
-      + "deci DECIMAL(31,20), flt FLOAT, dbl DOUBLE, real REAL, "
-      + "decflt DECFLOAT, decflt16 DECFLOAT(16), decflt34 DECFLOAT(34))").executeUpdate()
+      + "deci DECIMAL(31,20), flt FLOAT, dbl DOUBLE)").executeUpdate()
     conn.prepareStatement("INSERT INTO numbers VALUES (17, 77777, 922337203685477580, "
-      + "123456745.56789012345000000000, 42.75, 5.4E-70, "
-      + "3.4028234663852886e+38, 4.2999, DECFLOAT('9.999999999999999E19', 16), "
-      + "DECFLOAT('1234567891234567.123456789123456789', 34))").executeUpdate()
+      + "123456745.56789012345000000000, 42.75, 5.4E-70)").executeUpdate()
 
     conn.prepareStatement("CREATE TABLE dates (d DATE, t TIME, ts TIMESTAMP )").executeUpdate()
     conn.prepareStatement("INSERT INTO dates VALUES ('1991-11-09', '13:31:24', "
       + "'2009-02-13 23:31:30')").executeUpdate()
 
     // TODO: Test locale conversion for strings.
-    conn.prepareStatement("CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c CLOB, d BLOB, e XML)")
+    conn.prepareStatement("CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c CLOB, d BLOB)")
+      .executeUpdate()
+    conn.prepareStatement("INSERT INTO strings VALUES ('the', 'quick', 'brown', BLOB('fox'))")
       .executeUpdate()
     conn.prepareStatement("INSERT INTO strings VALUES ('the', 'quick', 'brown', BLOB('fox'),"
       + "'<cinfo cid=\"10\"><name>Kathy</name></cinfo>')").executeUpdate()
@@ -83,17 +82,13 @@ class DB2IntegrationSuite extends DockerJDBCIntegrationSuite {
     val rows = df.collect()
     assert(rows.length == 1)
     val types = rows(0).toSeq.map(x => x.getClass.toString)
-    assert(types.length == 10)
+    assert(types.length == 6)
     assert(types(0).equals("class java.lang.Integer"))
     assert(types(1).equals("class java.lang.Integer"))
     assert(types(2).equals("class java.lang.Long"))
     assert(types(3).equals("class java.math.BigDecimal"))
     assert(types(4).equals("class java.lang.Double"))
     assert(types(5).equals("class java.lang.Double"))
-    assert(types(6).equals("class java.lang.Float"))
-    assert(types(7).equals("class java.math.BigDecimal"))
-    assert(types(8).equals("class java.math.BigDecimal"))
-    assert(types(9).equals("class java.math.BigDecimal"))
     assert(rows(0).getInt(0) == 17)
     assert(rows(0).getInt(1) == 77777)
     assert(rows(0).getLong(2) == 922337203685477580L)
@@ -101,10 +96,6 @@ class DB2IntegrationSuite extends DockerJDBCIntegrationSuite {
     assert(rows(0).getAs[BigDecimal](3).equals(bd))
     assert(rows(0).getDouble(4) == 42.75)
     assert(rows(0).getDouble(5) == 5.4E-70)
-    assert(rows(0).getFloat(6) == 3.4028234663852886e+38)
-    assert(rows(0).getDecimal(7) == new BigDecimal("4.299900000000000000"))
-    assert(rows(0).getDecimal(8) == new BigDecimal("99999999999999990000.000000000000000000"))
-    assert(rows(0).getDecimal(9) == new BigDecimal("1234567891234567.123456789123456789"))
   }
 
   test("Date types") {
@@ -126,7 +117,7 @@ class DB2IntegrationSuite extends DockerJDBCIntegrationSuite {
     val rows = df.collect()
     assert(rows.length == 1)
     val types = rows(0).toSeq.map(x => x.getClass.toString)
-    assert(types.length == 5)
+    assert(types.length == 4)
     assert(types(0).equals("class java.lang.String"))
     assert(types(1).equals("class java.lang.String"))
     assert(types(2).equals("class java.lang.String"))
@@ -135,17 +126,13 @@ class DB2IntegrationSuite extends DockerJDBCIntegrationSuite {
     assert(rows(0).getString(1).equals("quick"))
     assert(rows(0).getString(2).equals("brown"))
     assert(java.util.Arrays.equals(rows(0).getAs[Array[Byte]](3), Array[Byte](102, 111, 120)))
-    assert(rows(0).getString(4).equals("""<cinfo cid="10"><name>Kathy</name></cinfo>"""))
   }
 
   test("Basic write test") {
-    // cast decflt column with precision value of 38 to DB2 max decimal precision value of 31.
-    val df1 = sqlContext.read.jdbc(jdbcUrl, "numbers", new Properties)
-      .selectExpr("small", "med", "big", "deci", "flt", "dbl", "real",
-      "cast(decflt as decimal(31, 5)) as decflt")
+    // val df1 = sqlContext.read.jdbc(jdbcUrl, "numbers", new Properties)
     val df2 = sqlContext.read.jdbc(jdbcUrl, "dates", new Properties)
     val df3 = sqlContext.read.jdbc(jdbcUrl, "strings", new Properties)
-    df1.write.jdbc(jdbcUrl, "numberscopy", new Properties)
+    // df1.write.jdbc(jdbcUrl, "numberscopy", new Properties)
     df2.write.jdbc(jdbcUrl, "datescopy", new Properties)
     df3.write.jdbc(jdbcUrl, "stringscopy", new Properties)
     // spark types that does not have exact matching db2 table types.

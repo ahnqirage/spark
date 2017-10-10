@@ -50,6 +50,7 @@ abstract class BaseReceivedBlockHandlerSuite(enableEncryption: Boolean)
   extends SparkFunSuite
   with BeforeAndAfter
   with Matchers
+  with LocalSparkContext
   with Logging {
 
   import WriteAheadLogBasedBlockHandler._
@@ -68,7 +69,7 @@ abstract class BaseReceivedBlockHandlerSuite(enableEncryption: Boolean)
 
   val hadoopConf = new Configuration()
   val streamId = 1
-  val securityMgr = new SecurityManager(conf, encryptionKey)
+  val securityMgr = new SecurityManager(conf)
   val broadcastManager = new BroadcastManager(true, conf, securityMgr)
   val mapOutputTracker = new MapOutputTrackerMaster(conf, broadcastManager, true)
   val shuffleManager = new SortShuffleManager(conf)
@@ -88,9 +89,10 @@ abstract class BaseReceivedBlockHandlerSuite(enableEncryption: Boolean)
     rpcEnv = RpcEnv.create("test", "localhost", 0, conf, securityMgr)
     conf.set("spark.driver.port", rpcEnv.address.port.toString)
 
+    sc = new SparkContext("local", "test", conf)
     blockManagerMaster = new BlockManagerMaster(rpcEnv.setupEndpoint("blockmanager",
       new BlockManagerMasterEndpoint(rpcEnv, true, conf,
-        new LiveListenerBus(conf))), conf, true)
+        new LiveListenerBus(sc))), conf, true)
 
     storageLevel = StorageLevel.MEMORY_ONLY_SER
     blockManager = createBlockManager(blockManagerSize, conf)
@@ -172,8 +174,7 @@ abstract class BaseReceivedBlockHandlerSuite(enableEncryption: Boolean)
           val bytes = reader.read(fileSegment)
           reader.close()
           serializerManager.dataDeserializeStream(
-            generateBlockId(),
-            new ChunkedByteBuffer(bytes).toInputStream())(ClassTag.Any).toList
+            generateBlockId(), new ChunkedByteBuffer(bytes).toInputStream())(ClassTag.Any).toList
         }
         loggedData shouldEqual data
       }

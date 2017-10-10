@@ -29,7 +29,7 @@ import org.scalatest.time.SpanSugar._
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.streaming.ProcessingTime
-import org.apache.spark.sql.streaming.util.StreamManualClock
+import org.apache.spark.util.{Clock, ManualClock, SystemClock}
 
 class ProcessingTimeExecutorSuite extends SparkFunSuite {
 
@@ -43,57 +43,6 @@ class ProcessingTimeExecutorSuite extends SparkFunSuite {
     assert(processingTimeExecutor.nextBatchTime(100) === 200)
     assert(processingTimeExecutor.nextBatchTime(101) === 200)
     assert(processingTimeExecutor.nextBatchTime(150) === 200)
-  }
-
-  test("trigger timing") {
-    val triggerTimes = new ConcurrentHashSet[Int]
-    val clock = new StreamManualClock()
-    @volatile var continueExecuting = true
-    @volatile var clockIncrementInTrigger = 0L
-    val executor = ProcessingTimeExecutor(ProcessingTime("1000 milliseconds"), clock)
-    val executorThread = new Thread() {
-      override def run(): Unit = {
-        executor.execute(() => {
-          // Record the trigger time, increment clock if needed and
-          triggerTimes.add(clock.getTimeMillis.toInt)
-          clock.advance(clockIncrementInTrigger)
-          clockIncrementInTrigger = 0 // reset this so that there are no runaway triggers
-          continueExecuting
-        })
-      }
-    }
-    executorThread.start()
-    // First batch should execute immediately, then executor should wait for next one
-    eventually {
-      assert(triggerTimes.contains(0))
-      assert(clock.isStreamWaitingAt(0))
-      assert(clock.isStreamWaitingFor(1000))
-    }
-
-    // Second batch should execute when clock reaches the next trigger time.
-    // If next trigger takes less than the trigger interval, executor should wait for next one
-    clockIncrementInTrigger = 500
-    clock.setTime(1000)
-    eventually {
-      assert(triggerTimes.contains(1000))
-      assert(clock.isStreamWaitingAt(1500))
-      assert(clock.isStreamWaitingFor(2000))
-    }
-
-    // If next trigger takes less than the trigger interval, executor should immediately execute
-    // another one
-    clockIncrementInTrigger = 1500
-    clock.setTime(2000)   // allow another trigger by setting clock to 2000
-    eventually {
-      // Since the next trigger will take 1500 (which is more than trigger interval of 1000)
-      // executor will immediately execute another trigger
-      assert(triggerTimes.contains(2000) && triggerTimes.contains(3500))
-      assert(clock.isStreamWaitingAt(3500))
-      assert(clock.isStreamWaitingFor(4000))
-    }
-    continueExecuting = false
-    clock.advance(1000)
-    waitForThreadJoin(executorThread)
   }
 
   test("calling nextBatchTime with the result of a previous call should return the next interval") {

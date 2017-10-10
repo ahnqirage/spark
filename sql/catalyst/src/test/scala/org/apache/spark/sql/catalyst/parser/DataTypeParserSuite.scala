@@ -135,7 +135,11 @@ class DataTypeParserSuite extends SparkFunSuite {
   checkDataType("struct<end: long, select: int, from: string>",
     (new StructType).add("end", LongType).add("select", IntegerType).add("from", StringType))
 
-  // DataType parser accepts comments.
-  checkDataType("Struct<x: INT, y: STRING COMMENT 'test'>",
-    (new StructType).add("x", IntegerType).add("y", StringType, true, "test"))
+  checkDataType(
+    "struct<`x``y` int>",
+    (new StructType).add("x`y", IntegerType))
+
+  // Use SQL keywords.
+  checkDataType("struct<end: long, select: int, from: string>",
+    (new StructType).add("end", LongType).add("select", IntegerType).add("from", StringType))
 }

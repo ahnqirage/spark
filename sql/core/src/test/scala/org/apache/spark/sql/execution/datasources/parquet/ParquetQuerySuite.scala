@@ -57,7 +57,7 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
       checkAnswer(spark.table("t"), (data ++ data).map(Row.fromTuple))
     }
     spark.sessionState.catalog.dropTable(
-      TableIdentifier("tmp"), ignoreIfNotExists = true, purge = false)
+      TableIdentifier("tmp"), ignoreIfNotExists = true)
   }
 
   test("overwriting") {
@@ -68,7 +68,7 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
       checkAnswer(spark.table("t"), data.map(Row.fromTuple))
     }
     spark.sessionState.catalog.dropTable(
-      TableIdentifier("tmp"), ignoreIfNotExists = true, purge = false)
+      TableIdentifier("tmp"), ignoreIfNotExists = true)
   }
 
   test("SPARK-15678: not use cache on overwrite") {
@@ -78,6 +78,8 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
       val df = spark.read.parquet(path).cache()
       assert(df.count() == 1000)
       spark.range(10).write.mode("overwrite").parquet(path)
+      assert(df.count() == 1000)
+      spark.catalog.refreshByPath(path)
       assert(df.count() == 10)
       assert(spark.read.parquet(path).count() == 10)
     }
@@ -90,6 +92,8 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
       val df = spark.read.parquet(path).cache()
       assert(df.count() == 1000)
       spark.range(10).write.mode("append").parquet(path)
+      assert(df.count() == 1000)
+      spark.catalog.refreshByPath(path)
       assert(df.count() == 1010)
       assert(spark.read.parquet(path).count() == 1010)
     }
@@ -249,8 +253,6 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
     }
 
     withSQLConf(
-      SQLConf.FILE_COMMIT_PROTOCOL_CLASS.key ->
-        classOf[SQLHadoopMapReduceCommitProtocol].getCanonicalName,
       SQLConf.PARQUET_SCHEMA_MERGING_ENABLED.key -> "true",
       SQLConf.PARQUET_SCHEMA_RESPECT_SUMMARIES.key -> "true",
       ParquetOutputFormat.ENABLE_JOB_SUMMARY -> "true"
@@ -259,8 +261,6 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
     }
 
     withSQLConf(
-      SQLConf.FILE_COMMIT_PROTOCOL_CLASS.key ->
-        classOf[SQLHadoopMapReduceCommitProtocol].getCanonicalName,
       SQLConf.PARQUET_SCHEMA_MERGING_ENABLED.key -> "true",
       SQLConf.PARQUET_SCHEMA_RESPECT_SUMMARIES.key -> "false"
     ) {
@@ -761,8 +761,8 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
 
         // donot return batch, because whole stage codegen is disabled for wide table (>200 columns)
         val df2 = spark.read.parquet(path)
-        val fileScan2 = df2.queryExecution.sparkPlan.find(_.isInstanceOf[FileSourceScanExec]).get
-        assert(!fileScan2.asInstanceOf[FileSourceScanExec].supportsBatch)
+        assert(df2.queryExecution.sparkPlan.find(_.isInstanceOf[BatchedDataSourceScanExec]).isEmpty,
+          "Should not return batch")
         checkAnswer(df2, df)
 
         // return batch
@@ -802,18 +802,6 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
       readParquetFile(path) { df =>
         assert(df.schema.last.metadata.getString("key") == "value")
       }
-    }
-  }
-
-  test("SPARK-16344: array of struct with a single field named 'element'") {
-    withTempPath { dir =>
-      val path = dir.getCanonicalPath
-      Seq(Tuple1(Array(SingleElement(42)))).toDF("f").write.parquet(path)
-
-      checkAnswer(
-        sqlContext.read.parquet(path),
-        Row(Array(Row(42)))
-      )
     }
   }
 

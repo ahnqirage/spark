@@ -299,3 +299,13 @@ object SparkExecuteStatementOperation {
     new TableSchema(schema.asJava)
   }
 }
+
+object SparkExecuteStatementOperation {
+  def getTableSchema(structType: StructType): TableSchema = {
+    val schema = structType.map { field =>
+      val attrTypeString = if (field.dataType == NullType) "void" else field.dataType.catalogString
+      new FieldSchema(field.name, attrTypeString, "")
+    }
+    new TableSchema(schema.asJava)
+  }
+}

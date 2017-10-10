@@ -17,10 +17,12 @@
 
 package org.apache.spark.sql.catalyst.expressions
 
-import java.net.{URI, URISyntaxException}
+import java.net.{MalformedURLException, URL}
 import java.text.{BreakIterator, DecimalFormat, DecimalFormatSymbols}
 import java.util.{HashMap, Locale, Map => JMap}
 import java.util.regex.Pattern
+
+import scala.collection.mutable.ArrayBuffer
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -177,17 +179,11 @@ case class ConcatWs(children: Seq[Expression])
   }
 }
 
-// scalastyle:off line.size.limit
 @ExpressionDescription(
-  usage = "_FUNC_(n, str1, str2, ...) - Returns the `n`-th string, e.g., returns `str2` when `n` is 2.",
-  examples = """
-    Examples:
-      > SELECT _FUNC_(1, 'scala', 'java');
-       scala
-  """)
-// scalastyle:on line.size.limit
+  usage = "_FUNC_(n, str1, str2, ...) - returns the n-th string, e.g. returns str2 when n is 2",
+  extended = "> SELECT _FUNC_(1, 'scala', 'java') FROM src LIMIT 1;\n" + "'scala'")
 case class Elt(children: Seq[Expression])
-  extends Expression with ImplicitCastInputTypes {
+  extends Expression with ImplicitCastInputTypes with CodegenFallback {
 
   private lazy val indexExpr = children.head
   private lazy val stringExprs = children.tail.toArray
@@ -219,29 +215,6 @@ case class Elt(children: Seq[Expression])
         stringExprs(index - 1).eval(input)
       }
     }
-  }
-
-  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    val index = indexExpr.genCode(ctx)
-    val strings = stringExprs.map(_.genCode(ctx))
-    val assignStringValue = strings.zipWithIndex.map { case (eval, index) =>
-      s"""
-        case ${index + 1}:
-          ${ev.value} = ${eval.isNull} ? null : ${eval.value};
-          break;
-      """
-    }.mkString("\n")
-    val indexVal = ctx.freshName("index")
-    val stringArray = ctx.freshName("strings");
-
-    ev.copy(index.code + "\n" + strings.map(_.code).mkString("\n") + s"""
-      final int $indexVal = ${index.value};
-      UTF8String ${ev.value} = null;
-      switch ($indexVal) {
-        $assignStringValue
-      }
-      final boolean ${ev.isNull} = ${ev.value} == null;
-    """)
   }
 }
 
@@ -1079,16 +1052,16 @@ object ParseUrl {
  * Extracts a part from a URL
  */
 @ExpressionDescription(
-  usage = "_FUNC_(url, partToExtract[, key]) - Extracts a part from a URL.",
-  examples = """
+  usage = "_FUNC_(url, partToExtract[, key]) - extracts a part from a URL",
+  extended = """Parts: HOST, PATH, QUERY, REF, PROTOCOL, AUTHORITY, FILE, USERINFO.
+    Key specifies which query to extract.
     Examples:
       > SELECT _FUNC_('http://spark.apache.org/path?query=1', 'HOST')
-       spark.apache.org
+      'spark.apache.org'
       > SELECT _FUNC_('http://spark.apache.org/path?query=1', 'QUERY')
-       query=1
+      'query=1'
       > SELECT _FUNC_('http://spark.apache.org/path?query=1', 'QUERY', 'query')
-       1
-  """)
+      '1'""")
 case class ParseUrl(children: Seq[Expression])
   extends Expression with ExpectsInputTypes with CodegenFallback {
 
@@ -1132,44 +1105,25 @@ case class ParseUrl(children: Seq[Expression])
     Pattern.compile(REGEXPREFIX + key.toString + REGEXSUBFIX)
   }
 
-  private def getUrl(url: UTF8String): URI = {
+  private def getUrl(url: UTF8String): URL = {
     try {
-      new URI(url.toString)
+      new URL(url.toString)
     } catch {
-      case e: URISyntaxException => null
+      case e: MalformedURLException => null
     }
   }
 
-  private def getExtractPartFunc(partToExtract: UTF8String): URI => String = {
-
-    // partToExtract match {
-    //   case HOST => _.toURL().getHost
-    //   case PATH => _.toURL().getPath
-    //   case QUERY => _.toURL().getQuery
-    //   case REF => _.toURL().getRef
-    //   case PROTOCOL => _.toURL().getProtocol
-    //   case FILE => _.toURL().getFile
-    //   case AUTHORITY => _.toURL().getAuthority
-    //   case USERINFO => _.toURL().getUserInfo
-    //   case _ => (url: URI) => null
-    // }
-
+  private def getExtractPartFunc(partToExtract: UTF8String): URL => String = {
     partToExtract match {
       case HOST => _.getHost
-      case PATH => _.getRawPath
-      case QUERY => _.getRawQuery
-      case REF => _.getRawFragment
-      case PROTOCOL => _.getScheme
-      case FILE =>
-        (url: URI) =>
-          if (url.getRawQuery ne null) {
-            url.getRawPath + "?" + url.getRawQuery
-          } else {
-            url.getRawPath
-          }
-      case AUTHORITY => _.getRawAuthority
-      case USERINFO => _.getRawUserInfo
-      case _ => (url: URI) => null
+      case PATH => _.getPath
+      case QUERY => _.getQuery
+      case REF => _.getRef
+      case PROTOCOL => _.getProtocol
+      case FILE => _.getFile
+      case AUTHORITY => _.getAuthority
+      case USERINFO => _.getUserInfo
+      case _ => (url: URL) => null
     }
   }
 
@@ -1182,7 +1136,7 @@ case class ParseUrl(children: Seq[Expression])
     }
   }
 
-  private def extractFromUrl(url: URI, partToExtract: UTF8String): UTF8String = {
+  private def extractFromUrl(url: URL, partToExtract: UTF8String): UTF8String = {
     if (cachedExtractPartFunc ne null) {
       UTF8String.fromString(cachedExtractPartFunc.apply(url))
     } else {
@@ -2002,12 +1956,8 @@ case class FormatNumber(x: Expression, d: Expression)
  * The 'lang' and 'country' arguments are optional, and if omitted, the default locale is used.
  */
 @ExpressionDescription(
-  usage = "_FUNC_(str[, lang, country]) - Splits `str` into an array of array of words.",
-  examples = """
-    Examples:
-      > SELECT _FUNC_('Hi there! Good morning.');
-       [["Hi","there"],["Good","morning"]]
-  """)
+  usage = "_FUNC_(str[, lang, country]) - Splits str into an array of array of words.",
+  extended = "> SELECT _FUNC_('Hi there! Good morning.');\n  [['Hi','there'], ['Good','morning']]")
 case class Sentences(
     str: Expression,
     language: Expression = Literal(""),
@@ -2033,7 +1983,7 @@ case class Sentences(
       val locale = if (languageStr != null && countryStr != null) {
         new Locale(languageStr.toString, countryStr.toString)
       } else {
-        Locale.US
+        Locale.getDefault
       }
       getSentences(string.asInstanceOf[UTF8String].toString, locale)
     }

@@ -80,17 +80,8 @@ NEXUS_PROFILE=d63f592e7eac0 # Profile for Spark staging uploads
 BASE_DIR=$(pwd)
 
 MVN="build/mvn --force"
-
-# Hive-specific profiles for some builds
-HIVE_PROFILES="-Phive -Phive-thriftserver"
-# Profiles for publishing snapshots and release to Maven Central
-PUBLISH_PROFILES="-Pmesos -Pyarn -Pflume $HIVE_PROFILES -Pspark-ganglia-lgpl -Pkinesis-asl"
-# Profiles for building binary releases
-BASE_RELEASE_PROFILES="-Pmesos -Pyarn -Pflume -Psparkr"
-# Scala 2.11 only profiles for some builds
-SCALA_2_11_PROFILES="-Pkafka-0-8"
-# Scala 2.12 only profiles for some builds
-SCALA_2_12_PROFILES="-Pscala-2.12"
+PUBLISH_PROFILES="-Pyarn -Phive -Phive-thriftserver -Phadoop-2.2"
+PUBLISH_PROFILES="$PUBLISH_PROFILES -Pspark-ganglia-lgpl -Pkinesis-asl"
 
 rm -rf spark
 git clone https://git-wip-us.apache.org/repos/asf/spark.git
@@ -339,10 +330,10 @@ if [[ "$1" == "publish-snapshot" ]]; then
   # Generate random point for Zinc
   export ZINC_PORT=$(python -S -c "import random; print random.randrange(3030,4030)")
 
-  $MVN -DzincPort=$ZINC_PORT --settings $tmp_settings -DskipTests $SCALA_2_11_PROFILES $PUBLISH_PROFILES deploy
-  #./dev/change-scala-version.sh 2.12
-  #$MVN -DzincPort=$ZINC_PORT --settings $tmp_settings \
-  #  -DskipTests $SCALA_2_12_PROFILES $PUBLISH_PROFILES clean deploy
+  $MVN -DzincPort=$ZINC_PORT --settings $tmp_settings -DskipTests $PUBLISH_PROFILES deploy
+  ./dev/change-scala-version.sh 2.10
+  $MVN -DzincPort=$ZINC_PORT -Dscala-2.10 --settings $tmp_settings \
+    -DskipTests $PUBLISH_PROFILES clean deploy
 
   # Clean-up Zinc nailgun process
   lsof -P |grep $ZINC_PORT | grep LISTEN | awk '{ print $2; }' | xargs kill
@@ -375,7 +366,9 @@ if [[ "$1" == "publish-release" ]]; then
   # Generate random point for Zinc
   export ZINC_PORT=$(python -S -c "import random; print random.randrange(3030,4030)")
 
-  $MVN -DzincPort=$ZINC_PORT -Dmaven.repo.local=$tmp_repo -DskipTests $SCALA_2_11_PROFILES $PUBLISH_PROFILES clean install
+  $MVN -DzincPort=$ZINC_PORT -Dmaven.repo.local=$tmp_repo -DskipTests $PUBLISH_PROFILES clean install
+
+  ./dev/change-scala-version.sh 2.10
 
   #./dev/change-scala-version.sh 2.12
   #$MVN -DzincPort=$ZINC_PORT -Dmaven.repo.local=$tmp_repo \

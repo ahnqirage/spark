@@ -44,8 +44,7 @@ private[clustering] trait GaussianMixtureParams extends Params with HasMaxIter w
   with HasSeed with HasPredictionCol with HasProbabilityCol with HasTol {
 
   /**
-   * Number of independent Gaussians in the mixture model. Must be greater than 1. Default: 2.
-   *
+   * Number of independent Gaussians in the mixture model. Must be > 1. Default: 2.
    * @group param
    */
   @Since("2.0.0")
@@ -64,8 +63,8 @@ private[clustering] trait GaussianMixtureParams extends Params with HasMaxIter w
    */
   protected def validateAndTransformSchema(schema: StructType): StructType = {
     SchemaUtils.checkColumnType(schema, $(featuresCol), new VectorUDT)
-    val schemaWithPredictionCol = SchemaUtils.appendColumn(schema, $(predictionCol), IntegerType)
-    SchemaUtils.appendColumn(schemaWithPredictionCol, $(probabilityCol), new VectorUDT)
+    SchemaUtils.appendColumn(schema, $(predictionCol), IntegerType)
+    SchemaUtils.appendColumn(schema, $(probabilityCol), new VectorUDT)
   }
 }
 
@@ -278,11 +277,9 @@ object GaussianMixtureModel extends MLReadable[GaussianMixtureModel] {
  * While this process is generally guaranteed to converge, it is not guaranteed
  * to find a global optimum.
  *
- * @note This algorithm is limited in its number of features since it requires storing a covariance
- * matrix which has size quadratic in the number of features. Even when the number of features does
- * not exceed this limit, this algorithm may perform poorly on high-dimensional data.
- * This is due to high-dimensional data (a) making it difficult to cluster at all (based
- * on statistical/theoretical arguments) and (b) numerical issues with Gaussian distributions.
+ * Note: For high-dimensional data (with many features), this algorithm may perform poorly.
+ *       This is due to high-dimensional data (a) making it difficult to cluster at all (based
+ *       on statistical/theoretical arguments) and (b) numerical issues with Gaussian distributions.
  */
 @Since("2.0.0")
 class GaussianMixture @Since("2.0.0") (
@@ -336,82 +333,18 @@ class GaussianMixture @Since("2.0.0") (
   @Since("2.0.0")
   override def fit(dataset: Dataset[_]): GaussianMixtureModel = {
     transformSchema(dataset.schema, logging = true)
+    val rdd: RDD[OldVector] = dataset.select(col($(featuresCol))).rdd.map {
+      case Row(point: Vector) => OldVectors.fromML(point)
+    }
 
-    val sc = dataset.sparkSession.sparkContext
-    val numClusters = $(k)
-
-    val instances: RDD[Vector] = dataset.select(col($(featuresCol))).rdd.map {
-      case Row(features: Vector) => features
-    }.cache()
-
-    // Extract the number of features.
-    val numFeatures = instances.first().size
-    require(numFeatures < GaussianMixture.MAX_NUM_FEATURES, s"GaussianMixture cannot handle more " +
-      s"than ${GaussianMixture.MAX_NUM_FEATURES} features because the size of the covariance" +
-      s" matrix is quadratic in the number of features.")
-
-    val instr = Instrumentation.create(this, instances)
-    instr.logParams(featuresCol, predictionCol, probabilityCol, k, maxIter, seed, tol)
-    instr.logNumFeatures(numFeatures)
-
-    val shouldDistributeGaussians = GaussianMixture.shouldDistributeGaussians(
-      numClusters, numFeatures)
-
-    // TODO: SPARK-15785 Support users supplied initial GMM.
-    val (weights, gaussians) = initRandom(instances, numClusters, numFeatures)
-
-    var logLikelihood = Double.MinValue
-    var logLikelihoodPrev = 0.0
-
-    var iter = 0
-    while (iter < $(maxIter) && math.abs(logLikelihood - logLikelihoodPrev) > $(tol)) {
-
-      val bcWeights = instances.sparkContext.broadcast(weights)
-      val bcGaussians = instances.sparkContext.broadcast(gaussians)
-
-      // aggregate the cluster contribution for all sample points
-      val sums = instances.treeAggregate(
-        new ExpectationAggregator(numFeatures, bcWeights, bcGaussians))(
-        seqOp = (c, v) => (c, v) match {
-          case (aggregator, instance) => aggregator.add(instance)
-        },
-        combOp = (c1, c2) => (c1, c2) match {
-          case (aggregator1, aggregator2) => aggregator1.merge(aggregator2)
-        })
-
-      bcWeights.destroy(blocking = false)
-      bcGaussians.destroy(blocking = false)
-
-      /*
-         Create new distributions based on the partial assignments
-         (often referred to as the "M" step in literature)
-       */
-      val sumWeights = sums.weights.sum
-
-      if (shouldDistributeGaussians) {
-        val numPartitions = math.min(numClusters, 1024)
-        val tuples = Seq.tabulate(numClusters) { i =>
-          (sums.means(i), sums.covs(i), sums.weights(i))
-        }
-        val (ws, gs) = sc.parallelize(tuples, numPartitions).map { case (mean, cov, weight) =>
-          GaussianMixture.updateWeightsAndGaussians(mean, cov, weight, sumWeights)
-        }.collect().unzip
-        Array.copy(ws, 0, weights, 0, ws.length)
-        Array.copy(gs, 0, gaussians, 0, gs.length)
-      } else {
-        var i = 0
-        while (i < numClusters) {
-          val (weight, gaussian) = GaussianMixture.updateWeightsAndGaussians(
-            sums.means(i), sums.covs(i), sums.weights(i), sumWeights)
-          weights(i) = weight
-          gaussians(i) = gaussian
-          i += 1
-        }
-      }
-
-      logLikelihoodPrev = logLikelihood   // current becomes previous
-      logLikelihood = sums.logLikelihood  // this is the freshly computed log-likelihood
-      iter += 1
+    val algo = new MLlibGM()
+      .setK($(k))
+      .setMaxIterations($(maxIter))
+      .setSeed($(seed))
+      .setConvergenceTol($(tol))
+    val parentModel = algo.run(rdd)
+    val gaussians = parentModel.gaussians.map { case g =>
+      new MultivariateGaussian(g.mu.asML, g.sigma.asML)
     }
 
     val gaussianDists = gaussians.map { case (mean, covVec) =>

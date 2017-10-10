@@ -65,18 +65,11 @@ class PartitionBatchPruningSuite
     }, 5).toDF()
     pruningData.createOrReplaceTempView("pruningData")
     spark.catalog.cacheTable("pruningData")
-
-    val pruningStringData = sparkContext.makeRDD((100 to 200).map { key =>
-      StringData(key.toString)
-    }, 5).toDF()
-    pruningStringData.createOrReplaceTempView("pruningStringData")
-    spark.catalog.cacheTable("pruningStringData")
   }
 
   override protected def afterEach(): Unit = {
     try {
       spark.catalog.uncacheTable("pruningData")
-      spark.catalog.uncacheTable("pruningStringData")
     } finally {
       super.afterEach()
     }

@@ -198,130 +198,9 @@ class LSHModel(JavaModel):
 class BucketedRandomProjectionLSH(JavaEstimator, LSHParams, HasInputCol, HasOutputCol, HasSeed,
                                   JavaMLReadable, JavaMLWritable):
     """
-    .. note:: Experimental
-
-    LSH class for Euclidean distance metrics.
-    The input is dense or sparse vectors, each of which represents a point in the Euclidean
-    distance space. The output will be vectors of configurable dimension. Hash values in the same
-    dimension are calculated by the same hash function.
-
-    .. seealso:: `Stable Distributions \
-    <https://en.wikipedia.org/wiki/Locality-sensitive_hashing#Stable_distributions>`_
-    .. seealso:: `Hashing for Similarity Search: A Survey <https://arxiv.org/abs/1408.2927>`_
-
-    >>> from pyspark.ml.linalg import Vectors
-    >>> from pyspark.sql.functions import col
-    >>> data = [(0, Vectors.dense([-1.0, -1.0 ]),),
-    ...         (1, Vectors.dense([-1.0, 1.0 ]),),
-    ...         (2, Vectors.dense([1.0, -1.0 ]),),
-    ...         (3, Vectors.dense([1.0, 1.0]),)]
-    >>> df = spark.createDataFrame(data, ["id", "features"])
-    >>> brp = BucketedRandomProjectionLSH(inputCol="features", outputCol="hashes",
-    ...                                   seed=12345, bucketLength=1.0)
-    >>> model = brp.fit(df)
-    >>> model.transform(df).head()
-    Row(id=0, features=DenseVector([-1.0, -1.0]), hashes=[DenseVector([-1.0])])
-    >>> data2 = [(4, Vectors.dense([2.0, 2.0 ]),),
-    ...          (5, Vectors.dense([2.0, 3.0 ]),),
-    ...          (6, Vectors.dense([3.0, 2.0 ]),),
-    ...          (7, Vectors.dense([3.0, 3.0]),)]
-    >>> df2 = spark.createDataFrame(data2, ["id", "features"])
-    >>> model.approxNearestNeighbors(df2, Vectors.dense([1.0, 2.0]), 1).collect()
-    [Row(id=4, features=DenseVector([2.0, 2.0]), hashes=[DenseVector([1.0])], distCol=1.0)]
-    >>> model.approxSimilarityJoin(df, df2, 3.0, distCol="EuclideanDistance").select(
-    ...     col("datasetA.id").alias("idA"),
-    ...     col("datasetB.id").alias("idB"),
-    ...     col("EuclideanDistance")).show()
-    +---+---+-----------------+
-    |idA|idB|EuclideanDistance|
-    +---+---+-----------------+
-    |  3|  6| 2.23606797749979|
-    +---+---+-----------------+
-    ...
-    >>> brpPath = temp_path + "/brp"
-    >>> brp.save(brpPath)
-    >>> brp2 = BucketedRandomProjectionLSH.load(brpPath)
-    >>> brp2.getBucketLength() == brp.getBucketLength()
-    True
-    >>> modelPath = temp_path + "/brp-model"
-    >>> model.save(modelPath)
-    >>> model2 = BucketedRandomProjectionLSHModel.load(modelPath)
-    >>> model.transform(df).head().hashes == model2.transform(df).head().hashes
-    True
-
-    .. versionadded:: 2.2.0
-    """
-
-    bucketLength = Param(Params._dummy(), "bucketLength", "the length of each hash bucket, " +
-                         "a larger bucket lowers the false negative rate.",
-                         typeConverter=TypeConverters.toFloat)
-
-    @keyword_only
-    def __init__(self, inputCol=None, outputCol=None, seed=None, numHashTables=1,
-                 bucketLength=None):
-        """
-        __init__(self, inputCol=None, outputCol=None, seed=None, numHashTables=1, \
-                 bucketLength=None)
-        """
-        super(BucketedRandomProjectionLSH, self).__init__()
-        self._java_obj = \
-            self._new_java_obj("org.apache.spark.ml.feature.BucketedRandomProjectionLSH", self.uid)
-        self._setDefault(numHashTables=1)
-        kwargs = self._input_kwargs
-        self.setParams(**kwargs)
-
-    @keyword_only
-    @since("2.2.0")
-    def setParams(self, inputCol=None, outputCol=None, seed=None, numHashTables=1,
-                  bucketLength=None):
-        """
-        setParams(self, inputCol=None, outputCol=None, seed=None, numHashTables=1, \
-                  bucketLength=None)
-        Sets params for this BucketedRandomProjectionLSH.
-        """
-        kwargs = self._input_kwargs
-        return self._set(**kwargs)
-
-    @since("2.2.0")
-    def setBucketLength(self, value):
-        """
-        Sets the value of :py:attr:`bucketLength`.
-        """
-        return self._set(bucketLength=value)
-
-    @since("2.2.0")
-    def getBucketLength(self):
-        """
-        Gets the value of bucketLength or its default value.
-        """
-        return self.getOrDefault(self.bucketLength)
-
-    def _create_model(self, java_model):
-        return BucketedRandomProjectionLSHModel(java_model)
-
-
-class BucketedRandomProjectionLSHModel(LSHModel, JavaMLReadable, JavaMLWritable):
-    """
-    .. note:: Experimental
-
-    Model fitted by :py:class:`BucketedRandomProjectionLSH`, where multiple random vectors are
-    stored. The vectors are normalized to be unit vectors and each vector is used in a hash
-    function: :math:`h_i(x) = floor(r_i \cdot x / bucketLength)` where :math:`r_i` is the
-    i-th random unit vector. The number of buckets will be `(max L2 norm of input vectors) /
-    bucketLength`.
-
-    .. versionadded:: 2.2.0
-    """
-
-
-@inherit_doc
-class Bucketizer(JavaTransformer, HasInputCol, HasOutputCol, HasHandleInvalid,
-                 JavaMLReadable, JavaMLWritable):
-    """
     Maps a column of continuous features to a column of feature buckets.
 
-    >>> values = [(0.1,), (0.4,), (1.2,), (1.5,), (float("nan"),), (float("nan"),)]
-    >>> df = spark.createDataFrame(values, ["values"])
+    >>> df = spark.createDataFrame([(0.1,), (0.4,), (1.2,), (1.5,)], ["values"])
     >>> bucketizer = Bucketizer(splits=[-float("inf"), 0.5, 1.4, float("inf")],
     ...     inputCol="values", outputCol="buckets")
     >>> bucketed = bucketizer.setHandleInvalid("keep").transform(df).collect()
@@ -372,7 +251,6 @@ class Bucketizer(JavaTransformer, HasInputCol, HasOutputCol, HasHandleInvalid,
         """
         super(Bucketizer, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.feature.Bucketizer", self.uid)
-        self._setDefault(handleInvalid="error")
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
@@ -700,82 +578,6 @@ class ElementwiseProduct(JavaTransformer, HasInputCol, HasOutputCol, JavaMLReada
 @inherit_doc
 class FeatureHasher(JavaTransformer, HasInputCols, HasOutputCol, HasNumFeatures, JavaMLReadable,
                     JavaMLWritable):
-    """
-    .. note:: Experimental
-
-    Feature hashing projects a set of categorical or numerical features into a feature vector of
-    specified dimension (typically substantially smaller than that of the original feature
-    space). This is done using the hashing trick (https://en.wikipedia.org/wiki/Feature_hashing)
-    to map features to indices in the feature vector.
-
-    The FeatureHasher transformer operates on multiple columns. Each column may contain either
-    numeric or categorical features. Behavior and handling of column data types is as follows:
-
-    * Numeric columns:
-        For numeric features, the hash value of the column name is used to map the
-        feature value to its index in the feature vector. Numeric features are never
-        treated as categorical, even when they are integers. You must explicitly
-        convert numeric columns containing categorical features to strings first.
-
-    * String columns:
-        For categorical features, the hash value of the string "column_name=value"
-        is used to map to the vector index, with an indicator value of `1.0`.
-        Thus, categorical features are "one-hot" encoded
-        (similarly to using :py:class:`OneHotEncoder` with `dropLast=false`).
-
-    * Boolean columns:
-        Boolean values are treated in the same way as string columns. That is,
-        boolean features are represented as "column_name=true" or "column_name=false",
-        with an indicator value of `1.0`.
-
-    Null (missing) values are ignored (implicitly zero in the resulting feature vector).
-
-    Since a simple modulo is used to transform the hash function to a vector index,
-    it is advisable to use a power of two as the `numFeatures` parameter;
-    otherwise the features will not be mapped evenly to the vector indices.
-
-    >>> data = [(2.0, True, "1", "foo"), (3.0, False, "2", "bar")]
-    >>> cols = ["real", "bool", "stringNum", "string"]
-    >>> df = spark.createDataFrame(data, cols)
-    >>> hasher = FeatureHasher(inputCols=cols, outputCol="features")
-    >>> hasher.transform(df).head().features
-    SparseVector(262144, {51871: 1.0, 63643: 1.0, 174475: 2.0, 253195: 1.0})
-    >>> hasherPath = temp_path + "/hasher"
-    >>> hasher.save(hasherPath)
-    >>> loadedHasher = FeatureHasher.load(hasherPath)
-    >>> loadedHasher.getNumFeatures() == hasher.getNumFeatures()
-    True
-    >>> loadedHasher.transform(df).head().features == hasher.transform(df).head().features
-    True
-
-    .. versionadded:: 2.3.0
-    """
-
-    @keyword_only
-    def __init__(self, numFeatures=1 << 18, inputCols=None, outputCol=None):
-        """
-        __init__(self, numFeatures=1 << 18, inputCols=None, outputCol=None)
-        """
-        super(FeatureHasher, self).__init__()
-        self._java_obj = self._new_java_obj("org.apache.spark.ml.feature.FeatureHasher", self.uid)
-        self._setDefault(numFeatures=1 << 18)
-        kwargs = self._input_kwargs
-        self.setParams(**kwargs)
-
-    @keyword_only
-    @since("2.3.0")
-    def setParams(self, numFeatures=1 << 18, inputCols=None, outputCol=None):
-        """
-        setParams(self, numFeatures=1 << 18, inputCols=None, outputCol=None)
-        Sets params for this FeatureHasher.
-        """
-        kwargs = self._input_kwargs
-        return self._set(**kwargs)
-
-
-@inherit_doc
-class HashingTF(JavaTransformer, HasInputCol, HasOutputCol, HasNumFeatures, JavaMLReadable,
-                JavaMLWritable):
     """
     Maps a sequence of terms to their term frequencies using the hashing trick.
     Currently we use Austin Appleby's MurmurHash 3 algorithm (MurmurHash3_x86_32)
@@ -1254,24 +1056,6 @@ class MinHashLSH(JavaEstimator, LSHParams, HasInputCol, HasOutputCol, HasSeed,
 
 class MinHashLSHModel(LSHModel, JavaMLReadable, JavaMLWritable):
     """
-    .. note:: Experimental
-
-    Model produced by :py:class:`MinHashLSH`, where where multiple hash functions are stored. Each
-    hash function is picked from the following family of hash functions, where :math:`a_i` and
-    :math:`b_i` are randomly chosen integers less than prime:
-    :math:`h_i(x) = ((x \cdot a_i + b_i) \mod prime)` This hash family is approximately min-wise
-    independent according to the reference.
-
-    .. seealso:: Tom Bohman, Colin Cooper, and Alan Frieze. "Min-wise independent linear \
-    permutations." Electronic Journal of Combinatorics 7 (2000): R26.
-
-    .. versionadded:: 2.2.0
-    """
-
-
-@inherit_doc
-class MinMaxScaler(JavaEstimator, HasInputCol, HasOutputCol, JavaMLReadable, JavaMLWritable):
-    """
     Rescale each feature individually to a common range [min, max] linearly using column summary
     statistics, which is also known as min-max normalization or Rescaling. The rescaled value for
     feature E is calculated as,
@@ -1687,33 +1471,21 @@ class PolynomialExpansion(JavaTransformer, HasInputCol, HasOutputCol, JavaMLRead
 
 
 @inherit_doc
-class QuantileDiscretizer(JavaEstimator, HasInputCol, HasOutputCol, HasHandleInvalid,
-                          JavaMLReadable, JavaMLWritable):
+class QuantileDiscretizer(JavaEstimator, HasInputCol, HasOutputCol, JavaMLReadable, JavaMLWritable):
     """
     .. note:: Experimental
 
     `QuantileDiscretizer` takes a column with continuous features and outputs a column with binned
     categorical features. The number of bins can be set using the :py:attr:`numBuckets` parameter.
-    It is possible that the number of buckets used will be less than this value, for example, if
-    there are too few distinct values of the input to create enough distinct quantiles.
-
-    NaN handling: Note also that
-    QuantileDiscretizer will raise an error when it finds NaN values in the dataset, but the user
-    can also choose to either keep or remove NaN values within the dataset by setting
-    :py:attr:`handleInvalid` parameter. If the user chooses to keep NaN values, they will be
-    handled specially and placed into their own bucket, for example, if 4 buckets are used, then
-    non-NaN data will be put into buckets[0-3], but NaNs will be counted in a special bucket[4].
-
-    Algorithm: The bin ranges are chosen using an approximate algorithm (see the documentation for
+    The bin ranges are chosen using an approximate algorithm (see the documentation for
     :py:meth:`~.DataFrameStatFunctions.approxQuantile` for a detailed description).
     The precision of the approximation can be controlled with the
     :py:attr:`relativeError` parameter.
     The lower and upper bin bounds will be `-Infinity` and `+Infinity`, covering all real values.
 
-    >>> values = [(0.1,), (0.4,), (1.2,), (1.5,), (float("nan"),), (float("nan"),)]
-    >>> df = spark.createDataFrame(values, ["values"])
+    >>> df = spark.createDataFrame([(0.1,), (0.4,), (1.2,), (1.5,)], ["values"])
     >>> qds = QuantileDiscretizer(numBuckets=2,
-    ...     inputCol="values", outputCol="buckets", relativeError=0.01, handleInvalid="error")
+    ...     inputCol="values", outputCol="buckets", relativeError=0.01)
     >>> qds.getRelativeError()
     0.01
     >>> bucketizer = qds.fit(df)
@@ -1748,33 +1520,23 @@ class QuantileDiscretizer(JavaEstimator, HasInputCol, HasOutputCol, HasHandleInv
                           "Must be in the range [0, 1].",
                           typeConverter=TypeConverters.toFloat)
 
-    handleInvalid = Param(Params._dummy(), "handleInvalid", "how to handle invalid entries. " +
-                          "Options are skip (filter out rows with invalid values), " +
-                          "error (throw an error), or keep (keep invalid values in a special " +
-                          "additional bucket).",
-                          typeConverter=TypeConverters.toString)
-
     @keyword_only
-    def __init__(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001,
-                 handleInvalid="error"):
+    def __init__(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001):
         """
-        __init__(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001, \
-                 handleInvalid="error")
+        __init__(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001)
         """
         super(QuantileDiscretizer, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.feature.QuantileDiscretizer",
                                             self.uid)
-        self._setDefault(numBuckets=2, relativeError=0.001, handleInvalid="error")
+        self._setDefault(numBuckets=2, relativeError=0.001)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
     @keyword_only
     @since("2.0.0")
-    def setParams(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001,
-                  handleInvalid="error"):
+    def setParams(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001):
         """
-        setParams(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001, \
-                  handleInvalid="error")
+        setParams(self, numBuckets=2, inputCol=None, outputCol=None, relativeError=0.001)
         Set the params for the QuantileDiscretizer
         """
         kwargs = self._input_kwargs
@@ -2199,7 +1961,7 @@ class StringIndexer(JavaEstimator, HasInputCol, HasOutputCol, HasHandleInvalid, 
         """
         super(StringIndexer, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.feature.StringIndexer", self.uid)
-        self._setDefault(handleInvalid="error", stringOrderType="frequencyDesc")
+        self._setDefault(handleInvalid="error")
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
@@ -2305,8 +2067,6 @@ class IndexToString(JavaTransformer, HasInputCol, HasOutputCol, JavaMLReadable, 
 class StopWordsRemover(JavaTransformer, HasInputCol, HasOutputCol, JavaMLReadable, JavaMLWritable):
     """
     A feature transformer that filters out stop words from input.
-
-    .. note:: null values from input array are preserved unless adding null to stopWords explicitly.
 
     >>> df = spark.createDataFrame([(["a", "b", "c"],)], ["text"])
     >>> remover = StopWordsRemover(inputCol="text", outputCol="words", stopWords=["b"])
@@ -3088,8 +2848,6 @@ class RFormula(JavaEstimator, HasFeaturesCol, HasLabelCol, HasHandleInvalid,
     True
     >>> loadedRF.getLabelCol() == rf.getLabelCol()
     True
-    >>> loadedRF.getHandleInvalid() == rf.getHandleInvalid()
-    True
     >>> str(loadedRF)
     'RFormula(y ~ x + s) (uid=...)'
     >>> modelPath = temp_path + "/rFormulaModel"
@@ -3145,8 +2903,6 @@ class RFormula(JavaEstimator, HasFeaturesCol, HasLabelCol, HasHandleInvalid,
         """
         super(RFormula, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.feature.RFormula", self.uid)
-        self._setDefault(forceIndexLabel=False, stringIndexerOrderType="frequencyDesc",
-                         handleInvalid="error")
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 
@@ -3240,25 +2996,6 @@ class ChiSqSelector(JavaEstimator, HasFeaturesCol, HasOutputCol, HasLabelCol, Ja
     The selector supports different selection methods: `numTopFeatures`, `percentile`, `fpr`,
     `fdr`, `fwe`.
 
-     * `numTopFeatures` chooses a fixed number of top features according to a chi-squared test.
-
-     * `percentile` is similar but chooses a fraction of all features
-       instead of a fixed number.
-
-     * `fpr` chooses all features whose p-values are below a threshold,
-       thus controlling the false positive rate of selection.
-
-     * `fdr` uses the `Benjamini-Hochberg procedure <https://en.wikipedia.org/wiki/
-       False_discovery_rate#Benjamini.E2.80.93Hochberg_procedure>`_
-       to choose all features whose false discovery rate is below a threshold.
-
-     * `fwe` chooses all features whose p-values are below a threshold. The threshold is scaled by
-       1/numFeatures, thus controlling the family-wise error rate of selection.
-
-    By default, the selection method is `numTopFeatures`, with the default number of top features
-    set to 50.
-
-
     >>> from pyspark.ml.linalg import Vectors
     >>> df = spark.createDataFrame(
     ...    [(Vectors.dense([0.0, 0.0, 18.0, 1.0]), 1.0),
@@ -3320,8 +3057,7 @@ class ChiSqSelector(JavaEstimator, HasFeaturesCol, HasOutputCol, HasLabelCol, Ja
         """
         super(ChiSqSelector, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.feature.ChiSqSelector", self.uid)
-        self._setDefault(numTopFeatures=50, selectorType="numTopFeatures", percentile=0.1,
-                         fpr=0.05, fdr=0.05, fwe=0.05)
+        self._setDefault(numTopFeatures=50)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
 

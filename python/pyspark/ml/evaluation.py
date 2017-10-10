@@ -20,10 +20,8 @@ from abc import abstractmethod, ABCMeta
 from pyspark import since, keyword_only
 from pyspark.ml.wrapper import JavaParams
 from pyspark.ml.param import Param, Params, TypeConverters
-from pyspark.ml.param.shared import HasLabelCol, HasPredictionCol, HasRawPredictionCol, \
-    HasFeaturesCol
+from pyspark.ml.param.shared import HasLabelCol, HasPredictionCol, HasRawPredictionCol
 from pyspark.ml.common import inherit_doc
-from pyspark.ml.util import JavaMLReadable, JavaMLWritable
 
 __all__ = ['Evaluator', 'BinaryClassificationEvaluator', 'RegressionEvaluator',
            'MulticlassClassificationEvaluator', 'ClusteringEvaluator']
@@ -147,7 +145,8 @@ class BinaryClassificationEvaluator(JavaEvaluator, HasLabelCol, HasRawPrediction
         super(BinaryClassificationEvaluator, self).__init__()
         self._java_obj = self._new_java_obj(
             "org.apache.spark.ml.evaluation.BinaryClassificationEvaluator", self.uid)
-        self._setDefault(metricName="areaUnderROC")
+        self._setDefault(rawPredictionCol="rawPrediction", labelCol="label",
+                         metricName="areaUnderROC")
         kwargs = self._input_kwargs
         self._set(**kwargs)
 
@@ -224,7 +223,8 @@ class RegressionEvaluator(JavaEvaluator, HasLabelCol, HasPredictionCol,
         super(RegressionEvaluator, self).__init__()
         self._java_obj = self._new_java_obj(
             "org.apache.spark.ml.evaluation.RegressionEvaluator", self.uid)
-        self._setDefault(metricName="rmse")
+        self._setDefault(predictionCol="prediction", labelCol="label",
+                         metricName="rmse")
         kwargs = self._input_kwargs
         self._set(**kwargs)
 
@@ -296,7 +296,8 @@ class MulticlassClassificationEvaluator(JavaEvaluator, HasLabelCol, HasPredictio
         super(MulticlassClassificationEvaluator, self).__init__()
         self._java_obj = self._new_java_obj(
             "org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator", self.uid)
-        self._setDefault(metricName="f1")
+        self._setDefault(predictionCol="prediction", labelCol="label",
+                         metricName="f1")
         kwargs = self._input_kwargs
         self._set(**kwargs)
 
@@ -326,100 +327,21 @@ class MulticlassClassificationEvaluator(JavaEvaluator, HasLabelCol, HasPredictio
         kwargs = self._input_kwargs
         return self._set(**kwargs)
 
-
-@inherit_doc
-class ClusteringEvaluator(JavaEvaluator, HasPredictionCol, HasFeaturesCol,
-                          JavaMLReadable, JavaMLWritable):
-    """
-    .. note:: Experimental
-
-    Evaluator for Clustering results, which expects two input
-    columns: prediction and features.
-
-    >>> from pyspark.ml.linalg import Vectors
-    >>> featureAndPredictions = map(lambda x: (Vectors.dense(x[0]), x[1]),
-    ...     [([0.0, 0.5], 0.0), ([0.5, 0.0], 0.0), ([10.0, 11.0], 1.0),
-    ...     ([10.5, 11.5], 1.0), ([1.0, 1.0], 0.0), ([8.0, 6.0], 1.0)])
-    >>> dataset = spark.createDataFrame(featureAndPredictions, ["features", "prediction"])
-    ...
-    >>> evaluator = ClusteringEvaluator(predictionCol="prediction")
-    >>> evaluator.evaluate(dataset)
-    0.9079...
-    >>> ce_path = temp_path + "/ce"
-    >>> evaluator.save(ce_path)
-    >>> evaluator2 = ClusteringEvaluator.load(ce_path)
-    >>> str(evaluator2.getPredictionCol())
-    'prediction'
-
-    .. versionadded:: 2.3.0
-    """
-    metricName = Param(Params._dummy(), "metricName",
-                       "metric name in evaluation (silhouette)",
-                       typeConverter=TypeConverters.toString)
-
-    @keyword_only
-    def __init__(self, predictionCol="prediction", featuresCol="features",
-                 metricName="silhouette"):
-        """
-        __init__(self, predictionCol="prediction", featuresCol="features", \
-                 metricName="silhouette")
-        """
-        super(ClusteringEvaluator, self).__init__()
-        self._java_obj = self._new_java_obj(
-            "org.apache.spark.ml.evaluation.ClusteringEvaluator", self.uid)
-        self._setDefault(metricName="silhouette")
-        kwargs = self._input_kwargs
-        self._set(**kwargs)
-
-    @since("2.3.0")
-    def setMetricName(self, value):
-        """
-        Sets the value of :py:attr:`metricName`.
-        """
-        return self._set(metricName=value)
-
-    @since("2.3.0")
-    def getMetricName(self):
-        """
-        Gets the value of metricName or its default value.
-        """
-        return self.getOrDefault(self.metricName)
-
-    @keyword_only
-    @since("2.3.0")
-    def setParams(self, predictionCol="prediction", featuresCol="features",
-                  metricName="silhouette"):
-        """
-        setParams(self, predictionCol="prediction", featuresCol="features", \
-                  metricName="silhouette")
-        Sets params for clustering evaluator.
-        """
-        kwargs = self._input_kwargs
-        return self._set(**kwargs)
-
 if __name__ == "__main__":
     import doctest
-    import tempfile
-    import pyspark.ml.evaluation
     from pyspark.sql import SparkSession
-    globs = pyspark.ml.evaluation.__dict__.copy()
+    globs = globals().copy()
     # The small batch size here ensures that we see multiple batches,
     # even in these small test examples:
     spark = SparkSession.builder\
         .master("local[2]")\
         .appName("ml.evaluation tests")\
         .getOrCreate()
+    sc = spark.sparkContext
+    globs['sc'] = sc
     globs['spark'] = spark
-    temp_path = tempfile.mkdtemp()
-    globs['temp_path'] = temp_path
-    try:
-        (failure_count, test_count) = doctest.testmod(globs=globs, optionflags=doctest.ELLIPSIS)
-        spark.stop()
-    finally:
-        from shutil import rmtree
-        try:
-            rmtree(temp_path)
-        except OSError:
-            pass
+    (failure_count, test_count) = doctest.testmod(
+        globs=globs, optionflags=doctest.ELLIPSIS)
+    spark.stop()
     if failure_count:
         exit(-1)

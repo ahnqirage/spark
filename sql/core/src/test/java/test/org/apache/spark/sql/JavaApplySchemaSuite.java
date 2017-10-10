@@ -95,7 +95,12 @@ public class JavaApplySchemaSuite implements Serializable {
     personList.add(person2);
 
     JavaRDD<Row> rowRDD = jsc.parallelize(personList).map(
-        person -> RowFactory.create(person.getName(), person.getAge()));
+      new Function<Person, Row>() {
+        @Override
+        public Row call(Person person) throws Exception {
+          return RowFactory.create(person.getName(), person.getAge());
+        }
+      });
 
     List<StructField> fields = new ArrayList<>(2);
     fields.add(DataTypes.createStructField("name", DataTypes.StringType, false));
@@ -126,7 +131,12 @@ public class JavaApplySchemaSuite implements Serializable {
     personList.add(person2);
 
     JavaRDD<Row> rowRDD = jsc.parallelize(personList).map(
-        person -> RowFactory.create(person.getName(), person.getAge()));
+        new Function<Person, Row>() {
+          @Override
+          public Row call(Person person) {
+            return RowFactory.create(person.getName(), person.getAge());
+          }
+        });
 
     List<StructField> fields = new ArrayList<>(2);
     fields.add(DataTypes.createStructField("", DataTypes.StringType, false));
@@ -136,7 +146,12 @@ public class JavaApplySchemaSuite implements Serializable {
     Dataset<Row> df = spark.createDataFrame(rowRDD, schema);
     df.createOrReplaceTempView("people");
     List<String> actual = spark.sql("SELECT * FROM people").toJavaRDD()
-      .map(row -> row.getString(0) + "_" + row.get(1)).collect();
+      .map(new Function<Row, String>() {
+        @Override
+        public String call(Row row) {
+          return row.getString(0) + "_" + row.get(1);
+        }
+      }).collect();
 
     List<String> expected = new ArrayList<>(2);
     expected.add("Michael_29");
@@ -147,7 +162,7 @@ public class JavaApplySchemaSuite implements Serializable {
 
   @Test
   public void applySchemaToJSON() {
-    Dataset<String> jsonDS = spark.createDataset(Arrays.asList(
+    JavaRDD<String> jsonRDD = jsc.parallelize(Arrays.asList(
       "{\"string\":\"this is a simple string.\", \"integer\":10, \"long\":21474836470, " +
         "\"bigInteger\":92233720368547758070, \"double\":1.7976931348623157E308, " +
         "\"boolean\":true, \"null\":null}",
@@ -184,14 +199,14 @@ public class JavaApplySchemaSuite implements Serializable {
         null,
         "this is another simple string."));
 
-    Dataset<Row> df1 = spark.read().json(jsonDS);
+    Dataset<Row> df1 = spark.read().json(jsonRDD);
     StructType actualSchema1 = df1.schema();
     Assert.assertEquals(expectedSchema, actualSchema1);
     df1.createOrReplaceTempView("jsonTable1");
     List<Row> actual1 = spark.sql("select * from jsonTable1").collectAsList();
     Assert.assertEquals(expectedResult, actual1);
 
-    Dataset<Row> df2 = spark.read().schema(expectedSchema).json(jsonDS);
+    Dataset<Row> df2 = spark.read().schema(expectedSchema).json(jsonRDD);
     StructType actualSchema2 = df2.schema();
     Assert.assertEquals(expectedSchema, actualSchema2);
     df2.createOrReplaceTempView("jsonTable2");

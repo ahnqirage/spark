@@ -151,10 +151,6 @@ case class SetCommand(kv: Option[(String, Option[String])]) extends RunnableComm
 
 }
 
-object SetCommand {
-  val VariableName = """hivevar:([^=]+)""".r
-}
-
 /**
  * This command is for resetting SQLConf to the default values. Command that runs
  * {{{

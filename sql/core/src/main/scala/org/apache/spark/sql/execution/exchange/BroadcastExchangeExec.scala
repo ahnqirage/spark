@@ -21,7 +21,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 import org.apache.spark.{broadcast, SparkException}
-import org.apache.spark.launcher.SparkLauncher
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
@@ -29,7 +28,7 @@ import org.apache.spark.sql.catalyst.plans.physical.{BroadcastMode, BroadcastPar
 import org.apache.spark.sql.execution.{SparkPlan, SQLExecution}
 import org.apache.spark.sql.execution.joins.HashedRelation
 import org.apache.spark.sql.execution.metric.SQLMetrics
-import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.execution.ui.SparkListenerDriverAccumUpdates
 import org.apache.spark.util.ThreadUtils
 
 /**
@@ -70,54 +69,38 @@ case class BroadcastExchangeExec(
       // This will run in another thread. Set the execution id so that we can connect these jobs
       // with the correct execution.
       SQLExecution.withExecutionId(sparkContext, executionId) {
-        try {
-          val beforeCollect = System.nanoTime()
-          // Use executeCollect/executeCollectIterator to avoid conversion to Scala types
-          val (numRows, input) = child.executeCollectIterator()
-          if (numRows >= 512000000) {
-            throw new SparkException(
-              s"Cannot broadcast the table with more than 512 millions rows: $numRows rows")
-          }
-
-          val beforeBuild = System.nanoTime()
-          longMetric("collectTime") += (beforeBuild - beforeCollect) / 1000000
-
-          // Construct the relation.
-          val relation = mode.transform(input, Some(numRows))
-
-          val dataSize = relation match {
-            case map: HashedRelation =>
-              map.estimatedSize
-            case arr: Array[InternalRow] =>
-              arr.map(_.asInstanceOf[UnsafeRow].getSizeInBytes.toLong).sum
-            case _ =>
-              throw new SparkException("[BUG] BroadcastMode.transform returned unexpected type: " +
-                  relation.getClass.getName)
-          }
-
-          longMetric("dataSize") += dataSize
-          if (dataSize >= (8L << 30)) {
-            throw new SparkException(
-              s"Cannot broadcast the table that is larger than 8GB: ${dataSize >> 30} GB")
-          }
-
-          val beforeBroadcast = System.nanoTime()
-          longMetric("buildTime") += (beforeBroadcast - beforeBuild) / 1000000
-
-          // Broadcast the relation
-          val broadcasted = sparkContext.broadcast(relation)
-          longMetric("broadcastTime") += (System.nanoTime() - beforeBroadcast) / 1000000
-
-          SQLMetrics.postDriverMetricUpdates(sparkContext, executionId, metrics.values.toSeq)
-          broadcasted
-        } catch {
-          case oe: OutOfMemoryError =>
-            throw new OutOfMemoryError(s"Not enough memory to build and broadcast the table to " +
-              s"all worker nodes. As a workaround, you can either disable broadcast by setting " +
-              s"${SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key} to -1 or increase the spark driver " +
-              s"memory by setting ${SparkLauncher.DRIVER_MEMORY} to a higher value")
-              .initCause(oe.getCause)
+        val beforeCollect = System.nanoTime()
+        // Note that we use .executeCollect() because we don't want to convert data to Scala types
+        val input: Array[InternalRow] = child.executeCollect()
+        if (input.length >= 512000000) {
+          throw new SparkException(
+            s"Cannot broadcast the table with more than 512 millions rows: ${input.length} rows")
         }
+        val beforeBuild = System.nanoTime()
+        longMetric("collectTime") += (beforeBuild - beforeCollect) / 1000000
+        val dataSize = input.map(_.asInstanceOf[UnsafeRow].getSizeInBytes.toLong).sum
+        longMetric("dataSize") += dataSize
+        if (dataSize >= (8L << 30)) {
+          throw new SparkException(
+            s"Cannot broadcast the table that is larger than 8GB: ${dataSize >> 30} GB")
+        }
+
+        // Construct and broadcast the relation.
+        val relation = mode.transform(input)
+        val beforeBroadcast = System.nanoTime()
+        longMetric("buildTime") += (beforeBroadcast - beforeBuild) / 1000000
+
+        val broadcasted = sparkContext.broadcast(relation)
+        longMetric("broadcastTime") += (System.nanoTime() - beforeBroadcast) / 1000000
+
+        // There are some cases we don't care about the metrics and call `SparkPlan.doExecute`
+        // directly without setting an execution id. We should be tolerant to it.
+        if (executionId != null) {
+          sparkContext.listenerBus.post(SparkListenerDriverAccumUpdates(
+            executionId.toLong, metrics.values.map(m => m.id -> m.value).toSeq))
+        }
+
+        broadcasted
       }
     }(BroadcastExchangeExec.executionContext)
   }
@@ -133,7 +116,8 @@ case class BroadcastExchangeExec(
   }
 
   override protected[sql] def doExecuteBroadcast[T](): broadcast.Broadcast[T] = {
-    ThreadUtils.awaitResult(relationFuture, timeout).asInstanceOf[broadcast.Broadcast[T]]
+    ThreadUtils.awaitResultInForkJoinSafely(relationFuture, timeout)
+      .asInstanceOf[broadcast.Broadcast[T]]
   }
 }
 

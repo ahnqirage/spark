@@ -23,8 +23,9 @@ import org.json4s.JsonDSL._
 
 import org.apache.spark.annotation.Since
 import org.apache.spark.internal.Logging
+import org.apache.spark.ml.{PredictionModel, Predictor}
 import org.apache.spark.ml.feature.LabeledPoint
-import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
+import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.regression.DecisionTreeRegressionModel
 import org.apache.spark.ml.tree._
@@ -351,8 +352,8 @@ object GBTClassificationModel extends MLReadable[GBTClassificationModel] {
     override protected def saveImpl(path: String): Unit = {
 
       val extraMetadata: JObject = Map(
-        numFeaturesKey -> instance.numFeatures,
-        numTreesKey -> instance.getNumTrees)
+        "numFeatures" -> instance.numFeatures,
+        "numTrees" -> instance.getNumTrees)
       EnsembleModelReadWrite.saveImpl(instance, path, sparkSession, extraMetadata)
     }
   }
@@ -367,8 +368,8 @@ object GBTClassificationModel extends MLReadable[GBTClassificationModel] {
       implicit val format = DefaultFormats
       val (metadata: Metadata, treesData: Array[(Metadata, Node)], treeWeights: Array[Double]) =
         EnsembleModelReadWrite.loadImpl(path, sparkSession, className, treeClassName)
-      val numFeatures = (metadata.metadata \ numFeaturesKey).extract[Int]
-      val numTrees = (metadata.metadata \ numTreesKey).extract[Int]
+      val numFeatures = (metadata.metadata \ "numFeatures").extract[Int]
+      val numTrees = (metadata.metadata \ "numTrees").extract[Int]
 
       val trees: Array[DecisionTreeRegressionModel] = treesData.map {
         case (treeMetadata, root) =>

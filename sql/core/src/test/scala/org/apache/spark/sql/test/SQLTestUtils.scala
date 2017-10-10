@@ -24,6 +24,7 @@ import java.util.{Locale, UUID}
 
 import scala.concurrent.duration._
 import scala.language.implicitConversions
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import org.apache.hadoop.fs.Path
@@ -32,6 +33,8 @@ import org.scalatest.concurrent.Eventually
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.sql.catalyst.catalog.SessionCatalog.DEFAULT_DATABASE
 import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog.DEFAULT_DATABASE
@@ -39,7 +42,6 @@ import org.apache.spark.sql.catalyst.plans.PlanTest
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.FilterExec
-import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.util.{UninterruptibleThread, Utils}
 
 /**
@@ -70,7 +72,7 @@ private[sql] trait SQLTestUtils
    * A helper object for importing SQL implicits.
    *
    * Note that the alternative of importing `spark.implicits._` is not possible here.
-   * This is because we create the `SQLContext` immediately before the first test is run,
+   * This is because we create the [[SQLContext]] immediately before the first test is run,
    * but the implicits import is needed in the constructor.
    */
   protected object testImplicits extends SQLImplicits {
@@ -92,9 +94,22 @@ private[sql] trait SQLTestUtils
     }
   }
 
-  protected override def withSQLConf(pairs: (String, String)*)(f: => Unit): Unit = {
-    SparkSession.setActiveSession(spark)
-    super.withSQLConf(pairs: _*)(f)
+  /**
+   * Sets all SQL configurations specified in `pairs`, calls `f`, and then restore all SQL
+   * configurations.
+   *
+   * @todo Probably this method should be moved to a more general place
+   */
+  protected def withSQLConf(pairs: (String, String)*)(f: => Unit): Unit = {
+    val (keys, values) = pairs.unzip
+    val currentValues = keys.map(key => Try(spark.conf.get(key)).toOption)
+    (keys, values).zipped.foreach(spark.conf.set)
+    try f finally {
+      keys.zip(currentValues).foreach {
+        case (key, Some(value)) => spark.conf.set(key, value)
+        case (key, None) => spark.conf.unset(key)
+      }
+    }
   }
 
   /**
@@ -221,36 +236,9 @@ private[sql] trait SQLTestUtils
 
     try f(dbName) finally {
       if (spark.catalog.currentDatabase == dbName) {
-        spark.sql(s"USE $DEFAULT_DATABASE")
+        spark.sql(s"USE ${DEFAULT_DATABASE}")
       }
       spark.sql(s"DROP DATABASE $dbName CASCADE")
-    }
-  }
-
-  /**
-   * Drops database `dbName` after calling `f`.
-   */
-  protected def withDatabase(dbNames: String*)(f: => Unit): Unit = {
-    try f finally {
-      dbNames.foreach { name =>
-        spark.sql(s"DROP DATABASE IF EXISTS $name")
-      }
-      spark.sql(s"USE $DEFAULT_DATABASE")
-    }
-  }
-
-  /**
-   * Enables Locale `language` before executing `f`, then switches back to the default locale of JVM
-   * after `f` returns.
-   */
-  protected def withLocale(language: String)(f: => Unit): Unit = {
-    val originalLocale = Locale.getDefault
-    try {
-      // Add Locale setting
-      Locale.setDefault(new Locale(language))
-      f
-    } finally {
-      Locale.setDefault(originalLocale)
     }
   }
 
@@ -297,9 +285,7 @@ private[sql] trait SQLTestUtils
     }
   }
 
-  /**
-   * Run a test on a separate `UninterruptibleThread`.
-   */
+  /** Run a test on a separate [[UninterruptibleThread]]. */
   protected def testWithUninterruptibleThread(name: String, quietly: Boolean = false)
     (body: => Unit): Unit = {
     val timeoutMillis = 10000
@@ -337,17 +323,6 @@ private[sql] trait SQLTestUtils
     } else {
       test(name) { runOnThread() }
     }
-  }
-
-  /**
-   * This method is used to make the given path qualified, when a path
-   * does not contain a scheme, this path will not be changed after the default
-   * FileSystem is changed.
-   */
-  def makeQualifiedPath(path: String): URI = {
-    val hadoopPath = new Path(path)
-    val fs = hadoopPath.getFileSystem(spark.sessionState.newHadoopConf())
-    fs.makeQualified(hadoopPath).toUri
   }
 }
 

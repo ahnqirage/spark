@@ -17,13 +17,9 @@
 
 package org.apache.spark.sql.catalyst.analysis
 
-import org.apache.spark.sql.AnalysisException
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, AttributeSet, MonotonicallyIncreasingID}
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
+import org.apache.spark.sql.{AnalysisException, InternalOutputModes}
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.catalyst.streaming.InternalOutputModes
 import org.apache.spark.sql.streaming.OutputMode
 
 /**
@@ -47,44 +43,8 @@ object UnsupportedOperationChecker {
         "Queries without streaming sources cannot be executed with writeStream.start()")(plan)
     }
 
-    /** Collect all the streaming aggregates in a sub plan */
-    def collectStreamingAggregates(subplan: LogicalPlan): Seq[Aggregate] = {
-      subplan.collect { case a: Aggregate if a.isStreaming => a }
-    }
-
-    val mapGroupsWithStates = plan.collect {
-      case f: FlatMapGroupsWithState if f.isStreaming && f.isMapGroupsWithState => f
-    }
-
-    // Disallow multiple `mapGroupsWithState`s.
-    if (mapGroupsWithStates.size >= 2) {
-      throwError(
-        "Multiple mapGroupsWithStates are not supported on a streaming DataFrames/Datasets")(plan)
-    }
-
-    val flatMapGroupsWithStates = plan.collect {
-      case f: FlatMapGroupsWithState if f.isStreaming && !f.isMapGroupsWithState => f
-    }
-
-    // Disallow mixing `mapGroupsWithState`s and `flatMapGroupsWithState`s
-    if (mapGroupsWithStates.nonEmpty && flatMapGroupsWithStates.nonEmpty) {
-      throwError(
-        "Mixing mapGroupsWithStates and flatMapGroupsWithStates are not supported on a " +
-          "streaming DataFrames/Datasets")(plan)
-    }
-
-    // Only allow multiple `FlatMapGroupsWithState(Append)`s in append mode.
-    if (flatMapGroupsWithStates.size >= 2 && (
-      outputMode != InternalOutputModes.Append ||
-        flatMapGroupsWithStates.exists(_.outputMode != InternalOutputModes.Append)
-      )) {
-      throwError(
-        "Multiple flatMapGroupsWithStates are not supported when they are not all in append mode" +
-          " or the output mode is not append on a streaming DataFrames/Datasets")(plan)
-    }
-
     // Disallow multiple streaming aggregations
-    val aggregates = collectStreamingAggregates(plan)
+    val aggregates = plan.collect { case a@Aggregate(_, _, _) if a.isStreaming => a }
 
     if (aggregates.size > 1) {
       throwError(
@@ -95,22 +55,11 @@ object UnsupportedOperationChecker {
     // Disallow some output mode
     outputMode match {
       case InternalOutputModes.Append if aggregates.nonEmpty =>
-        val aggregate = aggregates.head
+        throwError(
+          s"$outputMode output mode not supported when there are streaming aggregations on " +
+            s"streaming DataFrames/DataSets")(plan)
 
-        // Find any attributes that are associated with an eventTime watermark.
-        val watermarkAttributes = aggregate.groupingExpressions.collect {
-          case a: Attribute if a.metadata.contains(EventTimeWatermark.delayKey) => a
-        }
-
-        // We can append rows to the sink once the group is under the watermark. Without this
-        // watermark a group is never "finished" so we would never output anything.
-        if (watermarkAttributes.isEmpty) {
-          throwError(
-            s"$outputMode output mode not supported when there are streaming aggregations on " +
-                s"streaming DataFrames/DataSets without watermark")(plan)
-        }
-
-      case InternalOutputModes.Complete if aggregates.isEmpty =>
+      case InternalOutputModes.Complete | InternalOutputModes.Update if aggregates.isEmpty =>
         throwError(
           s"$outputMode output mode not supported when there are no streaming aggregations on " +
             s"streaming DataFrames/Datasets")(plan)
@@ -129,29 +78,10 @@ object UnsupportedOperationChecker {
       !subplan.isStreaming || (aggs.nonEmpty && outputMode == InternalOutputModes.Complete)
     }
 
-    def checkUnsupportedExpressions(implicit operator: LogicalPlan): Unit = {
-      val unsupportedExprs = operator.expressions.flatMap(_.collect {
-        case m: MonotonicallyIncreasingID => m
-      }).distinct
-      if (unsupportedExprs.nonEmpty) {
-        throwError("Expression(s): " + unsupportedExprs.map(_.sql).mkString(", ") +
-          " is not supported with streaming DataFrames/Datasets")
-      }
-    }
-
     plan.foreachUp { implicit subPlan =>
 
       // Operations that cannot exists anywhere in a streaming plan
       subPlan match {
-
-        case Aggregate(_, aggregateExpressions, child) =>
-          val distinctAggExprs = aggregateExpressions.flatMap { expr =>
-            expr.collect { case ae: AggregateExpression if ae.isDistinct => ae }
-          }
-          throwErrorIf(
-            child.isStreaming && distinctAggExprs.nonEmpty,
-            "Distinct aggregations are not supported on streaming DataFrames/Datasets. Consider " +
-              "using approx_count_distinct() instead.")
 
         case _: Command =>
           throwError("Commands like CreateTable*, AlterTable*, Show* are not supported with " +
@@ -209,26 +139,7 @@ object UnsupportedOperationChecker {
             }
           }
 
-          // Check compatibility with timeout configs
-          if (m.timeout == EventTimeTimeout) {
-            // With event time timeout, watermark must be defined.
-            val watermarkAttributes = m.child.output.collect {
-              case a: Attribute if a.metadata.contains(EventTimeWatermark.delayKey) => a
-            }
-            if (watermarkAttributes.isEmpty) {
-              throwError(
-                "Watermark must be specified in the query using " +
-                  "'[Dataset/DataFrame].withWatermark()' for using event-time timeout in a " +
-                  "[map|flatMap]GroupsWithState. Event-time timeout not supported without " +
-                  "watermark.")(plan)
-            }
-          }
-
-        case d: Deduplicate if collectStreamingAggregates(d).nonEmpty =>
-          throwError("dropDuplicates is not supported after aggregation on a " +
-            "streaming DataFrame/Dataset")
-
-        case Join(left, right, joinType, condition) =>
+        case Join(left, right, joinType, _) =>
 
           joinType match {
 
@@ -317,9 +228,9 @@ object UnsupportedOperationChecker {
         case GlobalLimit(_, _) | LocalLimit(_, _) if subPlan.children.forall(_.isStreaming) =>
           throwError("Limits are not supported on streaming DataFrames/Datasets")
 
-        case Sort(_, _, _) if !containsCompleteData(subPlan) =>
-          throwError("Sorting is not supported on streaming DataFrames/Datasets, unless it is on " +
-            "aggregated DataFrame/Dataset in Complete output mode")
+        case Sort(_, _, _) | SortPartitions(_, _) if !containsCompleteData(subPlan) =>
+          throwError("Sorting is not supported on streaming DataFrames/Datasets, unless it is on" +
+            "aggregated DataFrame/Dataset in Complete mode")
 
         case Sample(_, _, _, _, child) if child.isStreaming =>
           throwError("Sampling is not supported on streaming DataFrames/Datasets")

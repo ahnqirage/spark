@@ -52,7 +52,6 @@ object ChiSqSelectorExample {
     println(s"ChiSqSelector output with top ${selector.getNumTopFeatures} features selected")
     result.show()
     // $example off$
-
     spark.stop()
   }
 }

@@ -26,8 +26,8 @@ import org.apache.spark.annotation.{Experimental, Since}
 import org.apache.spark.ml.{Estimator, Model, Pipeline, PipelineModel, PipelineStage, Transformer}
 import org.apache.spark.ml.attribute.AttributeGroup
 import org.apache.spark.ml.linalg.VectorUDT
-import org.apache.spark.ml.param.{BooleanParam, Param, ParamMap, ParamValidators}
-import org.apache.spark.ml.param.shared.{HasFeaturesCol, HasHandleInvalid, HasLabelCol}
+import org.apache.spark.ml.param.{Param, ParamMap}
+import org.apache.spark.ml.param.shared.{HasFeaturesCol, HasLabelCol}
 import org.apache.spark.ml.util._
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.types._
@@ -159,6 +159,13 @@ class RFormula @Since("1.5.0") (@Since("1.5.0") override val uid: String)
   def this() = this(Identifiable.randomUID("rFormula"))
 
   /**
+   * R formula parameter. The formula is provided in string form.
+   * @group param
+   */
+  @Since("1.5.0")
+  val formula: Param[String] = new Param(this, "formula", "R model formula")
+
+  /**
    * Sets the formula to use for this transformer. Must be called before use.
    * @group setParam
    * @param value an R formula in string form (e.g. "y ~ x + z")
@@ -166,9 +173,9 @@ class RFormula @Since("1.5.0") (@Since("1.5.0") override val uid: String)
   @Since("1.5.0")
   def setFormula(value: String): this.type = set(formula, value)
 
-  /** @group setParam */
-  @Since("2.3.0")
-  def setHandleInvalid(value: String): this.type = set(handleInvalid, value)
+  /** @group getParam */
+  @Since("1.5.0")
+  def getFormula: String = $(formula)
 
   /** @group setParam */
   @Since("1.5.0")
@@ -340,10 +347,8 @@ class RFormulaModel private[feature](
   }
 
   @Since("1.5.0")
-  override def copy(extra: ParamMap): RFormulaModel = {
-    val copied = new RFormulaModel(uid, resolvedFormula, pipelineModel).setParent(parent)
-    copyValues(copied, extra)
-  }
+  override def copy(extra: ParamMap): RFormulaModel = copyValues(
+    new RFormulaModel(uid, resolvedFormula, pipelineModel))
 
   @Since("2.0.0")
   override def toString: String = s"RFormulaModel($resolvedFormula) (uid=$uid)"

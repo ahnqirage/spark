@@ -348,7 +348,7 @@ class FileSourceStrategySuite extends QueryTest with SharedSQLContext with Predi
 
   test("SPARK-15654 do not split non-splittable files") {
     // Check if a non-splittable file is not assigned into partitions
-    Seq("gz", "snappy", "lz4").foreach { suffix =>
+    Seq("gz", "snappy", "lz4").map { suffix =>
        val table = createTable(
         files = Seq(s"file1.${suffix}" -> 3, s"file2.${suffix}" -> 1, s"file3.${suffix}" -> 1)
       )
@@ -364,7 +364,7 @@ class FileSourceStrategySuite extends QueryTest with SharedSQLContext with Predi
     }
 
     // Check if a splittable compressed file is assigned into multiple partitions
-    Seq("bz2").foreach { suffix =>
+    Seq("bz2").map { suffix =>
        val table = createTable(
          files = Seq(s"file1.${suffix}" -> 3, s"file2.${suffix}" -> 1, s"file3.${suffix}" -> 1)
       )
@@ -397,9 +397,9 @@ class FileSourceStrategySuite extends QueryTest with SharedSQLContext with Predi
           util.stringToFile(file, fileName)
         }
 
-        val fileCatalog = new InMemoryFileIndex(
+        val fileCatalog = new ListingFileCatalog(
           sparkSession = spark,
-          rootPathsSpecified = Seq(new Path(tempDir)),
+          paths = Seq(new Path(tempDir)),
           parameters = Map.empty[String, String],
           partitionSchema = None)
         // This should not fail.
@@ -443,51 +443,6 @@ class FileSourceStrategySuite extends QueryTest with SharedSQLContext with Predi
       val df1 = df.where("a = 0").groupBy("b").agg("c" -> "sum")
       val df2 = df.where("a = 1").groupBy("b").agg("c" -> "sum")
       checkAnswer(df1.join(df2, "b"), Row(0, 6, 12) :: Row(1, 4, 8) :: Row(2, 10, 5) :: Nil)
-    }
-  }
-
-  test("spark.files.ignoreCorruptFiles should work in SQL") {
-    val inputFile = File.createTempFile("input-", ".gz")
-    try {
-      // Create a corrupt gzip file
-      val byteOutput = new ByteArrayOutputStream()
-      val gzip = new GZIPOutputStream(byteOutput)
-      try {
-        gzip.write(Array[Byte](1, 2, 3, 4))
-      } finally {
-        gzip.close()
-      }
-      val bytes = byteOutput.toByteArray
-      val o = new FileOutputStream(inputFile)
-      try {
-        // It's corrupt since we only write half of bytes into the file.
-        o.write(bytes.take(bytes.length / 2))
-      } finally {
-        o.close()
-      }
-      withSQLConf(SQLConf.IGNORE_CORRUPT_FILES.key -> "false") {
-        val e = intercept[SparkException] {
-          spark.read.text(inputFile.toURI.toString).collect()
-        }
-        assert(e.getCause.isInstanceOf[EOFException])
-        assert(e.getCause.getMessage === "Unexpected end of input stream")
-      }
-      withSQLConf(SQLConf.IGNORE_CORRUPT_FILES.key -> "true") {
-        assert(spark.read.text(inputFile.toURI.toString).collect().isEmpty)
-      }
-    } finally {
-      inputFile.delete()
-    }
-  }
-
-  test("[SPARK-18753] keep pushed-down null literal as a filter in Spark-side post-filter") {
-    val ds = Seq(Tuple1(Some(true)), Tuple1(None), Tuple1(Some(false))).toDS()
-    withTempPath { p =>
-      val path = p.getAbsolutePath
-      ds.write.parquet(path)
-      val readBack = spark.read.parquet(path).filter($"_1" === "true")
-      val filtered = ds.filter($"_1" === "true").toDF()
-      checkAnswer(readBack, filtered)
     }
   }
 

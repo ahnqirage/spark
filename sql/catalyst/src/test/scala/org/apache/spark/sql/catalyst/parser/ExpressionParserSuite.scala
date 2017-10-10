@@ -422,6 +422,8 @@ class ExpressionParserSuite extends PlanTest {
     assertEqual("10.0D", Literal(10.0D))
     intercept("-1.8E308D", s"does not fit in range")
     intercept("1.8E308D", s"does not fit in range")
+    // TODO we need to figure out if we should throw an exception here!
+    assertEqual("1E309", Literal(Double.PositiveInfinity))
 
     // BigDecimal Literal
     assertEqual("90912830918230182310293801923652346786BD",
@@ -617,12 +619,5 @@ class ExpressionParserSuite extends PlanTest {
     // Function identifier contains countious backticks should be treated correctly.
     val complexName2 = FunctionIdentifier("ba``r", Some("fo``o"))
     assertEqual(complexName2.quotedString, UnresolvedAttribute("fo``o.ba``r"))
-  }
-
-  test("SPARK-19526 Support ignore nulls keywords for first and last") {
-    assertEqual("first(a ignore nulls)", First('a, Literal(true)).toAggregateExpression())
-    assertEqual("first(a)", First('a, Literal(false)).toAggregateExpression())
-    assertEqual("last(a ignore nulls)", Last('a, Literal(true)).toAggregateExpression())
-    assertEqual("last(a)", Last('a, Literal(false)).toAggregateExpression())
   }
 }

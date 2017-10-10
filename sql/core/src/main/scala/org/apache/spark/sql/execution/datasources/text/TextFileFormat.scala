@@ -26,7 +26,7 @@ import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 import org.apache.spark.sql.catalyst.expressions.codegen.{BufferHolder, UnsafeRowWriter}
-import org.apache.spark.sql.catalyst.util.CompressionCodecs
+import org.apache.spark.sql.execution.command.CreateDataSourceTableUtils
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.{StringType, StructType}
@@ -133,12 +133,24 @@ class TextOutputWriter(
 
   private val writer = CodecStreams.createOutputStream(context, new Path(path))
 
-  override def write(row: InternalRow): Unit = {
-    if (!row.isNullAt(0)) {
-      val utf8string = row.getUTF8String(0)
-      utf8string.writeTo(writer)
-    }
-    writer.write('\n')
+  private val recordWriter: RecordWriter[NullWritable, Text] = {
+    new TextOutputFormat[NullWritable, Text]() {
+      override def getDefaultWorkFile(context: TaskAttemptContext, extension: String): Path = {
+        val configuration = context.getConfiguration
+        val uniqueWriteJobId = configuration.get(CreateDataSourceTableUtils.DATASOURCE_WRITEJOBUUID)
+        val taskAttemptId = context.getTaskAttemptID
+        val split = taskAttemptId.getTaskID.getId
+        new Path(path, f"part-r-$split%05d-$uniqueWriteJobId.txt$extension")
+      }
+    }.getRecordWriter(context)
+  }
+
+  override def write(row: Row): Unit = throw new UnsupportedOperationException("call writeInternal")
+
+  override protected[sql] def writeInternal(row: InternalRow): Unit = {
+    val utf8string = row.getUTF8String(0)
+    buffer.set(utf8string.getBytes)
+    recordWriter.write(NullWritable.get(), buffer)
   }
 
   override def close(): Unit = {

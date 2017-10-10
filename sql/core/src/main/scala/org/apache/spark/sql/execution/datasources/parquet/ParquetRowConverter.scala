@@ -120,7 +120,6 @@ private[parquet] class ParquetPrimitiveConverter(val updater: ParentContainerUpd
  * @param updater An updater which propagates converted field values to the parent container
  */
 private[parquet] class ParquetRowConverter(
-    schemaConverter: ParquetSchemaConverter,
     parquetType: GroupType,
     catalystType: StructType,
     updater: ParentContainerUpdater)
@@ -252,13 +251,6 @@ private[parquet] class ParquetRowConverter(
       case StringType =>
         new ParquetStringConverter(updater)
 
-      case TimestampType if parquetType.getOriginalType == OriginalType.TIMESTAMP_MILLIS =>
-        new ParquetPrimitiveConverter(updater) {
-          override def addLong(value: Long): Unit = {
-            updater.setLong(DateTimeUtils.fromMillis(value))
-          }
-        }
-
       case TimestampType =>
         // TODO Implements `TIMESTAMP_MICROS` once parquet-mr has that.
         new ParquetPrimitiveConverter(updater) {
@@ -301,10 +293,9 @@ private[parquet] class ParquetRowConverter(
         new ParquetMapConverter(parquetType.asGroupType(), t, updater)
 
       case t: StructType =>
-        new ParquetRowConverter(
-          schemaConverter, parquetType.asGroupType(), t, new ParentContainerUpdater {
-            override def set(value: Any): Unit = updater.set(value.asInstanceOf[InternalRow].copy())
-          })
+        new ParquetRowConverter(parquetType.asGroupType(), t, new ParentContainerUpdater {
+          override def set(value: Any): Unit = updater.set(value.asInstanceOf[InternalRow].copy())
+        })
 
       case t =>
         throw new RuntimeException(

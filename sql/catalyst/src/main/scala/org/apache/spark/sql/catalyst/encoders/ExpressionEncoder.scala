@@ -47,26 +47,16 @@ object ExpressionEncoder {
     // We convert the not-serializable TypeTag into StructType and ClassTag.
     val mirror = ScalaReflection.mirror
     val tpe = typeTag[T].in(mirror).tpe
-
-    if (ScalaReflection.optionOfProductType(tpe)) {
-      throw new UnsupportedOperationException(
-        "Cannot create encoder for Option of Product type, because Product type is represented " +
-          "as a row, and the entire row can not be null in Spark SQL like normal databases. " +
-          "You can wrap your type with Tuple1 if you do want top level null Product objects, " +
-          "e.g. instead of creating `Dataset[Option[MyClass]]`, you can do something like " +
-          "`val ds: Dataset[Tuple1[MyClass]] = Seq(Tuple1(MyClass(...)), Tuple1(null)).toDS`")
-    }
-
     val cls = mirror.runtimeClass(tpe)
     val flat = !ScalaReflection.definedByConstructorParams(tpe)
 
-    val inputObject = BoundReference(0, ScalaReflection.dataTypeFor[T], nullable = !cls.isPrimitive)
+    val inputObject = BoundReference(0, ScalaReflection.dataTypeFor[T], nullable = true)
     val nullSafeInput = if (flat) {
       inputObject
     } else {
-      // For input object of Product type, we can't encode it to row if it's null, as Spark SQL
+      // For input object of non-flat type, we can't encode it to row if it's null, as Spark SQL
       // doesn't allow top-level row to be null, only its columns can be null.
-      AssertNotNull(inputObject, Seq("top level Product input object"))
+      AssertNotNull(inputObject, Seq("top level non-flat input object"))
     }
     val serializer = ScalaReflection.serializerFor[T](nullSafeInput)
     val deserializer = ScalaReflection.deserializerFor[T]
@@ -230,13 +220,13 @@ case class ExpressionEncoder[T](
   // serializer expressions are used to encode an object to a row, while the object is usually an
   // intermediate value produced inside an operator, not from the output of the child operator. This
   // is quite different from normal expressions, and `AttributeReference` doesn't work here
-  // (intermediate value is not an attribute). We assume that all serializer expressions use the
-  // same `BoundReference` to refer to the object, and throw exception if they don't.
-  assert(serializer.forall(_.references.isEmpty), "serializer cannot reference any attributes.")
+  // (intermediate value is not an attribute). We assume that all serializer expressions use a same
+  // `BoundReference` to refer to the object, and throw exception if they don't.
+  assert(serializer.forall(_.references.isEmpty), "serializer cannot reference to any attributes.")
   assert(serializer.flatMap { ser =>
     val boundRefs = ser.collect { case b: BoundReference => b }
     assert(boundRefs.nonEmpty,
-      "each serializer expression should contain at least one `BoundReference`")
+      "each serializer expression should contains at least one `BoundReference`")
     boundRefs
   }.distinct.length <= 1, "all serializer expressions must use the same BoundReference.")
 

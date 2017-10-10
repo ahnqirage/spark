@@ -84,14 +84,6 @@ private[parquet] class ParquetWriteSupport extends WriteSupport[InternalRow] wit
       configuration.get(SQLConf.PARQUET_WRITE_LEGACY_FORMAT.key).toBoolean
     }
 
-    this.writeTimestampInMillis = {
-      assert(configuration.get(SQLConf.PARQUET_INT64_AS_TIMESTAMP_MILLIS.key) != null)
-      configuration.get(SQLConf.PARQUET_INT64_AS_TIMESTAMP_MILLIS.key).toBoolean
-    }
-
-
-    this.rootFieldWriters = schema.map(_.dataType).map(makeWriter).toArray[ValueWriter]
-
     val messageType = new ParquetSchemaConverter(configuration).convert(schema)
     val metadata = Map(ParquetReadSupport.SPARK_METADATA_KEY -> schemaString).asJava
 

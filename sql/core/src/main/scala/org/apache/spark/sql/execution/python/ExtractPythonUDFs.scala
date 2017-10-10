@@ -80,6 +80,59 @@ object ExtractPythonUDFFromAggregate extends Rule[LogicalPlan] {
 }
 
 
+
+/**
+ * Extracts all the Python UDFs in logical aggregate, which depends on aggregate expression or
+ * grouping key, evaluate them after aggregate.
+ */
+object ExtractPythonUDFFromAggregate extends Rule[LogicalPlan] {
+
+  /**
+   * Returns whether the expression could only be evaluated within aggregate.
+   */
+  private def belongAggregate(e: Expression, agg: Aggregate): Boolean = {
+    e.isInstanceOf[AggregateExpression] ||
+      agg.groupingExpressions.exists(_.semanticEquals(e))
+  }
+
+  private def hasPythonUdfOverAggregate(expr: Expression, agg: Aggregate): Boolean = {
+    expr.find {
+      e => e.isInstanceOf[PythonUDF] && e.find(belongAggregate(_, agg)).isDefined
+    }.isDefined
+  }
+
+  private def extract(agg: Aggregate): LogicalPlan = {
+    val projList = new ArrayBuffer[NamedExpression]()
+    val aggExpr = new ArrayBuffer[NamedExpression]()
+    agg.aggregateExpressions.foreach { expr =>
+      if (hasPythonUdfOverAggregate(expr, agg)) {
+        // Python UDF can only be evaluated after aggregate
+        val newE = expr transformDown {
+          case e: Expression if belongAggregate(e, agg) =>
+            val alias = e match {
+              case a: NamedExpression => a
+              case o => Alias(e, "agg")()
+            }
+            aggExpr += alias
+            alias.toAttribute
+        }
+        projList += newE.asInstanceOf[NamedExpression]
+      } else {
+        aggExpr += expr
+        projList += expr.toAttribute
+      }
+    }
+    // There is no Python UDF over aggregate expression
+    Project(projList, agg.copy(aggregateExpressions = aggExpr))
+  }
+
+  def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
+    case agg: Aggregate if agg.aggregateExpressions.exists(hasPythonUdfOverAggregate(_, agg)) =>
+      extract(agg)
+  }
+}
+
+
 /**
  * Extracts PythonUDFs from operators, rewriting the query plan so that the UDF can be evaluated
  * alone in a batch.
@@ -90,7 +143,7 @@ object ExtractPythonUDFFromAggregate extends Rule[LogicalPlan] {
  * This has the limitation that the input to the Python UDF is not allowed include attributes from
  * multiple child operators.
  */
-object ExtractPythonUDFs extends Rule[SparkPlan] with PredicateHelper {
+object ExtractPythonUDFs extends Rule[SparkPlan] {
 
   private def hasPythonUDF(e: Expression): Boolean = {
     e.find(_.isInstanceOf[PythonUDF]).isDefined
@@ -133,7 +186,7 @@ object ExtractPythonUDFs extends Rule[SparkPlan] with PredicateHelper {
         val validUdfs = udfs.filter { udf =>
           // Check to make sure that the UDF can be evaluated with only the input of this child.
           udf.references.subsetOf(child.outputSet)
-        }
+        }.toArray  // Turn it into an array since iterators cannot be serialized in Scala 2.10
         if (validUdfs.nonEmpty) {
           val resultAttrs = udfs.zipWithIndex.map { case (u, i) =>
             AttributeReference(s"pythonUDF$i", u.dataType)()
@@ -160,7 +213,7 @@ object ExtractPythonUDFs extends Rule[SparkPlan] with PredicateHelper {
         sys.error(s"Invalid PythonUDF $udf, requires attributes from more than one child.")
       }
 
-      val rewritten = splitFilter.withNewChildren(newChildren).transformExpressions {
+      val rewritten = plan.withNewChildren(newChildren).transformExpressions {
         case p: PythonUDF if attributeMap.contains(p) =>
           attributeMap(p)
       }

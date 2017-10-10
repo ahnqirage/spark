@@ -62,13 +62,14 @@ case class InMemoryRelation(
     @transient var _cachedColumnBuffers: RDD[CachedBatch] = null,
     val batchStats: LongAccumulator = child.sqlContext.sparkContext.longAccumulator)
   extends logical.LeafNode with MultiInstanceRelation {
-  override def innerChildren: Seq[SparkPlan] = Seq(child)
+
+  override protected def innerChildren: Seq[SparkPlan] = Seq(child)
 
   override def producedAttributes: AttributeSet = outputSet
 
   @transient val partitionStatistics = new PartitionStatistics(output)
 
-  override def computeStats(): Statistics = {
+  override lazy val statistics: Statistics = {
     if (batchStats.value == 0L) {
       // Underlying columnar RDD hasn't been materialized, no useful statistics information
       // available, return the default statistics.
@@ -81,6 +82,12 @@ case class InMemoryRelation(
   // If the cached column buffers were not passed in, we calculate them in the constructor.
   // As in Spark, the actual work of caching is lazy.
   if (_cachedColumnBuffers == null) {
+    buildBuffers()
+  }
+
+  def recache(): Unit = {
+    _cachedColumnBuffers.unpersist()
+    _cachedColumnBuffers = null
     buildBuffers()
   }
 
@@ -121,8 +128,8 @@ case class InMemoryRelation(
 
           batchStats.add(totalSize)
 
-          val stats = InternalRow.fromSeq(
-            columnBuilders.flatMap(_.columnStats.collectedStatistics))
+          val stats = InternalRow.fromSeq(columnBuilders.map(_.columnStats.collectedStatistics)
+            .flatMap(_.values))
           CachedBatch(rowCount, columnBuilders.map { builder =>
             JavaUtils.bufferToArray(builder.build())
           }, stats)

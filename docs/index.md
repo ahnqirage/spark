@@ -26,7 +26,7 @@ Spark runs on both Windows and UNIX-like systems (e.g. Linux, Mac OS). It's easy
 locally on one machine --- all you need is to have `java` installed on your system `PATH`,
 or the `JAVA_HOME` environment variable pointing to a Java installation.
 
-Spark runs on Java 8+, Python 2.7+/3.4+ and R 3.1+. For the Scala API, Spark {{site.SPARK_VERSION}}
+Spark runs on Java 7+, Python 2.6+/3.4+ and R 3.1+. For the Scala API, Spark {{site.SPARK_VERSION}}
 uses Scala {{site.SCALA_BINARY_VERSION}}. You will need to use a compatible Scala version
 ({{site.SCALA_BINARY_VERSION}}.x).
 
@@ -88,12 +88,13 @@ options for deployment:
 **Programming Guides:**
 
 * [Quick Start](quick-start.html): a quick introduction to the Spark API; start here!
-* [RDD Programming Guide](rdd-programming-guide.html): overview of Spark basics - RDDs (core but old API), accumulators, and broadcast variables  
-* [Spark SQL, Datasets, and DataFrames](sql-programming-guide.html): processing structured data with relational queries (newer API than RDDs)
-* [Structured Streaming](structured-streaming-programming-guide.html): processing structured data streams with relation queries (using Datasets and DataFrames, newer API than DStreams)
-* [Spark Streaming](streaming-programming-guide.html): processing data streams using DStreams (old API)
-* [MLlib](ml-guide.html): applying machine learning algorithms
-* [GraphX](graphx-programming-guide.html): processing graphs 
+* [Spark Programming Guide](programming-guide.html): detailed overview of Spark
+  in all supported languages (Scala, Java, Python, R)
+* Modules built on Spark:
+  * [Spark Streaming](streaming-programming-guide.html): processing real-time data streams
+  * [Spark SQL, Datasets, and DataFrames](sql-programming-guide.html): support for structured data and relational queries
+  * [MLlib](ml-guide.html): built-in machine learning library
+  * [GraphX](graphx-programming-guide.html): Spark's new API for graph processing
 
 **API Docs:**
 
@@ -127,8 +128,8 @@ options for deployment:
   * [Cloud Infrastructures](cloud-integration.html)
   * [OpenStack Swift](storage-openstack-swift.html)
 * [Building Spark](building-spark.html): build Spark using the Maven system
-* [Contributing to Spark](http://spark.apache.org/contributing.html)
-* [Third Party Projects](http://spark.apache.org/third-party-projects.html): related third party Spark projects
+* [Contributing to Spark](https://cwiki.apache.org/confluence/display/SPARK/Contributing+to+Spark)
+* [Third Party Projects](https://cwiki.apache.org/confluence/display/SPARK/Third+Party+Projects): related third party Spark projects
 
 **External Resources:**
 

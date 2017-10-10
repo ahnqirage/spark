@@ -43,24 +43,23 @@ object BuildCommons {
     "catalyst", "sql", "hive", "hive-thriftserver", "sql-kafka-0-10"
   ).map(ProjectRef(buildLocation, _))
 
-  val streamingProjects@Seq(streaming, streamingKafka010) =
-    Seq("streaming", "streaming-kafka-0-10").map(ProjectRef(buildLocation, _))
+  val streamingProjects@Seq(
+    streaming, streamingFlumeSink, streamingFlume, streamingKafka, streamingKafka010
+  ) = Seq(
+    "streaming", "streaming-flume-sink", "streaming-flume", "streaming-kafka-0-8", "streaming-kafka-0-10"
+  ).map(ProjectRef(buildLocation, _))
 
   val allProjects@Seq(
-    core, graphx, mllib, mllibLocal, repl, networkCommon, networkShuffle, launcher, unsafe, tags, sketch, kvstore, _*
+    core, graphx, mllib, mllibLocal, repl, networkCommon, networkShuffle, launcher, unsafe, tags, sketch, _*
   ) = Seq(
     "core", "graphx", "mllib", "mllib-local", "repl", "network-common", "network-shuffle", "launcher", "unsafe",
-    "tags", "sketch", "kvstore"
+    "tags", "sketch"
   ).map(ProjectRef(buildLocation, _)) ++ sqlProjects ++ streamingProjects
 
-  val optionallyEnabledProjects@Seq(mesos, yarn,
-    streamingFlumeSink, streamingFlume,
-    streamingKafka, sparkGangliaLgpl, streamingKinesisAsl,
-    dockerIntegrationTests, hadoopCloud) =
-    Seq("mesos", "yarn",
-      "streaming-flume-sink", "streaming-flume",
-      "streaming-kafka-0-8", "ganglia-lgpl", "streaming-kinesis-asl",
-      "docker-integration-tests", "hadoop-cloud").map(ProjectRef(buildLocation, _))
+  val optionallyEnabledProjects@Seq(yarn, java8Tests, sparkGangliaLgpl,
+    streamingKinesisAsl, dockerIntegrationTests) =
+    Seq("yarn", "java8-tests", "ganglia-lgpl", "streaming-kinesis-asl",
+      "docker-integration-tests").map(ProjectRef(buildLocation, _))
 
   val assemblyProjects@Seq(networkYarn, streamingFlumeAssembly, streamingKafkaAssembly, streamingKafka010Assembly, streamingKinesisAslAssembly) =
     Seq("network-yarn", "streaming-flume-assembly", "streaming-kafka-0-8-assembly", "streaming-kafka-0-10-assembly", "streaming-kinesis-asl-assembly")
@@ -247,12 +246,24 @@ object SparkBuild extends PomBuild {
     // additional discussion and explanation.
     javacOptions in (Compile, compile) ++= Seq(
       "-target", javacJVMVersion.value
-    ),
+    ) ++ sys.env.get("JAVA_7_HOME").toSeq.flatMap { jdk7 =>
+      if (javacJVMVersion.value == "1.7") {
+        Seq("-bootclasspath", s"$jdk7/jre/lib/rt.jar")
+      } else {
+        Nil
+      }
+    },
 
     scalacOptions in Compile ++= Seq(
       s"-target:jvm-${scalacJVMVersion.value}",
       "-sourcepath", (baseDirectory in ThisBuild).value.getAbsolutePath  // Required for relative source links in scaladoc
-    ),
+    ) ++ sys.env.get("JAVA_7_HOME").toSeq.flatMap { jdk7 =>
+      if (javacJVMVersion.value == "1.7") {
+        Seq("-javabootclasspath", s"$jdk7/jre/lib/rt.jar")
+      } else {
+        Nil
+      }
+    },
 
     // Implements -Xfatal-warnings, ignoring deprecation warnings.
     // Code snippet taken from https://issues.scala-lang.org/browse/SI-8410.
@@ -310,7 +321,7 @@ object SparkBuild extends PomBuild {
   val mimaProjects = allProjects.filterNot { x =>
     Seq(
       spark, hive, hiveThriftServer, catalyst, repl, networkCommon, networkShuffle, networkYarn,
-      unsafe, tags, sqlKafka010, kvstore
+      unsafe, tags, sqlKafka010
     ).contains(x)
   }
 
@@ -352,6 +363,8 @@ object SparkBuild extends PomBuild {
   enable(Hive.settings)(hive)
 
   enable(Flume.settings)(streamingFlumeSink)
+
+  enable(Java8TestSettings.settings)(java8Tests)
 
   // SPARK-14738 - Remove docker tests from main Spark build
   // enable(DockerIntegrationTests.settings)(dockerIntegrationTests)
@@ -563,13 +576,10 @@ object Assembly {
       sys.props.get("hadoop.version")
         .getOrElse(SbtPomKeys.effectivePom.value.getProperties.get("hadoop.version").asInstanceOf[String])
     },
-    jarName in assembly := {
-      if (moduleName.value.contains("streaming-flume-assembly")
-        || moduleName.value.contains("streaming-kafka-0-8-assembly")
-        || moduleName.value.contains("streaming-kafka-0-10-assembly")
-        || moduleName.value.contains("streaming-kinesis-asl-assembly")) {
+    jarName in assembly <<= (version, moduleName, hadoopVersion) map { (v, mName, hv) =>
+      if (mName.contains("streaming-flume-assembly") || mName.contains("streaming-kafka-0-8-assembly") || mName.contains("streaming-kafka-0-10-assembly") || mName.contains("streaming-kinesis-asl-assembly")) {
         // This must match the same name used in maven (see external/kafka-0-8-assembly/pom.xml)
-        s"${moduleName.value}-${version.value}.jar"
+        s"${mName}-${v}.jar"
       } else {
         s"${moduleName.value}-${version.value}-hadoop${hadoopVersion.value}.jar"
       }
@@ -698,14 +708,7 @@ object Unidoc {
     javacOptions in (JavaUnidoc, unidoc) := Seq(
       "-windowtitle", "Spark " + version.value.replaceAll("-SNAPSHOT", "") + " JavaDoc",
       "-public",
-      "-noqualifier", "java.lang",
-      "-tag", """example:a:Example\:""",
-      "-tag", """note:a:Note\:""",
-      "-tag", "group:X",
-      "-tag", "tparam:X",
-      "-tag", "constructor:X",
-      "-tag", "todo:X",
-      "-tag", "groupname:X"
+      "-noqualifier", "java.lang"
     ),
 
     // Use GitHub repository for Scaladoc source links

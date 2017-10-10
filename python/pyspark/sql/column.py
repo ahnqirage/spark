@@ -660,7 +660,7 @@ def _test():
         .appName("sql.column tests")\
         .getOrCreate()
     sc = spark.sparkContext
-    globs['spark'] = spark
+    globs['sc'] = sc
     globs['df'] = sc.parallelize([(2, 'Alice'), (5, 'Bob')]) \
         .toDF(StructType([StructField('age', IntegerType()),
                           StructField('name', StringType())]))

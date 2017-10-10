@@ -18,7 +18,7 @@
 package org.apache.spark.sql.catalyst.parser
 
 import org.apache.spark.sql.catalyst.FunctionIdentifier
-import org.apache.spark.sql.catalyst.analysis.{UnresolvedAttribute, UnresolvedFunction, UnresolvedGenerator, UnresolvedInlineTable, UnresolvedTableValuedFunction}
+import org.apache.spark.sql.catalyst.analysis.{UnresolvedGenerator, UnresolvedInlineTable, UnresolvedTableValuedFunction}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -29,13 +29,13 @@ import org.apache.spark.sql.types.IntegerType
  *
  * There is also SparkSqlParserSuite in sql/core module for parser rules defined in sql/core module.
  */
-class PlanParserSuite extends AnalysisTest {
+class PlanParserSuite extends PlanTest {
   import CatalystSqlParser._
   import org.apache.spark.sql.catalyst.dsl.expressions._
   import org.apache.spark.sql.catalyst.dsl.plans._
 
   private def assertEqual(sqlCommand: String, plan: LogicalPlan): Unit = {
-    comparePlans(parsePlan(sqlCommand), plan, checkAnalysis = false)
+    comparePlans(parsePlan(sqlCommand), plan)
   }
 
   private def intercept(sqlCommand: String, messages: String*): Unit = {
@@ -109,8 +109,7 @@ class PlanParserSuite extends AnalysisTest {
       table("db", "c").select('a, 'b).where('x < 1))
     assertEqual("select distinct a, b from db.c", Distinct(table("db", "c").select('a, 'b)))
     assertEqual("select all a, b from db.c", table("db", "c").select('a, 'b))
-    assertEqual("select from tbl", OneRowRelation().select('from.as("tbl")))
-    assertEqual("select a from 1k.2m", table("1k", "2m").select('a))
+    assertEqual("select from tbl", OneRowRelation.select('from.as("tbl")))
   }
 
   test("reverse select query") {
@@ -184,7 +183,7 @@ class PlanParserSuite extends AnalysisTest {
     assertEqual(s"insert overwrite table s $sql",
       insert(Map.empty, overwrite = true))
     assertEqual(s"insert overwrite table s partition (e = 1) if not exists $sql",
-      insert(Map("e" -> Option("1")), overwrite = true, ifPartitionNotExists = true))
+      insert(Map("e" -> Option("1")), overwrite = true, ifNotExists = true))
     assertEqual(s"insert into s $sql",
       insert(Map.empty))
     assertEqual(s"insert into table s partition (c = 'd', e = 1) $sql",
@@ -197,6 +196,13 @@ class PlanParserSuite extends AnalysisTest {
         table("s"), Map.empty, plan.limit(1), false, ifPartitionNotExists = false).union(
         InsertIntoTable(
           table("u"), Map.empty, plan2, false, ifPartitionNotExists = false)))
+  }
+
+  test ("insert with if not exists") {
+    val sql = "select * from t"
+    intercept(s"insert overwrite table s partition (e = 1, x) if not exists $sql",
+      "Dynamic partitions do not support IF NOT EXISTS. Specified partitions with value: [x]")
+    intercept[ParseException](parsePlan(s"insert overwrite table s if not exists $sql"))
   }
 
   test ("insert with if not exists") {
@@ -378,7 +384,7 @@ class PlanParserSuite extends AnalysisTest {
     assertEqual(
       "select * from t1 cross join t2 join t3 on t3.id = t1.id join t4 on t4.id = t1.id",
       table("t1")
-        .join(table("t2"), Cross)
+        .join(table("t2"), Inner)
         .join(table("t3"), Inner, Option(Symbol("t3.id") === Symbol("t1.id")))
         .join(table("t4"), Inner, Option(Symbol("t4.id") === Symbol("t1.id")))
         .select(star()))
@@ -475,51 +481,7 @@ class PlanParserSuite extends AnalysisTest {
   test("table valued function") {
     assertEqual(
       "select * from range(2)",
-      UnresolvedTableValuedFunction("range", Literal(2) :: Nil, Seq.empty).select(star()))
-  }
-
-  test("SPARK-20311 range(N) as alias") {
-    assertEqual(
-      "SELECT * FROM range(10) AS t",
-      SubqueryAlias("t", UnresolvedTableValuedFunction("range", Literal(10) :: Nil, Seq.empty))
-        .select(star()))
-    assertEqual(
-      "SELECT * FROM range(7) AS t(a)",
-      SubqueryAlias("t", UnresolvedTableValuedFunction("range", Literal(7) :: Nil, "a" :: Nil))
-        .select(star()))
-  }
-
-  test("SPARK-20841 Support table column aliases in FROM clause") {
-    assertEqual(
-      "SELECT * FROM testData AS t(col1, col2)",
-      UnresolvedSubqueryColumnAliases(
-        Seq("col1", "col2"),
-        SubqueryAlias("t", UnresolvedRelation(TableIdentifier("testData")))
-      ).select(star()))
-  }
-
-  test("SPARK-20962 Support subquery column aliases in FROM clause") {
-    assertEqual(
-      "SELECT * FROM (SELECT a AS x, b AS y FROM t) t(col1, col2)",
-      UnresolvedSubqueryColumnAliases(
-        Seq("col1", "col2"),
-        SubqueryAlias(
-          "t",
-          UnresolvedRelation(TableIdentifier("t")).select('a.as("x"), 'b.as("y")))
-      ).select(star()))
-  }
-
-  test("SPARK-20963 Support aliases for join relations in FROM clause") {
-    val src1 = UnresolvedRelation(TableIdentifier("src1")).as("s1")
-    val src2 = UnresolvedRelation(TableIdentifier("src2")).as("s2")
-    assertEqual(
-      "SELECT * FROM (src1 s1 INNER JOIN src2 s2 ON s1.id = s2.id) dst(a, b, c, d)",
-      UnresolvedSubqueryColumnAliases(
-        Seq("a", "b", "c", "d"),
-        SubqueryAlias(
-          "dst",
-          src1.join(src2, Inner, Option(Symbol("s1.id") === Symbol("s2.id"))))
-      ).select(star()))
+      UnresolvedTableValuedFunction("range", Literal(2) :: Nil).select(star()))
   }
 
   test("inline table") {

@@ -150,7 +150,7 @@ abstract class ClassificationModel[FeaturesType, M <: ClassificationModel[Featur
   /**
    * Transforms dataset by reading from [[featuresCol]], and appending new columns as specified by
    * parameters:
-   *  - predicted labels as [[predictionCol]] of type `Double`
+   *  - predicted labels as [[predictionCol]] of type [[Double]]
    *  - raw predictions (confidences) as [[rawPredictionCol]] of type `Vector`.
    *
    * @param dataset input dataset

@@ -131,9 +131,9 @@ public class TransportClient implements Closeable {
    */
   public void fetchChunk(
       long streamId,
-      int chunkIndex,
-      ChunkReceivedCallback callback) {
-    long startTime = System.currentTimeMillis();
+      final int chunkIndex,
+      final ChunkReceivedCallback callback) {
+    final long startTime = System.currentTimeMillis();
     if (logger.isDebugEnabled()) {
       logger.debug("Sending fetch chunk request {} to {}", chunkIndex, getRemoteAddress(channel));
     }
@@ -141,12 +141,28 @@ public class TransportClient implements Closeable {
     StreamChunkId streamChunkId = new StreamChunkId(streamId, chunkIndex);
     handler.addFetchRequest(streamChunkId, callback);
 
-    channel.writeAndFlush(new ChunkFetchRequest(streamChunkId)).addListener(future -> {
-      if (future.isSuccess()) {
-        long timeTaken = System.currentTimeMillis() - startTime;
-        if (logger.isTraceEnabled()) {
-          logger.trace("Sending request {} to {} took {} ms", streamChunkId,
-            getRemoteAddress(channel), timeTaken);
+    channel.writeAndFlush(new ChunkFetchRequest(streamChunkId)).addListener(
+      new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+          if (future.isSuccess()) {
+            long timeTaken = System.currentTimeMillis() - startTime;
+            if (logger.isTraceEnabled()) {
+              logger.trace("Sending request {} to {} took {} ms", streamChunkId,
+                getRemoteAddress(channel), timeTaken);
+            }
+          } else {
+            String errorMsg = String.format("Failed to send request %s to %s: %s", streamChunkId,
+              getRemoteAddress(channel), future.cause());
+            logger.error(errorMsg, future.cause());
+            handler.removeFetchRequest(streamChunkId);
+            channel.close();
+            try {
+              callback.onFailure(chunkIndex, new IOException(errorMsg, future.cause()));
+            } catch (Exception e) {
+              logger.error("Uncaught exception in RPC response callback handler!", e);
+            }
+          }
         }
       } else {
         String errorMsg = String.format("Failed to send request %s to %s: %s", streamChunkId,
@@ -169,8 +185,8 @@ public class TransportClient implements Closeable {
    * @param streamId The stream to fetch.
    * @param callback Object to call with the stream data.
    */
-  public void stream(String streamId, StreamCallback callback) {
-    long startTime = System.currentTimeMillis();
+  public void stream(final String streamId, final StreamCallback callback) {
+    final long startTime = System.currentTimeMillis();
     if (logger.isDebugEnabled()) {
       logger.debug("Sending stream request for {} to {}", streamId, getRemoteAddress(channel));
     }
@@ -179,13 +195,28 @@ public class TransportClient implements Closeable {
     // written to the socket atomically, so that callbacks are called in the right order
     // when responses arrive.
     synchronized (this) {
-      handler.addStreamCallback(streamId, callback);
-      channel.writeAndFlush(new StreamRequest(streamId)).addListener(future -> {
-        if (future.isSuccess()) {
-          long timeTaken = System.currentTimeMillis() - startTime;
-          if (logger.isTraceEnabled()) {
-            logger.trace("Sending request for {} to {} took {} ms", streamId,
-              getRemoteAddress(channel), timeTaken);
+      handler.addStreamCallback(callback);
+      channel.writeAndFlush(new StreamRequest(streamId)).addListener(
+        new ChannelFutureListener() {
+          @Override
+          public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+              long timeTaken = System.currentTimeMillis() - startTime;
+              if (logger.isTraceEnabled()) {
+                logger.trace("Sending request for {} to {} took {} ms", streamId,
+                  getRemoteAddress(channel), timeTaken);
+              }
+            } else {
+              String errorMsg = String.format("Failed to send request for %s to %s: %s", streamId,
+                getRemoteAddress(channel), future.cause());
+              logger.error(errorMsg, future.cause());
+              channel.close();
+              try {
+                callback.onFailure(streamId, new IOException(errorMsg, future.cause()));
+              } catch (Exception e) {
+                logger.error("Uncaught exception in RPC response callback handler!", e);
+              }
+            }
           }
         } else {
           String errorMsg = String.format("Failed to send request for %s to %s: %s", streamId,
@@ -210,8 +241,8 @@ public class TransportClient implements Closeable {
    * @param callback Callback to handle the RPC's reply.
    * @return The RPC's id.
    */
-  public long sendRpc(ByteBuffer message, RpcResponseCallback callback) {
-    long startTime = System.currentTimeMillis();
+  public long sendRpc(ByteBuffer message, final RpcResponseCallback callback) {
+    final long startTime = System.currentTimeMillis();
     if (logger.isTraceEnabled()) {
       logger.trace("Sending RPC to {}", getRemoteAddress(channel));
     }

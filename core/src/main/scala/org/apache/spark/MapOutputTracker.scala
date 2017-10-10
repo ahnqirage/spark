@@ -218,8 +218,6 @@ private[spark] class MapOutputTrackerMasterEndpoint(
     override val rpcEnv: RpcEnv, tracker: MapOutputTrackerMaster, conf: SparkConf)
   extends RpcEndpoint with Logging {
 
-  logDebug("init") // force eager creation of logger
-
   override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
     case GetMapOutputStatuses(shuffleId: Int) =>
       val hostPort = context.senderAddress.hostPort
@@ -312,11 +310,13 @@ private[spark] abstract class MapOutputTracker(conf: SparkConf) extends Logging 
  * ShuffleMapStage uses this class for tracking available / missing outputs in order to determine
  * which tasks need to be run.
  */
-private[spark] class MapOutputTrackerMaster(
-    conf: SparkConf,
-    broadcastManager: BroadcastManager,
-    isLocal: Boolean)
+private[spark] class MapOutputTrackerMaster(conf: SparkConf,
+    broadcastManager: BroadcastManager, isLocal: Boolean)
   extends MapOutputTracker(conf) {
+
+  // The size at which we use Broadcast to send the map output statuses to the executors
+  private val minSizeForBroadcast =
+    conf.getSizeAsBytes("spark.shuffle.mapOutput.minSizeForBroadcast", "512k").toInt
 
   // The size at which we use Broadcast to send the map output statuses to the executors
   private val minSizeForBroadcast =
@@ -344,6 +344,15 @@ private[spark] class MapOutputTrackerMaster(
 
   private val maxRpcMessageSize = RpcUtils.maxMessageSizeBytes(conf)
 
+  // Kept in sync with cachedSerializedStatuses explicitly
+  // This is required so that the Broadcast variable remains in scope until we remove
+  // the shuffleId explicitly or implicitly.
+  private val cachedSerializedBroadcast = new HashMap[Int, Broadcast[Array[Byte]]]()
+
+  // This is to prevent multiple serializations of the same shuffle - which happens when
+  // there is a request storm when shuffle start.
+  private val shuffleIdLocks = new ConcurrentHashMap[Int, AnyRef]()
+
   // requests for map output statuses
   private val mapOutputRequests = new LinkedBlockingQueue[GetMapOutputMessage]
 
@@ -356,6 +365,63 @@ private[spark] class MapOutputTrackerMaster(
       pool.execute(new MessageLoop)
     }
     pool
+  }
+
+  // Make sure that that we aren't going to exceed the max RPC message size by making sure
+  // we use broadcast to send large map output statuses.
+  if (minSizeForBroadcast > maxRpcMessageSize) {
+    val msg = s"spark.shuffle.mapOutput.minSizeForBroadcast ($minSizeForBroadcast bytes) must " +
+      s"be <= spark.rpc.message.maxSize ($maxRpcMessageSize bytes) to prevent sending an rpc " +
+      "message that is to large."
+    logError(msg)
+    throw new IllegalArgumentException(msg)
+  }
+
+  def post(message: GetMapOutputMessage): Unit = {
+    mapOutputRequests.offer(message)
+  }
+
+  /** Message loop used for dispatching messages. */
+  private class MessageLoop extends Runnable {
+    override def run(): Unit = {
+      try {
+        while (true) {
+          try {
+            val data = mapOutputRequests.take()
+             if (data == PoisonPill) {
+              // Put PoisonPill back so that other MessageLoops can see it.
+              mapOutputRequests.offer(PoisonPill)
+              return
+            }
+            val context = data.context
+            val shuffleId = data.shuffleId
+            val hostPort = context.senderAddress.hostPort
+            logDebug("Handling request to send map output locations for shuffle " + shuffleId +
+              " to " + hostPort)
+            val mapOutputStatuses = getSerializedMapOutputStatuses(shuffleId)
+            context.reply(mapOutputStatuses)
+          } catch {
+            case NonFatal(e) => logError(e.getMessage, e)
+          }
+        }
+      } catch {
+        case ie: InterruptedException => // exit
+      }
+    }
+  }
+
+  /** A poison endpoint that indicates MessageLoop should exit its message loop. */
+  private val PoisonPill = new GetMapOutputMessage(-99, null)
+
+  // Exposed for testing
+  private[spark] def getNumCachedSerializedBroadcast = cachedSerializedBroadcast.size
+
+  def registerShuffle(shuffleId: Int, numMaps: Int) {
+    if (mapStatuses.put(shuffleId, new Array[MapStatus](numMaps)).isDefined) {
+      throw new IllegalArgumentException("Shuffle ID " + shuffleId + " registered twice")
+    }
+    // add in advance
+    shuffleIdLocks.putIfAbsent(shuffleId, new Object())
   }
 
   // Make sure that we aren't going to exceed the max RPC message size by making sure
@@ -432,29 +498,11 @@ private[spark] class MapOutputTrackerMaster(
   }
 
   /** Unregister shuffle data */
-  def unregisterShuffle(shuffleId: Int) {
-    shuffleStatuses.remove(shuffleId).foreach { shuffleStatus =>
-      shuffleStatus.invalidateSerializedMapOutputStatusCache()
-    }
-  }
-
-  /**
-   * Removes all shuffle outputs associated with this host. Note that this will also remove
-   * outputs which are served by an external shuffle server (if one exists).
-   */
-  def removeOutputsOnHost(host: String): Unit = {
-    shuffleStatuses.valuesIterator.foreach { _.removeOutputsOnHost(host) }
-    incrementEpoch()
-  }
-
-  /**
-   * Removes all shuffle outputs associated with this executor. Note that this will also remove
-   * outputs which are served by an external shuffle server (if one exists), as they are still
-   * registered with this execId.
-   */
-  def removeOutputsOnExecutor(execId: String): Unit = {
-    shuffleStatuses.valuesIterator.foreach { _.removeOutputsOnExecutor(execId) }
-    incrementEpoch()
+  override def unregisterShuffle(shuffleId: Int) {
+    mapStatuses.remove(shuffleId)
+    cachedSerializedStatuses.remove(shuffleId)
+    cachedSerializedBroadcast.remove(shuffleId).foreach(v => removeBroadcast(v))
+    shuffleIdLocks.remove(shuffleId)
   }
 
   /** Check if the given shuffle is being tracked */
@@ -571,24 +619,77 @@ private[spark] class MapOutputTrackerMaster(
     }
   }
 
-  /** Called to get current epoch number. */
-  def getEpoch: Long = {
-    epochLock.synchronized {
-      return epoch
+  private def removeBroadcast(bcast: Broadcast[_]): Unit = {
+    if (null != bcast) {
+      broadcastManager.unbroadcast(bcast.id,
+        removeFromDriver = true, blocking = false)
     }
   }
 
-  // This method is only called in local-mode.
-  def getMapSizesByExecutorId(shuffleId: Int, startPartition: Int, endPartition: Int)
-      : Seq[(BlockManagerId, Seq[(BlockId, Long)])] = {
-    logDebug(s"Fetching outputs for shuffle $shuffleId, partitions $startPartition-$endPartition")
-    shuffleStatuses.get(shuffleId) match {
-      case Some (shuffleStatus) =>
-        shuffleStatus.withMapStatuses { statuses =>
-          MapOutputTracker.convertMapStatuses(shuffleId, startPartition, endPartition, statuses)
+  private def clearCachedBroadcast(): Unit = {
+    for (cached <- cachedSerializedBroadcast) removeBroadcast(cached._2)
+    cachedSerializedBroadcast.clear()
+  }
+
+  def getSerializedMapOutputStatuses(shuffleId: Int): Array[Byte] = {
+    var statuses: Array[MapStatus] = null
+    var retBytes: Array[Byte] = null
+    var epochGotten: Long = -1
+
+    // Check to see if we have a cached version, returns true if it does
+    // and has side effect of setting retBytes.  If not returns false
+    // with side effect of setting statuses
+    def checkCachedStatuses(): Boolean = {
+      epochLock.synchronized {
+        if (epoch > cacheEpoch) {
+          cachedSerializedStatuses.clear()
+          clearCachedBroadcast()
+          cacheEpoch = epoch
         }
-      case None =>
-        Seq.empty
+        cachedSerializedStatuses.get(shuffleId) match {
+          case Some(bytes) =>
+            retBytes = bytes
+            true
+          case None =>
+            logDebug("cached status not found for : " + shuffleId)
+            statuses = mapStatuses.getOrElse(shuffleId, Array[MapStatus]())
+            epochGotten = epoch
+            false
+        }
+      }
+    }
+
+    if (checkCachedStatuses()) return retBytes
+    var shuffleIdLock = shuffleIdLocks.get(shuffleId)
+    if (null == shuffleIdLock) {
+      val newLock = new Object()
+      // in general, this condition should be false - but good to be paranoid
+      val prevLock = shuffleIdLocks.putIfAbsent(shuffleId, newLock)
+      shuffleIdLock = if (null != prevLock) prevLock else newLock
+    }
+    // synchronize so we only serialize/broadcast it once since multiple threads call
+    // in parallel
+    shuffleIdLock.synchronized {
+      // double check to make sure someone else didn't serialize and cache the same
+      // mapstatus while we were waiting on the synchronize
+      if (checkCachedStatuses()) return retBytes
+
+      // If we got here, we failed to find the serialized locations in the cache, so we pulled
+      // out a snapshot of the locations as "statuses"; let's serialize and return that
+      val (bytes, bcast) = MapOutputTracker.serializeMapStatuses(statuses, broadcastManager,
+        isLocal, minSizeForBroadcast)
+      logInfo("Size of output statuses for shuffle %d is %d bytes".format(shuffleId, bytes.length))
+      // Add them into the table only if the epoch hasn't changed while we were working
+      epochLock.synchronized {
+        if (epoch == epochGotten) {
+          cachedSerializedStatuses(shuffleId) = bytes
+          if (null != bcast) cachedSerializedBroadcast(shuffleId) = bcast
+        } else {
+          logInfo("Epoch changed, not caching!")
+          removeBroadcast(bcast)
+        }
+      }
+      bytes
     }
   }
 
@@ -597,7 +698,9 @@ private[spark] class MapOutputTrackerMaster(
     threadpool.shutdown()
     sendTracker(StopMapOutputTracker)
     trackerEndpoint = null
-    shuffleStatuses.clear()
+    cachedSerializedStatuses.clear()
+    clearCachedBroadcast()
+    shuffleIdLocks.clear()
   }
 }
 

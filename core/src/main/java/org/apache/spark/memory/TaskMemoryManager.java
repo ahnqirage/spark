@@ -156,35 +156,24 @@ public class TaskMemoryManager {
         TreeMap<Long, List<MemoryConsumer>> sortedConsumers = new TreeMap<>();
         for (MemoryConsumer c: consumers) {
           if (c != consumer && c.getUsed() > 0 && c.getMode() == mode) {
-            long key = c.getUsed();
-            List<MemoryConsumer> list =
-                sortedConsumers.computeIfAbsent(key, k -> new ArrayList<>(1));
-            list.add(c);
-          }
-        }
-        while (!sortedConsumers.isEmpty()) {
-          // Get the consumer using the least memory more than the remaining required memory.
-          Map.Entry<Long, List<MemoryConsumer>> currentEntry =
-            sortedConsumers.ceilingEntry(required - got);
-          // No consumer has used memory more than the remaining required memory.
-          // Get the consumer of largest used memory.
-          if (currentEntry == null) {
-            currentEntry = sortedConsumers.lastEntry();
-          }
-          List<MemoryConsumer> cList = currentEntry.getValue();
-          MemoryConsumer c = cList.remove(cList.size() - 1);
-          if (cList.isEmpty()) {
-            sortedConsumers.remove(currentEntry.getKey());
-          }
-          try {
-            long released = c.spill(required - got, consumer);
-            if (released > 0) {
-              logger.debug("Task {} released {} from {} for {}", taskAttemptId,
-                Utils.bytesToString(released), c, consumer);
-              got += memoryManager.acquireExecutionMemory(required - got, taskAttemptId, mode);
-              if (got >= required) {
-                break;
+            try {
+              long released = c.spill(required - got, consumer);
+              if (released > 0) {
+                logger.debug("Task {} released {} from {} for {}", taskAttemptId,
+                  Utils.bytesToString(released), c, consumer);
+                got += memoryManager.acquireExecutionMemory(required - got, taskAttemptId, mode);
+                if (got >= required) {
+                  break;
+                }
               }
+            } catch (ClosedByInterruptException e) {
+              // This called by user to kill a task (e.g: speculative task).
+              logger.error("error while calling spill() on " + c, e);
+              throw new RuntimeException(e.getMessage());
+            } catch (IOException e) {
+              logger.error("error while calling spill() on " + c, e);
+              throw new OutOfMemoryError("error while calling spill() on " + c + " : "
+                + e.getMessage());
             }
           } catch (ClosedByInterruptException e) {
             // This called by user to kill a task (e.g: speculative task).
@@ -422,7 +411,7 @@ public class TaskMemoryManager {
 
       for (MemoryBlock page : pageTable) {
         if (page != null) {
-          logger.debug("unreleased page: " + page + " in task " + taskAttemptId);
+          logger.warn("leak a page: " + page + " in task " + taskAttemptId);
           memoryManager.tungstenMemoryAllocator().free(page);
         }
       }

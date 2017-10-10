@@ -20,12 +20,16 @@ package org.apache.spark.scheduler
 import java.nio.ByteBuffer
 import java.util.Properties
 
+import scala.collection.mutable
+import scala.collection.mutable.HashMap
+
 import org.apache.spark._
 import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.internal.config.APP_CALLER_CONTEXT
 import org.apache.spark.memory.{MemoryMode, TaskMemoryManager}
 import org.apache.spark.metrics.MetricsSystem
-import org.apache.spark.util._
+import org.apache.spark.serializer.SerializerInstance
+import org.apache.spark.util.{AccumulatorV2, ByteBufferInputStream, ByteBufferOutputStream, Utils}
 
 /**
  * A unit of execution. We have two kinds of Task's in Spark:
@@ -189,11 +193,14 @@ private[spark] abstract class Task[T](
    */
   def collectAccumulatorUpdates(taskFailed: Boolean = false): Seq[AccumulatorV2[_, _]] = {
     if (context != null) {
-      // Note: internal accumulators representing task metrics always count failed values
-      context.taskMetrics.nonZeroInternalAccums() ++
-        // zero value external accumulators may still be useful, e.g. SQLMetrics, we should not
-        // filter them out.
-        context.taskMetrics.externalAccums.filter(a => !taskFailed || a.countFailedValues)
+      context.taskMetrics.internalAccums.filter { a =>
+        // RESULT_SIZE accumulator is always zero at executor, we need to send it back as its
+        // value will be updated at driver side.
+        // Note: internal accumulators representing task metrics always count failed values
+        !a.isZero || a.name == Some(InternalAccumulator.RESULT_SIZE)
+      // zero value external accumulators may still be useful, e.g. SQLMetrics, we should not filter
+      // them out.
+      } ++ context.taskMetrics.externalAccums.filter(a => !taskFailed || a.countFailedValues)
     } else {
       Seq.empty
     }
@@ -214,5 +221,91 @@ private[spark] abstract class Task[T](
     if (interruptThread && taskThread != null) {
       taskThread.interrupt()
     }
+  }
+}
+
+/**
+ * Handles transmission of tasks and their dependencies, because this can be slightly tricky. We
+ * need to send the list of JARs and files added to the SparkContext with each task to ensure that
+ * worker nodes find out about it, but we can't make it part of the Task because the user's code in
+ * the task might depend on one of the JARs. Thus we serialize each task as multiple objects, by
+ * first writing out its dependencies.
+ */
+private[spark] object Task {
+  /**
+   * Serialize a task and the current app dependencies (files and JARs added to the SparkContext)
+   */
+  def serializeWithDependencies(
+      task: Task[_],
+      currentFiles: mutable.Map[String, Long],
+      currentJars: mutable.Map[String, Long],
+      serializer: SerializerInstance)
+    : ByteBuffer = {
+
+    val out = new ByteBufferOutputStream(4096)
+    val dataOut = new DataOutputStream(out)
+
+    // Write currentFiles
+    dataOut.writeInt(currentFiles.size)
+    for ((name, timestamp) <- currentFiles) {
+      dataOut.writeUTF(name)
+      dataOut.writeLong(timestamp)
+    }
+
+    // Write currentJars
+    dataOut.writeInt(currentJars.size)
+    for ((name, timestamp) <- currentJars) {
+      dataOut.writeUTF(name)
+      dataOut.writeLong(timestamp)
+    }
+
+    // Write the task properties separately so it is available before full task deserialization.
+    val propBytes = Utils.serialize(task.localProperties)
+    dataOut.writeInt(propBytes.length)
+    dataOut.write(propBytes)
+
+    // Write the task itself and finish
+    dataOut.flush()
+    val taskBytes = serializer.serialize(task)
+    Utils.writeByteBuffer(taskBytes, out)
+    out.close()
+    out.toByteBuffer
+  }
+
+  /**
+   * Deserialize the list of dependencies in a task serialized with serializeWithDependencies,
+   * and return the task itself as a serialized ByteBuffer. The caller can then update its
+   * ClassLoaders and deserialize the task.
+   *
+   * @return (taskFiles, taskJars, taskBytes)
+   */
+  def deserializeWithDependencies(serializedTask: ByteBuffer)
+    : (HashMap[String, Long], HashMap[String, Long], Properties, ByteBuffer) = {
+
+    val in = new ByteBufferInputStream(serializedTask)
+    val dataIn = new DataInputStream(in)
+
+    // Read task's files
+    val taskFiles = new HashMap[String, Long]()
+    val numFiles = dataIn.readInt()
+    for (i <- 0 until numFiles) {
+      taskFiles(dataIn.readUTF()) = dataIn.readLong()
+    }
+
+    // Read task's JARs
+    val taskJars = new HashMap[String, Long]()
+    val numJars = dataIn.readInt()
+    for (i <- 0 until numJars) {
+      taskJars(dataIn.readUTF()) = dataIn.readLong()
+    }
+
+    val propLength = dataIn.readInt()
+    val propBytes = new Array[Byte](propLength)
+    dataIn.readFully(propBytes, 0, propLength)
+    val taskProps = Utils.deserialize[Properties](propBytes)
+
+    // Create a sub-buffer for the rest of the data, which is the serialized Task object
+    val subBuffer = serializedTask.slice()  // ByteBufferInputStream will have read just up to task
+    (taskFiles, taskJars, taskProps, subBuffer)
   }
 }

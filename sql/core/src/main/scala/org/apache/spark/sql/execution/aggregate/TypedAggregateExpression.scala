@@ -24,8 +24,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.UnresolvedDeserializer
 import org.apache.spark.sql.catalyst.encoders.encoderFor
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateFunction, DeclarativeAggregate, TypedImperativeAggregate}
-import org.apache.spark.sql.catalyst.expressions.codegen.GenerateSafeProjection
+import org.apache.spark.sql.catalyst.expressions.aggregate.DeclarativeAggregate
 import org.apache.spark.sql.catalyst.expressions.objects.Invoke
 import org.apache.spark.sql.expressions.Aggregator
 import org.apache.spark.sql.types._
@@ -35,6 +34,9 @@ object TypedAggregateExpression {
       aggregator: Aggregator[_, BUF, OUT]): TypedAggregateExpression = {
     val bufferEncoder = encoderFor[BUF]
     val bufferSerializer = bufferEncoder.namedExpressions
+    val bufferDeserializer = UnresolvedDeserializer(
+      bufferEncoder.deserializer,
+      bufferSerializer.map(_.toAttribute))
 
     val outputEncoder = encoderFor[OUT]
     val outputType = if (outputEncoder.flat) {
@@ -117,8 +119,6 @@ trait TypedAggregateExpression extends AggregateFunction {
 case class SimpleTypedAggregateExpression(
     aggregator: Aggregator[Any, Any, Any],
     inputDeserializer: Option[Expression],
-    inputClass: Option[Class[_]],
-    inputSchema: Option[StructType],
     bufferSerializer: Seq[NamedExpression],
     bufferDeserializer: Expression,
     outputSerializer: Seq[Expression],
@@ -143,15 +143,9 @@ case class SimpleTypedAggregateExpression(
   override lazy val aggBufferAttributes: Seq[AttributeReference] =
     bufferSerializer.map(_.toAttribute.asInstanceOf[AttributeReference])
 
-  private def serializeToBuffer(expr: Expression): Seq[Expression] = {
-    bufferSerializer.map(_.transform {
-      case _: BoundReference => expr
-    })
-  }
-
   override lazy val initialValues: Seq[Expression] = {
     val zero = Literal.fromObject(aggregator.zero, bufferExternalType)
-    serializeToBuffer(zero)
+    bufferSerializer.map(ReferenceToExpressions(_, zero :: Nil))
   }
 
   override lazy val updateExpressions: Seq[Expression] = {
@@ -160,7 +154,8 @@ case class SimpleTypedAggregateExpression(
       "reduce",
       bufferExternalType,
       bufferDeserializer :: inputDeserializer.get :: Nil)
-    serializeToBuffer(reduced)
+
+    bufferSerializer.map(ReferenceToExpressions(_, reduced :: Nil))
   }
 
   override lazy val mergeExpressions: Seq[Expression] = {
@@ -175,7 +170,8 @@ case class SimpleTypedAggregateExpression(
       "merge",
       bufferExternalType,
       leftBuffer :: rightBuffer :: Nil)
-    serializeToBuffer(merged)
+
+    bufferSerializer.map(ReferenceToExpressions(_, merged :: Nil))
   }
 
   override lazy val evaluateExpression: Expression = {
@@ -190,9 +186,13 @@ case class SimpleTypedAggregateExpression(
     })
 
     dataType match {
-      case _: StructType =>
+      case s: StructType =>
         val objRef = outputSerializer.head.find(_.isInstanceOf[BoundReference]).get
-        If(IsNull(objRef), Literal.create(null, dataType), CreateStruct(outputSerializeExprs))
+        val struct = If(
+          IsNull(objRef),
+          Literal.create(null, dataType),
+          CreateStruct(outputSerializer))
+        ReferenceToExpressions(struct, resultObj :: Nil)
       case _ =>
         assert(outputSerializeExprs.length == 1)
         outputSerializeExprs.head

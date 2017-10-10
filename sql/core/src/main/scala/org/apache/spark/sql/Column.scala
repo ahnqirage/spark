@@ -84,8 +84,8 @@ class TypedColumn[-T, U](
   }
 
   /**
-   * Gives the [[TypedColumn]] a name (alias).
-   * If the current `TypedColumn` has metadata associated with it, this metadata will be propagated
+   * Gives the TypedColumn a name (alias).
+   * If the current TypedColumn has metadata associated with it, this metadata will be propagated
    * to the new column.
    *
    * @group expr_ops
@@ -97,7 +97,7 @@ class TypedColumn[-T, U](
 }
 
 /**
- * A column that will be computed based on the data in a `DataFrame`.
+ * A column that will be computed based on the data in a [[DataFrame]].
  *
  * A new column can be constructed based on the input columns present in a DataFrame:
  *
@@ -126,8 +126,7 @@ class TypedColumn[-T, U](
  *
  * @since 1.3.0
  */
-@InterfaceStability.Stable
-class Column(val expr: Expression) extends Logging {
+class Column(protected[sql] val expr: Expression) extends Logging {
 
   def this(name: String) = this(name match {
     case "*" => UnresolvedStar(None)
@@ -164,7 +163,10 @@ class Column(val expr: Expression) extends Logging {
 
     // Leave an unaliased generator with an empty list of names since the analyzer will generate
     // the correct defaults after the nested expression's type has been resolved.
-    case g: Generator => MultiAlias(g, Nil)
+    case explode: Explode => MultiAlias(explode, Nil)
+    case explode: PosExplode => MultiAlias(explode, Nil)
+
+    case jt: JsonTuple => MultiAlias(jt, Nil)
 
     case func: UnresolvedFunction => UnresolvedAlias(func, Some(Column.generateAlias))
 
@@ -172,7 +174,7 @@ class Column(val expr: Expression) extends Logging {
     // NamedExpression under this Cast.
     case c: Cast =>
       c.transformUp {
-        case c @ Cast(_: NamedExpression, _, _) => UnresolvedAlias(c)
+        case Cast(ne: NamedExpression, to) => UnresolvedAlias(Cast(ne, to))
       } match {
         case ne: NamedExpression => ne
         case other => Alias(expr, usePrettyExpression(expr).sql)()
@@ -180,9 +182,6 @@ class Column(val expr: Expression) extends Logging {
 
     case a: AggregateExpression if a.aggregateFunction.isInstanceOf[TypedAggregateExpression] =>
       UnresolvedAlias(a, Some(Column.generateAlias))
-
-    // Wait until the struct is resolved. This will generate a nicer looking alias.
-    case struct: CreateNamedStructLike => UnresolvedAlias(struct)
 
     case expr: Expression => Alias(expr, usePrettyExpression(expr).sql)()
   }
@@ -1176,7 +1175,7 @@ class Column(val expr: Expression) extends Logging {
   def over(window: expressions.WindowSpec): Column = window.withAggregate(this)
 
   /**
-   * Defines an empty analytic clause. In this case the analytic function is applied
+   * Define a empty analytic clause. In this case the analytic function is applied
    * and presented for all rows in the result set.
    *
    * {{{

@@ -30,10 +30,8 @@ import org.scalatest.time.Span
 import org.scalatest.time.SpanSugar._
 
 import org.apache.spark.SparkException
-import org.apache.spark.sql.{AnalysisException, Dataset}
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.execution.streaming._
-import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.streaming.util.BlockingSource
 import org.apache.spark.util.Utils
 
 class StreamingQueryManagerSuite extends StreamTest with BeforeAndAfter {
@@ -66,7 +64,7 @@ class StreamingQueryManagerSuite extends StreamTest with BeforeAndAfter {
       assert(spark.streams.get(q1.id).eq(q1))
       assert(spark.streams.get(q2.id).eq(q2))
       assert(spark.streams.get(q3.id).eq(q3))
-      assert(spark.streams.get(java.util.UUID.randomUUID()) === null) // non-existent id
+      assert(spark.streams.get(-1) === null) // non-existent id
       q1.stop()
 
       assert(spark.streams.active.toSet === Set(q2, q3))
@@ -81,6 +79,8 @@ class StreamingQueryManagerSuite extends StreamTest with BeforeAndAfter {
         assert(spark.streams.get(q2.id) === null)
         assert(spark.streams.active.toSet === Set(q3))
       }
+      assert(spark.streams.get(q2.id) === null)
+      assert(spark.streams.active.toSet === Set(q3))
     }
   }
 
@@ -244,7 +244,7 @@ class StreamingQueryManagerSuite extends StreamTest with BeforeAndAfter {
     failAfter(streamingTimeout) {
       val queries = withClue("Error starting queries") {
         datasets.zipWithIndex.map { case (ds, i) =>
-          var query: StreamingQuery = null
+          @volatile var query: StreamExecution = null
           try {
             val df = ds.toDF
             val metadataRoot =
@@ -256,6 +256,7 @@ class StreamingQueryManagerSuite extends StreamTest with BeforeAndAfter {
                 .option("checkpointLocation", metadataRoot)
                 .outputMode("append")
                 .start()
+                .asInstanceOf[StreamExecution]
           } catch {
             case NonFatal(e) =>
               if (query != null) query.stop()

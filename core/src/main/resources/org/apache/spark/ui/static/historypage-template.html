@@ -73,12 +73,10 @@
   <tbody>
   {{#applications}}
     <tr>
-      <td {{#hasMultipleAttempts}}style="background-color:#fff"{{/hasMultipleAttempts}}><span title="{{id}}"><a href="{{uiroot}}/history/{{id}}/{{num}}/jobs/">{{id}}</a></span></td>
-      <td {{#hasMultipleAttempts}}style="background-color:#fff"{{/hasMultipleAttempts}}>{{name}}</td>
+      <td class="rowGroupColumn"><span title="{{id}}"><a href="{{uiroot}}/history/{{id}}/{{num}}/jobs/">{{id}}</a></span></td>
+      <td class="rowGroupColumn">{{name}}</td>
       {{#attempts}}
-      {{#hasMultipleAttempts}}
-      <td><a href="{{uiroot}}/history/{{id}}/{{attemptId}}/jobs/">{{attemptId}}</a></td>
-      {{/hasMultipleAttempts}}
+      <td class="attemptIDSpan"><a href="{{uiroot}}/history/{{id}}/{{attemptId}}/jobs/">{{attemptId}}</a></td>
       <td>{{startTime}}</td>
       {{#showCompletedColumn}}
       <td>{{endTime}}</td>

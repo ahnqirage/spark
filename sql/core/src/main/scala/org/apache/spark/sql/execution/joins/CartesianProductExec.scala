@@ -19,11 +19,13 @@ package org.apache.spark.sql.execution.joins
 
 import org.apache.spark._
 import org.apache.spark.rdd.{CartesianPartition, CartesianRDD, RDD}
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, JoinedRow, UnsafeRow}
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateUnsafeRowJoiner
 import org.apache.spark.sql.execution.{BinaryExecNode, ExternalAppendOnlyUnsafeRowArray, SparkPlan}
 import org.apache.spark.sql.execution.metric.SQLMetrics
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.util.CompletionIterator
 
 /**
@@ -31,16 +33,23 @@ import org.apache.spark.util.CompletionIterator
  * will be much faster than building the right partition for every row in left RDD, it also
  * materialize the right RDD (in case of the right RDD is nondeterministic).
  */
-class UnsafeCartesianRDD(
-    left : RDD[UnsafeRow],
-    right : RDD[UnsafeRow],
-    numFieldsOfRight: Int,
-    inMemoryBufferThreshold: Int,
-    spillThreshold: Int)
+class UnsafeCartesianRDD(left : RDD[UnsafeRow], right : RDD[UnsafeRow], numFieldsOfRight: Int)
   extends CartesianRDD[UnsafeRow, UnsafeRow](left.sparkContext, left, right) {
 
   override def compute(split: Partition, context: TaskContext): Iterator[(UnsafeRow, UnsafeRow)] = {
-    val rowArray = new ExternalAppendOnlyUnsafeRowArray(inMemoryBufferThreshold, spillThreshold)
+    // We will not sort the rows, so prefixComparator and recordComparator are null.
+    val sorter = UnsafeExternalSorter.create(
+      context.taskMemoryManager(),
+      SparkEnv.get.blockManager,
+      SparkEnv.get.serializerManager,
+      context,
+      null,
+      null,
+      1024,
+      SparkEnv.get.memoryManager.pageSizeBytes,
+      SparkEnv.get.conf.getLong("spark.shuffle.spill.numElementsForceSpillThreshold",
+        UnsafeExternalSorter.DEFAULT_NUM_ELEMENTS_FOR_SPILL_THRESHOLD),
+      false)
 
     val partition = split.asInstanceOf[CartesianPartition]
     rdd2.iterator(partition.s2, context).foreach(rowArray.add)
@@ -52,7 +61,7 @@ class UnsafeCartesianRDD(
       for (x <- rdd1.iterator(partition.s1, context);
            y <- createIter()) yield (x, y)
     CompletionIterator[(UnsafeRow, UnsafeRow), Iterator[(UnsafeRow, UnsafeRow)]](
-      resultIter, rowArray.clear())
+      resultIter, sorter.cleanupResources())
   }
 }
 
@@ -65,6 +74,15 @@ case class CartesianProductExec(
 
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
+
+  protected override def doPrepare(): Unit = {
+    if (!sqlContext.conf.crossJoinEnabled) {
+      throw new AnalysisException("Cartesian joins could be prohibitively expensive and are " +
+        "disabled by default. To explicitly enable them, please set " +
+        s"${SQLConf.CROSS_JOINS_ENABLED.key} = true")
+    }
+    super.doPrepare()
+  }
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")

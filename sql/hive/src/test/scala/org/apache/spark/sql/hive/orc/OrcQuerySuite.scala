@@ -26,9 +26,8 @@ import org.scalatest.BeforeAndAfterAll
 
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
-import org.apache.spark.sql.execution.datasources.{LogicalRelation, RecordReaderIterator}
-import org.apache.spark.sql.hive.HiveUtils
+import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.hive.{HiveUtils, MetastoreRelation}
 import org.apache.spark.sql.hive.test.TestHive._
 import org.apache.spark.sql.hive.test.TestHive.implicits._
 import org.apache.spark.sql.internal.SQLConf
@@ -453,7 +452,7 @@ class OrcQuerySuite extends QueryTest with BeforeAndAfterAll with OrcTest {
                 s"""
                    |CREATE TABLE dummy_orc(key INT, value STRING)
                    |STORED AS ORC
-                   |LOCATION '${dir.toURI}'
+                   |LOCATION '$path'
                  """.stripMargin)
 
               spark.sql(
@@ -475,7 +474,7 @@ class OrcQuerySuite extends QueryTest with BeforeAndAfterAll with OrcTest {
                 }
               } else {
                 queryExecution.analyzed.collectFirst {
-                  case _: HiveTableRelation => ()
+                  case _: MetastoreRelation => ()
                 }.getOrElse {
                   fail(s"Expecting no conversion from orc to data sources, " +
                     s"but got:\n$queryExecution")
@@ -483,28 +482,6 @@ class OrcQuerySuite extends QueryTest with BeforeAndAfterAll with OrcTest {
               }
             }
           }
-        }
-      }
-    }
-  }
-
-  test("converted ORC table supports resolving mixed case field") {
-    withSQLConf(HiveUtils.CONVERT_METASTORE_ORC.key -> "true") {
-      withTable("dummy_orc") {
-        withTempPath { dir =>
-          val df = spark.range(5).selectExpr("id", "id as valueField", "id as partitionValue")
-          df.write
-            .partitionBy("partitionValue")
-            .mode("overwrite")
-            .orc(dir.getAbsolutePath)
-
-          spark.sql(s"""
-            |create external table dummy_orc (id long, valueField long)
-            |partitioned by (partitionValue int)
-            |stored as orc
-            |location "${dir.toURI}"""".stripMargin)
-          spark.sql(s"msck repair table dummy_orc")
-          checkAnswer(spark.sql("select * from dummy_orc"), df)
         }
       }
     }
@@ -523,101 +500,4 @@ class OrcQuerySuite extends QueryTest with BeforeAndAfterAll with OrcTest {
       }
     }
   }
-
-  test("SPARK-15198 Support for pushing down filters for boolean types") {
-    withSQLConf(SQLConf.ORC_FILTER_PUSHDOWN_ENABLED.key -> "true") {
-      val data = (0 until 10).map(_ => (true, false))
-      withOrcFile(data) { file =>
-        val df = spark.read.orc(file).where("_2 == true")
-        val actual = stripSparkFilter(df).count()
-
-        // ORC filter should be applied and the total count should be 0.
-        assert(actual === 0)
-      }
-    }
-  }
-
-  test("Support for pushing down filters for decimal types") {
-    withSQLConf(SQLConf.ORC_FILTER_PUSHDOWN_ENABLED.key -> "true") {
-      val data = (0 until 10).map(i => Tuple1(BigDecimal.valueOf(i)))
-      withTempPath { file =>
-        // It needs to repartition data so that we can have several ORC files
-        // in order to skip stripes in ORC.
-        createDataFrame(data).toDF("a").repartition(10).write.orc(file.getCanonicalPath)
-        val df = spark.read.orc(file.getCanonicalPath).where("a == 2")
-        val actual = stripSparkFilter(df).count()
-
-        assert(actual < 10)
-      }
-    }
-  }
-
-  test("Support for pushing down filters for timestamp types") {
-    withSQLConf(SQLConf.ORC_FILTER_PUSHDOWN_ENABLED.key -> "true") {
-      val timeString = "2015-08-20 14:57:00"
-      val data = (0 until 10).map { i =>
-        val milliseconds = Timestamp.valueOf(timeString).getTime + i * 3600
-        Tuple1(new Timestamp(milliseconds))
-      }
-      withTempPath { file =>
-        // It needs to repartition data so that we can have several ORC files
-        // in order to skip stripes in ORC.
-        createDataFrame(data).toDF("a").repartition(10).write.orc(file.getCanonicalPath)
-        val df = spark.read.orc(file.getCanonicalPath).where(s"a == '$timeString'")
-        val actual = stripSparkFilter(df).count()
-
-        assert(actual < 10)
-      }
-    }
-  }
-
-  test("column nullability and comment - write and then read") {
-    val schema = (new StructType)
-      .add("cl1", IntegerType, nullable = false, comment = "test")
-      .add("cl2", IntegerType, nullable = true)
-      .add("cl3", IntegerType, nullable = true)
-    val row = Row(3, null, 4)
-    val df = spark.createDataFrame(sparkContext.parallelize(row :: Nil), schema)
-
-    val tableName = "tab"
-    withTable(tableName) {
-      df.write.format("orc").mode("overwrite").saveAsTable(tableName)
-      // Verify the DDL command result: DESCRIBE TABLE
-      checkAnswer(
-        sql(s"desc $tableName").select("col_name", "comment").where($"comment" === "test"),
-        Row("cl1", "test") :: Nil)
-      // Verify the schema
-      val expectedFields = schema.fields.map(f => f.copy(nullable = true))
-      assert(spark.table(tableName).schema == schema.copy(fields = expectedFields))
-    }
-  }
-
-  test("Empty schema does not read data from ORC file") {
-    val data = Seq((1, 1), (2, 2))
-    withOrcFile(data) { path =>
-      val requestedSchema = StructType(Nil)
-      val conf = new Configuration()
-      val physicalSchema = OrcFileOperator.readSchema(Seq(path), Some(conf)).get
-      OrcRelation.setRequiredColumns(conf, physicalSchema, requestedSchema)
-      val maybeOrcReader = OrcFileOperator.getFileReader(path, Some(conf))
-      assert(maybeOrcReader.isDefined)
-      val orcRecordReader = new SparkOrcNewRecordReader(
-        maybeOrcReader.get, conf, 0, maybeOrcReader.get.getContentLength)
-
-      val recordsIterator = new RecordReaderIterator[OrcStruct](orcRecordReader)
-      try {
-        assert(recordsIterator.next().toString == "{null, null}")
-      } finally {
-        recordsIterator.close()
-      }
-    }
-  }
-
-   test("read from multiple orc input paths") {
-     val path1 = Utils.createTempDir()
-     val path2 = Utils.createTempDir()
-     makeOrcFile((1 to 10).map(Tuple1.apply), path1)
-     makeOrcFile((1 to 10).map(Tuple1.apply), path2)
-     assertResult(20)(read.orc(path1.getCanonicalPath, path2.getCanonicalPath).count())
-   }
 }

@@ -153,7 +153,8 @@ abstract class UserDefinedAggregateFunction extends Serializable {
 }
 
 /**
- * A `Row` representing a mutable aggregation buffer.
+ * :: Experimental ::
+ * A [[Row]] representing a mutable aggregation buffer.
  *
  * This is not meant to be extended outside of Spark.
  *

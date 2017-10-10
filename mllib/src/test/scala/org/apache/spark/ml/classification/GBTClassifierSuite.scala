@@ -21,13 +21,12 @@ import com.github.fommil.netlib.BLAS
 
 import org.apache.spark.{SparkException, SparkFunSuite}
 import org.apache.spark.ml.feature.LabeledPoint
-import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.regression.DecisionTreeRegressionModel
 import org.apache.spark.ml.tree.LeafNode
 import org.apache.spark.ml.tree.impl.TreeTests
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.regression.{LabeledPoint => OldLabeledPoint}
 import org.apache.spark.mllib.tree.{EnsembleTestHelper, GradientBoostedTrees => OldGBT}
 import org.apache.spark.mllib.tree.configuration.{Algo => OldAlgo}
@@ -296,14 +295,15 @@ class GBTClassifierSuite extends SparkFunSuite with MLlibTestSparkContext
   */
 
   test("Fitting without numClasses in metadata") {
-    val df: DataFrame = TreeTests.featureImportanceData(sc).toDF()
+    val df: DataFrame = spark.createDataFrame(TreeTests.featureImportanceData(sc))
     val gbt = new GBTClassifier().setMaxDepth(1).setMaxIter(1)
     gbt.fit(df)
   }
 
   test("extractLabeledPoints with bad data") {
     def getTestData(labels: Seq[Double]): DataFrame = {
-      labels.map { label: Double => LabeledPoint(label, Vectors.dense(0.0)) }.toDF()
+      val data = labels.map { label: Double => LabeledPoint(label, Vectors.dense(0.0)) }
+      spark.createDataFrame(data)
     }
 
     val gbt = new GBTClassifier().setMaxDepth(1).setMaxIter(1)

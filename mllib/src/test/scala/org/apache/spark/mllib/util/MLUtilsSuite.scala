@@ -261,7 +261,9 @@ class MLUtilsSuite extends SparkFunSuite with MLlibTestSparkContext {
     val z = Vectors.dense(4.0)
     val p = (5.0, z)
     val w = Vectors.dense(6.0).asML
-    val df = Seq((0, x, y, p, w)).toDF("id", "x", "y", "p", "w")
+    val df = spark.createDataFrame(Seq(
+      (0, x, y, p, w)
+    )).toDF("id", "x", "y", "p", "w")
       .withColumn("x", col("x"), metadata)
     val newDF1 = convertVectorColumnsToML(df)
     assert(newDF1.schema("x").metadata === metadata, "Metadata should be preserved.")
@@ -286,7 +288,9 @@ class MLUtilsSuite extends SparkFunSuite with MLlibTestSparkContext {
     val z = Vectors.dense(4.0).asML
     val p = (5.0, z)
     val w = Vectors.dense(6.0)
-    val df = Seq((0, x, y, p, w)).toDF("id", "x", "y", "p", "w")
+    val df = spark.createDataFrame(Seq(
+      (0, x, y, p, w)
+    )).toDF("id", "x", "y", "p", "w")
       .withColumn("x", col("x"), metadata)
     val newDF1 = convertVectorColumnsFromML(df)
     assert(newDF1.schema("x").metadata === metadata, "Metadata should be preserved.")
@@ -311,7 +315,9 @@ class MLUtilsSuite extends SparkFunSuite with MLlibTestSparkContext {
     val z = Matrices.ones(1, 1)
     val p = (5.0, z)
     val w = Matrices.dense(1, 1, Array(4.5)).asML
-    val df = Seq((0, x, y, p, w)).toDF("id", "x", "y", "p", "w")
+    val df = spark.createDataFrame(Seq(
+      (0, x, y, p, w)
+    )).toDF("id", "x", "y", "p", "w")
       .withColumn("x", col("x"), metadata)
     val newDF1 = convertMatrixColumnsToML(df)
     assert(newDF1.schema("x").metadata === metadata, "Metadata should be preserved.")
@@ -336,7 +342,9 @@ class MLUtilsSuite extends SparkFunSuite with MLlibTestSparkContext {
     val z = Matrices.ones(1, 1).asML
     val p = (5.0, z)
     val w = Matrices.dense(1, 1, Array(4.5))
-    val df = Seq((0, x, y, p, w)).toDF("id", "x", "y", "p", "w")
+    val df = spark.createDataFrame(Seq(
+      (0, x, y, p, w)
+    )).toDF("id", "x", "y", "p", "w")
       .withColumn("x", col("x"), metadata)
     val newDF1 = convertMatrixColumnsFromML(df)
     assert(newDF1.schema("x").metadata === metadata, "Metadata should be preserved.")

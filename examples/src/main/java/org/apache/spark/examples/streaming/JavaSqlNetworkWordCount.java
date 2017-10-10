@@ -67,25 +67,31 @@ public final class JavaSqlNetworkWordCount {
     JavaDStream<String> words = lines.flatMap(x -> Arrays.asList(SPACE.split(x)).iterator());
 
     // Convert RDDs of the words DStream to DataFrame and run SQL query
-    words.foreachRDD((rdd, time) -> {
-      SparkSession spark = JavaSparkSessionSingleton.getInstance(rdd.context().getConf());
+    words.foreachRDD(new VoidFunction2<JavaRDD<String>, Time>() {
+      @Override
+      public void call(JavaRDD<String> rdd, Time time) {
+        SparkSession spark = JavaSparkSessionSingleton.getInstance(rdd.context().getConf());
 
-      // Convert JavaRDD[String] to JavaRDD[bean class] to DataFrame
-      JavaRDD<JavaRecord> rowRDD = rdd.map(word -> {
-        JavaRecord record = new JavaRecord();
-        record.setWord(word);
-        return record;
-      });
-      Dataset<Row> wordsDataFrame = spark.createDataFrame(rowRDD, JavaRecord.class);
+        // Convert JavaRDD[String] to JavaRDD[bean class] to DataFrame
+        JavaRDD<JavaRecord> rowRDD = rdd.map(new Function<String, JavaRecord>() {
+          @Override
+          public JavaRecord call(String word) {
+            JavaRecord record = new JavaRecord();
+            record.setWord(word);
+            return record;
+          }
+        });
+        Dataset<Row> wordsDataFrame = spark.createDataFrame(rowRDD, JavaRecord.class);
 
-      // Creates a temporary view using the DataFrame
-      wordsDataFrame.createOrReplaceTempView("words");
+        // Creates a temporary view using the DataFrame
+        wordsDataFrame.createOrReplaceTempView("words");
 
-      // Do word count on table using SQL and print it
-      Dataset<Row> wordCountsDataFrame =
-          spark.sql("select word, count(*) as total from words group by word");
-      System.out.println("========= " + time + "=========");
-      wordCountsDataFrame.show();
+        // Do word count on table using SQL and print it
+        Dataset<Row> wordCountsDataFrame =
+            spark.sql("select word, count(*) as total from words group by word");
+        System.out.println("========= " + time + "=========");
+        wordCountsDataFrame.show();
+      }
     });
 
     ssc.start();

@@ -256,27 +256,6 @@ package object config {
     .toSequence
     .createWithDefault(Nil)
 
-  private[spark] val FILESYSTEMS_TO_ACCESS = ConfigBuilder("spark.yarn.access.hadoopFileSystems")
-    .doc("Extra Hadoop filesystem URLs for which to request delegation tokens. The filesystem " +
-      "that hosts fs.defaultFS does not need to be listed here.")
-    .fallbackConf(NAMENODES_TO_ACCESS)
-
-  /* Rolled log aggregation configuration. */
-
-  private[spark] val ROLLED_LOG_INCLUDE_PATTERN =
-    ConfigBuilder("spark.yarn.rolledLog.includePattern")
-      .doc("Java Regex to filter the log files which match the defined include pattern and those " +
-        "log files will be aggregated in a rolling fashion.")
-      .stringConf
-      .createOptional
-
-  private[spark] val ROLLED_LOG_EXCLUDE_PATTERN =
-    ConfigBuilder("spark.yarn.rolledLog.excludePattern")
-      .doc("Java Regex to filter the log files which match the defined exclude pattern and those " +
-        "log files will not be aggregated in a rolling fashion.")
-      .stringConf
-      .createOptional
-
   /* Private configs. */
 
   private[spark] val CREDENTIALS_FILE_PATH = ConfigBuilder("spark.yarn.credentials.file")

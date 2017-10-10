@@ -21,10 +21,10 @@ import scala.util.Random
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.classification.LogisticRegressionSuite._
-import org.apache.spark.ml.feature.{Instance, OffsetInstance}
-import org.apache.spark.ml.feature.{LabeledPoint, RFormula}
+import org.apache.spark.ml.feature.Instance
+import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.{BLAS, DenseVector, Vector, Vectors}
-import org.apache.spark.ml.param.{ParamMap, ParamsSuite}
+import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.random._
@@ -56,20 +56,23 @@ class GeneralizedLinearRegressionSuite
 
     import GeneralizedLinearRegressionSuite._
 
-    datasetGaussianIdentity = generateGeneralizedLinearRegressionInput(
-      intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "gaussian", link = "identity").toDF()
+    datasetGaussianIdentity = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "gaussian", link = "identity"), 2))
 
-    datasetGaussianLog = generateGeneralizedLinearRegressionInput(
-      intercept = 0.25, coefficients = Array(0.22, 0.06), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "gaussian", link = "log").toDF()
+    datasetGaussianLog = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 0.25, coefficients = Array(0.22, 0.06), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "gaussian", link = "log"), 2))
 
-    datasetGaussianInverse = generateGeneralizedLinearRegressionInput(
-      intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "gaussian", link = "inverse").toDF()
+    datasetGaussianInverse = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "gaussian", link = "inverse"), 2))
 
     datasetBinomial = {
       val nPoints = 10000
@@ -81,47 +84,44 @@ class GeneralizedLinearRegressionSuite
         generateMultinomialLogisticInput(coefficients, xMean, xVariance,
           addIntercept = true, nPoints, seed)
 
-      testData.toDF()
+      spark.createDataFrame(sc.parallelize(testData, 2))
     }
 
-    datasetPoissonLog = generateGeneralizedLinearRegressionInput(
-      intercept = 0.25, coefficients = Array(0.22, 0.06), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "poisson", link = "log").toDF()
+    datasetPoissonLog = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 0.25, coefficients = Array(0.22, 0.06), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "poisson", link = "log"), 2))
 
-    datasetPoissonLogWithZero = Seq(
-      LabeledPoint(0.0, Vectors.dense(18, 1.0)),
-      LabeledPoint(1.0, Vectors.dense(12, 0.0)),
-      LabeledPoint(0.0, Vectors.dense(15, 0.0)),
-      LabeledPoint(0.0, Vectors.dense(13, 2.0)),
-      LabeledPoint(0.0, Vectors.dense(15, 1.0)),
-      LabeledPoint(1.0, Vectors.dense(16, 1.0))
-    ).toDF()
+    datasetPoissonIdentity = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "poisson", link = "identity"), 2))
 
-    datasetPoissonIdentity = generateGeneralizedLinearRegressionInput(
-      intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "poisson", link = "identity").toDF()
+    datasetPoissonSqrt = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "poisson", link = "sqrt"), 2))
 
-    datasetPoissonSqrt = generateGeneralizedLinearRegressionInput(
-      intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "poisson", link = "sqrt").toDF()
+    datasetGammaInverse = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "gamma", link = "inverse"), 2))
 
-    datasetGammaInverse = generateGeneralizedLinearRegressionInput(
-      intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "gamma", link = "inverse").toDF()
+    datasetGammaIdentity = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "gamma", link = "identity"), 2))
 
-    datasetGammaIdentity = generateGeneralizedLinearRegressionInput(
-      intercept = 2.5, coefficients = Array(2.2, 0.6), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "gamma", link = "identity").toDF()
-
-    datasetGammaLog = generateGeneralizedLinearRegressionInput(
-      intercept = 0.25, coefficients = Array(0.22, 0.06), xMean = Array(2.9, 10.5),
-      xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
-      family = "gamma", link = "log").toDF()
+    datasetGammaLog = spark.createDataFrame(
+      sc.parallelize(generateGeneralizedLinearRegressionInput(
+        intercept = 0.25, coefficients = Array(0.22, 0.06), xMean = Array(2.9, 10.5),
+        xVariance = Array(0.7, 1.2), nPoints = 10000, seed, noiseLevel = 0.01,
+        family = "gamma", link = "log"), 2))
   }
 
   /**
@@ -760,44 +760,12 @@ class GeneralizedLinearRegressionSuite
       [1] -0.4700036 -0.6348783
       [1] 1.325782 1.463641
      */
-
-    val dataset = Seq(
-      Instance(1.0, 1.0, Vectors.zeros(0)),
-      Instance(0.5, 2.0, Vectors.zeros(0)),
-      Instance(0.7, 3.0, Vectors.zeros(0)),
-      Instance(0.3, 4.0, Vectors.zeros(0))
-    ).toDF()
-
-    val expected = Seq(0.5108256, 0.1201443, 1.600000, 1.886792, 0.625, 0.530,
-      -0.4700036, -0.6348783, 1.325782, 1.463641)
-
-    import GeneralizedLinearRegression._
-
-    var idx = 0
-    for (family <- GeneralizedLinearRegression.supportedFamilyNames.sortWith(_ < _)) {
-      for (useWeight <- Seq(false, true)) {
-        val trainer = new GeneralizedLinearRegression().setFamily(family)
-        if (useWeight) trainer.setWeightCol("weight")
-        if (family == "tweedie") trainer.setVariancePower(1.6)
-        val model = trainer.fit(dataset)
-        val actual = model.intercept
-        assert(actual ~== expected(idx) absTol 1E-3, "Model mismatch: intercept only GLM with " +
-          s"useWeight = $useWeight and family = $family.")
-        assert(model.coefficients === new DenseVector(Array.empty[Double]))
-        idx += 1
-      }
-    }
-
-    // throw exception for empty model
-    val trainer = new GeneralizedLinearRegression().setFitIntercept(false)
-    withClue("Specified model is empty with neither intercept nor feature") {
-      intercept[IllegalArgumentException] {
-        trainer.fit(dataset)
-      }
-    }
-  }
-
-  test("generalized linear regression with weight and offset") {
+    val datasetWithWeight = spark.createDataFrame(sc.parallelize(Seq(
+      Instance(17.0, 1.0, Vectors.dense(0.0, 5.0).toSparse),
+      Instance(19.0, 2.0, Vectors.dense(1.0, 7.0)),
+      Instance(23.0, 3.0, Vectors.dense(2.0, 11.0)),
+      Instance(29.0, 4.0, Vectors.dense(3.0, 13.0))
+    ), 2))
     /*
       R code:
       library(statmod)
@@ -1017,12 +985,12 @@ class GeneralizedLinearRegressionSuite
           0.9, 0.4, 1.0, 2.0, 1.0,
           0.7, 0.7, 0.0, 3.0, 3.0), 4, 5, byrow = TRUE))
      */
-    val dataset = Seq(
-      OffsetInstance(0.2, 1.0, 2.0, Vectors.dense(0.0, 5.0)),
-      OffsetInstance(0.5, 2.1, 0.5, Vectors.dense(1.0, 2.0)),
-      OffsetInstance(0.9, 0.4, 1.0, Vectors.dense(2.0, 1.0)),
-      OffsetInstance(0.7, 0.7, 0.0, Vectors.dense(3.0, 3.0))
-    ).toDF()
+    val datasetWithWeight = spark.createDataFrame(sc.parallelize(Seq(
+      Instance(1.0, 1.0, Vectors.dense(0.0, 5.0).toSparse),
+      Instance(0.0, 2.0, Vectors.dense(1.0, 2.0)),
+      Instance(1.0, 3.0, Vectors.dense(2.0, 1.0)),
+      Instance(0.0, 4.0, Vectors.dense(3.0, 3.0))
+    ), 2))
     /*
       R code:
 
@@ -1132,12 +1100,12 @@ class GeneralizedLinearRegressionSuite
       off <- c(2, 3, 1, 4)
       df <- as.data.frame(cbind(A, b))
      */
-    val dataset = Seq(
-      OffsetInstance(2.0, 1.0, 2.0, Vectors.dense(0.0, 5.0).toSparse),
-      OffsetInstance(8.0, 2.0, 3.0, Vectors.dense(1.0, 7.0)),
-      OffsetInstance(3.0, 3.0, 1.0, Vectors.dense(2.0, 11.0)),
-      OffsetInstance(9.0, 4.0, 4.0, Vectors.dense(3.0, 13.0))
-    ).toDF()
+    val datasetWithWeight = spark.createDataFrame(sc.parallelize(Seq(
+      Instance(2.0, 1.0, Vectors.dense(0.0, 5.0).toSparse),
+      Instance(8.0, 2.0, Vectors.dense(1.0, 7.0)),
+      Instance(3.0, 3.0, Vectors.dense(2.0, 11.0)),
+      Instance(9.0, 4.0, Vectors.dense(3.0, 13.0))
+    ), 2))
     /*
       R code:
 
@@ -1247,12 +1215,12 @@ class GeneralizedLinearRegressionSuite
       off <- c(0, 0.5, 1, 0)
       df <- as.data.frame(cbind(A, b))
      */
-    val dataset = Seq(
-      OffsetInstance(1.0, 1.0, 0.0, Vectors.dense(0.0, 5.0)),
-      OffsetInstance(2.0, 2.0, 0.5, Vectors.dense(1.0, 2.0)),
-      OffsetInstance(1.0, 3.0, 1.0, Vectors.dense(2.0, 1.0)),
-      OffsetInstance(2.0, 4.0, 0.0, Vectors.dense(3.0, 3.0))
-    ).toDF()
+    val datasetWithWeight = spark.createDataFrame(sc.parallelize(Seq(
+      Instance(2.0, 1.0, Vectors.dense(0.0, 5.0).toSparse),
+      Instance(8.0, 2.0, Vectors.dense(1.0, 7.0)),
+      Instance(3.0, 3.0, Vectors.dense(2.0, 11.0)),
+      Instance(9.0, 4.0, Vectors.dense(3.0, 13.0))
+    ), 2))
     /*
       R code:
 
@@ -1524,135 +1492,14 @@ class GeneralizedLinearRegressionSuite
       .fit(datasetGaussianIdentity.as[LabeledPoint])
   }
 
-  test("glm summary: feature name") {
-    // dataset1 with no attribute
-    val dataset1 = Seq(
-      Instance(2.0, 1.0, Vectors.dense(0.0, 5.0)),
-      Instance(8.0, 2.0, Vectors.dense(1.0, 7.0)),
-      Instance(3.0, 3.0, Vectors.dense(2.0, 11.0)),
-      Instance(9.0, 4.0, Vectors.dense(3.0, 13.0)),
-      Instance(2.0, 5.0, Vectors.dense(2.0, 3.0))
-    ).toDF()
-
-    // dataset2 with attribute
-    val datasetTmp = Seq(
-      (2.0, 1.0, 0.0, 5.0),
-      (8.0, 2.0, 1.0, 7.0),
-      (3.0, 3.0, 2.0, 11.0),
-      (9.0, 4.0, 3.0, 13.0),
-      (2.0, 5.0, 2.0, 3.0)
-    ).toDF("y", "w", "x1", "x2")
-    val formula = new RFormula().setFormula("y ~ x1 + x2")
-    val dataset2 = formula.fit(datasetTmp).transform(datasetTmp)
-
-    val expectedFeature = Seq(Array("features_0", "features_1"), Array("x1", "x2"))
-
-    var idx = 0
-    for (dataset <- Seq(dataset1, dataset2)) {
-      val model = new GeneralizedLinearRegression().fit(dataset)
-      model.summary.featureNames.zip(expectedFeature(idx))
-        .foreach{ x => assert(x._1 === x._2) }
-      idx += 1
-    }
-  }
-
-  test("glm summary: coefficient with statistics") {
-    /*
-      R code:
-
-      A <- matrix(c(0, 1, 2, 3, 2, 5, 7, 11, 13, 3), 5, 2)
-      b <- c(2, 8, 3, 9, 2)
-      df <- as.data.frame(cbind(A, b))
-      model <- glm(formula = "b ~ .",  data = df)
-      summary(model)
-
-      Coefficients:
-                  Estimate Std. Error t value Pr(>|t|)
-      (Intercept)   0.7903     4.0129   0.197    0.862
-      V1            0.2258     2.1153   0.107    0.925
-      V2            0.4677     0.5815   0.804    0.506
-    */
-    val dataset = Seq(
-      Instance(2.0, 1.0, Vectors.dense(0.0, 5.0)),
-      Instance(8.0, 2.0, Vectors.dense(1.0, 7.0)),
-      Instance(3.0, 3.0, Vectors.dense(2.0, 11.0)),
-      Instance(9.0, 4.0, Vectors.dense(3.0, 13.0)),
-      Instance(2.0, 5.0, Vectors.dense(2.0, 3.0))
-    ).toDF()
-
-    val expectedFeature = Seq(Array("features_0", "features_1"),
-      Array("(Intercept)", "features_0", "features_1"))
-    val expectedEstimate = Seq(Vectors.dense(0.2884, 0.538),
-      Vectors.dense(0.7903, 0.2258, 0.4677))
-    val expectedStdError = Seq(Vectors.dense(1.724, 0.3787),
-      Vectors.dense(4.0129, 2.1153, 0.5815))
-
-    var idx = 0
-    for (fitIntercept <- Seq(false, true)) {
-      val trainer = new GeneralizedLinearRegression()
-        .setFamily("gaussian")
-        .setFitIntercept(fitIntercept)
-      val model = trainer.fit(dataset)
-      val coefficientsWithStatistics = model.summary.coefficientsWithStatistics
-
-      coefficientsWithStatistics.map(_._1).zip(expectedFeature(idx)).foreach { x =>
-        assert(x._1 === x._2, "Feature name mismatch in coefficientsWithStatistics") }
-      assert(Vectors.dense(coefficientsWithStatistics.map(_._2)) ~= expectedEstimate(idx)
-        absTol 1E-3, "Coefficients mismatch in coefficientsWithStatistics")
-      assert(Vectors.dense(coefficientsWithStatistics.map(_._3)) ~= expectedStdError(idx)
-        absTol 1E-3, "Standard error mismatch in coefficientsWithStatistics")
-      idx += 1
-    }
-  }
-
-  test("generalized linear regression: regularization parameter") {
-    /*
-      R code:
-
-      a1 <- c(0, 1, 2, 3)
-      a2 <- c(5, 2, 1, 3)
-      b <- c(1, 0, 1, 0)
-      data <- as.data.frame(cbind(a1, a2, b))
-      df <- suppressWarnings(createDataFrame(data))
-
-      for (regParam in c(0.0, 0.1, 1.0)) {
-        model <- spark.glm(df, b ~ a1 + a2, regParam = regParam)
-        print(as.vector(summary(model)$aic))
-      }
-
-      [1] 12.88188
-      [1] 12.92681
-      [1] 13.32836
-     */
-    val dataset = Seq(
-      LabeledPoint(1, Vectors.dense(5, 0)),
-      LabeledPoint(0, Vectors.dense(2, 1)),
-      LabeledPoint(1, Vectors.dense(1, 2)),
-      LabeledPoint(0, Vectors.dense(3, 3))
-    ).toDF()
-    val expected = Seq(12.88188, 12.92681, 13.32836)
-
-    var idx = 0
-    for (regParam <- Seq(0.0, 0.1, 1.0)) {
-      val trainer = new GeneralizedLinearRegression()
-        .setRegParam(regParam)
-        .setLabelCol("label")
-        .setFeaturesCol("features")
-      val model = trainer.fit(dataset)
-      val actual = model.summary.aic
-      assert(actual ~= expected(idx) absTol 1e-4, "Model mismatch: GLM with regParam = $regParam.")
-      idx += 1
-    }
-  }
-
   test("evaluate with labels that are not doubles") {
     // Evaulate with a dataset that contains Labels not as doubles to verify correct casting
-    val dataset = Seq(
+    val dataset = spark.createDataFrame(sc.parallelize(Seq(
       Instance(17.0, 1.0, Vectors.dense(0.0, 5.0).toSparse),
       Instance(19.0, 1.0, Vectors.dense(1.0, 7.0)),
       Instance(23.0, 1.0, Vectors.dense(2.0, 11.0)),
       Instance(29.0, 1.0, Vectors.dense(3.0, 13.0))
-    ).toDF()
+    ), 2))
 
     val trainer = new GeneralizedLinearRegression()
       .setMaxIter(1)

@@ -123,10 +123,7 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
   }
 
   test("SPARK-8604: Parquet data source should write summary file while doing appending") {
-    withSQLConf(
-        ParquetOutputFormat.ENABLE_JOB_SUMMARY -> "true",
-        SQLConf.FILE_COMMIT_PROTOCOL_CLASS.key ->
-          classOf[SQLHadoopMapReduceCommitProtocol].getCanonicalName) {
+    withSQLConf(ParquetOutputFormat.ENABLE_JOB_SUMMARY -> "true") {
       withTempPath { dir =>
         val path = dir.getCanonicalPath
         val df = spark.range(0, 5).toDF()

@@ -189,12 +189,8 @@ class Catalog(object):
 
     @since(2.0)
     def dropTempView(self, viewName):
-        """Drops the local temporary view with the given view name in the catalog.
+        """Drops the temporary view with the given view name in the catalog.
         If the view has been cached before, then it will also be uncached.
-        Returns true if this view is dropped successfully, false otherwise.
-
-        Note that, the return type of this method was None in Spark 2.0, but changed to Boolean
-        in Spark 2.1.
 
         >>> spark.createDataFrame([(1, 1)]).createTempView("my_table")
         >>> spark.table("my_table").collect()
@@ -206,23 +202,6 @@ class Catalog(object):
         AnalysisException: ...
         """
         self._jcatalog.dropTempView(viewName)
-
-    @since(2.1)
-    def dropGlobalTempView(self, viewName):
-        """Drops the global temporary view with the given view name in the catalog.
-        If the view has been cached before, then it will also be uncached.
-        Returns true if this view is dropped successfully, false otherwise.
-
-        >>> spark.createDataFrame([(1, 1)]).createGlobalTempView("my_table")
-        >>> spark.table("global_temp.my_table").collect()
-        [Row(_1=1, _2=1)]
-        >>> spark.catalog.dropGlobalTempView("my_table")
-        >>> spark.table("global_temp.my_table") # doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-            ...
-        AnalysisException: ...
-        """
-        self._jcatalog.dropGlobalTempView(viewName)
 
     @ignore_unicode_prefix
     @since(2.0)
@@ -237,7 +216,6 @@ class Catalog(object):
         :param name: name of the UDF
         :param f: python function
         :param returnType: a :class:`pyspark.sql.types.DataType` object
-        :return: a wrapped :class:`UserDefinedFunction`
 
         >>> strlen = spark.catalog.registerFunction("stringLengthString", len)
         >>> spark.sql("SELECT stringLengthString('test')").collect()
@@ -282,23 +260,8 @@ class Catalog(object):
 
     @since(2.0)
     def refreshTable(self, tableName):
-        """Invalidates and refreshes all the cached data and metadata of the given table."""
+        """Invalidate and refresh all the cached metadata of the given table."""
         self._jcatalog.refreshTable(tableName)
-
-    @since('2.1.1')
-    def recoverPartitions(self, tableName):
-        """Recovers all the partitions of the given table and update the catalog.
-
-        Only works with a partitioned table, and not a view.
-        """
-        self._jcatalog.recoverPartitions(tableName)
-
-    @since('2.2.0')
-    def refreshByPath(self, path):
-        """Invalidates and refreshes all the cached data (and the associated metadata) for any
-        DataFrame that contains the given data source path.
-        """
-        self._jcatalog.refreshByPath(path)
 
     def _reset(self):
         """(Internal use only) Drop all existing databases (except "default"), tables,

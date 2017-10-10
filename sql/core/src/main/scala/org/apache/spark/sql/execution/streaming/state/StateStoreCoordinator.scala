@@ -43,7 +43,7 @@ private case class VerifyIfInstanceActive(storeId: StateStoreProviderId, executo
 private case class GetLocation(storeId: StateStoreProviderId)
   extends StateStoreCoordinatorMessage
 
-private case class DeactivateInstances(runId: UUID)
+private case class DeactivateInstances(checkpointLocation: String)
   extends StateStoreCoordinatorMessage
 
 private object StopCoordinator
@@ -120,7 +120,7 @@ class StateStoreCoordinatorRef private(rpcEndpointRef: RpcEndpointRef) {
  */
 private class StateStoreCoordinator(override val rpcEnv: RpcEnv)
     extends ThreadSafeRpcEndpoint with Logging {
-  private val instances = new mutable.HashMap[StateStoreProviderId, ExecutorCacheTaskLocation]
+  private val instances = new mutable.HashMap[StateStoreId, ExecutorCacheTaskLocation]
 
   override def receive: PartialFunction[Any, Unit] = {
     case ReportActiveInstance(id, host, executorId) =>
@@ -142,11 +142,11 @@ private class StateStoreCoordinator(override val rpcEnv: RpcEnv)
       logDebug(s"Got location of the state store $id: $executorId")
       context.reply(executorId)
 
-    case DeactivateInstances(runId) =>
+    case DeactivateInstances(checkpointLocation) =>
       val storeIdsToRemove =
-        instances.keys.filter(_.queryRunId == runId).toSeq
+        instances.keys.filter(_.checkpointLocation == checkpointLocation).toSeq
       instances --= storeIdsToRemove
-      logDebug(s"Deactivating instances related to checkpoint location $runId: " +
+      logDebug(s"Deactivating instances related to checkpoint location $checkpointLocation: " +
         storeIdsToRemove.mkString(", "))
       context.reply(true)
 

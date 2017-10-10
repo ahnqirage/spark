@@ -19,7 +19,7 @@ package org.apache.spark.sql.hive
 
 import java.io.File
 
-import org.apache.spark.sql.{AnalysisException, Dataset, QueryTest, SaveMode}
+import org.apache.spark.sql.{AnalysisException, QueryTest, SaveMode}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.execution.columnar.InMemoryTableScanExec
@@ -27,7 +27,6 @@ import org.apache.spark.sql.execution.datasources.{CatalogFileIndex, HadoopFsRel
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.test.SQLTestUtils
-import org.apache.spark.sql.types.StructType
 import org.apache.spark.storage.RDDBlockId
 import org.apache.spark.util.Utils
 
@@ -101,16 +100,13 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
     sql("DROP TABLE IF EXISTS nonexistantTable")
   }
 
-  test("uncache of nonexistant tables") {
-    // make sure table doesn't exist
-    intercept[NoSuchTableException](spark.table("nonexistantTable"))
+  test("correct error on uncache of nonexistant tables") {
     intercept[NoSuchTableException] {
       spark.catalog.uncacheTable("nonexistantTable")
     }
     intercept[NoSuchTableException] {
       sql("UNCACHE TABLE nonexistantTable")
     }
-    sql("UNCACHE TABLE IF EXISTS nonexistantTable")
   }
 
   test("no error on uncache of non-cached table") {
@@ -244,6 +240,51 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
     table("src").write.mode(SaveMode.Append).parquet(tempPath.toString)
     assertCached(table("refreshTable"))
 
+    // We are using the new data.
+    assertCached(table("refreshTable"))
+    checkAnswer(
+      table("refreshTable"),
+      table("src").union(table("src")).collect())
+
+    // Drop the table and create it again.
+    sql("DROP TABLE refreshTable")
+    sparkSession.catalog.createExternalTable("refreshTable", tempPath.toString, "parquet")
+    // It is not cached.
+    assert(!isCached("refreshTable"), "refreshTable should not be cached.")
+    // Refresh the table. REFRESH command should not make a uncached
+    // table cached.
+    sql(s"REFRESH ${tempPath.toString}")
+    checkAnswer(
+      table("refreshTable"),
+      table("src").union(table("src")).collect())
+    // It is not cached.
+    assert(!isCached("refreshTable"), "refreshTable should not be cached.")
+
+    sql("DROP TABLE refreshTable")
+    Utils.deleteRecursively(tempPath)
+  }
+
+  test("SPARK-15678: REFRESH PATH") {
+    val tempPath: File = Utils.createTempDir()
+    tempPath.delete()
+    table("src").write.mode(SaveMode.Overwrite).parquet(tempPath.toString)
+    sql("DROP TABLE IF EXISTS refreshTable")
+    sparkSession.catalog.createExternalTable("refreshTable", tempPath.toString, "parquet")
+    checkAnswer(
+      table("refreshTable"),
+      table("src").collect())
+    // Cache the table.
+    sql("CACHE TABLE refreshTable")
+    assertCached(table("refreshTable"))
+    // Append new data.
+    table("src").write.mode(SaveMode.Append).parquet(tempPath.toString)
+    // We are still using the old data.
+    assertCached(table("refreshTable"))
+    checkAnswer(
+      table("refreshTable"),
+      table("src").collect())
+    // Refresh the table.
+    sql(s"REFRESH ${tempPath.toString}")
     // We are using the new data.
     assertCached(table("refreshTable"))
     checkAnswer(
