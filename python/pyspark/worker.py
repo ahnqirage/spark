@@ -109,7 +109,7 @@ def read_udfs(pickleSer, infile, eval_type):
     udfs = {}
     call_udf = []
     for i in range(num_udfs):
-        arg_offsets, udf = read_single_udf(pickleSer, infile, eval_type)
+        arg_offsets, udf = read_single_udf(pickleSer, infile)
         udfs['f%d' % i] = udf
         args = ["a[%d]" % o for o in arg_offsets]
         call_udf.append("f%d(%s)" % (i, ", ".join(args)))

@@ -123,8 +123,7 @@ private[spark] class SparkUI private (
         duration = 0,
         lastUpdated = new Date(startTime),
         sparkUser = getSparkUser,
-        completed = false,
-        appSparkVersion = appSparkVersion
+        completed = false
       ))
     ))
   }

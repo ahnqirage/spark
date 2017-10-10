@@ -27,7 +27,6 @@ import org.apache.spark.ml.attribute.NominalAttribute
 import org.apache.spark.ml.classification.LogisticRegressionSuite._
 import org.apache.spark.ml.feature.{Instance, LabeledPoint}
 import org.apache.spark.ml.linalg.{DenseMatrix, Matrices, Matrix, SparseMatrix, Vector, Vectors}
-import org.apache.spark.ml.optim.aggregator.LogisticAggregator
 import org.apache.spark.ml.param.{ParamMap, ParamsSuite}
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
@@ -134,7 +133,7 @@ class LogisticRegressionSuite
       case Row(label: Double, features: Vector, weight: Double) =>
         label + "," + weight + "," + features.toArray.mkString(",")
     }.repartition(1)
-     .saveAsTextFile("target/tmp/LogisticRegressionSuite/multinomialDatasetWithZeroVar")
+      .saveAsTextFile("target/tmp/LogisticRegressionSuite/multinomialDatasetWithZeroVar")
   }
 
   test("params") {
@@ -222,64 +221,15 @@ class LogisticRegressionSuite
     }
   }
 
-  test("empty probabilityCol or predictionCol") {
-    val lr = new LogisticRegression().setMaxIter(1)
-    val datasetFieldNames = smallBinaryDataset.schema.fieldNames.toSet
-    def checkSummarySchema(model: LogisticRegressionModel, columns: Seq[String]): Unit = {
-      val fieldNames = model.summary.predictions.schema.fieldNames
-      assert(model.hasSummary)
-      assert(datasetFieldNames.subsetOf(fieldNames.toSet))
-      columns.foreach { c => assert(fieldNames.exists(_.startsWith(c))) }
-    }
-    // check that the summary model adds the appropriate columns
-    Seq(("binomial", smallBinaryDataset), ("multinomial", smallMultinomialDataset)).foreach {
-      case (family, dataset) =>
-        lr.setFamily(family)
-        lr.setProbabilityCol("").setPredictionCol("prediction")
-        val modelNoProb = lr.fit(dataset)
-        checkSummarySchema(modelNoProb, Seq("probability_"))
-
-        lr.setProbabilityCol("probability").setPredictionCol("")
-        val modelNoPred = lr.fit(dataset)
-        checkSummarySchema(modelNoPred, Seq("prediction_"))
-
-        lr.setProbabilityCol("").setPredictionCol("")
-        val modelNoPredNoProb = lr.fit(dataset)
-        checkSummarySchema(modelNoPredNoProb, Seq("prediction_", "probability_"))
-    }
-  }
-
-  test("check summary types for binary and multiclass") {
-    val lr = new LogisticRegression()
-      .setFamily("binomial")
-      .setMaxIter(1)
-
-    val blorModel = lr.fit(smallBinaryDataset)
-    assert(blorModel.summary.isInstanceOf[BinaryLogisticRegressionTrainingSummary])
-    assert(blorModel.summary.asBinary.isInstanceOf[BinaryLogisticRegressionSummary])
-    assert(blorModel.binarySummary.isInstanceOf[BinaryLogisticRegressionTrainingSummary])
-
-    val mlorModel = lr.setFamily("multinomial").fit(smallMultinomialDataset)
-    assert(mlorModel.summary.isInstanceOf[LogisticRegressionTrainingSummary])
-    withClue("cannot get binary summary for multiclass model") {
-      intercept[RuntimeException] {
-        mlorModel.binarySummary
-      }
-    }
-    withClue("cannot cast summary to binary summary multiclass model") {
-      intercept[RuntimeException] {
-        mlorModel.summary.asBinary
-      }
-    }
-
-    val mlorBinaryModel = lr.setFamily("multinomial").fit(smallBinaryDataset)
-    assert(mlorBinaryModel.summary.isInstanceOf[BinaryLogisticRegressionTrainingSummary])
-    assert(mlorBinaryModel.binarySummary.isInstanceOf[BinaryLogisticRegressionTrainingSummary])
-
-    val blorSummary = blorModel.evaluate(smallBinaryDataset)
-    val mlorSummary = mlorModel.evaluate(smallMultinomialDataset)
-    assert(blorSummary.isInstanceOf[BinaryLogisticRegressionSummary])
-    assert(mlorSummary.isInstanceOf[LogisticRegressionSummary])
+  test("empty probabilityCol") {
+    val lr = new LogisticRegression().setProbabilityCol("")
+    val model = lr.fit(smallBinaryDataset)
+    assert(model.hasSummary)
+    // Validate that we re-insert a probability column for evaluation
+    val fieldNames = model.summary.predictions.schema.fieldNames
+    assert(smallBinaryDataset.schema.fieldNames.toSet.subsetOf(
+      fieldNames.toSet))
+    assert(fieldNames.exists(s => s.startsWith("probability_")))
   }
 
   test("setThreshold, getThreshold") {
@@ -1480,7 +1430,6 @@ class LogisticRegressionSuite
 
     /*
      Use the following R code to load the data and train the model using glmnet package.
-
      library("glmnet")
      data <- read.csv("path", header=FALSE)
      label = as.factor(data$V1)
@@ -1495,14 +1444,12 @@ class LogisticRegressionSuite
              0.2658824
      data.V3 0.1881871
      data.V4 .
-
      $`1`
      3 x 1 sparse Matrix of class "dgCMatrix"
                       s0
               0.53604701
      data.V3 -0.02412645
      data.V4  .
-
      $`2`
      3 x 1 sparse Matrix of class "dgCMatrix"
                      s0

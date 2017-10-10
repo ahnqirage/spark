@@ -357,22 +357,21 @@ class ExecutorAllocationManagerSuite
     sc = createSparkContext(5, 12, 5)
     val manager = sc.executorAllocationManager.get
 
-    post(sc.listenerBus, SparkListenerStageSubmitted(createStageInfo(0, 8)))
+    sc.listenerBus.postToAll(SparkListenerStageSubmitted(createStageInfo(0, 8)))
 
     // Remove when numExecutorsTarget is the same as the current number of executors
     assert(addExecutors(manager) === 1)
     assert(addExecutors(manager) === 2)
     (1 to 8).map { i => createTaskInfo(i, i, s"$i") }.foreach {
-      info => post(sc.listenerBus, SparkListenerTaskStart(0, 0, info)) }
+      info => sc.listenerBus.postToAll(SparkListenerTaskStart(0, 0, info)) }
     assert(executorIds(manager).size === 8)
     assert(numExecutorsTarget(manager) === 8)
     assert(maxNumExecutorsNeeded(manager) == 8)
     assert(!removeExecutor(manager, "1")) // won't work since numExecutorsTarget == numExecutors
 
     // Remove executors when numExecutorsTarget is lower than current number of executors
-    (1 to 3).map { i => createTaskInfo(i, i, s"$i") }.foreach { info =>
-      post(sc.listenerBus, SparkListenerTaskEnd(0, 0, null, Success, info, null))
-    }
+    (1 to 3).map { i => createTaskInfo(i, i, s"$i") }.foreach {
+      info => sc.listenerBus.postToAll(SparkListenerTaskEnd(0, 0, null, Success, info, null)) }
     adjustRequestedExecutors(manager)
     assert(executorIds(manager).size === 8)
     assert(numExecutorsTarget(manager) === 5)
@@ -384,7 +383,7 @@ class ExecutorAllocationManagerSuite
     onExecutorRemoved(manager, "3")
 
     // numExecutorsTarget is lower than minNumExecutors
-    post(sc.listenerBus,
+    sc.listenerBus.postToAll(
       SparkListenerTaskEnd(0, 0, null, Success, createTaskInfo(4, 4, "4"), null))
     assert(executorIds(manager).size === 5)
     assert(numExecutorsTarget(manager) === 5)

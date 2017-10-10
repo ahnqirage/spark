@@ -1953,7 +1953,7 @@ class Dataset[T] private[sql](
     val normalizedCumWeights = weights.map(_ / sum).scanLeft(0.0d)(_ + _)
     normalizedCumWeights.sliding(2).map { x =>
       new Dataset[T](
-        sparkSession, Sample(x(0), x(1), withReplacement = false, seed, plan), encoder)
+        sparkSession, Sample(x(0), x(1), withReplacement = false, seed, plan)(), encoder)
     }.toArray
   }
 
@@ -2909,8 +2909,8 @@ class Dataset[T] private[sql](
    *
    * Global temporary view is cross-session. Its lifetime is the lifetime of the Spark application,
    * i.e. it will be automatically dropped when the application terminates. It's tied to a system
-   * preserved database `global_temp`, and we must use the qualified name to refer a global temp
-   * view, e.g. `SELECT * FROM global_temp.view1`.
+   * preserved database `_global_temp`, and we must use the qualified name to refer a global temp
+   * view, e.g. `SELECT * FROM _global_temp.view1`.
    *
    * @group basic
    * @since 2.2.0

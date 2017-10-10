@@ -42,11 +42,8 @@ import org.apache.spark.internal.config._
 import org.apache.spark.memory.UnifiedMemoryManager
 import org.apache.spark.network.{BlockDataManager, BlockTransferService, TransportContext}
 import org.apache.spark.network.buffer.{ManagedBuffer, NioManagedBuffer}
-import org.apache.spark.network.client.{RpcResponseCallback, TransportClient}
-import org.apache.spark.network.netty.{NettyBlockTransferService, SparkTransportConf}
-import org.apache.spark.network.server.{NoOpRpcHandler, TransportServer, TransportServerBootstrap}
-import org.apache.spark.network.shuffle.{BlockFetchingListener, ShuffleClient, TempShuffleFileManager}
-import org.apache.spark.network.shuffle.protocol.{BlockTransferMessage, RegisterExecutor}
+import org.apache.spark.network.netty.NettyBlockTransferService
+import org.apache.spark.network.shuffle.{BlockFetchingListener, TempShuffleFileManager}
 import org.apache.spark.rpc.RpcEnv
 import org.apache.spark.scheduler.LiveListenerBus
 import org.apache.spark.security.{CryptoStreamUtils, EncryptionFunSuite}

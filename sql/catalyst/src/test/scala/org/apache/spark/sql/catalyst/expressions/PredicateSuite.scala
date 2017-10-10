@@ -123,7 +123,7 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
       (null, false, null) ::
       (null, null, null) :: Nil)
 
-  test("basic IN predicate test") {
+  test("IN") {
     checkEvaluation(In(NonFoldableLiteral.create(null, IntegerType), Seq(Literal(1),
       Literal(2))), null)
     checkEvaluation(In(NonFoldableLiteral.create(null, IntegerType),
@@ -176,7 +176,7 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
           case _ => cleanData(value)
         }
       }
-      val input = inputData.map(NonFoldableLiteral.create(_, dataType))
+      val input = inputData.map(NonFoldableLiteral.create(_, t))
       val expected = if (inputData(0) == null) {
         null
       } else if (inputData.slice(1, 10).contains(inputData(0))) {
@@ -371,7 +371,6 @@ class PredicateSuite extends SparkFunSuite with ExpressionEvalHelper {
     // Use -1 (default value for codegen) which can trigger some weird bugs, e.g. SPARK-14757
     val normalInt = Literal(-1)
     val nullInt = NonFoldableLiteral.create(null, IntegerType)
-    val nullNullType = Literal.create(null, NullType)
 
     def nullTest(op: (Expression, Expression) => Expression): Unit = {
       checkEvaluation(op(normalInt, nullInt), null)

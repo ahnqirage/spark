@@ -22,7 +22,7 @@ import java.util.Locale
 import scala.collection.mutable
 
 import breeze.linalg.{DenseVector => BDV}
-import breeze.optimize.{CachedDiffFunction, LBFGS => BreezeLBFGS, LBFGSB => BreezeLBFGSB, OWLQN => BreezeOWLQN}
+import breeze.optimize.{CachedDiffFunction, DiffFunction, LBFGS => BreezeLBFGS, LBFGSB => BreezeLBFGSB, OWLQN => BreezeOWLQN}
 import org.apache.hadoop.fs.Path
 
 import org.apache.spark.SparkException
@@ -214,7 +214,7 @@ private[classification] trait LogisticRegressionParams extends ProbabilisticClas
 
   /**
    * The lower bounds on intercepts if fitting under bound constrained optimization.
-   * The bounds vector size must be equal to 1 for binomial regression, or the number
+   * The bounds vector size must be equal with 1 for binomial regression, or the number
    * of classes for multinomial regression. Otherwise, it throws exception.
    * Default is none.
    *
@@ -230,7 +230,7 @@ private[classification] trait LogisticRegressionParams extends ProbabilisticClas
 
   /**
    * The upper bounds on intercepts if fitting under bound constrained optimization.
-   * The bound vector size must be equal to 1 for binomial regression, or the number
+   * The bound vector size must be equal with 1 for binomial regression, or the number
    * of classes for multinomial regression. Otherwise, it throws exception.
    * Default is none.
    *
@@ -452,12 +452,12 @@ class LogisticRegression @Since("1.2.0") (
     }
     if (isSet(lowerBoundsOnIntercepts)) {
       require($(lowerBoundsOnIntercepts).size == numCoefficientSets, "The size of " +
-        "lowerBoundsOnIntercepts must be equal to 1 for binomial regression, or the number of " +
+        "lowerBoundsOnIntercepts must be equal with 1 for binomial regression, or the number of " +
         s"classes for multinomial regression, but found: ${getLowerBoundsOnIntercepts.size}.")
     }
     if (isSet(upperBoundsOnIntercepts)) {
       require($(upperBoundsOnIntercepts).size == numCoefficientSets, "The size of " +
-        "upperBoundsOnIntercepts must be equal to 1 for binomial regression, or the number of " +
+        "upperBoundsOnIntercepts must be equal with 1 for binomial regression, or the number of " +
         s"classes for multinomial regression, but found: ${getUpperBoundsOnIntercepts.size}.")
     }
     if (isSet(lowerBoundsOnCoefficients) && isSet(upperBoundsOnCoefficients)) {
@@ -1600,9 +1600,236 @@ sealed trait BinaryLogisticRegressionSummary extends LogisticRegressionSummary {
  * Currently, the training summary ignores the training weights except
  * for the objective trace.
  */
-@Experimental
-sealed trait BinaryLogisticRegressionTrainingSummary extends BinaryLogisticRegressionSummary
-  with LogisticRegressionTrainingSummary
+private class LogisticAggregator(
+    bcCoefficients: Broadcast[Vector],
+    bcFeaturesStd: Broadcast[Array[Double]],
+    numClasses: Int,
+    fitIntercept: Boolean,
+    multinomial: Boolean) extends Serializable with Logging {
+
+  private val numFeatures = bcFeaturesStd.value.length
+  private val numFeaturesPlusIntercept = if (fitIntercept) numFeatures + 1 else numFeatures
+  private val coefficientSize = bcCoefficients.value.size
+  private val numCoefficientSets = if (multinomial) numClasses else 1
+  if (multinomial) {
+    require(numClasses ==  coefficientSize / numFeaturesPlusIntercept, s"The number of " +
+      s"coefficients should be ${numClasses * numFeaturesPlusIntercept} but was $coefficientSize")
+  } else {
+    require(coefficientSize == numFeaturesPlusIntercept, s"Expected $numFeaturesPlusIntercept " +
+      s"coefficients but got $coefficientSize")
+    require(numClasses == 1 || numClasses == 2, s"Binary logistic aggregator requires numClasses " +
+      s"in {1, 2} but found $numClasses.")
+  }
+
+  private var weightSum = 0.0
+  private var lossSum = 0.0
+
+  @transient private lazy val coefficientsArray: Array[Double] = bcCoefficients.value match {
+    case DenseVector(values) => values
+    case _ => throw new IllegalArgumentException(s"coefficients only supports dense vector but " +
+      s"got type ${bcCoefficients.value.getClass}.)")
+  }
+  private lazy val gradientSumArray = new Array[Double](coefficientSize)
+
+  if (multinomial && numClasses <= 2) {
+    logInfo(s"Multinomial logistic regression for binary classification yields separate " +
+      s"coefficients for positive and negative classes. When no regularization is applied, the" +
+      s"result will be effectively the same as binary logistic regression. When regularization" +
+      s"is applied, multinomial loss will produce a result different from binary loss.")
+  }
+
+  /** Update gradient and loss using binary loss function. */
+  private def binaryUpdateInPlace(
+      features: Vector,
+      weight: Double,
+      label: Double): Unit = {
+
+    val localFeaturesStd = bcFeaturesStd.value
+    val localCoefficients = coefficientsArray
+    val localGradientArray = gradientSumArray
+    val margin = - {
+      var sum = 0.0
+      features.foreachActive { (index, value) =>
+        if (localFeaturesStd(index) != 0.0 && value != 0.0) {
+          sum += localCoefficients(index) * value / localFeaturesStd(index)
+        }
+      }
+      if (fitIntercept) sum += localCoefficients(numFeaturesPlusIntercept - 1)
+      sum
+    }
+
+    val multiplier = weight * (1.0 / (1.0 + math.exp(margin)) - label)
+
+    features.foreachActive { (index, value) =>
+      if (localFeaturesStd(index) != 0.0 && value != 0.0) {
+        localGradientArray(index) += multiplier * value / localFeaturesStd(index)
+      }
+    }
+
+    if (fitIntercept) {
+      localGradientArray(numFeaturesPlusIntercept - 1) += multiplier
+    }
+
+    if (label > 0) {
+      // The following is equivalent to log(1 + exp(margin)) but more numerically stable.
+      lossSum += weight * MLUtils.log1pExp(margin)
+    } else {
+      lossSum += weight * (MLUtils.log1pExp(margin) - margin)
+    }
+  }
+
+  /** Update gradient and loss using multinomial (softmax) loss function. */
+  private def multinomialUpdateInPlace(
+      features: Vector,
+      weight: Double,
+      label: Double): Unit = {
+    // TODO: use level 2 BLAS operations
+    /*
+      Note: this can still be used when numClasses = 2 for binary
+      logistic regression without pivoting.
+     */
+    val localFeaturesStd = bcFeaturesStd.value
+    val localCoefficients = coefficientsArray
+    val localGradientArray = gradientSumArray
+
+    // marginOfLabel is margins(label) in the formula
+    var marginOfLabel = 0.0
+    var maxMargin = Double.NegativeInfinity
+
+    val margins = new Array[Double](numClasses)
+    features.foreachActive { (index, value) =>
+      if (localFeaturesStd(index) != 0.0 && value != 0.0) {
+        val stdValue = value / localFeaturesStd(index)
+        var j = 0
+        while (j < numClasses) {
+          margins(j) += localCoefficients(index * numClasses + j) * stdValue
+          j += 1
+        }
+      }
+    }
+    var i = 0
+    while (i < numClasses) {
+      if (fitIntercept) {
+        margins(i) += localCoefficients(numClasses * numFeatures + i)
+      }
+      if (i == label.toInt) marginOfLabel = margins(i)
+      if (margins(i) > maxMargin) {
+        maxMargin = margins(i)
+      }
+      i += 1
+    }
+
+    /**
+     * When maxMargin is greater than 0, the original formula could cause overflow.
+     * We address this by subtracting maxMargin from all the margins, so it's guaranteed
+     * that all of the new margins will be smaller than zero to prevent arithmetic overflow.
+     */
+    val multipliers = new Array[Double](numClasses)
+    val sum = {
+      var temp = 0.0
+      var i = 0
+      while (i < numClasses) {
+        if (maxMargin > 0) margins(i) -= maxMargin
+        val exp = math.exp(margins(i))
+        temp += exp
+        multipliers(i) = exp
+        i += 1
+      }
+      temp
+    }
+
+    margins.indices.foreach { i =>
+      multipliers(i) = multipliers(i) / sum - (if (label == i) 1.0 else 0.0)
+    }
+    features.foreachActive { (index, value) =>
+      if (localFeaturesStd(index) != 0.0 && value != 0.0) {
+        val stdValue = value / localFeaturesStd(index)
+        var j = 0
+        while (j < numClasses) {
+          localGradientArray(index * numClasses + j) +=
+            weight * multipliers(j) * stdValue
+          j += 1
+        }
+      }
+    }
+    if (fitIntercept) {
+      var i = 0
+      while (i < numClasses) {
+        localGradientArray(numFeatures * numClasses + i) += weight * multipliers(i)
+        i += 1
+      }
+    }
+
+    val loss = if (maxMargin > 0) {
+      math.log(sum) - marginOfLabel + maxMargin
+    } else {
+      math.log(sum) - marginOfLabel
+    }
+    lossSum += weight * loss
+  }
+
+  /**
+   * Add a new training instance to this LogisticAggregator, and update the loss and gradient
+   * of the objective function.
+   *
+   * @param instance The instance of data point to be added.
+   * @return This LogisticAggregator object.
+   */
+  def add(instance: Instance): this.type = {
+    instance match { case Instance(label, weight, features) =>
+
+      if (weight == 0.0) return this
+
+      if (multinomial) {
+        multinomialUpdateInPlace(features, weight, label)
+      } else {
+        binaryUpdateInPlace(features, weight, label)
+      }
+      weightSum += weight
+      this
+    }
+  }
+
+  /**
+   * Merge another LogisticAggregator, and update the loss and gradient
+   * of the objective function.
+   * (Note that it's in place merging; as a result, `this` object will be modified.)
+   *
+   * @param other The other LogisticAggregator to be merged.
+   * @return This LogisticAggregator object.
+   */
+  def merge(other: LogisticAggregator): this.type = {
+
+    if (other.weightSum != 0.0) {
+      weightSum += other.weightSum
+      lossSum += other.lossSum
+
+      var i = 0
+      val localThisGradientSumArray = this.gradientSumArray
+      val localOtherGradientSumArray = other.gradientSumArray
+      val len = localThisGradientSumArray.length
+      while (i < len) {
+        localThisGradientSumArray(i) += localOtherGradientSumArray(i)
+        i += 1
+      }
+    }
+    this
+  }
+
+  def loss: Double = {
+    require(weightSum > 0.0, s"The effective number of instances should be " +
+      s"greater than 0.0, but $weightSum.")
+    lossSum / weightSum
+  }
+
+  def gradient: Matrix = {
+    require(weightSum > 0.0, s"The effective number of instances should be " +
+      s"greater than 0.0, but $weightSum.")
+    val result = Vectors.dense(gradientSumArray.clone())
+    scal(1.0 / weightSum, result)
+    new DenseMatrix(numCoefficientSets, numFeaturesPlusIntercept, result.toArray)
+  }
+}
 
 /**
  * Multiclass logistic regression training results.

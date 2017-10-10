@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.plans.PlanTest
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules._
 import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.Row
 
 class BooleanSimplificationSuite extends PlanTest with PredicateHelper {
 
@@ -43,6 +44,16 @@ class BooleanSimplificationSuite extends PlanTest with PredicateHelper {
 
   val testRelation = LocalRelation('a.int, 'b.int, 'c.int, 'd.string,
     'e.boolean, 'f.boolean, 'g.boolean, 'h.boolean)
+
+  val testRelationWithData = LocalRelation.fromExternalRows(
+    testRelation.output, Seq(Row(1, 2, 3, "abc"))
+  )
+
+  private def checkCondition(input: Expression, expected: LogicalPlan): Unit = {
+    val plan = testRelationWithData.where(input).analyze
+    val actual = Optimize.execute(plan)
+    comparePlans(actual, expected)
+  }
 
   val testRelationWithData = LocalRelation.fromExternalRows(
     testRelation.output, Seq(Row(1, 2, 3, "abc"))

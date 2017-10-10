@@ -235,7 +235,21 @@ public abstract class ColumnVector implements AutoCloseable {
    * Cleans up memory for this column. The column is not usable after this.
    * TODO: this should probably have ref-counted semantics.
    */
-  public abstract void close();
+  public void close() {
+    if (childColumns != null) {
+      for (int i = 0; i < childColumns.length; i++) {
+        if (childColumns[i] != null) {
+          childColumns[i].close();
+          childColumns[i] = null;
+        }
+      }
+    }
+    if (dictionaryIds != null) {
+      dictionaryIds.close();
+      dictionaryIds = null;
+    }
+    dictionary = null;
+  }
 
   /**
    * Returns the number of nulls in this column.

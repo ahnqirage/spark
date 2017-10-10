@@ -19,6 +19,7 @@ package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
 
+import org.apache.spark.SparkContext
 import org.apache.spark.annotation.Since
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.{BLAS, Vector, Vectors, VectorUDT}
@@ -342,12 +343,8 @@ object Word2VecModel extends MLReadable[Word2VecModel] {
         sc.conf.get("spark.kryoserializer.buffer.max", "64m"))
       val numPartitions = Word2VecModelWriter.calculateNumberOfPartitions(
         bufferSizeInBytes, instance.wordVectors.wordIndex.size, instance.getVectorSize)
-      val spark = sparkSession
-      import spark.implicits._
-      spark.createDataset[(String, Array[Float])](wordVectors.toSeq)
+      sparkSession.createDataFrame(dataSeq)
         .repartition(numPartitions)
-        .map { case (word, vector) => Data(word, vector) }
-        .toDF()
         .write
         .parquet(dataPath)
     }

@@ -165,14 +165,12 @@ class OptimizeInSuite extends PlanTest {
     }
 
     // Reduce the threshold to turning into InSet.
-    withSQLConf(OPTIMIZER_INSET_CONVERSION_THRESHOLD.key -> "2") {
-      val optimizedPlan = OptimizeIn(plan)
-      optimizedPlan match {
-        case Filter(cond, _)
-          if cond.isInstanceOf[InSet] && cond.asInstanceOf[InSet].getSet().size == 3 =>
-        // pass
-        case _ => fail("Unexpected result for OptimizedIn")
-      }
+    val optimizedPlan = OptimizeIn(conf.copy(OPTIMIZER_INSET_CONVERSION_THRESHOLD -> 2))(plan)
+    optimizedPlan match {
+      case Filter(cond, _)
+        if cond.isInstanceOf[InSet] && cond.asInstanceOf[InSet].getSet().size == 3 =>
+          // pass
+      case _ => fail("Unexpected result for OptimizedIn")
     }
   }
 }

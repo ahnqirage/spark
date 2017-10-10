@@ -203,18 +203,9 @@ case class DataSource(
         s"Unable to infer schema for $format. It must be specified manually.")
     }
 
-    // We just print a waring message if the data schema and partition schema have the duplicate
-    // columns. This is because we allow users to do so in the previous Spark releases and
-    // we have the existing tests for the cases (e.g., `ParquetHadoopFsRelationSuite`).
-    // See SPARK-18108 and SPARK-21144 for related discussions.
-    try {
-      SchemaUtils.checkColumnNameDuplication(
-        (dataSchema ++ partitionSchema).map(_.name),
-        "in the data schema and the partition schema",
-        equality)
-    } catch {
-      case e: AnalysisException => logWarning(e.getMessage)
-    }
+    SchemaUtils.checkColumnNameDuplication(
+      (dataSchema ++ partitionSchema).map(_.name), "in the data schema and the partition schema",
+      sparkSession.sessionState.conf.caseSensitiveAnalysis)
 
     (dataSchema, partitionSchema)
   }
@@ -461,18 +452,20 @@ case class DataSource(
     // For partitioned relation r, r.schema's column ordering can be different from the column
     // ordering of data.logicalPlan (partition columns are all moved after data column).  This
     // will be adjusted within InsertIntoHadoopFsRelation.
-    InsertIntoHadoopFsRelationCommand(
-      outputPath = outputPath,
-      staticPartitions = Map.empty,
-      ifPartitionNotExists = false,
-      partitionColumns = partitionColumns.map(UnresolvedAttribute.quoted),
-      bucketSpec = bucketSpec,
-      fileFormat = format,
-      options = options,
-      query = data,
-      mode = mode,
-      catalogTable = catalogTable,
-      fileIndex = fileIndex)
+    val plan =
+      InsertIntoHadoopFsRelationCommand(
+        outputPath = outputPath,
+        staticPartitions = Map.empty,
+        ifPartitionNotExists = false,
+        partitionColumns = partitionColumns,
+        bucketSpec = bucketSpec,
+        fileFormat = format,
+        options = options,
+        query = data.logicalPlan,
+        mode = mode,
+        catalogTable = catalogTable,
+        fileIndex = fileIndex)
+      sparkSession.sessionState.executePlan(plan).toRdd
   }
 
   /**

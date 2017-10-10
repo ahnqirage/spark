@@ -1291,7 +1291,7 @@ class DataFrame(object):
         """ Return a new :class:`DataFrame` containing union of rows in this and another frame.
 
         This is equivalent to `UNION ALL` in SQL. To do a SQL-style set union
-        (that does deduplication of elements), use this function followed by :func:`distinct`.
+        (that does deduplication of elements), use this function followed by a distinct.
 
         Also as standard in SQL, this function resolves columns by position (not by name).
         """
@@ -1302,7 +1302,7 @@ class DataFrame(object):
         """ Return a new :class:`DataFrame` containing union of rows in this and another frame.
 
         This is equivalent to `UNION ALL` in SQL. To do a SQL-style set union
-        (that does deduplication of elements), use this function followed by :func:`distinct`.
+        (that does deduplication of elements), use this function followed by a distinct.
 
         Also as standard in SQL, this function resolves columns by position (not by name).
 

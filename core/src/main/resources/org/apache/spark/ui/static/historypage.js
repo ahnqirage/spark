@@ -148,7 +148,7 @@ $(document).ready(function() {
         "uiroot": uiRoot,
         "applications": array,
         "hasMultipleAttempts": hasMultipleAttempts,
-        "showCompletedColumns": !requestedIncomplete,
+        "showCompletedColumn": !requestedIncomplete,
       }
 
       $.get("static/historypage-template.html", function(template) {
@@ -187,7 +187,6 @@ $(document).ready(function() {
         if (requestedIncomplete) {
           defaultSortColumn = startedColumnName;
           conf.columns = removeColumnByName(conf.columns, completedColumnName);
-          conf.columns = removeColumnByName(conf.columns, durationColumnName);
         }
         conf.order = [[ getColumnIndex(conf.columns, defaultSortColumn), "desc" ]];
         conf.columnDefs = [

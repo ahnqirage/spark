@@ -175,6 +175,8 @@ private[shared] object SharedParamsCodeGen {
 
     val htmlCompliantDoc = Utility.escape(doc)
 
+    val htmlCompliantDoc = Utility.escape(doc)
+
     s"""
       |/**
       | * Trait for shared param $name$defaultValueDoc.

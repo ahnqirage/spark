@@ -25,8 +25,7 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.classification.LinearSVCSuite._
 import org.apache.spark.ml.feature.{Instance, LabeledPoint}
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
-import org.apache.spark.ml.optim.aggregator.HingeAggregator
-import org.apache.spark.ml.param.ParamsSuite
+import org.apache.spark.ml.param.{ParamMap, ParamsSuite}
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.util.MLlibTestSparkContext

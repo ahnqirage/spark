@@ -362,13 +362,14 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
       // scan for modified applications, replay and merge them
       val logInfos = Option(fs.listStatus(new Path(logDir))).map(_.toSeq).getOrElse(Nil)
         .filter { entry =>
+          val prevFileSize = fileToAppInfo.get(entry.getPath()).map{_.fileSize}.getOrElse(0L)
           !entry.isDirectory() &&
             // FsHistoryProvider generates a hidden file which can't be read.  Accidentally
             // reading a garbage file is safe, but we would log an error which can be scary to
             // the end-user.
             !entry.getPath().getName().startsWith(".") &&
-            SparkHadoopUtil.get.checkAccessPermission(entry, FsAction.READ) &&
-            recordedFileSize(entry.getPath()) < entry.getLen()
+            prevFileSize < entry.getLen() &&
+            SparkHadoopUtil.get.checkAccessPermission(entry, FsAction.READ)
         }
         .sortWith { case (entry1, entry2) =>
           entry1.getModificationTime() > entry2.getModificationTime()
@@ -485,10 +486,52 @@ private[history] class FsHistoryProvider(conf: SparkConf, clock: Clock)
    * Replay the given log file, saving the application in the listing db.
    */
   protected def mergeApplicationListing(fileStatus: FileStatus): Unit = {
-    val eventsFilter: ReplayEventsFilter = { eventString =>
-      eventString.startsWith(APPL_START_EVENT_PREFIX) ||
-        eventString.startsWith(APPL_END_EVENT_PREFIX) ||
-        eventString.startsWith(LOG_START_EVENT_PREFIX)
+    val newAttempts = try {
+      val eventsFilter: ReplayEventsFilter = { eventString =>
+        eventString.startsWith(APPL_START_EVENT_PREFIX) ||
+          eventString.startsWith(APPL_END_EVENT_PREFIX)
+      }
+
+      val logPath = fileStatus.getPath()
+      val appCompleted = isApplicationCompleted(fileStatus)
+
+      // Use loading time as lastUpdated since some filesystems don't update modifiedTime
+      // each time file is updated. However use modifiedTime for completed jobs so lastUpdated
+      // won't change whenever HistoryServer restarts and reloads the file.
+      val lastUpdated = if (appCompleted) fileStatus.getModificationTime else clock.getTimeMillis()
+
+      val appListener = replay(fileStatus, appCompleted, new ReplayListenerBus(), eventsFilter)
+
+      // Without an app ID, new logs will render incorrectly in the listing page, so do not list or
+      // try to show their UI.
+      if (appListener.appId.isDefined) {
+        val attemptInfo = new FsApplicationAttemptInfo(
+          logPath.getName(),
+          appListener.appName.getOrElse(NOT_STARTED),
+          appListener.appId.getOrElse(logPath.getName()),
+          appListener.appAttemptId,
+          appListener.startTime.getOrElse(-1L),
+          appListener.endTime.getOrElse(-1L),
+          lastUpdated,
+          appListener.sparkUser.getOrElse(NOT_STARTED),
+          appCompleted,
+          fileStatus.getLen()
+        )
+        fileToAppInfo(logPath) = attemptInfo
+        logDebug(s"Application log ${attemptInfo.logPath} loaded successfully: $attemptInfo")
+        Some(attemptInfo)
+      } else {
+        logWarning(s"Failed to load application log ${fileStatus.getPath}. " +
+          "The application may have not started.")
+        None
+      }
+
+    } catch {
+      case e: Exception =>
+        logError(
+          s"Exception encountered when attempting to load application log ${fileStatus.getPath}",
+          e)
+        None
     }
 
     val logPath = fileStatus.getPath()

@@ -55,13 +55,4 @@ public abstract class ShuffleClient implements Closeable {
       String[] blockIds,
       BlockFetchingListener listener,
       TempShuffleFileManager tempShuffleFileManager);
-
-  /**
-   * Get the shuffle MetricsSet from ShuffleClient, this will be used in MetricsSystem to
-   * get the Shuffle related metrics.
-   */
-  public MetricSet shuffleMetrics() {
-    // Return an empty MetricSet by default.
-    return () -> Collections.emptyMap();
-  }
 }

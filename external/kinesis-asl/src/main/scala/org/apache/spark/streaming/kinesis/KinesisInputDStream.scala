@@ -21,6 +21,7 @@ import scala.reflect.ClassTag
 
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream
 import com.amazonaws.services.kinesis.model.Record
+import KinesisReadConfigurations._
 
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.rdd.RDD

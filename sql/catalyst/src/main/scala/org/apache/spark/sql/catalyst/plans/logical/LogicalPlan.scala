@@ -309,6 +309,23 @@ abstract class UnaryNode extends LogicalPlan {
   }
 
   override protected def validConstraints: Set[Expression] = child.constraints
+
+  override def computeStats(conf: SQLConf): Statistics = {
+    // There should be some overhead in Row object, the size should not be zero when there is
+    // no columns, this help to prevent divide-by-zero error.
+    val childRowSize = child.output.map(_.dataType.defaultSize).sum + 8
+    val outputRowSize = output.map(_.dataType.defaultSize).sum + 8
+    // Assume there will be the same number of rows as child has.
+    var sizeInBytes = (child.stats(conf).sizeInBytes * outputRowSize) / childRowSize
+    if (sizeInBytes == 0) {
+      // sizeInBytes can't be zero, or sizeInBytes of BinaryNode will also be zero
+      // (product of children).
+      sizeInBytes = 1
+    }
+
+    // Don't propagate rowCount and attributeStats, since they are not estimated here.
+    Statistics(sizeInBytes = sizeInBytes, hints = child.stats(conf).hints)
+  }
 }
 
 /**

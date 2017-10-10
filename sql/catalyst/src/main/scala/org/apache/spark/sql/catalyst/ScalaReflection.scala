@@ -848,10 +848,9 @@ trait ScalaReflection {
    * support inner class.
    */
   def getConstructorParameters(tpe: Type): Seq[(String, Type)] = {
-    val dealiasedTpe = tpe.dealias
-    val formalTypeArgs = dealiasedTpe.typeSymbol.asClass.typeParams
-    val TypeRef(_, _, actualTypeArgs) = dealiasedTpe
-    val params = constructParams(dealiasedTpe)
+    val formalTypeArgs = tpe.typeSymbol.asClass.typeParams
+    val TypeRef(_, _, actualTypeArgs) = tpe
+    val params = constructParams(tpe)
     // if there are type variables to fill in, do the substitution (SomeClass[T] -> SomeClass[Int])
     if (actualTypeArgs.nonEmpty) {
       params.map { p =>

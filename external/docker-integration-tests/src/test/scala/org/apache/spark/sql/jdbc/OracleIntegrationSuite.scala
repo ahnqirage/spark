@@ -111,7 +111,7 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationSuite with SharedSQLCo
   }
 
 
-  test("SPARK-16625 : Importing Oracle numeric types") {
+  test("SPARK-16625 : Importing Oracle numeric types") { 
     val df = sqlContext.read.jdbc(jdbcUrl, "numerics", new Properties);
     val rows = df.collect()
     assert(rows.size == 1)

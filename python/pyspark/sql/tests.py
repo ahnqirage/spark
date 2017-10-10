@@ -489,32 +489,13 @@ class SQLTests(ReusedPySparkTestCase):
         res.explain(True)
         self.assertEqual(res.collect(), [Row(id=0, copy=0)])
 
-    def test_udf_registration_returns_udf(self):
-        df = self.spark.range(10)
-        add_three = self.spark.udf.register("add_three", lambda x: x + 3, IntegerType())
-
-        self.assertListEqual(
-            df.selectExpr("add_three(id) AS plus_three").collect(),
-            df.select(add_three("id").alias("plus_three")).collect()
-        )
-
-    def test_non_existed_udf(self):
-        spark = self.spark
-        self.assertRaisesRegexp(AnalysisException, "Can not load class non_existed_udf",
-                                lambda: spark.udf.registerJavaFunction("udf1", "non_existed_udf"))
-
-    def test_non_existed_udaf(self):
-        spark = self.spark
-        self.assertRaisesRegexp(AnalysisException, "Can not load class non_existed_udaf",
-                                lambda: spark.udf.registerJavaUDAF("udaf1", "non_existed_udaf"))
-
     def test_multiLine_json(self):
         people1 = self.spark.read.json("python/test_support/sql/people.json")
         people_array = self.spark.read.json("python/test_support/sql/people_array.json",
                                             multiLine=True)
         self.assertEqual(people1.collect(), people_array.collect())
 
-    def test_multiline_csv(self):
+    def test_multiLine_csv(self):
         ages_newlines = self.spark.read.csv(
             "python/test_support/sql/ages_newlines.csv", multiLine=True)
         expected = [Row(_c0=u'Joe', _c1=u'20', _c2=u'Hi,\nI am Jeo'),
@@ -1886,6 +1867,10 @@ class SQLTests(ReusedPySparkTestCase):
         row = self.spark.createDataFrame([Row(a=None), Row(a=True)]).fillna({"a": True}).first()
         self.assertEqual(row.a, True)
 
+        # fillna with dictionary for boolean types
+        row = self.spark.createDataFrame([Row(a=None), Row(a=True)]).fillna({"a": True}).first()
+        self.assertEqual(row.a, True)
+
     def test_bitwise_operations(self):
         from pyspark.sql import functions
         row = Row(a=170, b=75)
@@ -2107,24 +2092,6 @@ class SQLTests(ReusedPySparkTestCase):
 
         plan = df1.join(df2.hint("broadcast"), "id")._jdf.queryExecution().executedPlan()
         self.assertEqual(1, plan.toString().count("BroadcastHashJoin"))
-
-    def test_sample(self):
-        self.assertRaisesRegexp(
-            TypeError,
-            "should be a bool, float and number",
-            lambda: self.spark.range(1).sample())
-
-        self.assertRaises(
-            TypeError,
-            lambda: self.spark.range(1).sample("a"))
-
-        self.assertRaises(
-            TypeError,
-            lambda: self.spark.range(1).sample(seed="abc"))
-
-        self.assertRaises(
-            IllegalArgumentException,
-            lambda: self.spark.range(1).sample(-1.0))
 
     def test_toDF_with_schema_string(self):
         data = [Row(key=i, value=str(i)) for i in range(100)]

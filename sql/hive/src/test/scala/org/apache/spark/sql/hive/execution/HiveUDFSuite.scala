@@ -569,17 +569,6 @@ class HiveUDFSuite extends QueryTest with TestHiveSingleton with SQLTestUtils {
     }
   }
 
-  test("Temp function has dots in the names") {
-    withUserDefinedFunction("test_avg" -> false, "`default.test_avg`" -> true) {
-      sql(s"CREATE FUNCTION test_avg AS '${classOf[GenericUDAFAverage].getName}'")
-      checkAnswer(sql("SELECT test_avg(1)"), Row(1.0))
-      // temp function containing dots in the name
-      spark.udf.register("default.test_avg", () => { Math.random() + 2})
-      assert(sql("SELECT `default.test_avg`()").head().getDouble(0) >= 2.0)
-      checkAnswer(sql("SELECT test_avg(1)"), Row(1.0))
-    }
-  }
-
   test("Call the function registered in the not-current database") {
     Seq("true", "false").foreach { caseSensitive =>
       withSQLConf(SQLConf.CASE_SENSITIVE.key -> caseSensitive) {
@@ -596,46 +585,6 @@ class HiveUDFSuite extends QueryTest with TestHiveSingleton with SQLTestUtils {
             message.contains("nor a permanent function registered in the database 'dAtABaSe1'"))
         }
       }
-    }
-  }
-
-  test("UDTF") {
-    withUserDefinedFunction("udtf_count2" -> true) {
-      sql(s"ADD JAR ${hiveContext.getHiveFile("TestUDTF.jar").getCanonicalPath}")
-      // The function source code can be found at:
-      // https://cwiki.apache.org/confluence/display/Hive/DeveloperGuide+UDTF
-      sql(
-        """
-          |CREATE TEMPORARY FUNCTION udtf_count2
-          |AS 'org.apache.spark.sql.hive.execution.GenericUDTFCount2'
-        """.stripMargin)
-
-      checkAnswer(
-        sql("SELECT key, cc FROM src LATERAL VIEW udtf_count2(value) dd AS cc"),
-        Row(97, 500) :: Row(97, 500) :: Nil)
-
-      checkAnswer(
-        sql("SELECT udtf_count2(a) FROM (SELECT 1 AS a FROM src LIMIT 3) t"),
-        Row(3) :: Row(3) :: Nil)
-    }
-  }
-
-  test("permanent UDTF") {
-    withUserDefinedFunction("udtf_count_temp" -> false) {
-      sql(
-        s"""
-           |CREATE FUNCTION udtf_count_temp
-           |AS 'org.apache.spark.sql.hive.execution.GenericUDTFCount2'
-           |USING JAR '${hiveContext.getHiveFile("TestUDTF.jar").toURI}'
-        """.stripMargin)
-
-      checkAnswer(
-        sql("SELECT key, cc FROM src LATERAL VIEW udtf_count_temp(value) dd AS cc"),
-        Row(97, 500) :: Row(97, 500) :: Nil)
-
-      checkAnswer(
-        sql("SELECT udtf_count_temp(a) FROM (SELECT 1 AS a FROM src LIMIT 3) t"),
-        Row(3) :: Row(3) :: Nil)
     }
   }
 }

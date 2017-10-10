@@ -58,11 +58,10 @@ setClass("NaiveBayesModel", representation(jobj = "jobj"))
 #' @param regParam The regularization parameter. Only supports L2 regularization currently.
 #' @param maxIter Maximum iteration number.
 #' @param tol Convergence tolerance of iterations.
-#' @param standardization Whether to standardize the training features before fitting the model.
-#'                        The coefficients of models will be always returned on the original scale,
-#'                        so it will be transparent for users. Note that with/without
-#'                        standardization, the models should be always converged to the same
-#'                        solution when no regularization is applied.
+#' @param standardization Whether to standardize the training features before fitting the model. The coefficients
+#'                        of models will be always returned on the original scale, so it will be transparent for
+#'                        users. Note that with/without standardization, the models should be always converged
+#'                        to the same solution when no regularization is applied.
 #' @param threshold The threshold in binary classification applied to the linear model prediction.
 #'                  This threshold can be any real number, where Inf will make all predictions 0.0
 #'                  and -Inf will make all predictions 1.0.

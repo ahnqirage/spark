@@ -29,8 +29,6 @@ import scala.reflect.ClassTag
 import scala.util.Random
 import scala.util.control.NonFatal
 
-import com.codahale.metrics.{MetricRegistry, MetricSet}
-
 import org.apache.spark._
 import org.apache.spark.executor.{DataReadMethod, ShuffleWriteMetrics}
 import org.apache.spark.internal.{config, Logging}

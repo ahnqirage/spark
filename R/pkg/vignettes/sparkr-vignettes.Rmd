@@ -809,7 +809,7 @@ predictions <- predict(dtModel, df)
 `spark.gbt` fits a [gradient-boosted tree](https://en.wikipedia.org/wiki/Gradient_boosting) classification or regression model on a `SparkDataFrame`.
 Users can call `summary` to get a summary of the fitted model, `predict` to make predictions, and `write.ml`/`read.ml` to save/load fitted models.
 
-We use the `Titanic` dataset to train a gradient-boosted tree and make predictions:
+We use the `longley` dataset to train a gradient-boosted tree and make predictions:
 
 ```{r}
 t <- as.data.frame(Titanic)

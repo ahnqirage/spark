@@ -373,21 +373,6 @@ test_that("spark.mlp", {
   expect_equal(summary$numOfOutputs, 3)
   expect_equal(summary$layers, c(4, 3))
   expect_equal(length(summary$weights), 15)
-
-  # Test unseen labels
-  data <- data.frame(clicked = base::sample(c(0, 1), 10, replace = TRUE),
-  someString = base::sample(c("this", "that"), 10, replace = TRUE),
-                            stringsAsFactors = FALSE)
-  trainidxs <- base::sample(nrow(data), nrow(data) * 0.7)
-  traindf <- as.DataFrame(data[trainidxs, ])
-  testdf <- as.DataFrame(rbind(data[-trainidxs, ], c(0, "the other")))
-  model <- spark.mlp(traindf, clicked ~ ., layers = c(1, 3))
-  predictions <- predict(model, testdf)
-  expect_error(collect(predictions))
-  model <- spark.mlp(traindf, clicked ~ ., layers = c(1, 3), handleInvalid = "skip")
-  predictions <- predict(model, testdf)
-  expect_equal(class(collect(predictions)$clicked[1]), "list")
-
 })
 
 test_that("spark.naiveBayes", {

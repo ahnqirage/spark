@@ -48,12 +48,8 @@ class LibSVMRelationSuite extends SparkFunSuite with MLlibTestSparkContext {
         |0 2:4.0 4:5.0 6:6.0
       """.stripMargin
     val dir = Utils.createTempDir()
-    val succ = new File(dir, "_SUCCESS")
-    val file0 = new File(dir, "part-00000")
-    val file1 = new File(dir, "part-00001")
-    Files.write("", succ, StandardCharsets.UTF_8)
-    Files.write(lines0, file0, StandardCharsets.UTF_8)
-    Files.write(lines1, file1, StandardCharsets.UTF_8)
+    val file = new File(dir, "part-00000")
+    Files.write(lines, file, StandardCharsets.UTF_8)
     path = dir.getPath
   }
 

@@ -23,8 +23,6 @@ from pyspark.ml import Estimator, Model
 from pyspark.ml.common import _py2java
 from pyspark.ml.param import Params, Param, TypeConverters
 from pyspark.ml.param.shared import HasSeed
-from pyspark.ml.util import *
-from pyspark.ml.wrapper import JavaParams
 from pyspark.sql.functions import rand
 
 __all__ = ['ParamGridBuilder', 'CrossValidator', 'CrossValidatorModel', 'TrainValidationSplit',

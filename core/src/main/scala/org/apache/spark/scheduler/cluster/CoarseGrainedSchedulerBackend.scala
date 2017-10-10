@@ -438,7 +438,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
    * be called in the yarn-client mode when AM re-registers after a failure.
    * */
   protected def reset(): Unit = {
-    val executors: Set[String] = synchronized {
+    val executors = synchronized {
       requestedTotalExecutors = 0
       numPendingExecutors = 0
       executorsPendingToRemove.clear()

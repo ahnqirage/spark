@@ -64,7 +64,7 @@ class JavaClassificationModel(JavaPredictionModel):
 @inherit_doc
 class LinearSVC(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, HasMaxIter,
                 HasRegParam, HasTol, HasRawPredictionCol, HasFitIntercept, HasStandardization,
-                HasWeightCol, HasAggregationDepth, HasThreshold, JavaMLWritable, JavaMLReadable):
+                HasWeightCol, HasAggregationDepth, JavaMLWritable, JavaMLReadable):
     """
     .. note:: Experimental
 
@@ -153,6 +153,18 @@ class LinearSVC(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, Ha
 
     def _create_model(self, java_model):
         return LinearSVCModel(java_model)
+
+    def setThreshold(self, value):
+        """
+        Sets the value of :py:attr:`threshold`.
+        """
+        return self._set(threshold=value)
+
+    def getThreshold(self):
+        """
+        Gets the value of threshold or its default value.
+        """
+        return self.getOrDefault(self.threshold)
 
 
 class LinearSVCModel(JavaModel, JavaClassificationModel, JavaMLWritable, JavaMLReadable):
@@ -1727,10 +1739,10 @@ class OneVsRest(Estimator, OneVsRestParams, HasParallelism, JavaMLReadable, Java
 
     @keyword_only
     def __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction",
-                 classifier=None, weightCol=None, parallelism=1):
+                 classifier=None, weightCol=None):
         """
         __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
-                 classifier=None, weightCol=None, parallelism=1):
+                 classifier=None, weightCol=None)
         """
         super(OneVsRest, self).__init__()
         self._setDefault(parallelism=1)
@@ -1739,11 +1751,11 @@ class OneVsRest(Estimator, OneVsRestParams, HasParallelism, JavaMLReadable, Java
 
     @keyword_only
     @since("2.0.0")
-    def setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction",
-                  classifier=None, weightCol=None, parallelism=1):
+    def setParams(self, featuresCol=None, labelCol=None, predictionCol=None,
+                  classifier=None, weightCol=None):
         """
-        setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
-                  classifier=None, weightCol=None, parallelism=1):
+        setParams(self, featuresCol=None, labelCol=None, predictionCol=None, \
+                  classifier=None, weightCol=None):
         Sets params for OneVsRest.
         """
         kwargs = self._input_kwargs

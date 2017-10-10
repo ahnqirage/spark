@@ -46,7 +46,7 @@ case class InsertIntoHadoopFsRelationCommand(
     outputPath: Path,
     staticPartitions: TablePartitionSpec,
     ifPartitionNotExists: Boolean,
-    partitionColumns: Seq[Attribute],
+    partitionColumns: Seq[String],
     bucketSpec: Option[BucketSpec],
     fileFormat: FileFormat,
     options: Map[String, String],
@@ -63,10 +63,13 @@ case class InsertIntoHadoopFsRelationCommand(
     assert(children.length == 1)
 
     // Most formats don't do well with duplicate columns, so lets not allow that
-    SchemaUtils.checkSchemaColumnNameDuplication(
-      query.schema,
-      s"when inserting into $outputPath",
-      sparkSession.sessionState.conf.caseSensitiveAnalysis)
+    if (query.schema.fieldNames.length != query.schema.fieldNames.distinct.length) {
+      val duplicateColumns = query.schema.fieldNames.groupBy(identity).collect {
+        case (x, ys) if ys.length > 1 => "\"" + x + "\""
+      }.mkString(", ")
+      throw new AnalysisException(s"Duplicate column(s): $duplicateColumns found, " +
+        "cannot save to file.")
+    }
 
     val hadoopConf = sparkSession.sessionState.newHadoopConfWithOptions(options)
     val fs = outputPath.getFileSystem(hadoopConf)
@@ -141,23 +144,18 @@ case class InsertIntoHadoopFsRelationCommand(
         }
       }
 
-      val updatedPartitionPaths =
-        FileFormatWriter.write(
-          sparkSession = sparkSession,
-          plan = children.head,
-          fileFormat = fileFormat,
-          committer = committer,
-          outputSpec = FileFormatWriter.OutputSpec(
-            qualifiedOutputPath.toString, customPartitionLocations),
-          hadoopConf = hadoopConf,
-          partitionColumns = partitionColumns,
-          bucketSpec = bucketSpec,
-          statsTrackers = Seq(basicWriteJobStatsTracker(hadoopConf)),
-          options = options)
-
-
-      // update metastore partition metadata
-      refreshUpdatedPartitions(updatedPartitionPaths)
+      FileFormatWriter.write(
+        sparkSession = sparkSession,
+        queryExecution = Dataset.ofRows(sparkSession, query).queryExecution,
+        fileFormat = fileFormat,
+        committer = committer,
+        outputSpec = FileFormatWriter.OutputSpec(
+          qualifiedOutputPath.toString, customPartitionLocations),
+        hadoopConf = hadoopConf,
+        partitionColumnNames = partitionColumns,
+        bucketSpec = bucketSpec,
+        refreshFunction = refreshPartitionsCallback,
+        options = options)
 
       // refresh cached files in FileIndex
       fileIndex.foreach(_.refresh())
@@ -185,10 +183,10 @@ case class InsertIntoHadoopFsRelationCommand(
       customPartitionLocations: Map[TablePartitionSpec, String],
       committer: FileCommitProtocol): Unit = {
     val staticPartitionPrefix = if (staticPartitions.nonEmpty) {
-      "/" + partitionColumns.flatMap { p =>
-        staticPartitions.get(p.name) match {
+      "/" + partitionColumns.flatMap { col =>
+        staticPartitions.get(col) match {
           case Some(value) =>
-            Some(escapePathName(p.name) + "=" + escapePathName(value))
+            Some(escapePathName(col) + "=" + escapePathName(value))
           case None =>
             None
         }

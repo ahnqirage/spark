@@ -449,19 +449,17 @@ case class HiveTableRelation(
     Objects.hashCode(tableMeta.identifier, output)
   }
 
-  override lazy val canonicalized: HiveTableRelation = copy(
-    tableMeta = tableMeta.copy(
-      storage = CatalogStorageFormat.empty,
-      createTime = -1
-    ),
-    dataCols = dataCols.zipWithIndex.map {
-      case (attr, index) => attr.withExprId(ExprId(index))
-    },
-    partitionCols = partitionCols.zipWithIndex.map {
-      case (attr, index) => attr.withExprId(ExprId(index + dataCols.length))
-    })
+  override def preCanonicalized: LogicalPlan = copy(tableMeta = CatalogTable(
+    identifier = tableMeta.identifier,
+    tableType = tableMeta.tableType,
+    storage = CatalogStorageFormat.empty,
+    schema = tableMeta.schema,
+    partitionColumnNames = tableMeta.partitionColumnNames,
+    bucketSpec = tableMeta.bucketSpec,
+    createTime = -1
+  ))
 
-  override def computeStats(): Statistics = {
+  override def computeStats(conf: SQLConf): Statistics = {
     tableMeta.stats.map(_.toPlanStats(output)).getOrElse {
       throw new IllegalStateException("table stats must be specified.")
     }

@@ -171,12 +171,12 @@ class StreamExecution(
       case streamingRelation@StreamingRelation(dataSource, _, output) =>
         toExecutionRelationMap.getOrElseUpdate(streamingRelation, {
           // Materialize source to avoid creating it in every batch
-          val metadataPath = s"$resolvedCheckpointRoot/sources/$nextSourceId"
+          val metadataPath = s"$checkpointRoot/sources/$nextSourceId"
           val source = dataSource.createSource(metadataPath)
           nextSourceId += 1
           // We still need to use the previous `output` instead of `source.schema` as attributes in
           // "df.logicalPlan" has already used attributes of the previous `output`.
-          StreamingExecutionRelation(source, output)(sparkSession)
+          StreamingExecutionRelation(source, output)
         })
     }
     sources = _logicalPlan.collect { case s: StreamingExecutionRelation => s.source }
@@ -275,7 +275,6 @@ class StreamExecution(
     try {
       sparkSession.sparkContext.setJobGroup(runId.toString, getBatchDescriptionString,
         interruptOnCancel = true)
-      sparkSession.sparkContext.setLocalProperty(StreamExecution.QUERY_ID_KEY, id.toString)
       if (sparkSession.sessionState.conf.streamingMetricsEnabled) {
         sparkSession.sparkContext.env.metricsSystem.registerSource(streamMetrics)
       }

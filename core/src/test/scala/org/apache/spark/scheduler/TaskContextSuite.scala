@@ -245,10 +245,7 @@ class TaskContextSuite extends SparkFunSuite with BeforeAndAfter with LocalSpark
     var invocations = 0
     val context = TaskContext.empty()
     context.markTaskCompleted(None)
-    context.addTaskCompletionListener(new TaskCompletionListener {
-      override def onTaskCompletion(context: TaskContext): Unit =
-        invocations += 1
-    })
+    context.addTaskCompletionListener(_ => invocations += 1)
     assert(invocations == 1)
     context.markTaskCompleted(None)
     assert(invocations == 1)
@@ -285,15 +282,9 @@ class TaskContextSuite extends SparkFunSuite with BeforeAndAfter with LocalSpark
   test("all TaskCompletionListeners should be called even if some fail or a task") {
     val context = TaskContext.empty()
     val listener = mock(classOf[TaskCompletionListener])
-    context.addTaskCompletionListener(new TaskCompletionListener {
-      override def onTaskCompletion(context: TaskContext): Unit =
-        throw new Exception("exception in listener1")
-    })
+    context.addTaskCompletionListener(_ => throw new Exception("exception in listener1"))
     context.addTaskCompletionListener(listener)
-    context.addTaskCompletionListener(new TaskCompletionListener {
-      override def onTaskCompletion(context: TaskContext): Unit =
-        throw new Exception("exception in listener3")
-    })
+    context.addTaskCompletionListener(_ => throw new Exception("exception in listener3"))
 
     val e = intercept[TaskCompletionListenerException] {
       context.markTaskCompleted(Some(new Exception("exception in task")))

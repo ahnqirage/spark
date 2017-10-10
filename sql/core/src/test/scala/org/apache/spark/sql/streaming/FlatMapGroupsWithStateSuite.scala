@@ -99,7 +99,7 @@ class FlatMapGroupsWithStateSuite extends StateStoreMetricsTest with BeforeAndAf
     }
   }
 
-  test("GroupState - setTimeout - with NoTimeout") {
+  test("GroupState - setTimeout**** with NoTimeout") {
     for (initValue <- Seq(None, Some(5))) {
       val states = Seq(
         GroupStateImpl.createForStreaming(initValue, 1000, 1000, NoTimeout, hasTimedOut = false),
@@ -117,7 +117,7 @@ class FlatMapGroupsWithStateSuite extends StateStoreMetricsTest with BeforeAndAf
     }
   }
 
-  test("GroupState - setTimeout - with ProcessingTimeTimeout") {
+  test("GroupState - setTimeout**** with ProcessingTimeTimeout") {
     // for streaming queries
     var state: GroupStateImpl[Int] = GroupStateImpl.createForStreaming(
       None, 1000, 1000, ProcessingTimeTimeout, hasTimedOut = false)
@@ -156,7 +156,7 @@ class FlatMapGroupsWithStateSuite extends StateStoreMetricsTest with BeforeAndAf
     testTimeoutTimestampNotAllowed[UnsupportedOperationException](state)
   }
 
-  test("GroupState - setTimeout - with EventTimeTimeout") {
+  test("GroupState - setTimeout**** with EventTimeTimeout") {
     var state: GroupStateImpl[Int] = GroupStateImpl.createForStreaming(
       None, 1000, 1000, EventTimeTimeout, false)
 
@@ -295,7 +295,7 @@ class FlatMapGroupsWithStateSuite extends StateStoreMetricsTest with BeforeAndAf
   val beforeTimeoutThreshold = 999
   val afterTimeoutThreshold = 1001
 
-  // Tests for InputProcessor.processNewData() when timeout = NoTimeout
+  // Tests for StateStoreUpdater.updateStateForKeysWithData() when timeout = NoTimeout
   for (priorState <- Seq(None, Some(0))) {
     val priorStateStr = if (priorState.nonEmpty) "prior state set" else "no prior state"
     val testName = s"NoTimeout - $priorStateStr - "
@@ -451,7 +451,45 @@ class FlatMapGroupsWithStateSuite extends StateStoreMetricsTest with BeforeAndAf
     }
   }
 
-  // Tests for InputProcessor.processTimedOutState()
+  // Currently disallowed cases for StateStoreUpdater.updateStateForKeysWithData(),
+  // Try to remove these cases in the future
+  for (priorTimeoutTimestamp <- Seq(NO_TIMESTAMP, 1000)) {
+    val testName =
+      if (priorTimeoutTimestamp != NO_TIMESTAMP) "prior timeout set" else "no prior timeout"
+    testStateUpdateWithData(
+      s"ProcessingTimeTimeout - $testName - setting timeout without init state not allowed",
+      stateUpdates = state => { state.setTimeoutDuration(5000) },
+      timeoutConf = ProcessingTimeTimeout,
+      priorState = None,
+      priorTimeoutTimestamp = priorTimeoutTimestamp,
+      expectedException = classOf[IllegalStateException])
+
+    testStateUpdateWithData(
+      s"ProcessingTimeTimeout - $testName - setting timeout with state removal not allowed",
+      stateUpdates = state => { state.remove(); state.setTimeoutDuration(5000) },
+      timeoutConf = ProcessingTimeTimeout,
+      priorState = Some(5),
+      priorTimeoutTimestamp = priorTimeoutTimestamp,
+      expectedException = classOf[IllegalStateException])
+
+    testStateUpdateWithData(
+      s"EventTimeTimeout - $testName - setting timeout without init state not allowed",
+      stateUpdates = state => { state.setTimeoutTimestamp(10000) },
+      timeoutConf = EventTimeTimeout,
+      priorState = None,
+      priorTimeoutTimestamp = priorTimeoutTimestamp,
+      expectedException = classOf[IllegalStateException])
+
+    testStateUpdateWithData(
+      s"EventTimeTimeout - $testName - setting timeout with state removal not allowed",
+      stateUpdates = state => { state.remove(); state.setTimeoutTimestamp(10000) },
+      timeoutConf = EventTimeTimeout,
+      priorState = Some(5),
+      priorTimeoutTimestamp = priorTimeoutTimestamp,
+      expectedException = classOf[IllegalStateException])
+  }
+
+  // Tests for StateStoreUpdater.updateStateForTimedOutKeys()
   val preTimeoutState = Some(5)
   for (timeoutConf <- Seq(ProcessingTimeTimeout, EventTimeTimeout)) {
     testStateUpdateWithTimeout(
@@ -995,9 +1033,9 @@ class FlatMapGroupsWithStateSuite extends StateStoreMetricsTest with BeforeAndAf
     // Call updating function to update state store
     def callFunction() = {
       val returnedIter = if (testTimeoutUpdates) {
-        inputProcessor.processTimedOutState()
+        updater.updateStateForTimedOutKeys()
       } else {
-        inputProcessor.processNewData(Iterator(key))
+        updater.updateStateForKeysWithData(Iterator(key))
       }
       returnedIter.size // consume the iterator to force state updates
     }
@@ -1008,11 +1046,15 @@ class FlatMapGroupsWithStateSuite extends StateStoreMetricsTest with BeforeAndAf
     } else {
       // Call function to update and verify updated state in store
       callFunction()
-      val updatedState = stateManager.getState(store, key)
-      assert(Option(updatedState.stateObj).map(_.toString.toInt) === expectedState,
+      val updatedStateRow = store.get(key)
+      assert(
+        updater.getStateObj(updatedStateRow).map(_.toString.toInt) === expectedState,
         "final state not as expected")
-      assert(updatedState.timeoutTimestamp === expectedTimeoutTimestamp,
-        "final timeout timestamp not as expected")
+      if (updatedStateRow.nonEmpty) {
+        assert(
+          updater.getTimeoutTimestamp(updatedStateRow.get) === expectedTimeoutTimestamp,
+          "final timeout timestamp not as expected")
+      }
     }
   }
 

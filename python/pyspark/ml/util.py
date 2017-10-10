@@ -136,8 +136,9 @@ class MLWriter(BaseReadWrite):
 
     def saveImpl(self, path):
         """
-        save() handles overwriting and then calls this method.  Subclasses should override this
-        method to implement the actual saving of the instance.
+        Sets the SQL context to use for saving.
+
+        .. note:: Deprecated in 2.1 and will be removed in 3.0, use session instead.
         """
         raise NotImplementedError("MLWriter is not yet implemented for type: %s" % type(self))
 
@@ -226,6 +227,18 @@ class MLReader(BaseReadWrite):
 
     def load(self, path):
         """Load the ML instance from the input path."""
+        raise NotImplementedError("MLReader is not yet implemented for type: %s" % type(self))
+
+    def context(self, sqlContext):
+        """
+        Sets the SQL context to use for loading.
+
+        .. note:: Deprecated in 2.1 and will be removed in 3.0, use session instead.
+        """
+        raise NotImplementedError("MLReader is not yet implemented for type: %s" % type(self))
+
+    def session(self, sparkSession):
+        """Sets the Spark Session to use for loading."""
         raise NotImplementedError("MLReader is not yet implemented for type: %s" % type(self))
 
 

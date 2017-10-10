@@ -141,9 +141,26 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
    *
    * @param sc Used to stop the SparkContext in case the listener thread dies.
    */
-  def start(sc: SparkContext, metricsSystem: MetricsSystem): Unit = synchronized {
-    if (!started.compareAndSet(false, true)) {
-      throw new IllegalStateException("LiveListenerBus already started.")
+  def start(): Unit = {
+    if (started.compareAndSet(false, true)) {
+      listenerThread.start()
+    } else {
+      throw new IllegalStateException(s"$name already started!")
+    }
+  }
+
+  def post(event: SparkListenerEvent): Unit = {
+    if (stopped.get) {
+      // Drop further events to make `listenerThread` exit ASAP
+      logDebug(s"$name has already stopped! Dropping event $event")
+      return
+    }
+    val eventAdded = eventQueue.offer(event)
+    if (eventAdded) {
+      eventLock.release()
+    } else {
+      onDropEvent(event)
+      droppedEventsCounter.incrementAndGet()
     }
 
     this.sparkContext = sc

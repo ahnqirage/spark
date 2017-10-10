@@ -70,11 +70,7 @@ class YarnShuffleIntegrationSuite extends BaseYarnClusterSuite {
     val finalState = runSpark(
       false,
       mainClassName(YarnExternalShuffleDriver.getClass),
-      appArgs = if (registeredExecFile != null) {
-        Seq(result.getAbsolutePath, registeredExecFile.getAbsolutePath)
-      } else {
-        Seq(result.getAbsolutePath)
-      },
+      appArgs = Seq(result.getAbsolutePath(), registeredExecFile.getAbsolutePath),
       extraConf = extraSparkConf()
     )
     checkResult(finalState, result)

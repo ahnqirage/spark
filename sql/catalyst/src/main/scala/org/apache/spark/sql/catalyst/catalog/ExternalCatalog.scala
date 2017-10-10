@@ -106,10 +106,8 @@ abstract class ExternalCatalog
   final def createTable(tableDefinition: CatalogTable, ignoreIfExists: Boolean): Unit = {
     val db = tableDefinition.database
     val name = tableDefinition.identifier.table
-    val tableDefinitionWithVersion =
-      tableDefinition.copy(createVersion = org.apache.spark.SPARK_VERSION)
     postToAll(CreateTablePreEvent(db, name))
-    doCreateTable(tableDefinitionWithVersion, ignoreIfExists)
+    doCreateTable(tableDefinition, ignoreIfExists)
     postToAll(CreateTableEvent(db, name))
   }
 
@@ -164,8 +162,6 @@ abstract class ExternalCatalog
 
   /** Alter the statistics of a table. If `stats` is None, then remove all existing statistics. */
   def alterTableStats(db: String, table: String, stats: Option[CatalogStatistics]): Unit
-
-  def getTable(db: String, table: String): CatalogTable
 
   def tableExists(db: String, table: String): Boolean
 
@@ -331,15 +327,6 @@ abstract class ExternalCatalog
   }
 
   protected def doDropFunction(db: String, funcName: String): Unit
-
-  final def alterFunction(db: String, funcDefinition: CatalogFunction): Unit = {
-    val name = funcDefinition.identifier.funcName
-    postToAll(AlterFunctionPreEvent(db, name))
-    doAlterFunction(db, funcDefinition)
-    postToAll(AlterFunctionEvent(db, name))
-  }
-
-  protected def doAlterFunction(db: String, funcDefinition: CatalogFunction): Unit
 
   final def renameFunction(db: String, oldName: String, newName: String): Unit = {
     postToAll(RenameFunctionPreEvent(db, oldName, newName))

@@ -76,22 +76,6 @@ class StreamSuite extends StreamTest {
       CheckAnswer(Row(1, 1, "one"), Row(2, 2, "two"), Row(4, 4, "four")))
   }
 
-
-  test("explain join") {
-    // Make a table and ensure it will be broadcast.
-    val smallTable = Seq((1, "one"), (2, "two"), (4, "four")).toDF("number", "word")
-
-    // Join the input stream with a table.
-    val inputData = MemoryStream[Int]
-    val joined = inputData.toDF().join(smallTable, smallTable("number") === $"value")
-
-    val outputStream = new java.io.ByteArrayOutputStream()
-    Console.withOut(outputStream) {
-      joined.explain()
-    }
-    assert(outputStream.toString.contains("StreamingRelation"))
-  }
-
   test("SPARK-20432: union one stream with itself") {
     val df = spark.readStream.format(classOf[FakeDefaultSource].getName).load().select("a")
     val unioned = df.union(df)
@@ -636,105 +620,6 @@ class StreamSuite extends StreamTest {
     query.processAllAvailable()
     assertDescContainsQueryNameAnd(batch = 2)
     query.stop()
-  }
-
-  test("should resolve the checkpoint path") {
-    withTempDir { dir =>
-      val checkpointLocation = dir.getCanonicalPath
-      assert(!checkpointLocation.startsWith("file:/"))
-      val query = MemoryStream[Int].toDF
-        .writeStream
-        .option("checkpointLocation", checkpointLocation)
-        .format("console")
-        .start()
-      try {
-        val resolvedCheckpointDir =
-          query.asInstanceOf[StreamingQueryWrapper].streamingQuery.resolvedCheckpointRoot
-        assert(resolvedCheckpointDir.startsWith("file:/"))
-      } finally {
-        query.stop()
-      }
-    }
-  }
-
-  testQuietly("specify custom state store provider") {
-    val providerClassName = classOf[TestStateStoreProvider].getCanonicalName
-    withSQLConf("spark.sql.streaming.stateStore.providerClass" -> providerClassName) {
-      val input = MemoryStream[Int]
-      val df = input.toDS().groupBy().count()
-      val query = df.writeStream.outputMode("complete").format("memory").queryName("name").start()
-      input.addData(1, 2, 3)
-      val e = intercept[Exception] {
-        query.awaitTermination()
-      }
-
-      assert(e.getMessage.contains(providerClassName))
-      assert(e.getMessage.contains("instantiated"))
-    }
-  }
-
-  testQuietly("custom state store provider read from offset log") {
-    val input = MemoryStream[Int]
-    val df = input.toDS().groupBy().count()
-    val providerConf1 = "spark.sql.streaming.stateStore.providerClass" ->
-      "org.apache.spark.sql.execution.streaming.state.HDFSBackedStateStoreProvider"
-    val providerConf2 = "spark.sql.streaming.stateStore.providerClass" ->
-      classOf[TestStateStoreProvider].getCanonicalName
-
-    def runQuery(queryName: String, checkpointLoc: String): Unit = {
-      val query = df.writeStream
-        .outputMode("complete")
-        .format("memory")
-        .queryName(queryName)
-        .option("checkpointLocation", checkpointLoc)
-        .start()
-      input.addData(1, 2, 3)
-      query.processAllAvailable()
-      query.stop()
-    }
-
-    withTempDir { dir =>
-      val checkpointLoc1 = new File(dir, "1").getCanonicalPath
-      withSQLConf(providerConf1) {
-        runQuery("query1", checkpointLoc1)  // generate checkpoints
-      }
-
-      val checkpointLoc2 = new File(dir, "2").getCanonicalPath
-      withSQLConf(providerConf2) {
-        // Verify new query will use new provider that throw error on loading
-        intercept[Exception] {
-          runQuery("query2", checkpointLoc2)
-        }
-
-        // Verify old query from checkpoint will still use old provider
-        runQuery("query1", checkpointLoc1)
-      }
-    }
-  }
-
-  for (e <- Seq(
-    new InterruptedException,
-    new InterruptedIOException,
-    new ClosedByInterruptException,
-    new UncheckedIOException("test", new ClosedByInterruptException),
-    new ExecutionException("test", new InterruptedException),
-    new UncheckedExecutionException("test", new InterruptedException))) {
-    test(s"view ${e.getClass.getSimpleName} as a normal query stop") {
-      ThrowingExceptionInCreateSource.createSourceLatch = new CountDownLatch(1)
-      ThrowingExceptionInCreateSource.exception = e
-      val query = spark
-        .readStream
-        .format(classOf[ThrowingExceptionInCreateSource].getName)
-        .load()
-        .writeStream
-        .format("console")
-        .start()
-      assert(ThrowingExceptionInCreateSource.createSourceLatch
-        .await(streamingTimeout.toMillis, TimeUnit.MILLISECONDS),
-        "ThrowingExceptionInCreateSource.createSource wasn't called before timeout")
-      query.stop()
-      assert(query.exception.isEmpty)
-    }
   }
 }
 

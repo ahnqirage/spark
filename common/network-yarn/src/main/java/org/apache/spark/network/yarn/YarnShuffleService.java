@@ -342,12 +342,11 @@ public class YarnShuffleService extends AuxiliaryService {
    * and DB exists in the local dir of NM by old version of shuffle service.
    */
   protected File initRecoveryDb(String dbName) {
-    Preconditions.checkNotNull(_recoveryPath,
-      "recovery path should not be null if NM recovery is enabled");
-
-    File recoveryFile = new File(_recoveryPath.toUri().getPath(), dbName);
-    if (recoveryFile.exists()) {
-      return recoveryFile;
+    if (_recoveryPath != null) {
+        File recoveryFile = new File(_recoveryPath.toUri().getPath(), dbName);
+        if (recoveryFile.exists()) {
+          return recoveryFile;
+        }
     }
 
     // db doesn't exist in recovery path go check local dirs for it
@@ -355,24 +354,32 @@ public class YarnShuffleService extends AuxiliaryService {
     for (String dir : localDirs) {
       File f = new File(new Path(dir).toUri().getPath(), dbName);
       if (f.exists()) {
-        // If the recovery path is set then either NM recovery is enabled or another recovery
-        // DB has been initialized. If NM recovery is enabled and had set the recovery path
-        // make sure to move all DBs to the recovery path from the old NM local dirs.
-        // If another DB was initialized first just make sure all the DBs are in the same
-        // location.
-        Path newLoc = new Path(_recoveryPath, dbName);
-        Path copyFrom = new Path(f.toURI());
-        if (!newLoc.equals(copyFrom)) {
-          logger.info("Moving " + copyFrom + " to: " + newLoc);
-          try {
-            // The move here needs to handle moving non-empty directories across NFS mounts
-            FileSystem fs = FileSystem.getLocal(_conf);
-            fs.rename(copyFrom, newLoc);
-          } catch (Exception e) {
-            // Fail to move recovery file to new path, just continue on with new DB location
-            logger.error("Failed to move recovery file {} to the path {}",
-              dbName, _recoveryPath.toString(), e);
+        if (_recoveryPath == null) {
+          // If NM recovery is not enabled, we should specify the recovery path using NM local
+          // dirs, which is compatible with the old code.
+          _recoveryPath = new Path(dir);
+          return f;
+        } else {
+          // If the recovery path is set then either NM recovery is enabled or another recovery
+          // DB has been initialized. If NM recovery is enabled and had set the recovery path
+          // make sure to move all DBs to the recovery path from the old NM local dirs.
+          // If another DB was initialized first just make sure all the DBs are in the same
+          // location.
+          Path newLoc = new Path(_recoveryPath, dbName);
+          Path copyFrom = new Path(f.toURI());
+          if (!newLoc.equals(copyFrom)) {
+            logger.info("Moving " + copyFrom + " to: " + newLoc);
+            try {
+              // The move here needs to handle moving non-empty directories across NFS mounts
+              FileSystem fs = FileSystem.getLocal(_conf);
+              fs.rename(copyFrom, newLoc);
+            } catch (Exception e) {
+              // Fail to move recovery file to new path, just continue on with new DB location
+              logger.error("Failed to move recovery file {} to the path {}",
+                dbName, _recoveryPath.toString(), e);
+            }
           }
+          return new File(newLoc.toUri().getPath());
         }
         return new File(newLoc.toUri().getPath());
       }

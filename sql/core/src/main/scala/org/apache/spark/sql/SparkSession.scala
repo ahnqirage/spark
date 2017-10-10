@@ -871,7 +871,7 @@ object SparkSession {
      *
      * @since 2.2.0
      */
-    def withExtensions(f: SparkSessionExtensions => Unit): Builder = synchronized {
+    def withExtensions(f: SparkSessionExtensions => Unit): Builder = {
       f(extensions)
       this
     }
@@ -926,6 +926,24 @@ object SparkSession {
 
           SparkContext.getOrCreate(sparkConf)
           // Do not update `SparkConf` for existing `SparkContext`, as it's shared by all sessions.
+        }
+
+        // Initialize extensions if the user has defined a configurator class.
+        val extensionConfOption = sparkContext.conf.get(StaticSQLConf.SPARK_SESSION_EXTENSIONS)
+        if (extensionConfOption.isDefined) {
+          val extensionConfClassName = extensionConfOption.get
+          try {
+            val extensionConfClass = Utils.classForName(extensionConfClassName)
+            val extensionConf = extensionConfClass.newInstance()
+              .asInstanceOf[SparkSessionExtensions => Unit]
+            extensionConf(extensions)
+          } catch {
+            // Ignore the error if we cannot find the class or when the class has the wrong type.
+            case e @ (_: ClassCastException |
+                      _: ClassNotFoundException |
+                      _: NoClassDefFoundError) =>
+              logWarning(s"Cannot use $extensionConfClassName to configure session extensions.", e)
+          }
         }
 
         // Initialize extensions if the user has defined a configurator class.

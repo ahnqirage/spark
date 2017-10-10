@@ -17,8 +17,8 @@
 
 package org.apache.spark.sql.catalyst.parser
 
-import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
-import org.apache.spark.sql.catalyst.analysis.{AnalysisTest, UnresolvedAttribute, UnresolvedFunction, UnresolvedGenerator, UnresolvedInlineTable, UnresolvedRelation, UnresolvedSubqueryColumnAliases, UnresolvedTableValuedFunction}
+import org.apache.spark.sql.catalyst.FunctionIdentifier
+import org.apache.spark.sql.catalyst.analysis.{UnresolvedAttribute, UnresolvedFunction, UnresolvedGenerator, UnresolvedInlineTable, UnresolvedTableValuedFunction}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -650,24 +650,6 @@ class PlanParserSuite extends AnalysisTest {
           )
         )
       )
-    )
-  }
-
-  test("TRIM function") {
-    intercept("select ltrim(both 'S' from 'SS abc S'", "missing ')' at '<EOF>'")
-    intercept("select rtrim(trailing 'S' from 'SS abc S'", "missing ')' at '<EOF>'")
-
-    assertEqual(
-      "SELECT TRIM(BOTH '@$%&( )abc' FROM '@ $ % & ()abc ' )",
-        OneRowRelation().select('TRIM.function("@$%&( )abc", "@ $ % & ()abc "))
-    )
-    assertEqual(
-      "SELECT TRIM(LEADING 'c []' FROM '[ ccccbcc ')",
-        OneRowRelation().select('ltrim.function("c []", "[ ccccbcc "))
-    )
-    assertEqual(
-      "SELECT TRIM(TRAILING 'c&^,.' FROM 'bc...,,,&&&ccc')",
-      OneRowRelation().select('rtrim.function("c&^,.", "bc...,,,&&&ccc"))
     )
   }
 }

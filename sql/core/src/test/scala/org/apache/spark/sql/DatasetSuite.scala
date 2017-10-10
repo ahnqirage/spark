@@ -1327,20 +1327,6 @@ class DatasetSuite extends QueryTest with SharedSQLContext {
     checkAnswer(df.orderBy($"id"), expected)
     checkAnswer(df.orderBy('id), expected)
   }
-
-  test("SPARK-21567: Dataset should work with type alias") {
-    checkDataset(
-      Seq(1).toDS().map(_ => ("", TestForTypeAlias.tupleTypeAlias)),
-      ("", (1, 1)))
-
-    checkDataset(
-      Seq(1).toDS().map(_ => ("", TestForTypeAlias.nestedTupleTypeAlias)),
-      ("", ((1, 1), 2)))
-
-    checkDataset(
-      Seq(1).toDS().map(_ => ("", TestForTypeAlias.seqOfTupleTypeAlias)),
-      ("", Seq((1, 1), (2, 2))))
-  }
 }
 
 case class WithImmutableMap(id: String, map_test: scala.collection.immutable.Map[Long, String])

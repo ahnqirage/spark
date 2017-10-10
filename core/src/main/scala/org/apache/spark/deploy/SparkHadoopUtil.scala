@@ -23,9 +23,7 @@ import java.text.DateFormat
 import java.util.{Arrays, Comparator, Date, Locale}
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Map
 import scala.collection.mutable
-import scala.collection.mutable.HashMap
 import scala.util.control.NonFatal
 
 import com.google.common.primitives.Longs
@@ -401,21 +399,6 @@ class SparkHadoopUtil extends Logging {
       s"path=${status.getPath}:${status.getOwner}:${status.getGroup}" +
       s"${if (status.isDirectory) "d" else "-"}$perm")
     false
-  }
-
-  def serialize(creds: Credentials): Array[Byte] = {
-    val byteStream = new ByteArrayOutputStream
-    val dataStream = new DataOutputStream(byteStream)
-    creds.writeTokenStorageToStream(dataStream)
-    byteStream.toByteArray
-  }
-
-  def deserialize(tokenBytes: Array[Byte]): Credentials = {
-    val tokensBuf = new ByteArrayInputStream(tokenBytes)
-
-    val creds = new Credentials()
-    creds.readTokenStorageStream(new DataInputStream(tokensBuf))
-    creds
   }
 }
 

@@ -20,6 +20,7 @@ package org.apache.spark.sql.streaming
 import java.util.UUID
 
 import scala.collection.mutable
+import scala.concurrent.duration._
 import scala.language.reflectiveCalls
 
 import org.scalactic.TolerantNumerics

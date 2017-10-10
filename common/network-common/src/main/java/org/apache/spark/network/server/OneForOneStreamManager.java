@@ -101,23 +101,16 @@ public class OneForOneStreamManager extends StreamManager {
 
   @Override
   public ManagedBuffer openStream(String streamChunkId) {
-    Pair<Long, Integer> streamChunkIdPair = parseStreamChunkId(streamChunkId);
-    return getChunk(streamChunkIdPair.getLeft(), streamChunkIdPair.getRight());
+    String[] array = streamChunkId.split("_");
+    assert array.length == 2:
+      "Stream id and chunk index should be specified when open stream for fetching block.";
+    long streamId = Long.valueOf(array[0]);
+    int chunkIndex = Integer.valueOf(array[1]);
+    return getChunk(streamId, chunkIndex);
   }
 
   public static String genStreamChunkId(long streamId, int chunkId) {
     return String.format("%d_%d", streamId, chunkId);
-  }
-
-  // Parse streamChunkId to be stream id and chunk id. This is used when fetch remote chunk as a
-  // stream.
-  public static Pair<Long, Integer> parseStreamChunkId(String streamChunkId) {
-    String[] array = streamChunkId.split("_");
-    assert array.length == 2:
-      "Stream id and chunk index should be specified.";
-    long streamId = Long.valueOf(array[0]);
-    int chunkIndex = Integer.valueOf(array[1]);
-    return ImmutablePair.of(streamId, chunkIndex);
   }
 
   @Override

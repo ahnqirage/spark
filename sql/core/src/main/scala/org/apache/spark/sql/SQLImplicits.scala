@@ -167,20 +167,6 @@ abstract class SQLImplicits extends LowPrioritySQLImplicits {
   /** @since 2.2.0 */
   implicit def newSequenceEncoder[T <: Seq[_] : TypeTag]: Encoder[T] = ExpressionEncoder()
 
-  // Maps
-  /** @since 2.3.0 */
-  implicit def newMapEncoder[T <: Map[_, _] : TypeTag]: Encoder[T] = ExpressionEncoder()
-
-  /**
-   * Notice that we serialize `Set` to Catalyst array. The set property is only kept when
-   * manipulating the domain objects. The serialization format doesn't keep the set property.
-   * When we have a Catalyst array which contains duplicated elements and convert it to
-   * `Dataset[Set[T]]` by using the encoder, the elements will be de-duplicated.
-   *
-   * @since 2.3.0
-   */
-  implicit def newSetEncoder[T <: Set[_] : TypeTag]: Encoder[T] = ExpressionEncoder()
-
   // Arrays
 
   /** @since 1.6.1 */

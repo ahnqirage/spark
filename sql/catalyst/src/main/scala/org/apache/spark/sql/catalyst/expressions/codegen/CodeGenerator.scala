@@ -28,6 +28,7 @@ import scala.util.control.NonFatal
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import com.google.common.util.concurrent.{ExecutionError, UncheckedExecutionException}
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.codehaus.commons.compiler.CompileException
 import org.codehaus.janino.{ByteArrayClassLoader, ClassBodyEvaluator, JaninoRuntimeException, SimpleCompiler}
 import org.codehaus.janino.util.ClassFile
@@ -1015,7 +1016,7 @@ object CodeGenerator extends Logging {
    *
    * @return a pair of a generated class and the max bytecode size of generated functions.
    */
-  def compile(code: CodeAndComment): (GeneratedClass, Int) = try {
+  def compile(code: CodeAndComment): GeneratedClass = try {
     cache.get(code)
   } catch {
     // Cache.get() may wrap the original exception. See the following URL
@@ -1072,16 +1073,12 @@ object CodeGenerator extends Logging {
       updateAndGetCompilationStats(evaluator)
     } catch {
       case e: JaninoRuntimeException =>
-        val msg = s"failed to compile: $e"
+        val msg = s"failed to compile: $e\n$formatted"
         logError(msg, e)
-        val maxLines = SQLConf.get.loggingMaxLinesForCodegen
-        logInfo(s"\n${CodeFormatter.format(code, maxLines)}")
         throw new JaninoRuntimeException(msg, e)
       case e: CompileException =>
-        val msg = s"failed to compile: $e"
+        val msg = s"failed to compile: $e\n$formatted"
         logError(msg, e)
-        val maxLines = SQLConf.get.loggingMaxLinesForCodegen
-        logInfo(s"\n${CodeFormatter.format(code, maxLines)}")
         throw new CompileException(msg, e.getLocation)
     }
 

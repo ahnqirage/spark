@@ -302,15 +302,6 @@ package object config {
       .booleanConf
       .createWithDefault(false)
 
-  private[spark] val BUFFER_WRITE_CHUNK_SIZE =
-    ConfigBuilder("spark.buffer.write.chunkSize")
-      .internal()
-      .doc("The chunk size during writing out the bytes of ChunkedByteBuffer.")
-      .bytesConf(ByteUnit.BYTE)
-      .checkValue(_ <= Int.MaxValue, "The chunk size during writing out the bytes of" +
-        " ChunkedByteBuffer should not larger than Int.MaxValue.")
-      .createWithDefault(64 * 1024 * 1024)
-
   private[spark] val CHECKPOINT_COMPRESS =
     ConfigBuilder("spark.checkpoint.compress")
       .doc("Whether to compress RDD checkpoints. Generally a good idea. Compression will use " +
@@ -325,19 +316,6 @@ package object config {
         "avoiding underestimating shuffle block size when fetch shuffle blocks.")
       .bytesConf(ByteUnit.BYTE)
       .createWithDefault(100 * 1024 * 1024)
-
-  private[spark] val SHUFFLE_REGISTRATION_TIMEOUT =
-    ConfigBuilder("spark.shuffle.registration.timeout")
-      .doc("Timeout in milliseconds for registration to the external shuffle service.")
-      .timeConf(TimeUnit.MILLISECONDS)
-      .createWithDefault(5000)
-
-  private[spark] val SHUFFLE_REGISTRATION_MAX_ATTEMPTS =
-    ConfigBuilder("spark.shuffle.registration.maxAttempts")
-      .doc("When we fail to register to the external shuffle service, we will " +
-        "retry for maxAttempts times.")
-      .intConf
-      .createWithDefault(3)
 
   private[spark] val REDUCER_MAX_BLOCKS_IN_FLIGHT_PER_ADDRESS =
     ConfigBuilder("spark.reducer.maxBlocksInFlightPerAddress")
@@ -359,64 +337,4 @@ package object config {
         " service is disabled.")
       .bytesConf(ByteUnit.BYTE)
       .createWithDefault(Long.MaxValue)
-
-  private[spark] val TASK_METRICS_TRACK_UPDATED_BLOCK_STATUSES =
-    ConfigBuilder("spark.taskMetrics.trackUpdatedBlockStatuses")
-      .doc("Enable tracking of updatedBlockStatuses in the TaskMetrics. Off by default since " +
-        "tracking the block statuses can use a lot of memory and its not used anywhere within " +
-        "spark.")
-      .booleanConf
-      .createWithDefault(false)
-
-  private[spark] val SHUFFLE_FILE_BUFFER_SIZE =
-    ConfigBuilder("spark.shuffle.file.buffer")
-      .doc("Size of the in-memory buffer for each shuffle file output stream. " +
-        "These buffers reduce the number of disk seeks and system calls made " +
-        "in creating intermediate shuffle files.")
-      .bytesConf(ByteUnit.KiB)
-      .checkValue(v => v > 0 && v <= Int.MaxValue / 1024,
-        s"The file buffer size must be greater than 0 and less than ${Int.MaxValue / 1024}.")
-      .createWithDefaultString("32k")
-
-  private[spark] val SHUFFLE_UNSAFE_FILE_OUTPUT_BUFFER_SIZE =
-    ConfigBuilder("spark.shuffle.unsafe.file.output.buffer")
-      .doc("The file system for this buffer size after each partition " +
-        "is written in unsafe shuffle writer.")
-      .bytesConf(ByteUnit.KiB)
-      .checkValue(v => v > 0 && v <= Int.MaxValue / 1024,
-        s"The buffer size must be greater than 0 and less than ${Int.MaxValue / 1024}.")
-      .createWithDefaultString("32k")
-
-  private[spark] val SHUFFLE_DISK_WRITE_BUFFER_SIZE =
-    ConfigBuilder("spark.shuffle.spill.diskWriteBufferSize")
-      .doc("The buffer size to use when writing the sorted records to an on-disk file.")
-      .bytesConf(ByteUnit.BYTE)
-      .checkValue(v => v > 0 && v <= Int.MaxValue,
-        s"The buffer size must be greater than 0 and less than ${Int.MaxValue}.")
-      .createWithDefault(1024 * 1024)
-
-  private[spark] val UNROLL_MEMORY_CHECK_PERIOD =
-    ConfigBuilder("spark.storage.unrollMemoryCheckPeriod")
-      .internal()
-      .doc("The memory check period is used to determine how often we should check whether "
-        + "there is a need to request more memory when we try to unroll the given block in memory.")
-      .longConf
-      .createWithDefault(16)
-
-  private[spark] val UNROLL_MEMORY_GROWTH_FACTOR =
-    ConfigBuilder("spark.storage.unrollMemoryGrowthFactor")
-      .internal()
-      .doc("Memory to request as a multiple of the size that used to unroll the block.")
-      .doubleConf
-      .createWithDefault(1.5)
-
-  private[spark] val FORCE_DOWNLOAD_SCHEMES =
-    ConfigBuilder("spark.yarn.dist.forceDownloadSchemes")
-      .doc("Comma-separated list of schemes for which files will be downloaded to the " +
-        "local disk prior to being added to YARN's distributed cache. For use in cases " +
-        "where the YARN service does not support schemes that are supported by Spark, like http, " +
-        "https and ftp.")
-      .stringConf
-      .toSequence
-      .createWithDefault(Nil)
 }

@@ -79,19 +79,8 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
   }
 
   /**
-   * Registers a user-defined function (UDF), for a UDF that's already defined using the Dataset
-   * API (i.e. of type UserDefinedFunction). To change a UDF to nondeterministic, call the API
-   * `UserDefinedFunction.asNondeterministic()`. To change a UDF to nonNullable, call the API
-   * `UserDefinedFunction.asNonNullable()`.
-   *
-   * Example:
-   * {{{
-   *   val foo = udf(() => Math.random())
-   *   spark.udf.register("random", foo.asNondeterministic())
-   *
-   *   val bar = udf(() => "bar")
-   *   spark.udf.register("stringLit", bar.asNonNullable())
-   * }}}
+   * Register a user-defined function (UDF), for a UDF that's already defined using the DataFrame
+   * API (i.e. of type UserDefinedFunction).
    *
    * @param name the name of the UDF.
    * @param udf the UDF needs to be registered.
@@ -101,7 +90,7 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
    */
   def register(name: String, udf: UserDefinedFunction): UserDefinedFunction = {
     def builder(children: Seq[Expression]) = udf.apply(children.map(Column.apply) : _*).expr
-    functionRegistry.createOrReplaceTempFunction(name, builder)
+    functionRegistry.registerFunction(name, builder)
     udf
   }
 

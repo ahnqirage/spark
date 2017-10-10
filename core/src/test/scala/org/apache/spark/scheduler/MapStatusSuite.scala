@@ -25,7 +25,6 @@ import org.mockito.Mockito._
 import org.roaringbitmap.RoaringBitmap
 
 import org.apache.spark.{SparkConf, SparkContext, SparkEnv, SparkFunSuite}
-import org.apache.spark.LocalSparkContext._
 import org.apache.spark.internal.config
 import org.apache.spark.serializer.{JavaSerializer, KryoSerializer}
 import org.apache.spark.storage.BlockManagerId
@@ -161,9 +160,12 @@ class MapStatusSuite extends SparkFunSuite {
       .set("spark.serializer", classOf[KryoSerializer].getName)
       .setMaster("local")
       .setAppName("SPARK-21133")
-    withSpark(new SparkContext(conf)) { sc =>
+    val sc = new SparkContext(conf)
+    try {
       val count = sc.parallelize(0 until 3000, 10).repartition(2001).collect().length
       assert(count === 3000)
+    } finally {
+      sc.stop()
     }
   }
 }

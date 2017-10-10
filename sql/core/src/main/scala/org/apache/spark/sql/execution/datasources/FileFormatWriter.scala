@@ -106,7 +106,7 @@ object FileFormatWriter extends Logging {
       committer: FileCommitProtocol,
       outputSpec: OutputSpec,
       hadoopConf: Configuration,
-      partitionColumns: Seq[Attribute],
+      partitionColumnNames: Seq[String],
       bucketSpec: Option[BucketSpec],
       statsTrackers: Seq[WriteJobStatsTracker],
       options: Map[String, String])
@@ -117,7 +117,16 @@ object FileFormatWriter extends Logging {
     job.setOutputValueClass(classOf[InternalRow])
     FileOutputFormat.setOutputPath(job, new Path(outputSpec.outputPath))
 
-    val allColumns = plan.output
+    val allColumns = queryExecution.executedPlan.output
+    // Get the actual partition columns as attributes after matching them by name with
+    // the given columns names.
+    val partitionColumns = partitionColumnNames.map { col =>
+      val nameEquality = sparkSession.sessionState.conf.resolver
+      allColumns.find(f => nameEquality(f.name, col)).getOrElse {
+        throw new RuntimeException(
+          s"Partition column $col not found in schema ${queryExecution.executedPlan.schema}")
+      }
+    }
     val partitionSet = AttributeSet(partitionColumns)
     val dataColumns = allColumns.filterNot(partitionSet.contains)
 

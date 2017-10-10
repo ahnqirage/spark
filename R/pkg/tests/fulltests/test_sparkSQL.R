@@ -2236,11 +2236,6 @@ test_that("join(), crossJoin() and merge() on a DataFrame", {
     explain(join(df1, hint(df2, "broadcast"), df1$id == df2$id))
   )
   expect_true(any(grepl("BroadcastHashJoin", execution_plan_hint)))
-
-  execution_plan_broadcast <- capture.output(
-    explain(join(df1, broadcast(df2), df1$id == df2$id))
-  )
-  expect_true(any(grepl("BroadcastHashJoin", execution_plan_broadcast)))
 })
 
 test_that("toJSON() on DataFrame", {
@@ -3078,6 +3073,20 @@ test_that("gapply() and gapplyCollect() on a DataFrame", {
   # gapply on empty grouping columns.
   df1 <- gapply(df, c(), function(key, x) { x }, schema(df))
   actual <- collect(df1)
+  expect_identical(actual, expected)
+
+  # Computes the sum of second column by grouping on the first and third columns
+  # and checks if the sum is larger than 2
+  schema <- structType(structField("a", "integer"), structField("e", "boolean"))
+  df2 <- gapply(
+    df,
+    c(df$"a", df$"c"),
+    function(key, x) {
+      y <- data.frame(key[1], sum(x$b) > 2)
+    },
+    schema)
+  actual <- collect(df2)$e
+  expected <- c(TRUE, TRUE)
   expect_identical(actual, expected)
 
   # Computes the sum of second column by grouping on the first and third columns

@@ -34,7 +34,7 @@ import org.apache.spark.ml._
 import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.param.{Param, ParamMap, ParamPair, Params}
-import org.apache.spark.ml.param.shared.{HasParallelism, HasWeightCol}
+import org.apache.spark.ml.param.shared.HasWeightCol
 import org.apache.spark.ml.util._
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.functions._
@@ -298,17 +298,6 @@ final class OneVsRest @Since("1.4.0") (
   def setPredictionCol(value: String): this.type = set(predictionCol, value)
 
   /**
-   * The implementation of parallel one vs. rest runs the classification for
-   * each class in a separate threads.
-   *
-   * @group expertSetParam
-   */
-  @Since("2.3.0")
-  def setParallelism(value: Int): this.type = {
-    set(parallelism, value)
-  }
-
-  /**
    * Sets the value of param [[weightCol]].
    *
    * This is ignored if weight is not supported by [[classifier]].
@@ -378,18 +367,14 @@ final class OneVsRest @Since("1.4.0") (
       paramMap.put(classifier.labelCol -> labelColName)
       paramMap.put(classifier.featuresCol -> getFeaturesCol)
       paramMap.put(classifier.predictionCol -> getPredictionCol)
-      Future {
-        if (weightColIsUsed) {
-          val classifier_ = classifier.asInstanceOf[ClassifierType with HasWeightCol]
-          paramMap.put(classifier_.weightCol -> getWeightCol)
-          classifier_.fit(trainingDataset, paramMap)
-        } else {
-          classifier.fit(trainingDataset, paramMap)
-        }
-      }(executionContext)
-    }
-    val models = modelFutures
-      .map(ThreadUtils.awaitResult(_, Duration.Inf)).toArray[ClassificationModel[_, _]]
+      if (weightColIsUsed) {
+        val classifier_ = classifier.asInstanceOf[ClassifierType with HasWeightCol]
+        paramMap.put(classifier_.weightCol -> getWeightCol)
+        classifier_.fit(trainingDataset, paramMap)
+      } else {
+        classifier.fit(trainingDataset, paramMap)
+      }
+    }.toArray[ClassificationModel[_, _]]
     instr.logNumFeatures(models.head.numFeatures)
 
     if (handlePersistence) {

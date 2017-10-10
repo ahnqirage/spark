@@ -85,23 +85,24 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
     val buffered = new ByteArrayOutputStream
     val codec = new LZ4CompressionCodec(new SparkConf())
     val compstream = codec.compressedOutputStream(buffered)
-    Utils.tryWithResource(new PrintWriter(compstream)) { writer =>
+    val writer = new PrintWriter(compstream)
 
-      val applicationStart = SparkListenerApplicationStart("AppStarts", None,
-        125L, "Mickey", None)
-      val applicationEnd = SparkListenerApplicationEnd(1000L)
+    val applicationStart = SparkListenerApplicationStart("AppStarts", None,
+      125L, "Mickey", None)
+    val applicationEnd = SparkListenerApplicationEnd(1000L)
 
-      // scalastyle:off println
-      writer.println(compact(render(JsonProtocol.sparkEventToJson(applicationStart))))
-      writer.println(compact(render(JsonProtocol.sparkEventToJson(applicationEnd))))
-      // scalastyle:on println
-    }
+    // scalastyle:off println
+    writer.println(compact(render(JsonProtocol.sparkEventToJson(applicationStart))))
+    writer.println(compact(render(JsonProtocol.sparkEventToJson(applicationEnd))))
+    // scalastyle:on println
+    writer.close()
 
     val logFilePath = Utils.getFilePath(testDir, "events.lz4.inprogress")
+    val fstream = fileSystem.create(logFilePath)
     val bytes = buffered.toByteArray
-    Utils.tryWithResource(fileSystem.create(logFilePath)) { fstream =>
-      fstream.write(bytes, 0, buffered.size)
-    }
+
+    fstream.write(bytes, 0, buffered.size)
+    fstream.close
 
     // Read the compressed .inprogress file and verify only first event was parsed.
     val conf = EventLoggingListenerSuite.getLoggingConf(logFilePath)
@@ -112,19 +113,17 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
 
     // Verify the replay returns the events given the input maybe truncated.
     val logData = EventLoggingListener.openEventLog(logFilePath, fileSystem)
-    Utils.tryWithResource(new EarlyEOFInputStream(logData, buffered.size - 10)) { failingStream =>
-      replayer.replay(failingStream, logFilePath.toString, true)
+    val failingStream = new EarlyEOFInputStream(logData, buffered.size - 10)
+    replayer.replay(failingStream, logFilePath.toString, true)
 
-      assert(eventMonster.loggedEvents.size === 1)
-      assert(failingStream.didFail)
-    }
+    assert(eventMonster.loggedEvents.size === 1)
+    assert(failingStream.didFail)
 
     // Verify the replay throws the EOF exception since the input may not be truncated.
     val logData2 = EventLoggingListener.openEventLog(logFilePath, fileSystem)
-    Utils.tryWithResource(new EarlyEOFInputStream(logData2, buffered.size - 10)) { failingStream2 =>
-      intercept[EOFException] {
-        replayer.replay(failingStream2, logFilePath.toString, false)
-      }
+    val failingStream2 = new EarlyEOFInputStream(logData2, buffered.size - 10)
+    intercept[EOFException] {
+      replayer.replay(failingStream2, logFilePath.toString, false)
     }
   }
 
@@ -226,14 +225,12 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
     def didFail: Boolean = countDown.get == 0
 
     @throws[IOException]
-    override def read(): Int = {
+    def read: Int = {
       if (countDown.get == 0) {
         throw new EOFException("Stream ended prematurely")
       }
       countDown.decrementAndGet()
-      in.read()
+      in.read
     }
-
-    override def close(): Unit = in.close()
   }
 }

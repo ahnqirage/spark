@@ -480,6 +480,28 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       }
   }
 
+  test("SPARK-21165: the query schema of INSERT is changed after optimization") {
+    withSQLConf(("hive.exec.dynamic.partition.mode", "nonstrict")) {
+      withTable("tab1", "tab2") {
+        Seq(("a", "b", 3)).toDF("word", "first", "length").write.saveAsTable("tab1")
+
+        spark.sql(
+          """
+            |CREATE TABLE tab2 (word string, length int)
+            |PARTITIONED BY (first string)
+          """.stripMargin)
+
+        spark.sql(
+          """
+            |INSERT INTO TABLE tab2 PARTITION(first)
+            |SELECT word, length, cast(first as string) as first FROM tab1
+          """.stripMargin)
+
+        checkAnswer(spark.table("tab2"), Row("a", 3, "b"))
+      }
+    }
+  }
+
   testPartitionedTable("insertInto() should reject extra columns") {
     tableName =>
       withTable("t") {
@@ -487,53 +509,6 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
         intercept[AnalysisException] {
           spark.table("t").write.insertInto(tableName)
-        }
-      }
-  }
-
-  private def testBucketedTable(testName: String)(f: String => Unit): Unit = {
-    test(s"Hive SerDe table - $testName") {
-      val hiveTable = "hive_table"
-
-      withTable(hiveTable) {
-        withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
-          sql(
-            s"""
-               |CREATE TABLE $hiveTable (a INT, d INT)
-               |PARTITIONED BY (b INT, c INT)
-               |CLUSTERED BY(a)
-               |SORTED BY(a, d) INTO 256 BUCKETS
-               |STORED AS TEXTFILE
-            """.stripMargin)
-          f(hiveTable)
-        }
-      }
-    }
-  }
-
-  testBucketedTable("INSERT should NOT fail if strict bucketing is NOT enforced") {
-    tableName =>
-      withSQLConf("hive.enforce.bucketing" -> "false", "hive.enforce.sorting" -> "false") {
-        sql(s"INSERT INTO TABLE $tableName SELECT 1, 4, 2 AS c, 3 AS b")
-        checkAnswer(sql(s"SELECT a, b, c, d FROM $tableName"), Row(1, 2, 3, 4))
-      }
-  }
-
-  testBucketedTable("INSERT should fail if strict bucketing / sorting is enforced") {
-    tableName =>
-      withSQLConf("hive.enforce.bucketing" -> "true", "hive.enforce.sorting" -> "false") {
-        intercept[AnalysisException] {
-          sql(s"INSERT INTO TABLE $tableName SELECT 1, 2, 3, 4")
-        }
-      }
-      withSQLConf("hive.enforce.bucketing" -> "false", "hive.enforce.sorting" -> "true") {
-        intercept[AnalysisException] {
-          sql(s"INSERT INTO TABLE $tableName SELECT 1, 2, 3, 4")
-        }
-      }
-      withSQLConf("hive.enforce.bucketing" -> "true", "hive.enforce.sorting" -> "true") {
-        intercept[AnalysisException] {
-          sql(s"INSERT INTO TABLE $tableName SELECT 1, 2, 3, 4")
         }
       }
   }
@@ -546,186 +521,6 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
         sql("INSERT OVERWRITE TABLE test_table SELECT 1")
         checkAnswer(sql("SELECT * FROM test_table"), Row(1))
       }
-    }
-  }
-
-  test("insert overwrite to dir from hive metastore table") {
-    withTempDir { dir =>
-      val path = dir.toURI.getPath
-
-      sql(s"INSERT OVERWRITE LOCAL DIRECTORY '${path}' SELECT * FROM src where key < 10")
-
-      sql(
-        s"""
-           |INSERT OVERWRITE LOCAL DIRECTORY '${path}'
-           |STORED AS orc
-           |SELECT * FROM src where key < 10
-         """.stripMargin)
-
-      // use orc data source to check the data of path is right.
-      withTempView("orc_source") {
-        sql(
-          s"""
-             |CREATE TEMPORARY VIEW orc_source
-             |USING org.apache.spark.sql.hive.orc
-             |OPTIONS (
-             |  PATH '${dir.getCanonicalPath}'
-             |)
-           """.stripMargin)
-
-        checkAnswer(
-          sql("select * from orc_source"),
-          sql("select * from src where key < 10"))
-      }
-    }
-  }
-
-  test("insert overwrite to local dir from temp table") {
-    withTempView("test_insert_table") {
-      spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
-
-      withTempDir { dir =>
-        val path = dir.toURI.getPath
-
-        sql(
-          s"""
-             |INSERT OVERWRITE LOCAL DIRECTORY '${path}'
-             |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-             |SELECT * FROM test_insert_table
-           """.stripMargin)
-
-        sql(
-          s"""
-             |INSERT OVERWRITE LOCAL DIRECTORY '${path}'
-             |STORED AS orc
-             |SELECT * FROM test_insert_table
-           """.stripMargin)
-
-        // use orc data source to check the data of path is right.
-        checkAnswer(
-          spark.read.orc(dir.getCanonicalPath),
-          sql("select * from test_insert_table"))
-      }
-    }
-  }
-
-  test("insert overwrite to dir from temp table") {
-    withTempView("test_insert_table") {
-      spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
-
-      withTempDir { dir =>
-        val pathUri = dir.toURI
-
-        sql(
-          s"""
-             |INSERT OVERWRITE DIRECTORY '${pathUri}'
-             |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-             |SELECT * FROM test_insert_table
-           """.stripMargin)
-
-        sql(
-          s"""
-             |INSERT OVERWRITE DIRECTORY '${pathUri}'
-             |STORED AS orc
-             |SELECT * FROM test_insert_table
-           """.stripMargin)
-
-        // use orc data source to check the data of path is right.
-        checkAnswer(
-          spark.read.orc(dir.getCanonicalPath),
-          sql("select * from test_insert_table"))
-      }
-    }
-  }
-
-  test("multi insert overwrite to dir") {
-    withTempView("test_insert_table") {
-      spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
-
-      withTempDir { dir =>
-        val pathUri = dir.toURI
-
-        withTempDir { dir2 =>
-          val pathUri2 = dir2.toURI
-
-          sql(
-            s"""
-               |FROM test_insert_table
-               |INSERT OVERWRITE DIRECTORY '${pathUri}'
-               |STORED AS orc
-               |SELECT id
-               |INSERT OVERWRITE DIRECTORY '${pathUri2}'
-               |STORED AS orc
-               |SELECT *
-             """.stripMargin)
-
-          // use orc data source to check the data of path is right.
-          checkAnswer(
-            spark.read.orc(dir.getCanonicalPath),
-            sql("select id from test_insert_table"))
-
-          checkAnswer(
-            spark.read.orc(dir2.getCanonicalPath),
-            sql("select * from test_insert_table"))
-        }
-      }
-    }
-  }
-
-  test("insert overwrite to dir to illegal path") {
-    withTempView("test_insert_table") {
-      spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
-
-      val e = intercept[IllegalArgumentException] {
-        sql(
-          s"""
-             |INSERT OVERWRITE LOCAL DIRECTORY 'abc://a'
-             |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-             |SELECT * FROM test_insert_table
-           """.stripMargin)
-      }.getMessage
-
-      assert(e.contains("Wrong FS: abc://a, expected: file:///"))
-    }
-  }
-
-  test("insert overwrite to dir with mixed syntax") {
-    withTempView("test_insert_table") {
-      spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
-
-      val e = intercept[ParseException] {
-        sql(
-          s"""
-             |INSERT OVERWRITE DIRECTORY 'file://tmp'
-             |USING json
-             |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-             |SELECT * FROM test_insert_table
-           """.stripMargin)
-      }.getMessage
-
-      assert(e.contains("mismatched input 'ROW'"))
-    }
-  }
-
-  test("insert overwrite to dir with multi inserts") {
-    withTempView("test_insert_table") {
-      spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
-
-      val e = intercept[ParseException] {
-        sql(
-          s"""
-             |INSERT OVERWRITE DIRECTORY 'file://tmp2'
-             |USING json
-             |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-             |SELECT * FROM test_insert_table
-             |INSERT OVERWRITE DIRECTORY 'file://tmp2'
-             |USING json
-             |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-             |SELECT * FROM test_insert_table
-           """.stripMargin)
-      }.getMessage
-
-      assert(e.contains("mismatched input 'ROW'"))
     }
   }
 }

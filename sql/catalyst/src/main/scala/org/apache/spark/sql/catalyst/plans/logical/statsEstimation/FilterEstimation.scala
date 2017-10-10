@@ -25,6 +25,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.Literal.{FalseLiteral, TrueLiteral}
 import org.apache.spark.sql.catalyst.plans.logical.{ColumnStat, Filter, LeafNode, Statistics}
 import org.apache.spark.sql.catalyst.plans.logical.statsEstimation.EstimationUtils._
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
 case class FilterEstimation(plan: Filter) extends Logging {
@@ -47,7 +48,7 @@ case class FilterEstimation(plan: Filter) extends Logging {
 
     // Estimate selectivity of this filter predicate, and update column stats if needed.
     // For not-supported condition, set filter selectivity to a conservative estimate 100%
-    val filterSelectivity = calculateFilterSelectivity(plan.condition).getOrElse(BigDecimal(1))
+    val filterSelectivity = calculateFilterSelectivity(plan.condition).getOrElse(BigDecimal(1.0))
 
     val filteredRowCount: BigInt = ceil(BigDecimal(childStats.rowCount.get) * filterSelectivity)
     val newColStats = if (filteredRowCount == 0) {
@@ -83,13 +84,13 @@ case class FilterEstimation(plan: Filter) extends Logging {
     : Option[BigDecimal] = {
     condition match {
       case And(cond1, cond2) =>
-        val percent1 = calculateFilterSelectivity(cond1, update).getOrElse(BigDecimal(1))
-        val percent2 = calculateFilterSelectivity(cond2, update).getOrElse(BigDecimal(1))
+        val percent1 = calculateFilterSelectivity(cond1, update).getOrElse(BigDecimal(1.0))
+        val percent2 = calculateFilterSelectivity(cond2, update).getOrElse(BigDecimal(1.0))
         Some(percent1 * percent2)
 
       case Or(cond1, cond2) =>
-        val percent1 = calculateFilterSelectivity(cond1, update = false).getOrElse(BigDecimal(1))
-        val percent2 = calculateFilterSelectivity(cond2, update = false).getOrElse(BigDecimal(1))
+        val percent1 = calculateFilterSelectivity(cond1, update = false).getOrElse(BigDecimal(1.0))
+        val percent2 = calculateFilterSelectivity(cond2, update = false).getOrElse(BigDecimal(1.0))
         Some(percent1 + percent2 - (percent1 * percent2))
 
       // Not-operator pushdown

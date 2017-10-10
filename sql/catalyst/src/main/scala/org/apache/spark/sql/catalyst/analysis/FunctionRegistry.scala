@@ -17,10 +17,8 @@
 
 package org.apache.spark.sql.catalyst.analysis
 
-import java.util.Locale
-import javax.annotation.concurrent.GuardedBy
+import java.lang.reflect.Modifier
 
-import scala.collection.mutable
 import scala.language.existentials
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -557,9 +555,7 @@ object FunctionRegistry {
     }
     val clazz = scala.reflect.classTag[Cast].runtimeClass
     val usage = "_FUNC_(expr) - Casts the value `expr` to the target data type `_FUNC_`."
-    val expressionInfo =
-      new ExpressionInfo(clazz.getCanonicalName, null, name, usage, "", "", "", "")
-    (name, (expressionInfo, builder))
+    (name, (new ExpressionInfo(clazz.getCanonicalName, null, name, usage, null), builder))
   }
 
   /**

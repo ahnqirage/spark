@@ -109,7 +109,7 @@ case class GenerateExec(
           } else {
             outputRows
           }
-        } ++ LazyIterator(() => boundGenerator.terminate())
+        } ++ LazyIterator(boundGenerator.terminate)
       }
 
       // Convert the rows to unsafe rows.

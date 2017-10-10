@@ -26,7 +26,7 @@
   </parent>
   <groupId>org.apache.spark</groupId>
   <artifactId>spark-parent_2.11</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>2.2.1-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Spark Project Parent POM</name>
   <url>http://spark.apache.org/</url>
@@ -131,12 +131,12 @@
     <orc.version>1.4.0</orc.version>
     <orc.classifier>nohive</orc.classifier>
     <hive.parquet.version>1.6.0</hive.parquet.version>
-    <jetty.version>9.3.20.v20170531</jetty.version>
+    <jetty.version>9.3.11.v20160721</jetty.version>
     <javaxservlet.version>3.1.0</javaxservlet.version>
     <chill.version>0.8.4</chill.version>
     <ivy.version>2.4.0</ivy.version>
     <oro.version>2.0.8</oro.version>
-    <codahale.metrics.version>3.1.5</codahale.metrics.version>
+    <codahale.metrics.version>3.1.2</codahale.metrics.version>
     <avro.version>1.7.7</avro.version>
     <avro.mapred.classifier>hadoop2</avro.mapred.classifier>
     <jets3t.version>0.9.3</jets3t.version>

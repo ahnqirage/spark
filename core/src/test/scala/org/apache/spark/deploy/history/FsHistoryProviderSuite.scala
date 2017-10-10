@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 import com.google.common.io.{ByteStreams, Files}
-import org.apache.hadoop.fs.{FileStatus, Path}
+import org.apache.hadoop.fs.FileStatus
 import org.apache.hadoop.hdfs.DistributedFileSystem
 import org.json4s.jackson.JsonMethods._
 import org.mockito.Matchers.any

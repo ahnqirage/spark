@@ -371,7 +371,7 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
       case (true, SaveMode.Overwrite) =>
         // Get all input data source or hive relations of the query.
         val srcRelations = df.logicalPlan.collect {
-          case LogicalRelation(src: BaseRelation, _, _, _) => src
+          case LogicalRelation(src: BaseRelation, _, _) => src
           case relation: HiveTableRelation => relation.tableMeta.identifier
         }
 

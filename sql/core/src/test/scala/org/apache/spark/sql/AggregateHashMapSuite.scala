@@ -24,7 +24,7 @@ import org.apache.spark.SparkConf
 class SingleLevelAggregateHashMapSuite extends DataFrameAggregateSuite with BeforeAndAfter {
   override protected def sparkConf: SparkConf = super.sparkConf
     .set("spark.sql.codegen.fallback", "false")
-    .set("spark.sql.codegen.aggregate.map.twolevel.enabled", "false")
+    .set("spark.sql.codegen.aggregate.map.twolevel.enable", "false")
 
   // adding some checking after each test is run, assuring that the configs are not changed
   // in test code
@@ -39,7 +39,7 @@ class SingleLevelAggregateHashMapSuite extends DataFrameAggregateSuite with Befo
 class TwoLevelAggregateHashMapSuite extends DataFrameAggregateSuite with BeforeAndAfter {
   override protected def sparkConf: SparkConf = super.sparkConf
     .set("spark.sql.codegen.fallback", "false")
-    .set("spark.sql.codegen.aggregate.map.twolevel.enabled", "true")
+    .set("spark.sql.codegen.aggregate.map.twolevel.enable", "true")
 
   // adding some checking after each test is run, assuring that the configs are not changed
   // in test code
@@ -57,7 +57,7 @@ class TwoLevelAggregateHashMapWithVectorizedMapSuite
 
   override protected def sparkConf: SparkConf = super.sparkConf
     .set("spark.sql.codegen.fallback", "false")
-    .set("spark.sql.codegen.aggregate.map.twolevel.enabled", "true")
+    .set("spark.sql.codegen.aggregate.map.twolevel.enable", "true")
     .set("spark.sql.codegen.aggregate.map.vectorized.enable", "true")
 
   // adding some checking after each test is run, assuring that the configs are not changed

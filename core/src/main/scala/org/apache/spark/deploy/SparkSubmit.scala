@@ -20,6 +20,7 @@ package org.apache.spark.deploy
 import java.io._
 import java.lang.reflect.{InvocationTargetException, Modifier, UndeclaredThrowableException}
 import java.net.URL
+import java.nio.file.Files
 import java.security.PrivilegedExceptionAction
 import java.text.ParseException
 
@@ -368,20 +369,29 @@ object SparkSubmit extends CommandLineUtils with Logging {
       }.orNull
     }
 
-    // When running in YARN, for some remote resources with scheme:
-    //   1. Hadoop FileSystem doesn't support them.
-    //   2. We explicitly bypass Hadoop FileSystem with "spark.yarn.dist.forceDownloadSchemes".
-    // We will download them to local disk prior to add to YARN's distributed cache.
-    // For yarn client mode, since we already download them with above code, so we only need to
-    // figure out the local path and replace the remote one.
-    if (clusterManager == YARN) {
-      sparkConf.setIfMissing(SecurityManager.SPARK_AUTH_SECRET_CONF, "unused")
-      val secMgr = new SecurityManager(sparkConf)
-      val forceDownloadSchemes = sparkConf.get(FORCE_DOWNLOAD_SCHEMES)
+    // In client mode, download remote files.
+    var localPrimaryResource: String = null
+    var localJars: String = null
+    var localPyFiles: String = null
+    var localFiles: String = null
+    if (deployMode == CLIENT) {
+      val hadoopConf = conf.getOrElse(new HadoopConfiguration())
+      localPrimaryResource = Option(args.primaryResource).map(downloadFile(_, hadoopConf)).orNull
+      localJars = Option(args.jars).map(downloadFileList(_, hadoopConf)).orNull
+      localPyFiles = Option(args.pyFiles).map(downloadFileList(_, hadoopConf)).orNull
+      localFiles = Option(args.files).map(downloadFileList(_, hadoopConf)).orNull
+    }
 
-      def shouldDownload(scheme: String): Boolean = {
-        forceDownloadSchemes.contains(scheme) ||
-          Try { FileSystem.getFileSystemClass(scheme, hadoopConf) }.isFailure
+    // Require all python files to be local, so we can add them to the PYTHONPATH
+    // In YARN cluster mode, python files are distributed as regular files, which can be non-local.
+    // In Mesos cluster mode, non-local python files are automatically downloaded by Mesos.
+    if (args.isPython && !isYarnCluster && !isMesosCluster) {
+      if (Utils.nonLocalPaths(args.primaryResource).nonEmpty) {
+        printErrorAndExit(s"Only local python files are supported: ${args.primaryResource}")
+      }
+      val nonLocalPyFiles = Utils.nonLocalPaths(args.pyFiles).mkString(",")
+      if (nonLocalPyFiles.nonEmpty) {
+        printErrorAndExit(s"Only local additional python files are supported: $nonLocalPyFiles")
       }
 
       def downloadResource(resource: String): String = {
@@ -929,6 +939,40 @@ object SparkSubmit extends CommandLineUtils with Logging {
     if (merged == "") null else merged
   }
 
+  /**
+   * Download a list of remote files to temp local files. If the file is local, the original file
+   * will be returned.
+   * @param fileList A comma separated file list.
+   * @return A comma separated local files list.
+   */
+  private[deploy] def downloadFileList(
+      fileList: String,
+      hadoopConf: HadoopConfiguration): String = {
+    require(fileList != null, "fileList cannot be null.")
+    fileList.split(",").map(downloadFile(_, hadoopConf)).mkString(",")
+  }
+
+  /**
+   * Download a file from the remote to a local temporary directory. If the input path points to
+   * a local path, returns it with no operation.
+   */
+  private[deploy] def downloadFile(path: String, hadoopConf: HadoopConfiguration): String = {
+    require(path != null, "path cannot be null.")
+    val uri = Utils.resolveURI(path)
+    uri.getScheme match {
+      case "file" | "local" =>
+        path
+
+      case _ =>
+        val fs = FileSystem.get(uri, hadoopConf)
+        val tmpFile = new File(Files.createTempDirectory("tmp").toFile, uri.getPath)
+        // scalastyle:off println
+        printStream.println(s"Downloading ${uri.toString} to ${tmpFile.getAbsolutePath}.")
+        // scalastyle:on println
+        fs.copyToLocalFile(new Path(uri), new Path(tmpFile.getAbsolutePath))
+        Utils.resolveURI(tmpFile.getAbsolutePath).toString
+    }
+  }
 }
 
 /** Provides utility functions to be used inside SparkSubmit. */

@@ -127,16 +127,15 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
     Batch("Join Reorder", Once,
       CostBasedJoinReorder) ::
     Batch("Decimal Optimizations", fixedPoint,
-      DecimalAggregates) ::
+      DecimalAggregates(conf)) ::
     Batch("Object Expressions Optimization", fixedPoint,
       EliminateMapObjects,
       CombineTypedFilters) ::
     Batch("LocalRelation", fixedPoint,
       ConvertToLocalRelation,
       PropagateEmptyRelation) ::
-    // The following batch should be executed after batch "Join Reorder" and "LocalRelation".
     Batch("Check Cartesian Products", Once,
-      CheckCartesianProducts) ::
+      CheckCartesianProducts(conf)) ::
     Batch("OptimizeCodegen", Once,
       OptimizeCodegen) ::
     Batch("RewriteSubquery", Once,

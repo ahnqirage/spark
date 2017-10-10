@@ -20,6 +20,7 @@ package org.apache.spark.sql
 import scala.collection.mutable
 
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.catalog.{CatalogStatistics, HiveTableRelation}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSQLContext
@@ -114,6 +115,19 @@ class StatisticsCollectionSuite extends StatisticsCollectionTestBase with Shared
     }
   }
 
+  test("analyze empty table") {
+    val table = "emptyTable"
+    withTable(table) {
+      sql(s"CREATE TABLE $table (key STRING, value STRING) USING PARQUET")
+      sql(s"ANALYZE TABLE $table COMPUTE STATISTICS noscan")
+      val fetchedStats1 = checkTableStats(table, hasSizeInBytes = true, expectedRowCounts = None)
+      assert(fetchedStats1.get.sizeInBytes == 0)
+      sql(s"ANALYZE TABLE $table COMPUTE STATISTICS")
+      val fetchedStats2 = checkTableStats(table, hasSizeInBytes = true, expectedRowCounts = Some(0))
+      assert(fetchedStats2.get.sizeInBytes == 0)
+    }
+  }
+
   test("test table-level statistics for data source table") {
     val tableName = "tbl"
     withTable(tableName) {
@@ -195,23 +209,84 @@ class StatisticsCollectionSuite extends StatisticsCollectionTestBase with Shared
     }
   }
 
-  test("change stats after truncate command") {
-    val table = "change_stats_truncate_table"
-    withTable(table) {
-      spark.range(100).select($"id", $"id" % 5 as "value").write.saveAsTable(table)
-      // analyze to get initial stats
-      sql(s"ANALYZE TABLE $table COMPUTE STATISTICS FOR COLUMNS id, value")
-      val fetched1 = checkTableStats(table, hasSizeInBytes = true, expectedRowCounts = Some(100))
-      assert(fetched1.get.sizeInBytes > 0)
-      assert(fetched1.get.colStats.size == 2)
+/**
+ * The base for test cases that we want to include in both the hive module (for verifying behavior
+ * when using the Hive external catalog) as well as in the sql/core module.
+ */
+abstract class StatisticsCollectionTestBase extends QueryTest with SQLTestUtils {
+  import testImplicits._
 
-      // truncate table command
-      sql(s"TRUNCATE TABLE $table")
-      val fetched2 = checkTableStats(table, hasSizeInBytes = true, expectedRowCounts = Some(0))
-      assert(fetched2.get.sizeInBytes == 0)
-      assert(fetched2.get.colStats.isEmpty)
+  private val dec1 = new java.math.BigDecimal("1.000000000000000000")
+  private val dec2 = new java.math.BigDecimal("8.000000000000000000")
+  private val d1 = Date.valueOf("2016-05-08")
+  private val d2 = Date.valueOf("2016-05-09")
+  private val t1 = Timestamp.valueOf("2016-05-08 00:00:01")
+  private val t2 = Timestamp.valueOf("2016-05-09 00:00:02")
+
+  /**
+   * Define a very simple 3 row table used for testing column serialization.
+   * Note: last column is seq[int] which doesn't support stats collection.
+   */
+  protected val data = Seq[
+    (jl.Boolean, jl.Byte, jl.Short, jl.Integer, jl.Long,
+      jl.Double, jl.Float, java.math.BigDecimal,
+      String, Array[Byte], Date, Timestamp,
+      Seq[Int])](
+    (false, 1.toByte, 1.toShort, 1, 1L, 1.0, 1.0f, dec1, "s1", "b1".getBytes, d1, t1, null),
+    (true, 2.toByte, 3.toShort, 4, 5L, 6.0, 7.0f, dec2, "ss9", "bb0".getBytes, d2, t2, null),
+    (null, null, null, null, null, null, null, null, null, null, null, null, null)
+  )
+
+  /** A mapping from column to the stats collected. */
+  protected val stats = mutable.LinkedHashMap(
+    "cbool" -> ColumnStat(2, Some(false), Some(true), 1, 1, 1),
+    "cbyte" -> ColumnStat(2, Some(1.toByte), Some(2.toByte), 1, 1, 1),
+    "cshort" -> ColumnStat(2, Some(1.toShort), Some(3.toShort), 1, 2, 2),
+    "cint" -> ColumnStat(2, Some(1), Some(4), 1, 4, 4),
+    "clong" -> ColumnStat(2, Some(1L), Some(5L), 1, 8, 8),
+    "cdouble" -> ColumnStat(2, Some(1.0), Some(6.0), 1, 8, 8),
+    "cfloat" -> ColumnStat(2, Some(1.0f), Some(7.0f), 1, 4, 4),
+    "cdecimal" -> ColumnStat(2, Some(Decimal(dec1)), Some(Decimal(dec2)), 1, 16, 16),
+    "cstring" -> ColumnStat(2, None, None, 1, 3, 3),
+    "cbinary" -> ColumnStat(2, None, None, 1, 3, 3),
+    "cdate" -> ColumnStat(2, Some(DateTimeUtils.fromJavaDate(d1)),
+      Some(DateTimeUtils.fromJavaDate(d2)), 1, 4, 4),
+    "ctimestamp" -> ColumnStat(2, Some(DateTimeUtils.fromJavaTimestamp(t1)),
+      Some(DateTimeUtils.fromJavaTimestamp(t2)), 1, 8, 8)
+  )
+
+  private val randomName = new Random(31)
+
+  def checkTableStats(
+      tableName: String,
+      hasSizeInBytes: Boolean,
+      expectedRowCounts: Option[Int]): Option[CatalogStatistics] = {
+    val stats = spark.sessionState.catalog.getTableMetadata(TableIdentifier(tableName)).stats
+
+    if (hasSizeInBytes || expectedRowCounts.nonEmpty) {
+      assert(stats.isDefined)
+      assert(stats.get.sizeInBytes >= 0)
+      assert(stats.get.rowCount === expectedRowCounts)
+    } else {
+      assert(stats.isEmpty)
     }
+
+    stats
   }
+
+  /**
+   * Compute column stats for the given DataFrame and compare it with colStats.
+   */
+  def checkColStats(
+      df: DataFrame,
+      colStats: mutable.LinkedHashMap[String, ColumnStat]): Unit = {
+    val tableName = "column_stats_test_" + randomName.nextInt(1000)
+    withTable(tableName) {
+      df.write.saveAsTable(tableName)
+
+      // Collect statistics
+      sql(s"analyze table $tableName compute STATISTICS FOR COLUMNS " +
+        colStats.keys.mkString(", "))
 
   test("change stats after set location command") {
     val table = "change_stats_set_location_table"
@@ -347,5 +422,26 @@ class StatisticsCollectionSuite extends StatisticsCollectionTestBase with Shared
         }
       }
     }
+    sql(createTableSql)
+    // Analyze only one column.
+    sql(s"ANALYZE TABLE $tableName COMPUTE STATISTICS FOR COLUMNS c1")
+    val (relation, catalogTable) = spark.table(tableName).queryExecution.analyzed.collect {
+      case catalogRel: HiveTableRelation => (catalogRel, catalogRel.tableMeta)
+      case logicalRel: LogicalRelation => (logicalRel, logicalRel.catalogTable.get)
+    }.head
+    val emptyColStat = ColumnStat(0, None, None, 0, 4, 4)
+    // Check catalog statistics
+    assert(catalogTable.stats.isDefined)
+    assert(catalogTable.stats.get.sizeInBytes == 0)
+    assert(catalogTable.stats.get.rowCount == Some(0))
+    assert(catalogTable.stats.get.colStats == Map("c1" -> emptyColStat))
+
+    // Check relation statistics
+    assert(relation.stats(conf).sizeInBytes == 0)
+    assert(relation.stats(conf).rowCount == Some(0))
+    assert(relation.stats(conf).attributeStats.size == 1)
+    val (attribute, colStat) = relation.stats(conf).attributeStats.head
+    assert(attribute.name == "c1")
+    assert(colStat == emptyColStat)
   }
 }

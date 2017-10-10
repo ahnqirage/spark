@@ -44,9 +44,13 @@ private[deploy] class HadoopFSDelegationTokenProvider(fileSystems: Configuration
       hadoopConf: Configuration,
       sparkConf: SparkConf,
       creds: Credentials): Option[Long] = {
-
-    val fsToGetTokens = fileSystems(hadoopConf)
-    val fetchCreds = fetchDelegationTokens(getTokenRenewer(hadoopConf), fsToGetTokens, creds)
+    // NameNode to access, used to get tokens from different FileSystems
+    val tokenRenewer = getTokenRenewer(hadoopConf)
+    hadoopFSsToAccess(hadoopConf, sparkConf).foreach { dst =>
+      val dstFs = dst.getFileSystem(hadoopConf)
+      logInfo("getting token for: " + dst)
+      dstFs.addDelegationTokens(tokenRenewer, creds)
+    }
 
     // Get the token renewal interval if it is not set. It will only be called once.
     if (tokenRenewalInterval == null) {
@@ -55,7 +59,7 @@ private[deploy] class HadoopFSDelegationTokenProvider(fileSystems: Configuration
 
     // Get the time of next renewal.
     val nextRenewalDate = tokenRenewalInterval.flatMap { interval =>
-      val nextRenewalDates = fetchCreds.getAllTokens.asScala
+      val nextRenewalDates = creds.getAllTokens.asScala
         .filter(_.decodeIdentifier().isInstanceOf[AbstractDelegationTokenIdentifier])
         .map { token =>
           val identifier = token

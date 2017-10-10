@@ -321,11 +321,6 @@ class InMemoryCatalog(
     catalog(db).tables(table).table = origTable.copy(stats = stats)
   }
 
-  override def getTable(db: String, table: String): CatalogTable = synchronized {
-    requireTableExists(db, table)
-    catalog(db).tables(table).table
-  }
-
   override def tableExists(db: String, table: String): Boolean = synchronized {
     requireDbExists(db)
     catalog(db).tables.contains(table)
@@ -572,12 +567,6 @@ class InMemoryCatalog(
   override protected def doDropFunction(db: String, funcName: String): Unit = synchronized {
     requireFunctionExists(db, funcName)
     catalog(db).functions.remove(funcName)
-  }
-
-  override protected def doAlterFunction(db: String, func: CatalogFunction): Unit = synchronized {
-    requireDbExists(db)
-    requireFunctionExists(db, func.identifier.funcName)
-    catalog(db).functions.put(func.identifier.funcName, func)
   }
 
   override protected def doRenameFunction(

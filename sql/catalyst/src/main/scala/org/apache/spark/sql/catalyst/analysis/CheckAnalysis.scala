@@ -123,6 +123,65 @@ trait CheckAnalysis extends PredicateHelper {
               case _ =>
                 failAnalysis(s"Expression '$e' not supported within a window function.")
             }
+            // Make sure the window specification is valid.
+            s.validate match {
+              case Some(m) =>
+                failAnalysis(s"Window specification $s is not valid because $m")
+              case None => w
+            }
+
+          case s @ ScalarSubquery(query, conditions, _) =>
+            checkAnalysis(query)
+
+            // If no correlation, the output must be exactly one column
+            if (conditions.isEmpty && query.output.size != 1) {
+              failAnalysis(
+                s"Scalar subquery must return only one column, but got ${query.output.size}")
+            } else if (conditions.nonEmpty) {
+              def checkAggregate(agg: Aggregate): Unit = {
+                // Make sure correlated scalar subqueries contain one row for every outer row by
+                // enforcing that they are aggregates containing exactly one aggregate expression.
+                // The analyzer has already checked that subquery contained only one output column,
+                // and added all the grouping expressions to the aggregate.
+                val aggregates = agg.expressions.flatMap(_.collect {
+                  case a: AggregateExpression => a
+                })
+                if (aggregates.isEmpty) {
+                  failAnalysis("The output of a correlated scalar subquery must be aggregated")
+                }
+
+                // SPARK-18504/SPARK-18814: Block cases where GROUP BY columns
+                // are not part of the correlated columns.
+                val groupByCols = AttributeSet(agg.groupingExpressions.flatMap(_.references))
+                // Collect the local references from the correlated predicate in the subquery.
+                val subqueryColumns = getCorrelatedPredicates(query).flatMap(_.references)
+                  .filterNot(conditions.flatMap(_.references).contains)
+                val correlatedCols = AttributeSet(subqueryColumns)
+                val invalidCols = groupByCols -- correlatedCols
+                // GROUP BY columns must be a subset of columns in the predicates
+                if (invalidCols.nonEmpty) {
+                  failAnalysis(
+                    "A GROUP BY clause in a scalar correlated subquery " +
+                      "cannot contain non-correlated columns: " +
+                      invalidCols.mkString(","))
+                }
+              }
+
+              // Skip subquery aliases added by the Analyzer.
+              // For projects, do the necessary mapping and skip to its child.
+              def cleanQuery(p: LogicalPlan): LogicalPlan = p match {
+                case s: SubqueryAlias => cleanQuery(s.child)
+                case p: Project => cleanQuery(p.child)
+                case child => child
+              }
+
+              cleanQuery(query) match {
+                case a: Aggregate => checkAggregate(a)
+                case Filter(_, a: Aggregate) => checkAggregate(a)
+                case fail => failAnalysis(s"Correlated scalar subqueries must be Aggregated: $fail")
+              }
+            }
+            s
 
           case s: SubqueryExpression =>
             checkSubqueryExpression(operator, s)

@@ -176,7 +176,7 @@ class DataFrameReader(OptionUtils):
              allowComments=None, allowUnquotedFieldNames=None, allowSingleQuotes=None,
              allowNumericLeadingZero=None, allowBackslashEscapingAnyCharacter=None,
              mode=None, columnNameOfCorruptRecord=None, dateFormat=None, timestampFormat=None,
-             multiLine=None, allowUnquotedControlChars=None):
+             multiLine=None):
         """
         Loads JSON files and returns the results as a :class:`DataFrame`.
 
@@ -253,8 +253,7 @@ class DataFrameReader(OptionUtils):
             allowSingleQuotes=allowSingleQuotes, allowNumericLeadingZero=allowNumericLeadingZero,
             allowBackslashEscapingAnyCharacter=allowBackslashEscapingAnyCharacter,
             mode=mode, columnNameOfCorruptRecord=columnNameOfCorruptRecord, dateFormat=dateFormat,
-            timestampFormat=timestampFormat, multiLine=multiLine,
-            allowUnquotedControlChars=allowUnquotedControlChars)
+            timestampFormat=timestampFormat, multiLine=multiLine)
         if isinstance(path, basestring):
             path = [path]
         if type(path) == list:

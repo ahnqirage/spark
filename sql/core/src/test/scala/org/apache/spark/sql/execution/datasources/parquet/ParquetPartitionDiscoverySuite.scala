@@ -1024,38 +1024,6 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
     }
   }
 
-  test("SPARK-21463: MetadataLogFileIndex should respect userSpecifiedSchema for partition cols") {
-    withTempDir { tempDir =>
-      val output = new File(tempDir, "output").toString
-      val checkpoint = new File(tempDir, "chkpoint").toString
-      try {
-        val stream = MemoryStream[(String, Int)]
-        val df = stream.toDS().toDF("time", "value")
-        val sq = df.writeStream
-          .option("checkpointLocation", checkpoint)
-          .format("parquet")
-          .partitionBy("time")
-          .start(output)
-
-        stream.addData(("2017-01-01-00", 1), ("2017-01-01-01", 2))
-        sq.processAllAvailable()
-
-        val schema = new StructType()
-          .add("time", StringType)
-          .add("value", IntegerType)
-        val readBack = spark.read.schema(schema).parquet(output)
-        assert(readBack.schema.toSet === schema.toSet)
-
-        checkAnswer(
-          readBack,
-          Seq(Row("2017-01-01-00", 1), Row("2017-01-01-01", 2))
-        )
-      } finally {
-        spark.streams.active.foreach(_.stop())
-      }
-    }
-  }
-
   test("SPARK-22109: Resolve type conflicts between strings and timestamps in partition column") {
     val df = Seq(
       (1, "2015-01-01 00:00:00"),

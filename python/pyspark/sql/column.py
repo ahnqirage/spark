@@ -345,17 +345,8 @@ class Column(object):
         raise TypeError("Column is not iterable")
 
     # string methods
-    _contains_doc = """
-    Contains the other element. Returns a boolean :class:`Column` based on a string match.
-
-    :param other: string in line
-
-    >>> df.filter(df.name.contains('o')).collect()
-    [Row(age=5, name=u'Bob')]
-    """
     _rlike_doc = """
-    SQL RLIKE expression (LIKE with Regex). Returns a boolean :class:`Column` based on a regex
-    match.
+    Return a Boolean :class:`Column` based on a regex match.
 
     :param other: an extended regex expression
 
@@ -363,7 +354,7 @@ class Column(object):
     [Row(age=2, name=u'Alice')]
     """
     _like_doc = """
-    SQL like expression. Returns a boolean :class:`Column` based on a SQL LIKE match.
+    Return a Boolean :class:`Column` based on a SQL LIKE match.
 
     :param other: a SQL LIKE pattern
 
@@ -373,9 +364,9 @@ class Column(object):
     [Row(age=2, name=u'Alice')]
     """
     _startswith_doc = """
-    String starts with. Returns a boolean :class:`Column` based on a string match.
+    Return a Boolean :class:`Column` based on a string match.
 
-    :param other: string at start of line (do not use a regex `^`)
+    :param other: string at end of line (do not use a regex `^`)
 
     >>> df.filter(df.name.startswith('Al')).collect()
     [Row(age=2, name=u'Alice')]
@@ -383,7 +374,7 @@ class Column(object):
     []
     """
     _endswith_doc = """
-    String ends with. Returns a boolean :class:`Column` based on a string match.
+    Return a Boolean :class:`Column` based on matching end of string.
 
     :param other: string at end of line (do not use a regex `$`)
 
@@ -393,7 +384,7 @@ class Column(object):
     []
     """
 
-    contains = ignore_unicode_prefix(_bin_op("contains", _contains_doc))
+    contains = _bin_op("contains")
     rlike = ignore_unicode_prefix(_bin_op("rlike", _rlike_doc))
     like = ignore_unicode_prefix(_bin_op("like", _like_doc))
     startswith = ignore_unicode_prefix(_bin_op("startsWith", _startswith_doc))
@@ -481,6 +472,25 @@ class Column(object):
     >>> from pyspark.sql import Row
     >>> df = spark.createDataFrame([Row(name=u'Tom', height=80), Row(name=u'Alice', height=None)])
     >>> df.filter(df.height.isNotNull()).collect()
+    [Row(height=80, name=u'Tom')]
+    """
+
+    _isNull_doc = """
+    True if the current expression is null. Often combined with
+    :func:`DataFrame.filter` to select rows with null values.
+
+    >>> from pyspark.sql import Row
+    >>> df2 = sc.parallelize([Row(name=u'Tom', height=80), Row(name=u'Alice', height=None)]).toDF()
+    >>> df2.filter(df2.height.isNull()).collect()
+    [Row(height=None, name=u'Alice')]
+    """
+    _isNotNull_doc = """
+    True if the current expression is null. Often combined with
+    :func:`DataFrame.filter` to select rows with non-null values.
+
+    >>> from pyspark.sql import Row
+    >>> df2 = sc.parallelize([Row(name=u'Tom', height=80), Row(name=u'Alice', height=None)]).toDF()
+    >>> df2.filter(df2.height.isNotNull()).collect()
     [Row(height=80, name=u'Tom')]
     """
 

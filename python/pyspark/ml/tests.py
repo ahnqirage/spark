@@ -470,54 +470,6 @@ class ParamTests(PySparkTestCase):
             LogisticRegression, threshold=0.42, thresholds=[0.5, 0.5]
         )
 
-    @staticmethod
-    def check_params(test_self, py_stage, check_params_exist=True):
-        """
-        Checks common requirements for Params.params:
-          - set of params exist in Java and Python and are ordered by names
-          - param parent has the same UID as the object's UID
-          - default param value from Java matches value in Python
-          - optionally check if all params from Java also exist in Python
-        """
-        py_stage_str = "%s %s" % (type(py_stage), py_stage)
-        if not hasattr(py_stage, "_to_java"):
-            return
-        java_stage = py_stage._to_java()
-        if java_stage is None:
-            return
-        test_self.assertEqual(py_stage.uid, java_stage.uid(), msg=py_stage_str)
-        if check_params_exist:
-            param_names = [p.name for p in py_stage.params]
-            java_params = list(java_stage.params())
-            java_param_names = [jp.name() for jp in java_params]
-            test_self.assertEqual(
-                param_names, sorted(java_param_names),
-                "Param list in Python does not match Java for %s:\nJava = %s\nPython = %s"
-                % (py_stage_str, java_param_names, param_names))
-        for p in py_stage.params:
-            test_self.assertEqual(p.parent, py_stage.uid)
-            java_param = java_stage.getParam(p.name)
-            py_has_default = py_stage.hasDefault(p)
-            java_has_default = java_stage.hasDefault(java_param)
-            test_self.assertEqual(py_has_default, java_has_default,
-                                  "Default value mismatch of param %s for Params %s"
-                                  % (p.name, str(py_stage)))
-            if py_has_default:
-                if p.name == "seed":
-                    continue  # Random seeds between Spark and PySpark are different
-                java_default = _java2py(test_self.sc,
-                                        java_stage.clear(java_param).getOrDefault(java_param))
-                py_stage._clear(p)
-                py_default = py_stage.getOrDefault(p)
-                # equality test for NaN is always False
-                if isinstance(java_default, float) and np.isnan(java_default):
-                    java_default = "NaN"
-                    py_default = "NaN" if np.isnan(py_default) else "not NaN"
-                test_self.assertEqual(
-                    java_default, py_default,
-                    "Java default %s != python default %s of param %s for Params %s"
-                    % (str(java_default), str(py_default), p.name, str(py_stage)))
-
 
 class EvaluatorTests(SparkSessionTestCase):
 
@@ -1605,20 +1557,6 @@ class OneVsRestTests(SparkSessionTestCase):
         model = ovr.fit(df)
         output = model.transform(df)
         self.assertEqual(output.columns, ["label", "features", "prediction"])
-
-    def test_parallelism_doesnt_change_output(self):
-        df = self.spark.createDataFrame([(0.0, Vectors.dense(1.0, 0.8)),
-                                         (1.0, Vectors.sparse(2, [], [])),
-                                         (2.0, Vectors.dense(0.5, 0.5))],
-                                        ["label", "features"])
-        ovrPar1 = OneVsRest(classifier=LogisticRegression(maxIter=5, regParam=.01), parallelism=1)
-        modelPar1 = ovrPar1.fit(df)
-        ovrPar2 = OneVsRest(classifier=LogisticRegression(maxIter=5, regParam=.01), parallelism=2)
-        modelPar2 = ovrPar2.fit(df)
-        for i, model in enumerate(modelPar1.models):
-            self.assertTrue(np.allclose(model.coefficients.toArray(),
-                                        modelPar2.models[i].coefficients.toArray(), atol=1E-4))
-            self.assertTrue(np.allclose(model.intercept, modelPar2.models[i].intercept, atol=1E-4))
 
     def test_support_for_weightCol(self):
         df = self.spark.createDataFrame([(0.0, Vectors.dense(1.0, 0.8), 1.0),

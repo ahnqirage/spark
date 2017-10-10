@@ -670,10 +670,6 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
     client.alterTable(updatedTable)
   }
 
-  override def getTable(db: String, table: String): CatalogTable = withClient {
-    restoreTableMetadata(getRawTable(db, table))
-  }
-
   /**
    * Restores table metadata from the table properties. This method is kind of a opposite version
    * of [[createTable]].
@@ -695,6 +691,15 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
         if (table.properties.contains(DATASOURCE_SCHEMA_NUMPARTS)) {
           table = table.copy(schema = getSchemaFromTableProperties(table))
         }
+
+      // No provider in table properties, which means this is a Hive serde table.
+      case None =>
+        table = restoreHiveSerdeTable(table)
+
+      // This is a regular data source table.
+      case Some(provider) =>
+        table = restoreDataSourceTable(table, provider)
+    }
 
       // No provider in table properties, which means this is a Hive serde table.
       case None =>
@@ -748,8 +753,7 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
       val partColumnNames = getPartitionColumnsFromTableProperties(table)
       val reorderedSchema = reorderSchema(schema = schemaFromTableProps, partColumnNames)
 
-      if (DataType.equalsIgnoreCaseAndNullability(reorderedSchema, table.schema) ||
-          options.respectSparkSchema) {
+      if (DataType.equalsIgnoreCaseAndNullability(reorderedSchema, table.schema)) {
         hiveTable.copy(
           schema = reorderedSchema,
           partitionColumnNames = partColumnNames,
@@ -1232,15 +1236,6 @@ private[spark] class HiveExternalCatalog(conf: SparkConf, hadoopConf: Configurat
   override protected def doDropFunction(db: String, name: String): Unit = withClient {
     requireFunctionExists(db, name)
     client.dropFunction(db, name)
-  }
-
-  override protected def doAlterFunction(
-      db: String, funcDefinition: CatalogFunction): Unit = withClient {
-    requireDbExists(db)
-    val functionName = funcDefinition.identifier.funcName.toLowerCase(Locale.ROOT)
-    requireFunctionExists(db, functionName)
-    val functionIdentifier = funcDefinition.identifier.copy(funcName = functionName)
-    client.alterFunction(db, funcDefinition.copy(identifier = functionIdentifier))
   }
 
   override protected def doRenameFunction(

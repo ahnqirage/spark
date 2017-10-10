@@ -489,11 +489,7 @@ object MapObjects {
       customCollectionCls: Option[Class[_]] = None): MapObjects = {
     val id = curId.getAndIncrement()
     val loopValue = s"MapObjects_loopValue$id"
-    val loopIsNull = if (elementNullable) {
-      s"MapObjects_loopIsNull$id"
-    } else {
-      "false"
-    }
+    val loopIsNull = s"MapObjects_loopIsNull$id"
     val loopVar = LambdaVariable(loopValue, loopIsNull, elementType, elementNullable)
     MapObjects(
       loopValue, loopIsNull, elementType, function(loopVar), inputData, customCollectionCls)
@@ -885,11 +881,7 @@ object ExternalMapToCatalyst {
       valueNullable: Boolean): ExternalMapToCatalyst = {
     val id = curId.getAndIncrement()
     val keyName = "ExternalMapToCatalyst_key" + id
-    val keyIsNull = if (keyNullable) {
-      "ExternalMapToCatalyst_key_isNull" + id
-    } else {
-      "false"
-    }
+    val keyIsNull = "ExternalMapToCatalyst_key_isNull" + id
     val valueName = "ExternalMapToCatalyst_value" + id
     val valueIsNull = if (valueNullable) {
       "ExternalMapToCatalyst_value_isNull" + id
@@ -965,7 +957,9 @@ case class ExternalMapToCatalyst private(
 
     val keyElementJavaType = ctx.javaType(keyType)
     val valueElementJavaType = ctx.javaType(valueType)
+    ctx.addMutableState("boolean", keyIsNull, "")
     ctx.addMutableState(keyElementJavaType, key, "")
+    ctx.addMutableState("boolean", valueIsNull, "")
     ctx.addMutableState(valueElementJavaType, value, "")
 
     val (defineEntries, defineKeyValue) = child.dataType match {
@@ -1001,18 +995,16 @@ case class ExternalMapToCatalyst private(
         defineEntries -> defineKeyValue
     }
 
-    val keyNullCheck = if (keyIsNull != "false") {
-      ctx.addMutableState("boolean", keyIsNull, "")
-      s"$keyIsNull = $key == null;"
+    val keyNullCheck = if (ctx.isPrimitiveType(keyType)) {
+      s"$keyIsNull = false;"
     } else {
-      ""
+      s"$keyIsNull = $key == null;"
     }
 
-    val valueNullCheck = if (valueIsNull != "false") {
-      ctx.addMutableState("boolean", valueIsNull, "")
-      s"$valueIsNull = $value == null;"
+    val valueNullCheck = if (ctx.isPrimitiveType(valueType)) {
+      s"$valueIsNull = false;"
     } else {
-      ""
+      s"$valueIsNull = $value == null;"
     }
 
     val arrayCls = classOf[GenericArrayData].getName

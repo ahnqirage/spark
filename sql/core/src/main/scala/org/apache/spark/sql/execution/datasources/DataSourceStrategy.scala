@@ -145,16 +145,8 @@ case class DataSourceAnalysis(conf: SQLConf) extends Rule[LogicalPlan] with Cast
         parts, query, overwrite, false) if parts.isEmpty =>
       InsertIntoDataSourceCommand(l, query, overwrite)
 
-    case InsertIntoDir(_, storage, provider, query, overwrite)
-      if provider.isDefined && provider.get.toLowerCase(Locale.ROOT) != DDLUtils.HIVE_PROVIDER =>
-
-      val outputPath = new Path(storage.locationUri.get)
-      if (overwrite) DDLUtils.verifyNotReadPath(query, outputPath)
-
-      InsertIntoDataSourceDirCommand(storage, provider.get, query, overwrite)
-
     case i @ InsertIntoTable(
-        l @ LogicalRelation(t: HadoopFsRelation, _, table, _), parts, query, overwrite, _) =>
+        l @ LogicalRelation(t: HadoopFsRelation, _, table), parts, query, overwrite, _) =>
       // If the InsertIntoTable command is for a partitioned HadoopFsRelation and
       // the user has specified static partitions, we add a Project operator on top of the query
       // to include those constant column values in the query result.
@@ -193,15 +185,13 @@ case class DataSourceAnalysis(conf: SQLConf) extends Rule[LogicalPlan] with Cast
 
       val mode = if (overwrite) SaveMode.Overwrite else SaveMode.Append
 
-      val partitionSchema = actualQuery.resolve(
-        t.partitionSchema, t.sparkSession.sessionState.analyzer.resolver)
       val staticPartitions = parts.filter(_._2.nonEmpty).map { case (k, v) => k -> v.get }
 
       InsertIntoHadoopFsRelationCommand(
         outputPath,
         staticPartitions,
         i.ifPartitionNotExists,
-        partitionSchema,
+        partitionColumns = t.partitionSchema.map(_.name),
         t.bucketSpec,
         t.fileFormat,
         t.options,
