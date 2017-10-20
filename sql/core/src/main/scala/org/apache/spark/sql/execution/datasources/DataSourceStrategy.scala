@@ -185,13 +185,15 @@ case class DataSourceAnalysis(conf: SQLConf) extends Rule[LogicalPlan] with Cast
 
       val mode = if (overwrite) SaveMode.Overwrite else SaveMode.Append
 
+      val partitionSchema = actualQuery.resolve(
+        t.partitionSchema, t.sparkSession.sessionState.analyzer.resolver)
       val staticPartitions = parts.filter(_._2.nonEmpty).map { case (k, v) => k -> v.get }
 
       InsertIntoHadoopFsRelationCommand(
         outputPath,
         staticPartitions,
         i.ifPartitionNotExists,
-        partitionColumns = t.partitionSchema.map(_.name),
+        partitionSchema,
         t.bucketSpec,
         t.fileFormat,
         t.options,

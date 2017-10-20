@@ -480,7 +480,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       }
   }
 
-  test("SPARK-21165: the query schema of INSERT is changed after optimization") {
+  test("SPARK-21165: FileFormatWriter should only rely on attributes from analyzed plan") {
     withSQLConf(("hive.exec.dynamic.partition.mode", "nonstrict")) {
       withTable("tab1", "tab2") {
         Seq(("a", "b", 3)).toDF("word", "first", "length").write.saveAsTable("tab1")

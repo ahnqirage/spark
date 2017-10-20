@@ -2093,4 +2093,26 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
       testData2.select(lit(7), 'a, 'b).orderBy(lit(1), lit(2), lit(3)),
       Seq(Row(7, 1, 1), Row(7, 1, 2), Row(7, 2, 1), Row(7, 2, 2), Row(7, 3, 1), Row(7, 3, 2)))
   }
+
+  test("SPARK-22252: FileFormatWriter should respect the input query schema") {
+    withTable("t1", "t2", "t3", "t4") {
+      spark.range(1).select('id as 'col1, 'id as 'col2).write.saveAsTable("t1")
+      spark.sql("select COL1, COL2 from t1").write.saveAsTable("t2")
+      checkAnswer(spark.table("t2"), Row(0, 0))
+
+      // Test picking part of the columns when writing.
+      spark.range(1).select('id, 'id as 'col1, 'id as 'col2).write.saveAsTable("t3")
+      spark.sql("select COL1, COL2 from t3").write.saveAsTable("t4")
+      checkAnswer(spark.table("t4"), Row(0, 0))
+    }
+  }
+
+  test("SPARK-22271: mean overflows and returns null for some decimal variables") {
+    val d = 0.034567890
+    val df = Seq(d, d, d, d, d, d, d, d, d, d).toDF("DecimalCol")
+    val result = df.select('DecimalCol cast DecimalType(38, 33))
+      .select(col("DecimalCol")).describe()
+    val mean = result.select("DecimalCol").where($"summary" === "mean")
+    assert(mean.collect().toSet === Set(Row("0.0345678900000000000000000000000000000")))
+  }
 }
