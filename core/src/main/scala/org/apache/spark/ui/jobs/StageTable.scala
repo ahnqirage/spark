@@ -438,7 +438,11 @@ private[ui] class StageDataSource(
       case Some(t) => UIUtils.formatDate(new Date(t))
       case None => "Unknown"
     }
+<<<<<<< HEAD
     val finishTime = s.completionTime.getOrElse(currentTime)
+=======
+    val finishTime = s.completionTime.getOrElse(System.currentTimeMillis)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // The submission time for a stage is misleading because it counts the time
     // the stage waits to be launched. (SPARK-10930)
@@ -450,7 +454,11 @@ private[ui] class StageDataSource(
         if (finishTime > startTime) {
           Some(finishTime - startTime)
         } else {
+<<<<<<< HEAD
           Some(currentTime - startTime)
+=======
+          Some(System.currentTimeMillis() - startTime)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       } else {
         None

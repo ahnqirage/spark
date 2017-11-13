@@ -21,6 +21,7 @@ import java.util.{Locale, Properties}
 
 import scala.collection.JavaConverters._
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
@@ -31,6 +32,16 @@ import org.apache.spark.sql.execution.command.DDLUtils
 import org.apache.spark.sql.execution.datasources.{CreateTable, DataSource, LogicalRelation}
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.types.StructType
+=======
+import org.apache.spark.annotation.Experimental
+import org.apache.spark.sql.catalyst.{SqlParser, TableIdentifier}
+import org.apache.spark.sql.catalyst.analysis.{UnresolvedAttribute, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.plans.logical.{Project, InsertIntoTable}
+import org.apache.spark.sql.execution.datasources.jdbc.JdbcUtils
+import org.apache.spark.sql.execution.datasources.{CreateTableUsingAsSelect, ResolvedDataSource}
+import org.apache.spark.sql.sources.HadoopFsRelation
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Interface used to write a [[Dataset]] to external storage systems (e.g. file systems,
@@ -165,12 +176,16 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
    *   - year=2016/month=01/
    *   - year=2016/month=02/
    *
+<<<<<<< HEAD
    * Partitioning is one of the most widely used techniques to optimize physical data layout.
    * It provides a coarse-grained index for skipping unnecessary data reads when queries have
    * predicates on the partitioned columns. In order for partitioning to work well, the number
    * of distinct values in each column should typically be less than tens of thousands.
    *
    * This is applicable for all file-based data sources (e.g. Parquet, JSON) staring Spark 2.1.0.
+=======
+   * This was initially applicable for Parquet but in 1.5+ covers JSON, text, ORC and avro as well.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @since 1.4.0
    */
@@ -270,6 +285,7 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
   }
 
   private def insertInto(tableIdent: TableIdentifier): Unit = {
+<<<<<<< HEAD
     assertNotBucketed("insertInto")
 
     if (partitioningColumns.isDefined) {
@@ -309,6 +325,38 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
   private def assertNotPartitioned(operation: String): Unit = {
     if (partitioningColumns.isDefined) {
       throw new AnalysisException( s"'$operation' does not support partitioning")
+    }
+=======
+    val partitions = normalizedParCols.map(_.map(col => col -> (None: Option[String])).toMap)
+    val overwrite = mode == SaveMode.Overwrite
+
+    // A partitioned relation's schema can be different from the input logicalPlan, since
+    // partition columns are all moved after data columns. We Project to adjust the ordering.
+    // TODO: this belongs to the analyzer.
+    val input = normalizedParCols.map { parCols =>
+      val (inputPartCols, inputDataCols) = df.logicalPlan.output.partition { attr =>
+        parCols.contains(attr.name)
+      }
+      Project(inputDataCols ++ inputPartCols, df.logicalPlan)
+    }.getOrElse(df.logicalPlan)
+
+    df.sqlContext.executePlan(
+      InsertIntoTable(
+        UnresolvedRelation(tableIdent),
+        partitions.getOrElse(Map.empty[String, Option[String]]),
+        input,
+        overwrite,
+        ifNotExists = false)).toRdd
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+  }
+
+  private def normalizedParCols: Option[Seq[String]] = partitioningColumns.map { parCols =>
+    parCols.map { col =>
+      df.logicalPlan.output
+        .map(_.name)
+        .find(df.sqlContext.analyzer.resolver(_, col))
+        .getOrElse(throw new AnalysisException(s"Partition column $col not found in existing " +
+          s"columns (${df.logicalPlan.output.map(_.name).mkString(", ")})"))
     }
   }
 
@@ -451,6 +499,7 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
    * @since 1.4.0
    */
   def jdbc(url: String, table: String, connectionProperties: Properties): Unit = {
+<<<<<<< HEAD
     assertNotPartitioned("jdbc")
     assertNotBucketed("jdbc")
     // connectionProperties should override settings in extraOptions.
@@ -458,6 +507,48 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
     // explicit url and dbtable should override all
     this.extraOptions += ("url" -> url, "dbtable" -> table)
     format("jdbc").save()
+=======
+    val props = new Properties()
+    extraOptions.foreach { case (key, value) =>
+      props.put(key, value)
+    }
+    // connectionProperties should override settings in extraOptions
+    props.putAll(connectionProperties)
+    val conn = JdbcUtils.createConnectionFactory(url, props)()
+
+    try {
+      var tableExists = JdbcUtils.tableExists(conn, url, table)
+
+      if (mode == SaveMode.Ignore && tableExists) {
+        return
+      }
+
+      if (mode == SaveMode.ErrorIfExists && tableExists) {
+        sys.error(s"Table $table already exists.")
+      }
+
+      if (mode == SaveMode.Overwrite && tableExists) {
+        JdbcUtils.dropTable(conn, table)
+        tableExists = false
+      }
+
+      // Create the table if the table didn't exist.
+      if (!tableExists) {
+        val schema = JdbcUtils.schemaString(df, url)
+        val sql = s"CREATE TABLE $table ($schema)"
+        val statement = conn.createStatement
+        try {
+          statement.executeUpdate(sql)
+        } finally {
+          statement.close()
+        }
+      }
+    } finally {
+      conn.close()
+    }
+
+    JdbcUtils.saveTable(df, url, table, props)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**

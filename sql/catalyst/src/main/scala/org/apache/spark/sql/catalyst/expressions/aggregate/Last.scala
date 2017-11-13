@@ -68,6 +68,7 @@ case class Last(child: Expression, ignoreNullsExpr: Expression)
 
   private lazy val last = AttributeReference("last", child.dataType)()
 
+<<<<<<< HEAD
   private lazy val valueSet = AttributeReference("valueSet", BooleanType)()
 
   override lazy val aggBufferAttributes: Seq[AttributeReference] = last :: valueSet :: Nil
@@ -75,6 +76,14 @@ case class Last(child: Expression, ignoreNullsExpr: Expression)
   override lazy val initialValues: Seq[Literal] = Seq(
     /* last = */ Literal.create(null, child.dataType),
     /* valueSet = */ Literal.create(false, BooleanType)
+=======
+  private lazy val last = AttributeReference("last", child.dataType)()
+
+  override lazy val aggBufferAttributes: Seq[AttributeReference] = last :: Nil
+
+  override lazy val initialValues: Seq[Literal] = Seq(
+    /* last = */ Literal.create(null, child.dataType)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   )
 
   override lazy val updateExpressions: Seq[Expression] = {
@@ -92,11 +101,23 @@ case class Last(child: Expression, ignoreNullsExpr: Expression)
   }
 
   override lazy val mergeExpressions: Seq[Expression] = {
+<<<<<<< HEAD
     // Prefer the right hand expression if it has been set.
     Seq(
       /* last = */ If(valueSet.right, last.right, last.left),
       /* valueSet = */ Or(valueSet.right, valueSet.left)
     )
+=======
+    if (ignoreNulls) {
+      Seq(
+        /* last = */ If(IsNull(last.right), last.left, last.right)
+      )
+    } else {
+      Seq(
+        /* last = */ last.right
+      )
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override lazy val evaluateExpression: AttributeReference = last

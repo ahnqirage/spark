@@ -185,7 +185,11 @@ object IsotonicRegressionModel extends Loader[IsotonicRegressionModel] {
         boundaries: Array[Double],
         predictions: Array[Double],
         isotonic: Boolean): Unit = {
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       val metadata = compact(render(
         ("class" -> thisClassName) ~ ("version" -> thisFormatVersion) ~
@@ -198,8 +202,13 @@ object IsotonicRegressionModel extends Loader[IsotonicRegressionModel] {
     }
 
     def load(sc: SparkContext, path: String): (Array[Double], Array[Double]) = {
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
       val dataRDD = spark.read.parquet(dataPath(path))
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+      val dataRDD = sqlContext.read.parquet(dataPath(path))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       checkSchema[Data](dataRDD.schema)
       val dataArray = dataRDD.select("boundary", "prediction").collect()

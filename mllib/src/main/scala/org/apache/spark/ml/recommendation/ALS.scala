@@ -27,6 +27,7 @@ import scala.util.{Sorting, Try}
 import scala.util.hashing.byteswap64
 
 import com.github.fommil.netlib.BLAS.{getInstance => blas}
+<<<<<<< HEAD
 import org.apache.hadoop.fs.Path
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
@@ -34,6 +35,14 @@ import org.json4s.JsonDSL._
 import org.apache.spark.{Dependency, Partitioner, ShuffleDependency, SparkContext}
 import org.apache.spark.annotation.{DeveloperApi, Since}
 import org.apache.spark.internal.Logging
+=======
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.json4s.DefaultFormats
+import org.json4s.JsonDSL._
+
+import org.apache.spark.{Logging, Partitioner}
+import org.apache.spark.annotation.{Since, DeveloperApi, Experimental}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.BLAS
 import org.apache.spark.ml.param._
@@ -332,6 +341,7 @@ class ALSModel private[ml] (
 
   @Since("1.6.0")
   override def write: MLWriter = new ALSModel.ALSModelWriter(this)
+<<<<<<< HEAD
 
   /**
    * Returns top `numItems` items recommended for each user, for all users.
@@ -482,15 +492,20 @@ class ALSModel private[ml] (
     factors.mapPartitions(_.grouped(blockSize))
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 @Since("1.6.0")
 object ALSModel extends MLReadable[ALSModel] {
 
+<<<<<<< HEAD
   private val NaN = "nan"
   private val Drop = "drop"
   private[recommendation] final val supportedColdStartStrategies = Array(NaN, Drop)
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.6.0")
   override def read: MLReader[ALSModel] = new ALSModelReader
 
@@ -519,9 +534,15 @@ object ALSModel extends MLReadable[ALSModel] {
       implicit val format = DefaultFormats
       val rank = (metadata.metadata \ "rank").extract[Int]
       val userPath = new Path(path, "userFactors").toString
+<<<<<<< HEAD
       val userFactors = sparkSession.read.format("parquet").load(userPath)
       val itemPath = new Path(path, "itemFactors").toString
       val itemFactors = sparkSession.read.format("parquet").load(itemPath)
+=======
+      val userFactors = sqlContext.read.format("parquet").load(userPath)
+      val itemPath = new Path(path, "itemFactors").toString
+      val itemFactors = sqlContext.read.format("parquet").load(itemPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       val model = new ALSModel(metadata.uid, rank, userFactors, itemFactors)
 
@@ -560,8 +581,13 @@ object ALSModel extends MLReadable[ALSModel] {
  * values related to strength of indicated user
  * preferences rather than explicit ratings given to items.
  */
+<<<<<<< HEAD
 @Since("1.3.0")
 class ALS(@Since("1.4.0") override val uid: String) extends Estimator[ALSModel] with ALSParams
+=======
+@Experimental
+class ALS(override val uid: String) extends Estimator[ALSModel] with ALSParams
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   with DefaultParamsWritable {
 
   import org.apache.spark.ml.recommendation.ALS.Rating

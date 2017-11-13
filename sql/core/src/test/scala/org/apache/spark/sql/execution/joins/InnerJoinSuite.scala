@@ -102,6 +102,7 @@ class InnerJoinSuite extends SparkPlanTest with SharedSQLContext {
       EnsureRequirements(spark.sessionState.conf).apply(broadcastJoin)
     }
 
+<<<<<<< HEAD
     def makeShuffledHashJoin(
         leftKeys: Seq[Expression],
         rightKeys: Seq[Expression],
@@ -116,6 +117,8 @@ class InnerJoinSuite extends SparkPlanTest with SharedSQLContext {
       EnsureRequirements(spark.sessionState.conf).apply(filteredJoin)
     }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def makeSortMergeJoin(
         leftKeys: Seq[Expression],
         rightKeys: Seq[Expression],
@@ -144,30 +147,6 @@ class InnerJoinSuite extends SparkPlanTest with SharedSQLContext {
         withSQLConf(SQLConf.SHUFFLE_PARTITIONS.key -> "1") {
           checkAnswer2(leftRows, rightRows, (leftPlan: SparkPlan, rightPlan: SparkPlan) =>
             makeBroadcastHashJoin(
-              leftKeys, rightKeys, boundCondition, leftPlan, rightPlan, joins.BuildRight),
-            expectedAnswer.map(Row.fromTuple),
-            sortAnswers = true)
-        }
-      }
-    }
-
-    test(s"$testName using ShuffledHashJoin (build=left)") {
-      extractJoinParts().foreach { case (_, leftKeys, rightKeys, boundCondition, _, _) =>
-        withSQLConf(SQLConf.SHUFFLE_PARTITIONS.key -> "1") {
-          checkAnswer2(leftRows, rightRows, (leftPlan: SparkPlan, rightPlan: SparkPlan) =>
-            makeShuffledHashJoin(
-              leftKeys, rightKeys, boundCondition, leftPlan, rightPlan, joins.BuildLeft),
-            expectedAnswer.map(Row.fromTuple),
-            sortAnswers = true)
-        }
-      }
-    }
-
-    test(s"$testName using ShuffledHashJoin (build=right)") {
-      extractJoinParts().foreach { case (_, leftKeys, rightKeys, boundCondition, _, _) =>
-        withSQLConf(SQLConf.SHUFFLE_PARTITIONS.key -> "1") {
-          checkAnswer2(leftRows, rightRows, (leftPlan: SparkPlan, rightPlan: SparkPlan) =>
-            makeShuffledHashJoin(
               leftKeys, rightKeys, boundCondition, leftPlan, rightPlan, joins.BuildRight),
             expectedAnswer.map(Row.fromTuple),
             sortAnswers = true)

@@ -24,8 +24,15 @@ import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
+<<<<<<< HEAD
 import com.google.common.base.Objects
 import org.apache.avro.Schema
+=======
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.io.{Input, Output}
+import com.google.common.base.Objects
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.ql.exec.{UDF, Utilities}

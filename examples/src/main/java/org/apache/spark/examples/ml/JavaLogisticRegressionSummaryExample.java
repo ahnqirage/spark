@@ -17,19 +17,30 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.ml.classification.BinaryLogisticRegressionSummary;
 import org.apache.spark.ml.classification.LogisticRegression;
 import org.apache.spark.ml.classification.LogisticRegressionModel;
 import org.apache.spark.ml.classification.LogisticRegressionTrainingSummary;
+<<<<<<< HEAD
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+=======
+import org.apache.spark.sql.DataFrame;
+import org.apache.spark.sql.SQLContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions;
 // $example off$
 
 public class JavaLogisticRegressionSummaryExample {
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaLogisticRegressionSummaryExample")
@@ -37,6 +48,14 @@ public class JavaLogisticRegressionSummaryExample {
 
     // Load training data
     Dataset<Row> training = spark.read().format("libsvm")
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaLogisticRegressionSummaryExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext sqlContext = new SQLContext(jsc);
+
+    // Load training data
+    DataFrame training = sqlContext.read().format("libsvm")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .load("data/mllib/sample_libsvm_data.txt");
 
     LogisticRegression lr = new LogisticRegression()
@@ -65,20 +84,32 @@ public class JavaLogisticRegressionSummaryExample {
       (BinaryLogisticRegressionSummary) trainingSummary;
 
     // Obtain the receiver-operating characteristic as a dataframe and areaUnderROC.
+<<<<<<< HEAD
     Dataset<Row> roc = binarySummary.roc();
+=======
+    DataFrame roc = binarySummary.roc();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     roc.show();
     roc.select("FPR").show();
     System.out.println(binarySummary.areaUnderROC());
 
     // Get the threshold corresponding to the maximum F-Measure and rerun LogisticRegression with
     // this selected threshold.
+<<<<<<< HEAD
     Dataset<Row> fMeasure = binarySummary.fMeasureByThreshold();
+=======
+    DataFrame fMeasure = binarySummary.fMeasureByThreshold();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     double maxFMeasure = fMeasure.select(functions.max("F-Measure")).head().getDouble(0);
     double bestThreshold = fMeasure.where(fMeasure.col("F-Measure").equalTo(maxFMeasure))
       .select("threshold").head().getDouble(0);
     lrModel.setThreshold(bestThreshold);
     // $example off$
 
+<<<<<<< HEAD
     spark.stop();
+=======
+    jsc.stop();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

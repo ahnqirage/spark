@@ -18,6 +18,7 @@
 package org.apache.spark.ml.classification
 
 import com.github.fommil.netlib.BLAS.{getInstance => blas}
+<<<<<<< HEAD
 import org.json4s.{DefaultFormats, JObject}
 import org.json4s.JsonDSL._
 
@@ -26,6 +27,13 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
 import org.apache.spark.ml.param.ParamMap
+=======
+
+import org.apache.spark.Logging
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.{PredictionModel, Predictor}
+import org.apache.spark.ml.param.{Param, ParamMap}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.regression.DecisionTreeRegressionModel
 import org.apache.spark.ml.tree._
 import org.apache.spark.ml.tree.impl.GradientBoostedTrees
@@ -55,10 +63,18 @@ import org.apache.spark.sql.functions._
  * @note Multiclass labels are not currently supported.
  */
 @Since("1.4.0")
+<<<<<<< HEAD
 class GBTClassifier @Since("1.4.0") (
     @Since("1.4.0") override val uid: String)
   extends ProbabilisticClassifier[Vector, GBTClassifier, GBTClassificationModel]
   with GBTClassifierParams with DefaultParamsWritable with Logging {
+=======
+@Experimental
+final class GBTClassifier @Since("1.4.0") (
+    @Since("1.4.0") override val uid: String)
+  extends Predictor[Vector, GBTClassifier, GBTClassificationModel]
+  with GBTParams with TreeClassifierParams with Logging {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("gbtc"))
@@ -67,6 +83,7 @@ class GBTClassifier @Since("1.4.0") (
 
   // Parameters from TreeClassifierParams:
 
+<<<<<<< HEAD
   /** @group setParam */
   @Since("1.4.0")
   override def setMaxDepth(value: Int): this.type = set(maxDepth, value)
@@ -102,6 +119,29 @@ class GBTClassifier @Since("1.4.0") (
    */
   @Since("1.4.0")
   override def setCheckpointInterval(value: Int): this.type = set(checkpointInterval, value)
+=======
+  @Since("1.4.0")
+  override def setMaxDepth(value: Int): this.type = super.setMaxDepth(value)
+
+  @Since("1.4.0")
+  override def setMaxBins(value: Int): this.type = super.setMaxBins(value)
+
+  @Since("1.4.0")
+  override def setMinInstancesPerNode(value: Int): this.type =
+    super.setMinInstancesPerNode(value)
+
+  @Since("1.4.0")
+  override def setMinInfoGain(value: Double): this.type = super.setMinInfoGain(value)
+
+  @Since("1.4.0")
+  override def setMaxMemoryInMB(value: Int): this.type = super.setMaxMemoryInMB(value)
+
+  @Since("1.4.0")
+  override def setCacheNodeIds(value: Boolean): this.type = super.setCacheNodeIds(value)
+
+  @Since("1.4.0")
+  override def setCheckpointInterval(value: Int): this.type = super.setCheckpointInterval(value)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * The impurity setting is ignored for GBT models.
@@ -117,6 +157,7 @@ class GBTClassifier @Since("1.4.0") (
 
   // Parameters from TreeEnsembleParams:
 
+<<<<<<< HEAD
   /** @group setParam */
   @Since("1.4.0")
   override def setSubsamplingRate(value: Double): this.type = set(subsamplingRate, value)
@@ -134,6 +175,38 @@ class GBTClassifier @Since("1.4.0") (
   /** @group setParam */
   @Since("1.4.0")
   override def setStepSize(value: Double): this.type = set(stepSize, value)
+=======
+  @Since("1.4.0")
+  override def setSubsamplingRate(value: Double): this.type = super.setSubsamplingRate(value)
+
+  @Since("1.4.0")
+  override def setSeed(value: Long): this.type = {
+    logWarning("The 'seed' parameter is currently ignored by Gradient Boosting.")
+    super.setSeed(value)
+  }
+
+  // Parameters from GBTParams:
+
+  @Since("1.4.0")
+  override def setMaxIter(value: Int): this.type = super.setMaxIter(value)
+
+  @Since("1.4.0")
+  override def setStepSize(value: Double): this.type = super.setStepSize(value)
+
+  // Parameters for GBTClassifier:
+
+  /**
+   * Loss function which GBT tries to minimize. (case-insensitive)
+   * Supported: "logistic"
+   * (default = logistic)
+   * @group param
+   */
+  @Since("1.4.0")
+  val lossType: Param[String] = new Param[String](this, "lossType", "Loss function which GBT" +
+    " tries to minimize (case-insensitive). Supported options:" +
+    s" ${GBTClassifier.supportedLossTypes.mkString(", ")}",
+    (value: String) => GBTClassifier.supportedLossTypes.contains(value.toLowerCase))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   // Parameters from GBTClassifierParams:
 
@@ -141,7 +214,25 @@ class GBTClassifier @Since("1.4.0") (
   @Since("1.4.0")
   def setLossType(value: String): this.type = set(lossType, value)
 
+<<<<<<< HEAD
   override protected def train(dataset: Dataset[_]): GBTClassificationModel = {
+=======
+  /** @group getParam */
+  @Since("1.4.0")
+  def getLossType: String = $(lossType).toLowerCase
+
+  /** (private[ml]) Convert new loss to old loss. */
+  override private[ml] def getOldLossType: OldLoss = {
+    getLossType match {
+      case "logistic" => OldLogLoss
+      case _ =>
+        // Should never happen because of check in setter method.
+        throw new RuntimeException(s"GBTClassifier was given bad loss type: $getLossType")
+    }
+  }
+
+  override protected def train(dataset: DataFrame): GBTClassificationModel = {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val categoricalFeatures: Map[Int, Int] =
       MetadataUtils.getCategoricalFeatures(dataset.schema($(featuresCol)))
     // We copy and modify this from Classifier.extractLabeledPoints since GBT only supports
@@ -183,6 +274,7 @@ class GBTClassifier @Since("1.4.0") (
 }
 
 @Since("1.4.0")
+<<<<<<< HEAD
 object GBTClassifier extends DefaultParamsReadable[GBTClassifier] {
 
   /** Accessor for supported loss settings: logistic */
@@ -191,6 +283,14 @@ object GBTClassifier extends DefaultParamsReadable[GBTClassifier] {
 
   @Since("2.0.0")
   override def load(path: String): GBTClassifier = super.load(path)
+=======
+@Experimental
+object GBTClassifier {
+  // The losses below should be lowercase.
+  /** Accessor for supported loss settings: logistic */
+  @Since("1.4.0")
+  final val supportedLossTypes: Array[String] = Array("logistic").map(_.toLowerCase)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -204,6 +304,7 @@ object GBTClassifier extends DefaultParamsReadable[GBTClassifier] {
  * @note Multiclass labels are not currently supported.
  */
 @Since("1.6.0")
+<<<<<<< HEAD
 class GBTClassificationModel private[ml](
     @Since("1.6.0") override val uid: String,
     private val _trees: Array[DecisionTreeRegressionModel],
@@ -213,6 +314,16 @@ class GBTClassificationModel private[ml](
   extends ProbabilisticClassificationModel[Vector, GBTClassificationModel]
   with GBTClassifierParams with TreeEnsembleModel[DecisionTreeRegressionModel]
   with MLWritable with Serializable {
+=======
+@Experimental
+final class GBTClassificationModel private[ml](
+    @Since("1.6.0") override val uid: String,
+    private val _trees: Array[DecisionTreeRegressionModel],
+    private val _treeWeights: Array[Double],
+    @Since("1.6.0") override val numFeatures: Int)
+  extends PredictionModel[Vector, GBTClassificationModel]
+  with TreeEnsembleModel with Serializable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   require(_trees.nonEmpty, "GBTClassificationModel requires at least 1 tree.")
   require(_trees.length == _treeWeights.length, "GBTClassificationModel given trees, treeWeights" +
@@ -225,6 +336,7 @@ class GBTClassificationModel private[ml](
    * @param _treeWeights  Weights for the decision trees in the ensemble.
    * @param numFeatures  The number of features.
    */
+<<<<<<< HEAD
   private[ml] def this(
       uid: String,
       _trees: Array[DecisionTreeRegressionModel],
@@ -238,11 +350,14 @@ class GBTClassificationModel private[ml](
    * @param _trees  Decision trees in the ensemble.
    * @param _treeWeights  Weights for the decision trees in the ensemble.
    */
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.6.0")
   def this(uid: String, _trees: Array[DecisionTreeRegressionModel], _treeWeights: Array[Double]) =
     this(uid, _trees, _treeWeights, -1, 2)
 
   @Since("1.4.0")
+<<<<<<< HEAD
   override def trees: Array[DecisionTreeRegressionModel] = _trees
 
   /**
@@ -251,6 +366,10 @@ class GBTClassificationModel private[ml](
   @Since("2.0.0")
   val getNumTrees: Int = trees.length
 
+=======
+  override def trees: Array[DecisionTreeModel] = _trees.asInstanceOf[Array[DecisionTreeModel]]
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.4.0")
   override def treeWeights: Array[Double] = _treeWeights
 
@@ -271,6 +390,7 @@ class GBTClassificationModel private[ml](
     }
   }
 
+<<<<<<< HEAD
   override protected def predictRaw(features: Vector): Vector = {
     val prediction: Double = margin(features)
     Vectors.dense(Array(-prediction, prediction))
@@ -291,6 +411,8 @@ class GBTClassificationModel private[ml](
   /** Number of trees in ensemble */
   val numTrees: Int = trees.length
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.4.0")
   override def copy(extra: ParamMap): GBTClassificationModel = {
     copyValues(new GBTClassificationModel(uid, _trees, _treeWeights, numFeatures, numClasses),

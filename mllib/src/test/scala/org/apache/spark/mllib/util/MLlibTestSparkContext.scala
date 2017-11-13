@@ -33,6 +33,7 @@ trait MLlibTestSparkContext extends TempDirectory { self: Suite =>
 
   override def beforeAll() {
     super.beforeAll()
+<<<<<<< HEAD
     spark = SparkSession.builder
       .master("local[2]")
       .appName("MLlibUnitTest")
@@ -53,6 +54,22 @@ trait MLlibTestSparkContext extends TempDirectory { self: Suite =>
       spark = null
     } finally {
       super.afterAll()
+=======
+    val conf = new SparkConf()
+      .setMaster("local[2]")
+      .setAppName("MLlibUnitTest")
+    sc = new SparkContext(conf)
+    SQLContext.clearActive()
+    sqlContext = new SQLContext(sc)
+    SQLContext.setActive(sqlContext)
+  }
+
+  override def afterAll() {
+    sqlContext = null
+    SQLContext.clearActive()
+    if (sc != null) {
+      sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

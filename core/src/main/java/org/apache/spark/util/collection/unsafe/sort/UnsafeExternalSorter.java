@@ -35,7 +35,10 @@ import org.apache.spark.memory.TaskMemoryManager;
 import org.apache.spark.serializer.SerializerManager;
 import org.apache.spark.storage.BlockManager;
 import org.apache.spark.unsafe.Platform;
+<<<<<<< HEAD
 import org.apache.spark.unsafe.UnsafeAlignedOffset;
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.unsafe.array.LongArray;
 import org.apache.spark.unsafe.memory.MemoryBlock;
 import org.apache.spark.util.Utils;
@@ -154,6 +157,7 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
     this.fileBufferSizeBytes = 32 * 1024;
 
     if (existingInMemorySorter == null) {
+<<<<<<< HEAD
       RecordComparator comparator = null;
       if (recordComparatorSupplier != null) {
         comparator = recordComparatorSupplier.get();
@@ -165,6 +169,10 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
         prefixComparator,
         initialSize,
         canUseRadixSort);
+=======
+      this.inMemSorter = new UnsafeInMemorySorter(
+        this, taskMemoryManager, recordComparator, prefixComparator, initialSize);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } else {
       this.inMemSorter = existingInMemorySorter;
     }
@@ -219,7 +227,19 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
         new UnsafeSorterSpillWriter(blockManager, fileBufferSizeBytes, writeMetrics,
           inMemSorter.numRecords());
       spillWriters.add(spillWriter);
+<<<<<<< HEAD
       spillIterator(inMemSorter.getSortedIterator(), spillWriter);
+=======
+      final UnsafeSorterIterator sortedRecords = inMemSorter.getSortedIterator();
+      while (sortedRecords.hasNext()) {
+        sortedRecords.loadNext();
+        final Object baseObject = sortedRecords.getBaseObject();
+        final long baseOffset = sortedRecords.getBaseOffset();
+        final int recordLength = sortedRecords.getRecordLength();
+        spillWriter.write(baseObject, baseOffset, recordLength, sortedRecords.getKeyPrefix());
+      }
+      spillWriter.close();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     final long spillSize = freeMemory();
@@ -228,8 +248,15 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
     // written to disk. This also counts the space needed to store the sorter's pointer array.
     inMemSorter.reset();
     // Reset the in-memory sorter's pointer array only after freeing up the memory pages holding the
+<<<<<<< HEAD
     // records. Otherwise, if the task is over allocated memory, then without freeing the memory
     // pages, we might not be able to get memory for the pointer array.
+=======
+    // records. Otherwise, if the task is over allocated memory, then without freeing the memory pages,
+    // we might not be able to get memory for the pointer array.
+
+    taskContext.taskMetrics().incMemoryBytesSpilled(spillSize);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     taskContext.taskMetrics().incMemoryBytesSpilled(spillSize);
     taskContext.taskMetrics().incDiskBytesSpilled(writeMetrics.bytesWritten());
@@ -522,7 +549,10 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
         UnsafeInMemorySorter.SortedIterator inMemIterator =
           ((UnsafeInMemorySorter.SortedIterator) upstream).clone();
 
+<<<<<<< HEAD
        ShuffleWriteMetrics writeMetrics = new ShuffleWriteMetrics();
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         // Iterate over the records that have not been returned and spill them.
         final UnsafeSorterSpillWriter spillWriter =
           new UnsafeSorterSpillWriter(blockManager, fileBufferSizeBytes, writeMetrics, numRecords);
@@ -536,8 +566,12 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
           // is accessing the current record. We free this page in that caller's next loadNext()
           // call.
           for (MemoryBlock page : allocatedPages) {
+<<<<<<< HEAD
             if (!loaded || page.pageNumber !=
                     ((UnsafeInMemorySorter.SortedIterator)upstream).getCurrentPageNumber()) {
+=======
+            if (!loaded || page.getBaseObject() != upstream.getBaseObject()) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               released += page.size();
               freePage(page);
             } else {
@@ -550,12 +584,17 @@ public final class UnsafeExternalSorter extends MemoryConsumer {
         // in-memory sorter will not be used after spilling
         assert(inMemSorter != null);
         released += inMemSorter.getMemoryUsage();
+<<<<<<< HEAD
         totalSortTimeNanos += inMemSorter.getSortTimeNanos();
         inMemSorter.free();
         inMemSorter = null;
         taskContext.taskMetrics().incMemoryBytesSpilled(released);
         taskContext.taskMetrics().incDiskBytesSpilled(writeMetrics.bytesWritten());
         totalSpillBytes += released;
+=======
+        inMemSorter.free();
+        inMemSorter = null;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         return released;
       }
     }

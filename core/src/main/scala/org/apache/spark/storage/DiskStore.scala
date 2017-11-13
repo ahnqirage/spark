@@ -248,6 +248,7 @@ private class EncryptedBlockData(
     }
   }
 
+<<<<<<< HEAD
   override def size: Long = blockSize
 
   override def dispose(): Unit = { }
@@ -295,6 +296,14 @@ private class ReadableChannelFileRegion(source: ReadableByteChannel, blockSize: 
         written += lastWrite
       } else {
         lastWrite = 0
+=======
+  override def remove(blockId: BlockId): Boolean = {
+    val file = diskManager.getFile(blockId.name)
+    if (file.exists()) {
+      val ret = file.delete()
+      if (!ret) {
+        logWarning(s"Error deleting ${file.getPath()}")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
 

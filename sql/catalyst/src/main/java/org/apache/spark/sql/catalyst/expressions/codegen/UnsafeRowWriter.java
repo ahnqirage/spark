@@ -43,8 +43,13 @@ public class UnsafeRowWriter {
   private final BufferHolder holder;
   // The offset of the global buffer where we start to write this row.
   private int startingOffset;
+<<<<<<< HEAD
   private final int nullBitsSize;
   private final int fixedSize;
+=======
+  private int nullBitsSize;
+  private UnsafeRow row;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   public UnsafeRowWriter(BufferHolder holder, int numFields) {
     this.holder = holder;
@@ -61,7 +66,12 @@ public class UnsafeRowWriter {
     this.startingOffset = holder.cursor;
 
     // grow the global buffer to make sure it has enough space to write fixed-length data.
+<<<<<<< HEAD
     holder.grow(fixedSize);
+=======
+    final int fixedSize = nullBitsSize + 8 * numFields;
+    holder.grow(fixedSize, row);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     holder.cursor += fixedSize;
 
     zeroOutNullBytes();
@@ -74,6 +84,11 @@ public class UnsafeRowWriter {
     for (int i = 0; i < nullBitsSize; i += 8) {
       Platform.putLong(holder.buffer, startingOffset + i, 0L);
     }
+  }
+
+  public void initialize(UnsafeRow row, BufferHolder holder, int numFields) {
+    initialize(holder, numFields);
+    this.row = row;
   }
 
   private void zeroOutPaddingBytes(int numBytes) {
@@ -109,6 +124,25 @@ public class UnsafeRowWriter {
     Platform.putLong(holder.buffer, fieldOffset, offsetAndSize);
   }
 
+<<<<<<< HEAD
+=======
+  // Do word alignment for this row and grow the row buffer if needed.
+  // todo: remove this after we make unsafe array data word align.
+  public void alignToWords(int numBytes) {
+    final int remainder = numBytes & 0x07;
+
+    if (remainder > 0) {
+      final int paddingBytes = 8 - remainder;
+      holder.grow(paddingBytes, row);
+
+      for (int i = 0; i < paddingBytes; i++) {
+        Platform.putByte(holder.buffer, holder.cursor, (byte) 0);
+        holder.cursor++;
+      }
+    }
+  }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   public void write(int ordinal, boolean value) {
     final long offset = getFieldOffset(ordinal);
     Platform.putLong(holder.buffer, offset, 0L);
@@ -163,7 +197,7 @@ public class UnsafeRowWriter {
       }
     } else {
       // grow the global buffer before writing data.
-      holder.grow(16);
+      holder.grow(16, row);
 
       // zero-out the bytes
       Platform.putLong(holder.buffer, holder.cursor, 0L);
@@ -195,7 +229,7 @@ public class UnsafeRowWriter {
     final int roundedSize = ByteArrayMethods.roundNumberOfBytesToNearestWord(numBytes);
 
     // grow the global buffer before writing data.
-    holder.grow(roundedSize);
+    holder.grow(roundedSize, row);
 
     zeroOutPaddingBytes(numBytes);
 
@@ -216,7 +250,7 @@ public class UnsafeRowWriter {
     final int roundedSize = ByteArrayMethods.roundNumberOfBytesToNearestWord(numBytes);
 
     // grow the global buffer before writing data.
-    holder.grow(roundedSize);
+    holder.grow(roundedSize, row);
 
     zeroOutPaddingBytes(numBytes);
 
@@ -232,7 +266,7 @@ public class UnsafeRowWriter {
 
   public void write(int ordinal, CalendarInterval input) {
     // grow the global buffer before writing data.
-    holder.grow(16);
+    holder.grow(16, row);
 
     // Write the months and microseconds fields of Interval to the variable length portion.
     Platform.putLong(holder.buffer, holder.cursor, input.months);

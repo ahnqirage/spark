@@ -158,7 +158,11 @@ trait ExpressionEvalHelper extends GeneratorDrivenPropertyChecks {
     // some expression is reusing variable names across different instances.
     // This behavior is tested in ExpressionEvalHelperSuite.
     val plan = generateProject(
+<<<<<<< HEAD
       UnsafeProjection.create(
+=======
+      GenerateUnsafeProjection.generate(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Alias(expression, s"Optimized($expression)1")() ::
           Alias(expression, s"Optimized($expression)2")() :: Nil),
       expression)
@@ -187,10 +191,15 @@ trait ExpressionEvalHelper extends GeneratorDrivenPropertyChecks {
       expression: Expression,
       expected: Any,
       inputRow: InternalRow = EmptyRow): Unit = {
+<<<<<<< HEAD
     val plan = Project(Alias(expression, s"Optimized($expression)")() :: Nil, OneRowRelation())
     // We should analyze the plan first, otherwise we possibly optimize an unresolved plan.
     val analyzedPlan = SimpleAnalyzer.execute(plan)
     val optimizedPlan = SimpleTestOptimizer.execute(analyzedPlan)
+=======
+    val plan = Project(Alias(expression, s"Optimized($expression)")() :: Nil, OneRowRelation)
+    val optimizedPlan = SimpleTestOptimizer.execute(plan)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkEvaluationWithoutCodegen(optimizedPlan.expressions.head, expected, inputRow)
   }
 

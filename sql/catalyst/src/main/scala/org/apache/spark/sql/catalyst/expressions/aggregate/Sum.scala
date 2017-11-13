@@ -33,7 +33,12 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
   // Return data type.
   override def dataType: DataType = resultType
 
+<<<<<<< HEAD
   override def inputTypes: Seq[AbstractDataType] = Seq(NumericType)
+=======
+  override def inputTypes: Seq[AbstractDataType] =
+    Seq(TypeCollection(LongType, DoubleType, DecimalType))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForNumericExpr(child.dataType, "function sum")
@@ -57,6 +62,7 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
     /* sum = */ Literal.create(null, sumDataType)
   )
 
+<<<<<<< HEAD
   override lazy val updateExpressions: Seq[Expression] = {
     if (child.nullable) {
       Seq(
@@ -72,11 +78,24 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
   }
 
   override lazy val mergeExpressions: Seq[Expression] = {
+=======
+  override lazy val updateExpressions: Seq[Expression] = Seq(
+    /* sum = */
+    Coalesce(Seq(Add(Coalesce(Seq(sum, zero)), Cast(child, sumDataType)), sum))
+  )
+
+  override lazy val mergeExpressions: Seq[Expression] = {
+    val add = Add(Coalesce(Seq(sum.left, zero)), Cast(sum.right, sumDataType))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     Seq(
       /* sum = */
       Coalesce(Seq(Add(Coalesce(Seq(sum.left, zero)), sum.right), sum.left))
     )
   }
 
+<<<<<<< HEAD
   override lazy val evaluateExpression: Expression = sum
+=======
+  override lazy val evaluateExpression: Expression = Cast(sum, resultType)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

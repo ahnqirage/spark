@@ -18,8 +18,13 @@
 package org.apache.spark.ml.feature
 
 import org.apache.spark.SparkFunSuite
+<<<<<<< HEAD
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+=======
+import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.Row
 
@@ -90,6 +95,7 @@ class MinMaxScalerSuite extends SparkFunSuite with MLlibTestSparkContext with De
     assert(newInstance.originalMin === instance.originalMin)
     assert(newInstance.originalMax === instance.originalMax)
   }
+<<<<<<< HEAD
 
   test("MinMaxScaler should remain NaN value") {
     val data = Array(
@@ -117,4 +123,6 @@ class MinMaxScalerSuite extends SparkFunSuite with MLlibTestSparkContext with De
         assert(vector1.equals(vector2), "Transformed vector is different with expected.")
       }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

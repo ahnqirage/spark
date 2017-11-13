@@ -17,6 +17,7 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession;
 
 // $example on$
@@ -25,6 +26,18 @@ import java.util.List;
 
 import org.apache.spark.ml.feature.StopWordsRemover;
 import org.apache.spark.sql.Dataset;
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SQLContext;
+
+// $example on$
+import java.util.Arrays;
+
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.ml.feature.StopWordsRemover;
+import org.apache.spark.sql.DataFrame;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
@@ -36,29 +49,49 @@ import org.apache.spark.sql.types.StructType;
 public class JavaStopWordsRemoverExample {
 
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaStopWordsRemoverExample")
       .getOrCreate();
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaStopWordsRemoverExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext jsql = new SQLContext(jsc);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // $example on$
     StopWordsRemover remover = new StopWordsRemover()
       .setInputCol("raw")
       .setOutputCol("filtered");
 
+<<<<<<< HEAD
     List<Row> data = Arrays.asList(
       RowFactory.create(Arrays.asList("I", "saw", "the", "red", "balloon")),
       RowFactory.create(Arrays.asList("Mary", "had", "a", "little", "lamb"))
     );
+=======
+    JavaRDD<Row> rdd = jsc.parallelize(Arrays.asList(
+      RowFactory.create(Arrays.asList("I", "saw", "the", "red", "baloon")),
+      RowFactory.create(Arrays.asList("Mary", "had", "a", "little", "lamb"))
+    ));
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     StructType schema = new StructType(new StructField[]{
       new StructField(
         "raw", DataTypes.createArrayType(DataTypes.StringType), false, Metadata.empty())
     });
 
+<<<<<<< HEAD
     Dataset<Row> dataset = spark.createDataFrame(data, schema);
     remover.transform(dataset).show(false);
     // $example off$
     spark.stop();
+=======
+    DataFrame dataset = jsql.createDataFrame(rdd, schema);
+    remover.transform(dataset).show();
+    // $example off$
+    jsc.stop();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

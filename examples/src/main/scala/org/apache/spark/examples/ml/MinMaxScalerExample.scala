@@ -20,6 +20,7 @@ package org.apache.spark.examples.ml
 
 // $example on$
 import org.apache.spark.ml.feature.MinMaxScaler
+<<<<<<< HEAD
 import org.apache.spark.ml.linalg.Vectors
 // $example off$
 import org.apache.spark.sql.SparkSession
@@ -37,6 +38,20 @@ object MinMaxScalerExample {
       (1, Vectors.dense(2.0, 1.1, 1.0)),
       (2, Vectors.dense(3.0, 10.1, 3.0))
     )).toDF("id", "features")
+=======
+// $example off$
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object MinMaxScalerExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("MinMaxScalerExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    val dataFrame = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val scaler = new MinMaxScaler()
       .setInputCol("features")
@@ -47,11 +62,17 @@ object MinMaxScalerExample {
 
     // rescale each feature to range [min, max].
     val scaledData = scalerModel.transform(dataFrame)
+<<<<<<< HEAD
     println(s"Features scaled to range: [${scaler.getMin}, ${scaler.getMax}]")
     scaledData.select("features", "scaledFeatures").show()
     // $example off$
 
     spark.stop()
+=======
+    scaledData.show()
+    // $example off$
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

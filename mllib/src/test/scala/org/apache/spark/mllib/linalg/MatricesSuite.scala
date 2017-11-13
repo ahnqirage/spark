@@ -19,6 +19,12 @@ package org.apache.spark.mllib.linalg
 
 import java.util.Random
 
+<<<<<<< HEAD
+=======
+import breeze.linalg.{CSCMatrix, Matrix => BM}
+import org.mockito.Mockito.when
+import org.scalatest.mock.MockitoSugar._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.collection.mutable.{Map => MutableMap}
 
 import breeze.linalg.{CSCMatrix, Matrix => BM}
@@ -512,6 +518,7 @@ class MatricesSuite extends SparkFunSuite {
     val sum = bm1 + bm2
     Matrices.fromBreeze(sum)
   }
+<<<<<<< HEAD
 
   test("Test FromBreeze when Breeze.CSCMatrix.rowIndices has trailing zeros. - SPARK-20687") {
     // (2, 0, 0)
@@ -631,4 +638,6 @@ class MatricesSuite extends SparkFunSuite {
     compare(mlDenseMatrixToTriple(dm), mlDenseMatrixToTriple(newDM))
     compare(mlSparseMatrixToTriple(sm), mlSparseMatrixToTriple(newSM))
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

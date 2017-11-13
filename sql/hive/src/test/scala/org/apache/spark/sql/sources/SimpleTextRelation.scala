@@ -19,7 +19,51 @@ package org.apache.spark.sql.sources
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
+<<<<<<< HEAD
 import org.apache.hadoop.mapreduce.{Job, TaskAttemptContext}
+=======
+import org.apache.hadoop.io.{NullWritable, Text}
+import org.apache.hadoop.mapreduce.{Job, RecordWriter, TaskAttemptContext}
+import org.apache.hadoop.mapreduce.lib.output.{FileOutputFormat, TextOutputFormat}
+
+import org.apache.spark.TaskContext
+import org.apache.spark.deploy.SparkHadoopUtil
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Row, SQLContext, sources}
+import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.{CatalystTypeConverters, expressions}
+import org.apache.spark.sql.types.{DataType, StructType}
+
+/**
+ * A simple example [[HadoopFsRelationProvider]].
+ */
+class SimpleTextSource extends HadoopFsRelationProvider {
+  override def createRelation(
+      sqlContext: SQLContext,
+      paths: Array[String],
+      schema: Option[StructType],
+      partitionColumns: Option[StructType],
+      parameters: Map[String, String]): HadoopFsRelation = {
+    new SimpleTextRelation(paths, schema, partitionColumns, parameters)(sqlContext)
+  }
+}
+
+class AppendingTextOutputFormat(outputFile: Path) extends TextOutputFormat[NullWritable, Text] {
+  val numberFormat = NumberFormat.getInstance()
+
+  numberFormat.setMinimumIntegerDigits(5)
+  numberFormat.setGroupingUsed(false)
+
+  override def getDefaultWorkFile(context: TaskAttemptContext, extension: String): Path = {
+    val configuration = SparkHadoopUtil.get.getConfigurationFromJobContext(context)
+    val uniqueWriteJobId = configuration.get("spark.sql.sources.writeJobUUID")
+    val taskAttemptId = SparkHadoopUtil.get.getTaskAttemptIDFromTaskAttemptContext(context)
+    val split = taskAttemptId.getTaskID.getId
+    val name = FileOutputFormat.getOutputName(context)
+    new Path(outputFile, s"$name-${numberFormat.format(split)}-$uniqueWriteJobId")
+  }
+}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.spark.sql.{sources, SparkSession}
 import org.apache.spark.sql.catalyst.{expressions, InternalRow}
@@ -39,6 +83,7 @@ class SimpleTextSource extends TextBasedFileFormat with DataSourceRegister {
     Some(DataType.fromJson(options("dataSchema")).asInstanceOf[StructType])
   }
 
+<<<<<<< HEAD
   override def prepareWrite(
       sparkSession: SparkSession,
       job: Job,
@@ -52,6 +97,41 @@ class SimpleTextSource extends TextBasedFileFormat with DataSourceRegister {
           context: TaskAttemptContext): OutputWriter = {
         new SimpleTextOutputWriter(path, dataSchema, context)
       }
+=======
+/**
+ * A simple example [[HadoopFsRelation]], used for testing purposes.  Data are stored as comma
+ * separated string lines.  When scanning data, schema must be explicitly provided via data source
+ * option `"dataSchema"`.
+ */
+class SimpleTextRelation(
+    override val paths: Array[String],
+    val maybeDataSchema: Option[StructType],
+    override val userDefinedPartitionColumns: Option[StructType],
+    parameters: Map[String, String])(
+    @transient val sqlContext: SQLContext)
+  extends HadoopFsRelation(parameters) {
+
+  import sqlContext.sparkContext
+
+  override val dataSchema: StructType =
+    maybeDataSchema.getOrElse(DataType.fromJson(parameters("dataSchema")).asInstanceOf[StructType])
+
+  override def equals(other: Any): Boolean = other match {
+    case that: SimpleTextRelation =>
+      this.paths.sameElements(that.paths) &&
+        this.maybeDataSchema == that.maybeDataSchema &&
+        this.dataSchema == that.dataSchema &&
+        this.partitionColumns == that.partitionColumns
+
+    case _ => false
+  }
+
+  override def hashCode(): Int =
+    Objects.hashCode(paths, maybeDataSchema, dataSchema, partitionColumns)
+
+  override def buildScan(inputStatuses: Array[FileStatus]): RDD[Row] = {
+    val fields = dataSchema.map(_.dataType)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       override def getFileExtension(context: TaskAttemptContext): String = ""
     }
@@ -75,8 +155,18 @@ class SimpleTextSource extends TextBasedFileFormat with DataSourceRegister {
       inputAttributes.find(_.name == field.name)
     }
 
+<<<<<<< HEAD
     val broadcastedHadoopConf =
       sparkSession.sparkContext.broadcast(new SerializableConfiguration(hadoopConf))
+=======
+    SimpleTextRelation.requiredColumns = requiredColumns
+    SimpleTextRelation.pushedFilters = filters.toSet
+
+    val fields = this.dataSchema.map(_.dataType)
+    val inputAttributes = this.dataSchema.toAttributes
+    val outputAttributes = requiredColumns.flatMap(name => inputAttributes.find(_.name == name))
+    val dataSchema = this.dataSchema
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     (file: PartitionedFile) => {
       val predicate = {
@@ -131,6 +221,7 @@ class SimpleTextOutputWriter(path: String, dataSchema: StructType, context: Task
     writer.write('\n')
   }
 
+<<<<<<< HEAD
   override def close(): Unit = {
     writer.close()
   }
@@ -154,4 +245,74 @@ object SimpleTextRelation {
 
   // Used by the test case to check the value propagated in the hadoop confs.
   var lastHadoopConf: Option[Configuration] = None
+=======
+object SimpleTextRelation {
+  // Used to test column pruning
+  var requiredColumns: Seq[String] = Nil
+
+  // Used to test filter push-down
+  var pushedFilters: Set[Filter] = Set.empty
+
+  // Used to test failed committer
+  var failCommitter = false
+
+  // Used to test failed writer
+  var failWriter = false
+
+  // Used to test failure callback
+  var callbackCalled = false
+}
+
+/**
+ * A simple example [[HadoopFsRelationProvider]].
+ */
+class CommitFailureTestSource extends HadoopFsRelationProvider {
+  override def createRelation(
+      sqlContext: SQLContext,
+      paths: Array[String],
+      schema: Option[StructType],
+      partitionColumns: Option[StructType],
+      parameters: Map[String, String]): HadoopFsRelation = {
+    new CommitFailureTestRelation(paths, schema, partitionColumns, parameters)(sqlContext)
+  }
+}
+
+class CommitFailureTestRelation(
+    override val paths: Array[String],
+    maybeDataSchema: Option[StructType],
+    override val userDefinedPartitionColumns: Option[StructType],
+    parameters: Map[String, String])(
+    @transient sqlContext: SQLContext)
+  extends SimpleTextRelation(
+    paths, maybeDataSchema, userDefinedPartitionColumns, parameters)(sqlContext) {
+  override def prepareJobForWrite(job: Job): OutputWriterFactory = new OutputWriterFactory {
+    override def newInstance(
+        path: String,
+        dataSchema: StructType,
+        context: TaskAttemptContext): OutputWriter = {
+      new SimpleTextOutputWriter(path, context) {
+        var failed = false
+        TaskContext.get().addTaskFailureListener { (t: TaskContext, e: Throwable) =>
+          failed = true
+          SimpleTextRelation.callbackCalled = true
+        }
+
+        override def write(row: Row): Unit = {
+          if (SimpleTextRelation.failWriter) {
+            sys.error("Intentional task writer failure for testing purpose.")
+
+          }
+          super.write(row)
+        }
+
+        override def close(): Unit = {
+          if (SimpleTextRelation.failCommitter) {
+            sys.error("Intentional task commitment failure for testing purpose.")
+          }
+          super.close()
+        }
+      }
+    }
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

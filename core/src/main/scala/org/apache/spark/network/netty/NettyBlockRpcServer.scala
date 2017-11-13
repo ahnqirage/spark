@@ -60,8 +60,13 @@ class NettyBlockRpcServer(
         val blocks = for (i <- (0 until blocksNum).view)
           yield blockManager.getBlockData(BlockId.apply(openBlocks.blockIds(i)))
         val streamId = streamManager.registerStream(appId, blocks.iterator.asJava)
+<<<<<<< HEAD
         logTrace(s"Registered streamId $streamId with $blocksNum buffers")
         responseContext.onSuccess(new StreamHandle(streamId, blocksNum).toByteBuffer)
+=======
+        logTrace(s"Registered streamId $streamId with ${blocks.size} buffers")
+        responseContext.onSuccess(new StreamHandle(streamId, blocks.size).toByteBuffer)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       case uploadBlock: UploadBlock =>
         // StorageLevel and ClassTag are serialized as bytes using our JavaSerializer.
@@ -72,8 +77,12 @@ class NettyBlockRpcServer(
             .asInstanceOf[(StorageLevel, ClassTag[_])]
         }
         val data = new NioManagedBuffer(ByteBuffer.wrap(uploadBlock.blockData))
+<<<<<<< HEAD
         val blockId = BlockId(uploadBlock.blockId)
         blockManager.putBlockData(blockId, data, level, classTag)
+=======
+        blockManager.putBlockData(BlockId(uploadBlock.blockId), data, level)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         responseContext.onSuccess(ByteBuffer.allocate(0))
     }
   }

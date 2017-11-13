@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.feature import StringIndexer
 # $example off$
@@ -33,9 +34,29 @@ if __name__ == "__main__":
         [(0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c")],
         ["id", "category"])
 
+=======
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+# $example on$
+from pyspark.ml.feature import StringIndexer
+# $example off$
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="StringIndexerExample")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    df = sqlContext.createDataFrame(
+        [(0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c")],
+        ["id", "category"])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     indexer = StringIndexer(inputCol="category", outputCol="categoryIndex")
     indexed = indexer.fit(df).transform(df)
     indexed.show()
     # $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

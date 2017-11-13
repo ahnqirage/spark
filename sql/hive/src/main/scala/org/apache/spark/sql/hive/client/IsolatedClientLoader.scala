@@ -22,6 +22,10 @@ import java.lang.reflect.InvocationTargetException
 import java.net.{URL, URLClassLoader}
 import java.util
 
+<<<<<<< HEAD
+=======
+import scala.language.reflectiveCalls
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.util.Try
 
 import org.apache.commons.io.{FileUtils, IOUtils}
@@ -29,10 +33,15 @@ import org.apache.hadoop.conf.Configuration
 
 import org.apache.spark.SparkConf
 import org.apache.spark.deploy.SparkSubmitUtils
+<<<<<<< HEAD
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.quietly
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.internal.NonClosableMutableURLClassLoader
+=======
+import org.apache.spark.sql.catalyst.util.quietly
+import org.apache.spark.sql.hive.HiveContext
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.{MutableURLClassLoader, Utils}
 
 /** Factory for `IsolatedClientLoader` with specific versions of hive. */
@@ -43,15 +52,22 @@ private[hive] object IsolatedClientLoader extends Logging {
   def forVersion(
       hiveMetastoreVersion: String,
       hadoopVersion: String,
+<<<<<<< HEAD
       sparkConf: SparkConf,
       hadoopConf: Configuration,
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       config: Map[String, String] = Map.empty,
       ivyPath: Option[String] = None,
       sharedPrefixes: Seq[String] = Seq.empty,
       barrierPrefixes: Seq[String] = Seq.empty): IsolatedClientLoader = synchronized {
     val resolvedVersion = hiveVersion(hiveMetastoreVersion)
     // We will first try to share Hadoop classes. If we cannot resolve the Hadoop artifact
+<<<<<<< HEAD
     // with the given version, we will use Hadoop 2.6 and then will not share Hadoop classes.
+=======
+    // with the given version, we will use Hadoop 2.4.0 and then will not share Hadoop classes.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     var sharesHadoopClasses = true
     val files = if (resolvedVersions.contains((resolvedVersion, hadoopVersion))) {
       resolvedVersions((resolvedVersion, hadoopVersion))
@@ -62,22 +78,39 @@ private[hive] object IsolatedClientLoader extends Logging {
         } catch {
           case e: RuntimeException if e.getMessage.contains("hadoop") =>
             // If the error message contains hadoop, it is probably because the hadoop
+<<<<<<< HEAD
             // version cannot be resolved.
             logWarning(s"Failed to resolve Hadoop artifacts for the version $hadoopVersion. " +
               s"We will change the hadoop version from $hadoopVersion to 2.6.0 and try again. " +
+=======
+            // version cannot be resolved (e.g. it is a vendor specific version like
+            // 2.0.0-cdh4.1.1). If it is the case, we will try just
+            // "org.apache.hadoop:hadoop-client:2.4.0". "org.apache.hadoop:hadoop-client:2.4.0"
+            // is used just because we used to hard code it as the hadoop artifact to download.
+            logWarning(s"Failed to resolve Hadoop artifacts for the version ${hadoopVersion}. " +
+              s"We will change the hadoop version from ${hadoopVersion} to 2.4.0 and try again. " +
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               "Hadoop classes will not be shared between Spark and Hive metastore client. " +
               "It is recommended to set jars used by Hive metastore client through " +
               "spark.sql.hive.metastore.jars in the production environment.")
             sharesHadoopClasses = false
+<<<<<<< HEAD
             (downloadVersion(resolvedVersion, "2.6.5", ivyPath), "2.6.5")
+=======
+            (downloadVersion(resolvedVersion, "2.4.0", ivyPath), "2.4.0")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       resolvedVersions.put((resolvedVersion, actualHadoopVersion), downloadedFiles)
       resolvedVersions((resolvedVersion, actualHadoopVersion))
     }
 
     new IsolatedClientLoader(
+<<<<<<< HEAD
       hiveVersion(hiveMetastoreVersion),
       sparkConf,
+=======
+      version = hiveVersion(hiveMetastoreVersion),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       execJars = files,
       hadoopConf = hadoopConf,
       config = config,
@@ -102,7 +135,7 @@ private[hive] object IsolatedClientLoader extends Logging {
       hadoopVersion: String,
       ivyPath: Option[String]): Seq[URL] = {
     val hiveArtifacts = version.extraDeps ++
-      Seq("hive-metastore", "hive-exec", "hive-common", "hive-serde")
+      Seq("hive-metastore", "hive-exec", "hive-common", "hive-serde", "hive-cli")
         .map(a => s"org.apache.hive:$a:${version.fullVersion}") ++
       Seq("com.google.guava:guava:14.0.1",
         s"org.apache.hadoop:hadoop-client:$hadoopVersion")

@@ -543,6 +543,7 @@ case class DateFormatClass(left: Expression, right: Expression, timeZoneId: Opti
  * Converts time string with given pattern.
  * Deterministic version of [[UnixTimestamp]], must have at least one parameter.
  */
+<<<<<<< HEAD
 @ExpressionDescription(
   usage = "_FUNC_(expr[, pattern]) - Returns the UNIX timestamp of the given time.",
   examples = """
@@ -570,6 +571,15 @@ case class ToUnixTimestamp(
   }
 
   override def prettyName: String = "to_unix_timestamp"
+=======
+case class ToUnixTimestamp(timeExp: Expression, format: Expression) extends UnixTime {
+  override def left: Expression = timeExp
+  override def right: Expression = format
+
+  def this(time: Expression) = {
+    this(time, Literal("yyyy-MM-dd HH:mm:ss"))
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -582,6 +592,7 @@ case class ToUnixTimestamp(
  * If the first parameter is a Date or Timestamp instead of String, we will ignore the
  * second parameter.
  */
+<<<<<<< HEAD
 @ExpressionDescription(
   usage = "_FUNC_([expr[, pattern]]) - Returns the UNIX timestamp of current or specified time.",
   examples = """
@@ -597,6 +608,9 @@ case class UnixTimestamp(timeExp: Expression, format: Expression, timeZoneId: Op
 
   def this(timeExp: Expression, format: Expression) = this(timeExp, format, None)
 
+=======
+case class UnixTimestamp(timeExp: Expression, format: Expression) extends UnixTime {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def left: Expression = timeExp
   override def right: Expression = format
 
@@ -610,6 +624,9 @@ case class UnixTimestamp(timeExp: Expression, format: Expression, timeZoneId: Op
   def this() = {
     this(CurrentTimestamp())
   }
+}
+
+abstract class UnixTime extends BinaryExpression with ExpectsInputTypes {
 
   override def prettyName: String = "unix_timestamp"
 }
@@ -1017,11 +1034,18 @@ case class FromUTCTimestamp(left: Expression, right: Expression)
         val tzTerm = ctx.freshName("tz")
         val utcTerm = ctx.freshName("utc")
         val tzClass = classOf[TimeZone].getName
+<<<<<<< HEAD
         val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
         ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $dtu.getTimeZone("$tz");""")
         ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $dtu.getTimeZone("UTC");""")
         val eval = left.genCode(ctx)
         ev.copy(code = s"""
+=======
+        ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $tzClass.getTimeZone("$tz");""")
+        ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $tzClass.getTimeZone("UTC");""")
+        val eval = left.gen(ctx)
+        s"""
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
            |${eval.code}
            |boolean ${ev.isNull} = ${eval.isNull};
            |long ${ev.value} = 0;
@@ -1193,11 +1217,18 @@ case class ToUTCTimestamp(left: Expression, right: Expression)
         val tzTerm = ctx.freshName("tz")
         val utcTerm = ctx.freshName("utc")
         val tzClass = classOf[TimeZone].getName
+<<<<<<< HEAD
         val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
         ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $dtu.getTimeZone("$tz");""")
         ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $dtu.getTimeZone("UTC");""")
         val eval = left.genCode(ctx)
         ev.copy(code = s"""
+=======
+        ctx.addMutableState(tzClass, tzTerm, s"""$tzTerm = $tzClass.getTimeZone("$tz");""")
+        ctx.addMutableState(tzClass, utcTerm, s"""$utcTerm = $tzClass.getTimeZone("UTC");""")
+        val eval = left.gen(ctx)
+        s"""
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
            |${eval.code}
            |boolean ${ev.isNull} = ${eval.isNull};
            |long ${ev.value} = 0;

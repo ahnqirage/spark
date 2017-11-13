@@ -143,7 +143,13 @@ object GaussianMixtureModel extends Loader[GaussianMixtureModel] {
         path: String,
         weights: Array[Double],
         gaussians: Array[MultivariateGaussian]): Unit = {
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
+=======
+
+      val sqlContext = SQLContext.getOrCreate(sc)
+      import sqlContext.implicits._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // Create JSON metadata.
       val metadata = compact(render
@@ -159,8 +165,13 @@ object GaussianMixtureModel extends Loader[GaussianMixtureModel] {
 
     def load(sc: SparkContext, path: String): GaussianMixtureModel = {
       val dataPath = Loader.dataPath(path)
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
       val dataFrame = spark.read.parquet(dataPath)
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+      val dataFrame = sqlContext.read.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // Check schema explicitly since erasure makes it hard to use match-case for checking.
       Loader.checkSchema[Data](dataFrame.schema)
       val dataArray = dataFrame.select("weight", "mu", "sigma").collect()

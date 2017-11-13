@@ -165,6 +165,32 @@ private[ui] class AllJobsPage(parent: JobsTab) extends WebUIPage("") {
            """.stripMargin
         events += removedEvent
 
+<<<<<<< HEAD
+=======
+        if (event.finishTime.isDefined) {
+          val removedEvent =
+            s"""
+               |{
+               |  'className': 'executor removed',
+               |  'group': 'executors',
+               |  'start': new Date(${event.finishTime.get}),
+               |  'content': '<div class="executor-event-content"' +
+               |    'data-toggle="tooltip" data-placement="bottom"' +
+               |    'data-title="Executor ${executorId}<br>' +
+               |    'Removed at ${UIUtils.formatDate(new Date(event.finishTime.get))}' +
+               |    '${
+                        if (event.finishReason.isDefined) {
+                          s"""<br>Reason: ${event.finishReason.get.replace("\n", " ")}"""
+                        } else {
+                          ""
+                        }
+                     }"' +
+               |    'data-html="true">Executor ${executorId} removed</div>'
+               |}
+             """.stripMargin
+          events += removedEvent
+        }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     events.toSeq
   }
@@ -254,6 +280,38 @@ private[ui] class AllJobsPage(parent: JobsTab) extends WebUIPage("") {
       } else {
         1
       }
+<<<<<<< HEAD
+=======
+      val formattedDuration = duration.map(d => UIUtils.formatDuration(d)).getOrElse("Unknown")
+      val formattedSubmissionTime = job.submissionTime.map(UIUtils.formatDate).getOrElse("Unknown")
+      val basePathUri = UIUtils.prependBaseUri(parent.basePath)
+      val jobDescription = UIUtils.makeDescription(lastStageDescription, basePathUri)
+
+      val detailUrl = "%s/jobs/job?id=%s".format(basePathUri, job.jobId)
+      <tr id={"job-" + job.jobId}>
+        <td sorttable_customkey={job.jobId.toString}>
+          {job.jobId} {job.jobGroup.map(id => s"($id)").getOrElse("")}
+        </td>
+        <td>
+          {jobDescription}
+          <a href={detailUrl} class="name-link">{lastStageName}</a>
+        </td>
+        <td sorttable_customkey={job.submissionTime.getOrElse(-1).toString}>
+          {formattedSubmissionTime}
+        </td>
+        <td sorttable_customkey={duration.getOrElse(-1).toString}>{formattedDuration}</td>
+        <td class="stage-progress-cell">
+          {job.completedStageIndices.size}/{job.stageIds.size - job.numSkippedStages}
+          {if (job.numFailedStages > 0) s"(${job.numFailedStages} failed)"}
+          {if (job.numSkippedStages > 0) s"(${job.numSkippedStages} skipped)"}
+        </td>
+        <td class="progress-cell">
+          {UIUtils.makeProgressBar(started = job.numActiveTasks, completed = job.numCompletedTasks,
+           failed = job.numFailedTasks, skipped = job.numSkippedTasks,
+           total = job.numTasks - job.numSkippedTasks)}
+        </td>
+      </tr>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     val currentTime = System.currentTimeMillis()
 

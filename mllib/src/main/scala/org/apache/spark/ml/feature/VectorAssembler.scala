@@ -20,22 +20,36 @@ package org.apache.spark.ml.feature
 import scala.collection.mutable.ArrayBuilder
 
 import org.apache.spark.SparkException
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.Transformer
 import org.apache.spark.ml.attribute.{Attribute, AttributeGroup, NumericAttribute, UnresolvedAttribute}
 import org.apache.spark.ml.linalg.{Vector, Vectors, VectorUDT}
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
+<<<<<<< HEAD
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
+=======
+import org.apache.spark.mllib.linalg.{Vector, VectorUDT, Vectors}
+import org.apache.spark.sql.{DataFrame, Row}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 /**
  * A feature transformer that merges multiple columns into a vector column.
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 class VectorAssembler @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+=======
+@Experimental
+class VectorAssembler(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Transformer with HasInputCols with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.4.0")

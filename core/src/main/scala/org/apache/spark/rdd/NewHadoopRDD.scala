@@ -17,7 +17,11 @@
 
 package org.apache.spark.rdd
 
+<<<<<<< HEAD
 import java.io.IOException
+=======
+import java.io.EOFException
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.text.SimpleDateFormat
 import java.util.{Date, Locale}
 
@@ -30,8 +34,17 @@ import org.apache.hadoop.mapreduce._
 import org.apache.hadoop.mapreduce.lib.input.{CombineFileSplit, FileSplit}
 import org.apache.hadoop.mapreduce.task.{JobContextImpl, TaskAttemptContextImpl}
 
+<<<<<<< HEAD
 import org.apache.spark._
 import org.apache.spark.annotation.DeveloperApi
+=======
+import org.apache.spark.annotation.DeveloperApi
+import org.apache.spark._
+import org.apache.spark.executor.DataReadMethod
+import org.apache.spark.mapreduce.SparkHadoopMapReduceUtil
+import org.apache.spark.rdd.NewHadoopRDD.NewHadoopMapPartitionsWithSplitRDD
+import org.apache.spark.util.{SerializableConfiguration, ShutdownHookManager}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config.IGNORE_CORRUPT_FILES
@@ -61,9 +74,12 @@ private[spark] class NewHadoopPartition(
  * @param inputFormatClass Storage format of the data to be read.
  * @param keyClass Class of the key associated with the inputFormatClass.
  * @param valueClass Class of the value associated with the inputFormatClass.
+<<<<<<< HEAD
  *
  * @note Instantiating this class directly is not recommended, please use
  * `org.apache.spark.SparkContext.newAPIHadoopRDD()`
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 @DeveloperApi
 class NewHadoopRDD[K, V](
@@ -87,7 +103,12 @@ class NewHadoopRDD[K, V](
 
   private val shouldCloneJobConf = sparkContext.conf.getBoolean("spark.hadoop.cloneConf", false)
 
+<<<<<<< HEAD
   private val ignoreCorruptFiles = sparkContext.conf.get(IGNORE_CORRUPT_FILES)
+=======
+  private val ignoreCorruptFiles =
+    sparkContext.conf.getBoolean("spark.files.ignoreCorruptFiles", true)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   def getConf: Configuration = {
     val conf: Configuration = confBroadcast.value.value
@@ -147,6 +168,12 @@ class NewHadoopRDD[K, V](
           InputFileBlockHolder.unset()
       }
 
+      // Sets the thread local variable for the file's name
+      split.serializableHadoopSplit.value match {
+        case fs: FileSplit => SqlNewHadoopRDDState.setInputFileName(fs.getPath.toString)
+        case _ => SqlNewHadoopRDDState.unsetInputFileName()
+      }
+
       // Find a function that will return the FileSystem bytes read by this thread. Do this before
       // creating RecordReader, because RecordReader's constructor might read some bytes
       private val getBytesReadCallback: Option[() => Long] =
@@ -166,12 +193,17 @@ class NewHadoopRDD[K, V](
         }
       }
 
+<<<<<<< HEAD
       private val format = inputFormatClass.newInstance
+=======
+      val format = inputFormatClass.newInstance
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       format match {
         case configurable: Configurable =>
           configurable.setConf(conf)
         case _ =>
       }
+<<<<<<< HEAD
       private val attemptId = new TaskAttemptID(jobTrackerId, id, TaskType.MAP, split.index, 0)
       private val hadoopAttemptContext = new TaskAttemptContextImpl(conf, attemptId)
       private var finished = false
@@ -189,6 +221,13 @@ class NewHadoopRDD[K, V](
             finished = true
             null
         }
+=======
+      val attemptId = newTaskAttemptID(jobTrackerId, id, isMap = true, split.index, 0)
+      val hadoopAttemptContext = newTaskAttemptContext(conf, attemptId)
+      private var reader = format.createRecordReader(
+        split.serializableHadoopSplit.value, hadoopAttemptContext)
+      reader.initialize(split.serializableHadoopSplit.value, hadoopAttemptContext)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // Register an on-task-completion callback to close the input stream.
       context.addTaskCompletionListener { context =>
@@ -206,11 +245,15 @@ class NewHadoopRDD[K, V](
           try {
             finished = !reader.nextKeyValue
           } catch {
+<<<<<<< HEAD
             case e: IOException if ignoreCorruptFiles =>
               logWarning(
                 s"Skipped the rest content in the corrupted file: ${split.serializableHadoopSplit}",
                 e)
               finished = true
+=======
+            case _: EOFException if ignoreCorruptFiles => finished = true
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           }
           if (finished) {
             // Close and release the reader here; close() will also be called when the task
@@ -239,7 +282,15 @@ class NewHadoopRDD[K, V](
 
       private def close(): Unit = {
         if (reader != null) {
+<<<<<<< HEAD
           InputFileBlockHolder.unset()
+=======
+          SqlNewHadoopRDDState.unsetInputFileName()
+          // Close the reader and release it. Note: it's very important that we don't close the
+          // reader more than once, since that exposes us to MAPREDUCE-5918 when running against
+          // Hadoop 1.x and older Hadoop 2.x releases. That bug can lead to non-deterministic
+          // corruption issues when reading compressed input.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           try {
             reader.close()
           } catch {

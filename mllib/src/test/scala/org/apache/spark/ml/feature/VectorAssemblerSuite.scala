@@ -17,6 +17,7 @@
 
 package org.apache.spark.ml.feature
 
+import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.{SparkException, SparkFunSuite}
 import org.apache.spark.ml.attribute.{AttributeGroup, NominalAttribute, NumericAttribute}
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
@@ -28,8 +29,11 @@ import org.apache.spark.sql.functions.col
 
 class VectorAssemblerSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new VectorAssembler)
@@ -72,6 +76,7 @@ class VectorAssemblerSuite
   }
 
   test("transform should throw an exception in case of unsupported type") {
+<<<<<<< HEAD
     val df = Seq(("a", "b", "c")).toDF("a", "b", "c")
     val assembler = new VectorAssembler()
       .setInputCols(Array("a", "b", "c"))
@@ -83,6 +88,16 @@ class VectorAssemblerSuite
       "Data type StringType of column a is not supported.\n" +
       "Data type StringType of column b is not supported.\n" +
       "Data type StringType of column c is not supported.")
+=======
+    val df = sqlContext.createDataFrame(Seq(("a", "b", "c"))).toDF("a", "b", "c")
+    val assembler = new VectorAssembler()
+      .setInputCols(Array("a", "b", "c"))
+      .setOutputCol("features")
+    val thrown = intercept[SparkException] {
+      assembler.transform(df)
+    }
+    assert(thrown.getMessage contains "VectorAssembler does not support the StringType type")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("ML attributes") {

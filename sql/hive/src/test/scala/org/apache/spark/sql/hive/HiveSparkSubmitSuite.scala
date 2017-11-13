@@ -21,8 +21,15 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 import scala.tools.nsc.Properties
 
+<<<<<<< HEAD
 import org.apache.hadoop.fs.Path
 import org.scalatest.{BeforeAndAfterEach, Matchers}
+=======
+import org.scalatest.{BeforeAndAfterEach, Matchers}
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.exceptions.TestFailedDueToTimeoutException
+import org.scalatest.time.SpanSugar._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.spark._
 import org.apache.spark.internal.Logging
@@ -42,7 +49,12 @@ class HiveSparkSubmitSuite
   extends SparkSubmitTestUtils
   with Matchers
   with BeforeAndAfterEach
+<<<<<<< HEAD
   with ResetSystemProperties {
+=======
+  with ResetSystemProperties
+  with Timeouts {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   // TODO: rewrite these or mark them as slow tests to be run sparingly
 
@@ -129,8 +141,11 @@ class HiveSparkSubmitSuite
       "--master", "local-cluster[2,1,1024]",
       "--conf", "spark.ui.enabled=false",
       "--conf", "spark.master.rest.enabled=false",
+<<<<<<< HEAD
       "--conf", "spark.sql.hive.metastore.version=0.12",
       "--conf", "spark.sql.hive.metastore.jars=maven",
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       "--driver-java-options", "-Dderby.system.durability=test",
       unusedJar.toString)
     runSparkSubmit(args)
@@ -157,7 +172,7 @@ class HiveSparkSubmitSuite
     runSparkSubmit(args)
   }
 
-  test("SPARK-9757 Persist Parquet relation with decimal column") {
+  ignore("SPARK-9757 Persist Parquet relation with decimal column") {
     val unusedJar = TestUtils.createJarWithClasses(Seq.empty)
     val args = Seq(
       "--class", SPARK_9757.getClass.getName.stripSuffix("$"),
@@ -179,6 +194,7 @@ class HiveSparkSubmitSuite
       "--conf", "spark.ui.enabled=false",
       "--conf", "spark.master.rest.enabled=false",
       "--driver-java-options", "-Dderby.system.durability=test",
+<<<<<<< HEAD
       unusedJar.toString)
     runSparkSubmit(args)
   }
@@ -205,6 +221,8 @@ class HiveSparkSubmitSuite
       "--conf", "spark.ui.enabled=false",
       "--conf", "spark.master.rest.enabled=false",
       "--driver-java-options", "-Dderby.system.durability=test",
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       unusedJar.toString)
     runSparkSubmit(args)
   }

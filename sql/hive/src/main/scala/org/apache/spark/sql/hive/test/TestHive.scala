@@ -530,7 +530,11 @@ private[hive] class TestHiveSparkSession(
       // Lots of tests fail if we do not change the partition whitelist from the default.
       metadataHive.runSqlHive("set hive.metastore.partition.name.whitelist.pattern=.*")
 
+<<<<<<< HEAD
       sessionState.catalog.setCurrentDatabase("default")
+=======
+      runSqlHive("USE default")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } catch {
       case e: Exception =>
         logError("FATAL ERROR: Failed to reset TestDB state.", e)

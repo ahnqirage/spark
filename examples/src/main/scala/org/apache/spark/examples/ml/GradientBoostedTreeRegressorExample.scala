@@ -18,12 +18,18 @@
 // scalastyle:off println
 package org.apache.spark.examples.ml
 
+<<<<<<< HEAD
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.VectorIndexer
 import org.apache.spark.ml.regression.{GBTRegressionModel, GBTRegressor}
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 
 object GradientBoostedTreeRegressorExample {
@@ -36,6 +42,18 @@ object GradientBoostedTreeRegressorExample {
     // $example on$
     // Load and parse the data file, converting it to a DataFrame.
     val data = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+
+object GradientBoostedTreeRegressorExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("GradientBoostedTreeRegressorExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    // Load and parse the data file, converting it to a DataFrame.
+    val data = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Automatically identify categorical features, and index them.
     // Set maxCategories so features with > 4 distinct values are treated as continuous.
@@ -45,7 +63,11 @@ object GradientBoostedTreeRegressorExample {
       .setMaxCategories(4)
       .fit(data)
 
+<<<<<<< HEAD
     // Split the data into training and test sets (30% held out for testing).
+=======
+    // Split the data into training and test sets (30% held out for testing)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val Array(trainingData, testData) = data.randomSplit(Array(0.7, 0.3))
 
     // Train a GBT model.
@@ -54,11 +76,19 @@ object GradientBoostedTreeRegressorExample {
       .setFeaturesCol("indexedFeatures")
       .setMaxIter(10)
 
+<<<<<<< HEAD
     // Chain indexer and GBT in a Pipeline.
     val pipeline = new Pipeline()
       .setStages(Array(featureIndexer, gbt))
 
     // Train model. This also runs the indexer.
+=======
+    // Chain indexer and GBT in a Pipeline
+    val pipeline = new Pipeline()
+      .setStages(Array(featureIndexer, gbt))
+
+    // Train model.  This also runs the indexer.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val model = pipeline.fit(trainingData)
 
     // Make predictions.
@@ -67,7 +97,11 @@ object GradientBoostedTreeRegressorExample {
     // Select example rows to display.
     predictions.select("prediction", "label", "features").show(5)
 
+<<<<<<< HEAD
     // Select (prediction, true label) and compute test error.
+=======
+    // Select (prediction, true label) and compute test error
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val evaluator = new RegressionEvaluator()
       .setLabelCol("label")
       .setPredictionCol("prediction")
@@ -79,7 +113,11 @@ object GradientBoostedTreeRegressorExample {
     println("Learned regression GBT model:\n" + gbtModel.toDebugString)
     // $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

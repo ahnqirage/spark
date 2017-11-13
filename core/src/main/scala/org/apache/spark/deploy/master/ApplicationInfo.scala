@@ -64,7 +64,12 @@ private[spark] class ApplicationInfo(
     appSource = new ApplicationSource(this)
     nextExecutorId = 0
     removedExecutors = new ArrayBuffer[ExecutorDesc]
+<<<<<<< HEAD
     executorLimit = desc.initialExecutorLimit.getOrElse(Integer.MAX_VALUE)
+=======
+    executorLimit = Integer.MAX_VALUE
+    appUIUrlAtHistoryServer = None
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private def newExecutorId(useID: Option[Int] = None): Int = {

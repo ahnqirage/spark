@@ -20,19 +20,34 @@ package org.apache.spark.sql.execution.aggregate
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction}
+<<<<<<< HEAD
 import org.apache.spark.sql.execution.metric.SQLMetric
 
 /**
  * An iterator used to evaluate [[AggregateFunction]]. It assumes the input rows have been
  * sorted by values of [[groupingExpressions]].
+=======
+import org.apache.spark.sql.execution.metric.LongSQLMetric
+
+/**
+ * An iterator used to evaluate [[AggregateFunction]]. It assumes the input rows have been
+ * sorted by values of [[groupingKeyAttributes]].
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 class SortBasedAggregationIterator(
     partIndex: Int,
     groupingExpressions: Seq[NamedExpression],
     valueAttributes: Seq[Attribute],
     inputIterator: Iterator[InternalRow],
+<<<<<<< HEAD
     aggregateExpressions: Seq[AggregateExpression],
     aggregateAttributes: Seq[Attribute],
+=======
+    nonCompleteAggregateExpressions: Seq[AggregateExpression],
+    nonCompleteAggregateAttributes: Seq[Attribute],
+    completeAggregateExpressions: Seq[AggregateExpression],
+    completeAggregateAttributes: Seq[Attribute],
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     initialInputBufferOffset: Int,
     resultExpressions: Seq[NamedExpression],
     newMutableProjection: (Seq[Expression], Seq[Attribute]) => MutableProjection,

@@ -27,11 +27,14 @@ class RandomSuite extends SparkFunSuite with ExpressionEvalHelper {
   test("random") {
     checkDoubleEvaluation(Rand(30), 0.31429268272540556 +- 0.001)
     checkDoubleEvaluation(Randn(30), -0.4798519469521663 +- 0.001)
+<<<<<<< HEAD
 
     checkDoubleEvaluation(
       new Rand(Literal.create(null, LongType)), 0.8446490682263027 +- 0.001)
     checkDoubleEvaluation(
       new Randn(Literal.create(null, IntegerType)), 1.1164209726833079 +- 0.001)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("SPARK-9127 codegen with long seed") {

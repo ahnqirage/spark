@@ -17,6 +17,7 @@
 package org.apache.spark.sql.catalyst.expressions
 
 import org.apache.spark.SparkFunSuite
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.types.{DataType, IntegerType}
 
@@ -31,6 +32,17 @@ class SubexpressionEliminationSuite extends SparkFunSuite {
     val b1 = a.withName("name2").withExprId(id)
     val b2 = a.withExprId(id)
     val b3 = a.withQualifier(Some("qualifierName"))
+=======
+import org.apache.spark.sql.types.IntegerType
+
+class SubexpressionEliminationSuite extends SparkFunSuite {
+  test("Semantic equals and hash") {
+    val id = ExprId(1)
+    val a: AttributeReference = AttributeReference("name", IntegerType)()
+    val b1 = a.withName("name2").withExprId(id)
+    val b2 = a.withExprId(id)
+    val b3 = a.withQualifiers("qualifierName" :: Nil)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     assert(b1 != b2)
     assert(a != b1)
@@ -97,12 +109,21 @@ class SubexpressionEliminationSuite extends SparkFunSuite {
     val add2 = Add(add, add)
 
     var equivalence = new EquivalentExpressions
+<<<<<<< HEAD
     equivalence.addExprTree(add)
     equivalence.addExprTree(abs)
     equivalence.addExprTree(add2)
 
     // Should only have one equivalence for `one + two`
     assert(equivalence.getAllEquivalentExprs.count(_.size > 1) == 1)
+=======
+    equivalence.addExprTree(add, true)
+    equivalence.addExprTree(abs, true)
+    equivalence.addExprTree(add2, true)
+
+    // Should only have one equivalence for `one + two`
+    assert(equivalence.getAllEquivalentExprs.filter(_.size > 1).size == 1)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(equivalence.getAllEquivalentExprs.filter(_.size > 1).head.size == 4)
 
     // Set up the expressions
@@ -115,6 +136,7 @@ class SubexpressionEliminationSuite extends SparkFunSuite {
     val mul2 = Multiply(mul, mul)
     val sqrt = Sqrt(mul2)
     val sum = Add(mul2, sqrt)
+<<<<<<< HEAD
     equivalence.addExprTree(mul)
     equivalence.addExprTree(mul2)
     equivalence.addExprTree(sqrt)
@@ -122,10 +144,46 @@ class SubexpressionEliminationSuite extends SparkFunSuite {
 
     // (one * two), (one * two) * (one * two) and sqrt( (one * two) * (one * two) ) should be found
     assert(equivalence.getAllEquivalentExprs.count(_.size > 1) == 3)
+=======
+    equivalence.addExprTree(mul, true)
+    equivalence.addExprTree(mul2, true)
+    equivalence.addExprTree(sqrt, true)
+    equivalence.addExprTree(sum, true)
+
+    // (one * two), (one * two) * (one * two) and sqrt( (one * two) * (one * two) ) should be found
+    assert(equivalence.getAllEquivalentExprs.filter(_.size > 1).size == 3)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(equivalence.getEquivalentExprs(mul).size == 3)
     assert(equivalence.getEquivalentExprs(mul2).size == 3)
     assert(equivalence.getEquivalentExprs(sqrt).size == 2)
     assert(equivalence.getEquivalentExprs(sum).size == 1)
+<<<<<<< HEAD
+=======
+
+    // Some expressions inspired by TPCH-Q1
+    // sum(l_quantity) as sum_qty,
+    // sum(l_extendedprice) as sum_base_price,
+    // sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
+    // sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+    // avg(l_extendedprice) as avg_price,
+    // avg(l_discount) as avg_disc
+    equivalence = new EquivalentExpressions
+    val quantity = Literal(1)
+    val price = Literal(1.1)
+    val discount = Literal(.24)
+    val tax = Literal(0.1)
+    equivalence.addExprTree(quantity, false)
+    equivalence.addExprTree(price, false)
+    equivalence.addExprTree(Multiply(price, Subtract(Literal(1), discount)), false)
+    equivalence.addExprTree(
+      Multiply(
+        Multiply(price, Subtract(Literal(1), discount)),
+        Add(Literal(1), tax)), false)
+    equivalence.addExprTree(price, false)
+    equivalence.addExprTree(discount, false)
+    // quantity, price, discount and (price * (1 - discount))
+    assert(equivalence.getAllEquivalentExprs.filter(_.size > 1).size == 4)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("Expression equivalence - non deterministic") {
@@ -135,6 +193,7 @@ class SubexpressionEliminationSuite extends SparkFunSuite {
     equivalence.addExpr(sum)
     assert(equivalence.getAllEquivalentExprs.isEmpty)
   }
+<<<<<<< HEAD
 
   test("Children of CodegenFallback") {
     val one = Literal(1)
@@ -166,4 +225,6 @@ class SubexpressionEliminationSuite extends SparkFunSuite {
 case class CodegenFallbackExpression(child: Expression)
   extends UnaryExpression with CodegenFallback {
   override def dataType: DataType = child.dataType
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

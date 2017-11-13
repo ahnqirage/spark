@@ -22,7 +22,10 @@ import java.io.Serializable;
 /**
  * A two-argument function that takes arguments of type T1 and T2 with no return value.
  */
+<<<<<<< HEAD
 @FunctionalInterface
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 public interface VoidFunction2<T1, T2> extends Serializable {
   void call(T1 v1, T2 v2) throws Exception;
 }

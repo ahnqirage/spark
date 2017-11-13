@@ -19,6 +19,7 @@ package org.apache.spark.sql.execution
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
+<<<<<<< HEAD
 import scala.collection.JavaConverters._
 
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -29,6 +30,11 @@ import org.apache.spark.sql.catalyst.expressions.SubqueryExpression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
+=======
+import org.apache.spark.Logging
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.execution.columnar.InMemoryRelation
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK
 
@@ -81,18 +87,28 @@ class CacheManager extends Logging {
   }
 
   /**
+<<<<<<< HEAD
    * Caches the data produced by the logical representation of the given [[Dataset]].
    * Unlike `RDD.cache()`, the default storage level is set to be `MEMORY_AND_DISK` because
    * recomputing the in-memory columnar representation of the underlying table is expensive.
    */
   def cacheQuery(
       query: Dataset[_],
+=======
+   * Caches the data produced by the logical representation of the given [[Queryable]].
+   * Unlike `RDD.cache()`, the default storage level is set to be `MEMORY_AND_DISK` because
+   * recomputing the in-memory columnar representation of the underlying table is expensive.
+   */
+  private[sql] def cacheQuery(
+      query: Queryable,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       tableName: Option[String] = None,
       storageLevel: StorageLevel = MEMORY_AND_DISK): Unit = writeLock {
     val planToCache = query.logicalPlan
     if (lookupCachedData(planToCache).nonEmpty) {
       logWarning("Asked to cache already cached data.")
     } else {
+<<<<<<< HEAD
       val sparkSession = query.sparkSession
       cachedData.add(CachedData(
         planToCache,
@@ -151,11 +167,48 @@ class CacheManager extends Logging {
           tableName = cd.cachedRepresentation.tableName)
         needToRecache += cd.copy(cachedRepresentation = newCache)
       }
+=======
+      val sqlContext = query.sqlContext
+      cachedData +=
+        CachedData(
+          planToCache,
+          InMemoryRelation(
+            sqlContext.conf.useCompression,
+            sqlContext.conf.columnBatchSize,
+            storageLevel,
+            sqlContext.executePlan(planToCache).executedPlan,
+            tableName))
+    }
+  }
+
+  /** Removes the data for the given [[Queryable]] from the cache */
+  private[sql] def uncacheQuery(query: Queryable, blocking: Boolean = true): Unit = writeLock {
+    val planToCache = query.queryExecution.analyzed
+    val dataIndex = cachedData.indexWhere(cd => planToCache.sameResult(cd.plan))
+    require(dataIndex >= 0, s"Table $query is not cached.")
+    cachedData(dataIndex).cachedRepresentation.uncache(blocking)
+    cachedData.remove(dataIndex)
+  }
+
+  /** Tries to remove the data for the given [[Queryable]] from the cache
+    * if it's cached
+    */
+  private[sql] def tryUncacheQuery(
+      query: Queryable,
+      blocking: Boolean = true): Boolean = writeLock {
+    val planToCache = query.queryExecution.analyzed
+    val dataIndex = cachedData.indexWhere(cd => planToCache.sameResult(cd.plan))
+    val found = dataIndex >= 0
+    if (found) {
+      cachedData(dataIndex).cachedRepresentation.cachedColumnBuffers.unpersist(blocking)
+      cachedData.remove(dataIndex)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     needToRecache.foreach(cachedData.add)
   }
 
+<<<<<<< HEAD
   /** Optionally returns cached data for the given [[Dataset]] */
   def lookupCachedData(query: Dataset[_]): Option[CachedData] = readLock {
     lookupCachedData(query.logicalPlan)
@@ -164,6 +217,16 @@ class CacheManager extends Logging {
   /** Optionally returns cached data for the given [[LogicalPlan]]. */
   def lookupCachedData(plan: LogicalPlan): Option[CachedData] = readLock {
     cachedData.asScala.find(cd => plan.sameResult(cd.plan))
+=======
+  /** Optionally returns cached data for the given [[Queryable]] */
+  private[sql] def lookupCachedData(query: Queryable): Option[CachedData] = readLock {
+    lookupCachedData(query.queryExecution.analyzed)
+  }
+
+  /** Optionally returns cached data for the given [[LogicalPlan]]. */
+  private[sql] def lookupCachedData(plan: LogicalPlan): Option[CachedData] = readLock {
+    cachedData.find(cd => plan.sameResult(cd.plan))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /** Replaces segments of the given logical plan with cached versions where possible. */

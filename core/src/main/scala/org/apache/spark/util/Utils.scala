@@ -22,6 +22,7 @@ import java.lang.management.{LockInfo, ManagementFactory, MonitorInfo, ThreadInf
 import java.math.{MathContext, RoundingMode}
 import java.net._
 import java.nio.ByteBuffer
+<<<<<<< HEAD
 import java.nio.channels.{Channels, FileChannel}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
@@ -29,6 +30,12 @@ import java.util.{Locale, Properties, Random, UUID}
 import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.GZIPInputStream
+=======
+import java.nio.channels.Channels
+import java.nio.charset.StandardCharsets
+import java.util.concurrent._
+import java.util.{Locale, Properties, Random, UUID}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import javax.net.ssl.HttpsURLConnection
 
 import scala.annotation.tailrec
@@ -52,7 +59,12 @@ import org.apache.hadoop.security.UserGroupInformation
 import org.apache.log4j.PropertyConfigurator
 import org.eclipse.jetty.util.MultiException
 import org.json4s._
+<<<<<<< HEAD
 import org.slf4j.Logger
+=======
+import tachyon.TachyonURI
+import tachyon.client.{TachyonFS, TachyonFile}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
@@ -449,7 +461,11 @@ private[spark] object Utils extends Logging {
       securityMgr: SecurityManager,
       hadoopConf: Configuration,
       timestamp: Long,
+<<<<<<< HEAD
       useCache: Boolean): File = {
+=======
+      useCache: Boolean) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val fileName = decodeFileNameInURI(new URI(url))
     val targetFile = new File(targetDir, fileName)
     val fetchCacheEnabled = conf.getBoolean("spark.files.useFetchCache", defaultValue = true)
@@ -1424,6 +1440,53 @@ private[spark] object Utils extends Logging {
     }
   }
 
+  /**
+   * Execute a block of code and call the failure callbacks in the catch block. If exceptions occur
+   * in either the catch or the finally block, they are appended to the list of suppressed
+   * exceptions in original exception which is then rethrown.
+   *
+   * This is primarily an issue with `catch { abort() }` or `finally { out.close() }` blocks,
+   * where the abort/close needs to be called to clean up `out`, but if an exception happened
+   * in `out.write`, it's likely `out` may be corrupted and `abort` or `out.close` will
+   * fail as well. This would then suppress the original/likely more meaningful
+   * exception from the original `out.write` call.
+   */
+  def tryWithSafeFinallyAndFailureCallbacks[T](block: => T)
+      (catchBlock: => Unit = (), finallyBlock: => Unit = ()): T = {
+    var originalThrowable: Throwable = null
+    try {
+      block
+    } catch {
+      case cause: Throwable =>
+        // Purposefully not using NonFatal, because even fatal exceptions
+        // we don't want to have our finallyBlock suppress
+        originalThrowable = cause
+        try {
+          logError("Aborting task", originalThrowable)
+          TaskContext.get().asInstanceOf[TaskContextImpl].markTaskFailed(originalThrowable)
+          catchBlock
+        } catch {
+          case t: Throwable =>
+            originalThrowable.addSuppressed(t)
+            logWarning(s"Suppressing exception in catch: " + t.getMessage, t)
+        }
+        throw originalThrowable
+    } finally {
+      try {
+        finallyBlock
+      } catch {
+        case t: Throwable =>
+          if (originalThrowable != null) {
+            originalThrowable.addSuppressed(t)
+            logWarning(s"Suppressing exception in finally: " + t.getMessage, t)
+            throw originalThrowable
+          } else {
+            throw t
+          }
+      }
+    }
+  }
+
   /** Default filtering function for finding call sites using `getCallSite`. */
   private def sparkInternalExclusionFunction(className: String): Boolean = {
     // A regular expression to match classes of the internal Spark API's
@@ -1932,6 +1995,7 @@ private[spark] object Utils extends Logging {
   def terminateProcess(process: Process, timeoutMs: Long): Option[Int] = {
     // Politely destroy first
     process.destroy()
+<<<<<<< HEAD
     if (process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
       // Successful exit
       Option(process.exitValue())
@@ -1943,12 +2007,64 @@ private[spark] object Utils extends Logging {
       }
       // Wait, again, although this really should return almost immediately
       if (process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
+=======
+
+    if (waitForProcess(process, timeoutMs)) {
+      // Successful exit
+      Option(process.exitValue())
+    } else {
+      // Java 8 added a new API which will more forcibly kill the process. Use that if available.
+      try {
+        classOf[Process].getMethod("destroyForcibly").invoke(process)
+      } catch {
+        case _: NoSuchMethodException => return None // Not available; give up
+        case NonFatal(e) => logWarning("Exception when attempting to kill process", e)
+      }
+      // Wait, again, although this really should return almost immediately
+      if (waitForProcess(process, timeoutMs)) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Option(process.exitValue())
       } else {
         logWarning("Timed out waiting to forcibly kill process")
         None
       }
     }
+<<<<<<< HEAD
+=======
+  }
+
+  /**
+   * Wait for a process to terminate for at most the specified duration.
+   *
+   * @return whether the process actually terminated before the given timeout.
+   */
+  def waitForProcess(process: Process, timeoutMs: Long): Boolean = {
+    try {
+      // Use Java 8 method if available
+      classOf[Process].getMethod("waitFor", java.lang.Long.TYPE, classOf[TimeUnit])
+        .invoke(process, timeoutMs.asInstanceOf[java.lang.Long], TimeUnit.MILLISECONDS)
+        .asInstanceOf[Boolean]
+    } catch {
+      case _: NoSuchMethodException =>
+        // Otherwise implement it manually
+        var terminated = false
+        val startTime = System.currentTimeMillis
+        while (!terminated) {
+          try {
+            process.exitValue()
+            terminated = true
+          } catch {
+            case e: IllegalThreadStateException =>
+              // Process not terminated yet
+              if (System.currentTimeMillis - startTime > timeoutMs) {
+                return false
+              }
+              Thread.sleep(100)
+          }
+        }
+        true
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -2260,6 +2376,7 @@ private[spark] object Utils extends Logging {
       } catch {
         case e: Exception if isBindCollision(e) =>
           if (offset >= maxRetries) {
+<<<<<<< HEAD
             val exceptionMessage = if (startPort == 0) {
               s"${e.getMessage}: Service$serviceString failed after " +
                 s"$maxRetries retries (on a random free port)! " +
@@ -2272,6 +2389,12 @@ private[spark] object Utils extends Logging {
                 s"the appropriate port for the service$serviceString (for example spark.ui.port " +
                 s"for SparkUI) to an available port or increasing spark.port.maxRetries."
             }
+=======
+            val exceptionMessage = s"${e.getMessage}: Service$serviceString failed after " +
+              s"$maxRetries retries! Consider explicitly setting the appropriate port for the " +
+              s"service$serviceString (for example spark.ui.port for SparkUI) to an available " +
+              "port or increasing spark.port.maxRetries."
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             val exception = new BindException(exceptionMessage)
             // restore original stack trace
             exception.setStackTrace(e.getStackTrace)
@@ -2577,6 +2700,7 @@ private[spark] object Utils extends Logging {
   def tempFileWith(path: File): File = {
     new File(path.getAbsolutePath + "." + UUID.randomUUID())
   }
+<<<<<<< HEAD
 
   /**
    * Returns the name of this JVM process. This is OS dependent but typically (OSX, Linux, Windows),
@@ -2780,6 +2904,8 @@ private[spark] class CallerContext(
       }
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**

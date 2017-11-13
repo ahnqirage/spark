@@ -56,6 +56,12 @@ sparkR.session.stop <- function() {
       .libPaths(.libPaths()[.libPaths() != libPath])
     }
 
+    # Remove the R package lib path from .libPaths()
+    if (exists(".libPath", envir = env)) {
+      libPath <- get(".libPath", envir = env)
+      .libPaths(.libPaths()[.libPaths() != libPath])
+    }
+
     if (exists(".backendLaunched", envir = env)) {
       callJStatic("SparkRHandler", "stopBackend")
     }
@@ -92,7 +98,13 @@ sparkR.stop <- function() {
 
 #' (Deprecated) Initialize a new Spark Context
 #'
+<<<<<<< HEAD
 #' This function initializes a new SparkContext.
+=======
+#' This function initializes a new SparkContext. For details on how to initialize
+#' and use SparkR, refer to SparkR programming guide at
+#' \url{http://spark.apache.org/docs/latest/sparkr.html#starting-up-sparkcontext-sqlcontext}.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param master The Spark master URL
 #' @param appName Application name to register with cluster manager
@@ -100,9 +112,13 @@ sparkR.stop <- function() {
 #' @param sparkEnvir Named list of environment variables to set on worker nodes
 #' @param sparkExecutorEnv Named list of environment variables to be used when launching executors
 #' @param sparkJars Character vector of jar files to pass to the worker nodes
+<<<<<<< HEAD
 #' @param sparkPackages Character vector of package coordinates
 #' @seealso \link{sparkR.session}
 #' @rdname sparkR.init-deprecated
+=======
+#' @param sparkPackages Character vector of packages from spark-packages.org
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
@@ -113,7 +129,12 @@ sparkR.stop <- function() {
 #'                  list(spark.executor.memory="4g"),
 #'                  list(LD_LIBRARY_PATH="/directory of JVM libraries (libjvm.so) on workers/"),
 #'                  c("one.jar", "two.jar", "three.jar"),
+<<<<<<< HEAD
 #'                  c("com.databricks:spark-avro_2.11:2.0.1"))
+=======
+#'                  c("com.databricks:spark-avro_2.10:2.0.1",
+#'                    "com.databricks:spark-csv_2.10:1.3.0"))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @note sparkR.init since 1.4.0
 sparkR.init <- function(
@@ -152,6 +173,11 @@ sparkR.sparkContext <- function(
 
   jars <- processSparkJars(sparkJars)
   packages <- processSparkPackages(sparkPackages)
+<<<<<<< HEAD
+=======
+
+  sparkEnvirMap <- convertNamedListToEnv(sparkEnvir)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   existingPort <- Sys.getenv("EXISTING_SPARKR_BACKEND_PORT", "")
   connectionTimeout <- as.numeric(Sys.getenv("SPARKR_BACKEND_CONNECTION_TIMEOUT", "6000"))
@@ -188,7 +214,10 @@ sparkR.sparkContext <- function(
     backendPort <- readInt(f)
     monitorPort <- readInt(f)
     rLibPath <- readString(f)
+<<<<<<< HEAD
     connectionTimeout <- readInt(f)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     close(f)
     file.remove(path)
     if (length(backendPort) == 0 || backendPort == 0 ||
@@ -218,6 +247,10 @@ sparkR.sparkContext <- function(
     sparkHome <- suppressWarnings(normalizePath(sparkHome))
   }
 
+<<<<<<< HEAD
+=======
+  sparkExecutorEnvMap <- convertNamedListToEnv(sparkExecutorEnv)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   if (is.null(sparkExecutorEnvMap$LD_LIBRARY_PATH)) {
     sparkExecutorEnvMap[["LD_LIBRARY_PATH"]] <-
       paste0("$LD_LIBRARY_PATH:", Sys.getenv("LD_LIBRARY_PATH"))
@@ -604,6 +637,7 @@ processSparkPackages <- function(packages) {
   }
   splittedPackages
 }
+<<<<<<< HEAD
 
 # Utility function that checks and install Spark to local folder if not found
 #
@@ -637,3 +671,5 @@ sparkCheckInstall <- function(sparkHome, master, deployMode) {
     NULL
   }
 }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

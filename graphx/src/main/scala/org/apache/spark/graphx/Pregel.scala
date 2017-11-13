@@ -169,9 +169,13 @@ object Pregel extends Logging {
       // count the iteration
       i += 1
     }
+<<<<<<< HEAD
     messageCheckpointer.unpersistDataSet()
     graphCheckpointer.deleteAllCheckpoints()
     messageCheckpointer.deleteAllCheckpoints()
+=======
+    messages.unpersist(blocking = false)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     g
   } // end of apply
 

@@ -20,12 +20,19 @@ Random Forest Regressor Example.
 """
 from __future__ import print_function
 
+<<<<<<< HEAD
+=======
+import sys
+
+from pyspark import SparkContext, SQLContext
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 # $example on$
 from pyspark.ml import Pipeline
 from pyspark.ml.regression import RandomForestRegressor
 from pyspark.ml.feature import VectorIndexer
 from pyspark.ml.evaluation import RegressionEvaluator
 # $example off$
+<<<<<<< HEAD
 from pyspark.sql import SparkSession
 
 if __name__ == "__main__":
@@ -37,6 +44,16 @@ if __name__ == "__main__":
     # $example on$
     # Load and parse the data file, converting it to a DataFrame.
     data = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="random_forest_regressor_example")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    # Load and parse the data file, converting it to a DataFrame.
+    data = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     # Automatically identify categorical features, and index them.
     # Set maxCategories so features with > 4 distinct values are treated as continuous.
@@ -71,4 +88,8 @@ if __name__ == "__main__":
     print(rfModel)  # summary only
     # $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

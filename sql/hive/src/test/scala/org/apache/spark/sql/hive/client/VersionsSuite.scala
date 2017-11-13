@@ -20,6 +20,7 @@ package org.apache.spark.sql.hive.client
 import java.io.{ByteArrayOutputStream, File, PrintStream}
 import java.net.URI
 
+<<<<<<< HEAD
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
 import org.apache.hadoop.hive.serde2.`lazy`.LazySimpleSerDe
@@ -32,13 +33,27 @@ import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, NoSuchPermanentFunctionException}
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, EqualTo, Literal}
+=======
+import org.apache.hadoop.util.VersionInfo
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.{Logging, SparkFunSuite}
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, EqualTo, Literal, NamedExpression}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.util.quietly
 import org.apache.spark.sql.hive.{HiveExternalCatalog, HiveUtils}
 import org.apache.spark.sql.hive.test.TestHiveVersion
 import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.tags.ExtendedHiveTest
+<<<<<<< HEAD
 import org.apache.spark.util.{MutableURLClassLoader, Utils}
+=======
+import org.apache.spark.util.Utils
+import org.apache.spark.sql.test.SQLTestUtils
+import org.apache.spark.sql.hive.test.TestHiveSingleton
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * A simple set of tests that call the methods of a [[HiveClient]], loading different version
@@ -48,8 +63,9 @@ import org.apache.spark.util.{MutableURLClassLoader, Utils}
  */
 // TODO: Refactor this to `HiveClientSuite` and make it a subclass of `HiveVersionSuite`
 @ExtendedHiveTest
-class VersionsSuite extends SparkFunSuite with Logging {
+class VersionsSuite extends SparkFunSuite  with SQLTestUtils with TestHiveSingleton with Logging {
 
+<<<<<<< HEAD
   import HiveClientBuilder.buildClient
 
   /**
@@ -83,6 +99,32 @@ class VersionsSuite extends SparkFunSuite with Logging {
     hadoopConf.set("test", "success")
     val client = buildClient(HiveUtils.hiveExecutionVersion, hadoopConf)
     assert("success" === client.getConf("test", null))
+=======
+  // In order to speed up test execution during development or in Jenkins, you can specify the path
+  // of an existing Ivy cache:
+  private val ivyPath: Option[String] = {
+    sys.env.get("SPARK_VERSIONS_SUITE_IVY_PATH").orElse(
+      Some(new File(sys.props("java.io.tmpdir"), "hive-ivy-cache").getAbsolutePath))
+  }
+
+  private def buildConf() = {
+    lazy val warehousePath = Utils.createTempDir()
+    lazy val metastorePath = Utils.createTempDir()
+    metastorePath.delete()
+    Map(
+      "javax.jdo.option.ConnectionURL" -> s"jdbc:derby:;databaseName=$metastorePath;create=true",
+      "hive.metastore.warehouse.dir" -> warehousePath.toString)
+  }
+
+  test("success sanity check") {
+    val badClient = IsolatedClientLoader.forVersion(
+      hiveMetastoreVersion = HiveContext.hiveExecutionVersion,
+      hadoopVersion = VersionInfo.getVersion,
+      config = buildConf(),
+      ivyPath = ivyPath).createClient()
+    val db = new HiveDatabase("default", "")
+    badClient.createDatabase(db)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private def getNestedMessages(e: Throwable): String = {
@@ -103,7 +145,17 @@ class VersionsSuite extends SparkFunSuite with Logging {
   // TODO: currently only works on mysql where we manually create the schema...
   ignore("failure sanity check") {
     val e = intercept[Throwable] {
+<<<<<<< HEAD
       val badClient = quietly { buildClient("13", new Configuration()) }
+=======
+      val badClient = quietly {
+        IsolatedClientLoader.forVersion(
+          hiveMetastoreVersion = "13",
+          hadoopVersion = VersionInfo.getVersion,
+          config = buildConf(),
+          ivyPath = ivyPath).createClient()
+      }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     assert(getNestedMessages(e) contains "Unknown column 'A0.OWNER_NAME' in 'field list'")
   }
@@ -118,6 +170,7 @@ class VersionsSuite extends SparkFunSuite with Logging {
     test(s"$version: create client") {
       client = null
       System.gc() // Hack to avoid SEGV on some JVM versions.
+<<<<<<< HEAD
       val hadoopConf = new Configuration()
       hadoopConf.set("test", "success")
       // Hive changed the default of datanucleus.schema.autoCreateAll from true to false and
@@ -147,6 +200,14 @@ class VersionsSuite extends SparkFunSuite with Logging {
           compressed = false,
           properties = Map.empty
         ))
+=======
+      client =
+        IsolatedClientLoader.forVersion(
+          hiveMetastoreVersion = version,
+          hadoopVersion = VersionInfo.getVersion,
+          config = buildConf(),
+          ivyPath = ivyPath).createClient()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -734,6 +795,7 @@ class VersionsSuite extends SparkFunSuite with Logging {
       }
     }
 
+<<<<<<< HEAD
     test(s"$version: Decimal support of Avro Hive serde") {
       val tableName = "tab1"
       // TODO: add the other logical types. For details, see the link:
@@ -842,5 +904,37 @@ class VersionsSuite extends SparkFunSuite with Logging {
     }
 
     // TODO: add more tests.
+=======
+    test(s"$version: CREATE TABLE AS SELECT") {
+      withTable("tbl") {
+        sqlContext.sql("CREATE TABLE tbl AS SELECT 1 AS a")
+        assert(sqlContext.table("tbl").collect().toSeq == Seq(Row(1)))
+      }
+    }
+
+    test(s"$version: Delete the temporary staging directory and files after each insert") {
+      withTempDir { tmpDir =>
+        withTable("tab", "tbl") {
+          sqlContext.sql(
+            s"""
+               |CREATE TABLE tab(c1 string)
+               |location '${tmpDir.toURI.toString}'
+             """.stripMargin)
+
+          sqlContext.sql("CREATE TABLE tbl AS SELECT 1 AS a")
+          sqlContext.sql(s"INSERT OVERWRITE TABLE tab SELECT * from tbl ")
+
+          def listFiles(path: File): List[String] = {
+            val dir = path.listFiles()
+            val folders = dir.filter(_.isDirectory).toList
+            val filePaths = dir.map(_.getName).toList
+            folders.flatMap(listFiles) ++: filePaths
+          }
+          val expectedFiles = ".part-00000.crc" :: "part-00000" :: Nil
+          assert(listFiles(tmpDir).sorted == expectedFiles)
+        }
+      }
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

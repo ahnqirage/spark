@@ -18,6 +18,7 @@ package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.{Estimator, Model}
@@ -27,6 +28,17 @@ import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
 import org.apache.spark.ml.util._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset}
+=======
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.ml.{Estimator, Model}
+import org.apache.spark.ml.param._
+import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
+import org.apache.spark.ml.util._
+import org.apache.spark.mllib.linalg.{VectorUDT, Vectors}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.util.collection.OpenHashMap
@@ -71,7 +83,11 @@ private[feature] trait CountVectorizerParams extends Params with HasInputCol wit
 
   /** Validates and transforms the input schema. */
   protected def validateAndTransformSchema(schema: StructType): StructType = {
+<<<<<<< HEAD
     val typeCandidates = List(new ArrayType(StringType, true), new ArrayType(StringType, false))
+=======
+    val typeCandidates = List(ArrayType(StringType, true), ArrayType(StringType, false))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     SchemaUtils.checkColumnTypes(schema, $(inputCol), typeCandidates)
     SchemaUtils.appendColumn(schema, $(outputCol), new VectorUDT)
   }
@@ -119,8 +135,13 @@ private[feature] trait CountVectorizerParams extends Params with HasInputCol wit
 /**
  * Extracts a vocabulary from document collections and generates a [[CountVectorizerModel]].
  */
+<<<<<<< HEAD
 @Since("1.5.0")
 class CountVectorizer @Since("1.5.0") (@Since("1.5.0") override val uid: String)
+=======
+@Experimental
+class CountVectorizer(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Estimator[CountVectorizerModel] with CountVectorizerParams with DefaultParamsWritable {
 
   @Since("1.5.0")
@@ -203,10 +224,15 @@ object CountVectorizer extends DefaultParamsReadable[CountVectorizer] {
  * Converts a text document to a sparse vector of token counts.
  * @param vocabulary An Array over terms. Only the terms in the vocabulary will be counted.
  */
+<<<<<<< HEAD
 @Since("1.5.0")
 class CountVectorizerModel(
     @Since("1.5.0") override val uid: String,
     @Since("1.5.0") val vocabulary: Array[String])
+=======
+@Experimental
+class CountVectorizerModel(override val uid: String, val vocabulary: Array[String])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Model[CountVectorizerModel] with CountVectorizerParams with MLWritable {
 
   import CountVectorizerModel._
@@ -294,7 +320,11 @@ object CountVectorizerModel extends MLReadable[CountVectorizerModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = Data(instance.vocabulary)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+=======
+      sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -305,7 +335,11 @@ object CountVectorizerModel extends MLReadable[CountVectorizerModel] {
     override def load(path: String): CountVectorizerModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       val data = sparkSession.read.parquet(dataPath)
+=======
+      val data = sqlContext.read.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .select("vocabulary")
         .head()
       val vocabulary = data.getAs[Seq[String]](0).toArray

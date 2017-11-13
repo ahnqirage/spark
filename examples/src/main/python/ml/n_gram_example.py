@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.feature import NGram
 # $example off$
@@ -42,3 +43,28 @@ if __name__ == "__main__":
     # $example off$
 
     spark.stop()
+=======
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+# $example on$
+from pyspark.ml.feature import NGram
+# $example off$
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="NGramExample")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    wordDataFrame = sqlContext.createDataFrame([
+        (0, ["Hi", "I", "heard", "about", "Spark"]),
+        (1, ["I", "wish", "Java", "could", "use", "case", "classes"]),
+        (2, ["Logistic", "regression", "models", "are", "neat"])
+    ], ["label", "words"])
+    ngram = NGram(inputCol="words", outputCol="ngrams")
+    ngramDataFrame = ngram.transform(wordDataFrame)
+    for ngrams_label in ngramDataFrame.select("ngrams", "label").take(3):
+        print(ngrams_label)
+    # $example off$
+
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

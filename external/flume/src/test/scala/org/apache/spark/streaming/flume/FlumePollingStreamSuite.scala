@@ -132,7 +132,11 @@ class FlumePollingStreamSuite extends SparkFunSuite with BeforeAndAfterAll with 
         val headers = flattenOutput.map(_.event.getHeaders.asScala.map {
           case (key, value) => (key.toString, value.toString)
         }).map(_.asJava)
+<<<<<<< HEAD
         val bodies = flattenOutput.map(e => JavaUtils.bytesToString(e.event.getBody))
+=======
+        val bodies = flattenOutputBuffer.map(e => new String(e.event.getBody.array(), UTF_8))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         utils.assertOutput(headers.asJava, bodies.asJava)
       }
     } finally {

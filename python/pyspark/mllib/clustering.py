@@ -561,6 +561,7 @@ class PowerIterationClusteringModel(JavaModelWrapper, JavaSaveable, JavaLoader):
 
     >>> import math
     >>> def genCircle(r, n):
+<<<<<<< HEAD
     ...     points = []
     ...     for i in range(0, n):
     ...         theta = 2.0 * math.pi * i / n
@@ -569,6 +570,16 @@ class PowerIterationClusteringModel(JavaModelWrapper, JavaSaveable, JavaLoader):
     >>> def sim(x, y):
     ...     dist2 = (x[0] - y[0]) * (x[0] - y[0]) + (x[1] - y[1]) * (x[1] - y[1])
     ...     return math.exp(-dist2 / 2.0)
+=======
+    ...   points = []
+    ...   for i in range(0, n):
+    ...     theta = 2.0 * math.pi * i / n
+    ...     points.append((r * math.cos(theta), r * math.sin(theta)))
+    ...   return points
+    >>> def sim(x, y):
+    ...   dist2 = (x[0] - y[0]) * (x[0] - y[0]) + (x[1] - y[1]) * (x[1] - y[1])
+    ...   return math.exp(-dist2 / 2.0)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     >>> r1 = 1.0
     >>> n1 = 10
     >>> r2 = 4.0
@@ -955,6 +966,7 @@ class LDAModel(JavaModelWrapper, JavaSaveable, Loader):
     @since('1.6.0')
     def describeTopics(self, maxTermsPerTopic=None):
         """Return the topics described by weighted terms.
+<<<<<<< HEAD
 
         WARNING: If vocabSize and k are large, this can return a large object!
 
@@ -965,6 +977,16 @@ class LDAModel(JavaModelWrapper, JavaSaveable, Loader):
           Array over topics. Each topic is represented as a pair of
           matching arrays: (term indices, term weights in topic).
           Each topic's terms are sorted in order of decreasing weight.
+=======
+
+        WARNING: If vocabSize and k are large, this can return a large object!
+
+        :param maxTermsPerTopic: Maximum number of terms to collect for each topic.
+            (default: vocabulary size)
+        :return: Array over topics. Each topic is represented as a pair of matching arrays:
+            (term indices, term weights in topic).
+            Each topic's terms are sorted in order of decreasing weight.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         if maxTermsPerTopic is None:
             topics = self.call("describeTopics")

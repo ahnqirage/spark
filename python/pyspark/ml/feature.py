@@ -2336,9 +2336,19 @@ class StopWordsRemover(JavaTransformer, HasInputCol, HasOutputCol, JavaMLReadabl
         super(StopWordsRemover, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.feature.StopWordsRemover",
                                             self.uid)
+<<<<<<< HEAD
         self._setDefault(stopWords=StopWordsRemover.loadDefaultStopWords("english"),
                          caseSensitive=False)
         kwargs = self._input_kwargs
+=======
+        self.stopWords = Param(self, "stopWords", "The words to be filtered out")
+        self.caseSensitive = Param(self, "caseSensitive", "whether to do a case " +
+                                   "sensitive comparison over the stop words")
+        stopWordsObj = _jvm().org.apache.spark.ml.feature.StopWords
+        defaultStopWords = list(stopWordsObj.English())
+        self._setDefault(stopWords=defaultStopWords)
+        kwargs = self.__init__._input_kwargs
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         self.setParams(**kwargs)
 
     @keyword_only
@@ -2751,6 +2761,7 @@ class Word2Vec(JavaEstimator, HasStepSize, HasMaxIter, HasSeed, HasInputCol, Has
     |   c|[-0.3794820010662...|
     +----+--------------------+
     ...
+<<<<<<< HEAD
     >>> model.findSynonymsArray("a", 2)
     [(u'b', 0.25053444504737854), (u'c', -0.6980510950088501)]
     >>> from pyspark.sql.functions import format_number as fmt
@@ -2780,6 +2791,18 @@ class Word2Vec(JavaEstimator, HasStepSize, HasMaxIter, HasSeed, HasInputCol, Has
     True
     >>> loadedModel.getVectors().first().vector == model.getVectors().first().vector
     True
+=======
+    >>> model.findSynonyms("a", 2).show()
+    +----+--------------------+
+    |word|          similarity|
+    +----+--------------------+
+    |   b| 0.16782984556103436|
+    |   c|-0.46761559092107646|
+    +----+--------------------+
+    ...
+    >>> model.transform(doc).head().model
+    DenseVector([0.5524, -0.4995, -0.3599, 0.0241, 0.3461])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.4.0
     """

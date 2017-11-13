@@ -224,8 +224,12 @@ abstract class HiveComparisonTest
       testCaseName: String,
       sql: String,
       reset: Boolean = true,
+<<<<<<< HEAD
       tryWithoutResettingFirst: Boolean = false,
       skip: Boolean = false) {
+=======
+      tryWithoutResettingFirst: Boolean = false) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // testCaseName must not contain ':', which is not allowed to appear in a filename of Windows
     assert(!testCaseName.contains(":"))
 
@@ -296,11 +300,18 @@ abstract class HiveComparisonTest
         // thus the tables referenced in those DDL commands cannot be extracted for use by our
         // test table auto-loading mechanism. In addition, the tests which use the SHOW TABLES
         // command expect these tables to exist.
+<<<<<<< HEAD
         val hasShowTableCommand =
           queryList.exists(_.toLowerCase(Locale.ROOT).contains("show tables"))
         for (table <- Seq("src", "srcpart")) {
           val hasMatchingQuery = queryList.exists { query =>
             val normalizedQuery = query.toLowerCase(Locale.ROOT).stripSuffix(";")
+=======
+        val hasShowTableCommand = queryList.exists(_.toLowerCase.contains("show tables"))
+        for (table <- Seq("src", "srcpart")) {
+          val hasMatchingQuery = queryList.exists { query =>
+            val normalizedQuery = query.toLowerCase.stripSuffix(";")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             normalizedQuery.endsWith(table) ||
               normalizedQuery.contains(s"from $table") ||
               normalizedQuery.contains(s"from default.$table")
@@ -445,13 +456,20 @@ abstract class HiveComparisonTest
           "create table",
           "drop index"
         )
+<<<<<<< HEAD
         !queryList.map(_.toLowerCase(Locale.ROOT)).exists { query =>
+=======
+        !queryList.map(_.toLowerCase).exists { query =>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           excludedSubstrings.exists(s => query.contains(s))
         }
       }
 
+<<<<<<< HEAD
       val savedSettings = new util.HashMap[String, String]
       savedSettings.putAll(TestHive.conf.settings)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       try {
         try {
           if (tryWithoutResettingFirst && canSpeculativelyTryWithoutReset) {

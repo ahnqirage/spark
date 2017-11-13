@@ -21,6 +21,7 @@ library(SparkR)
 # Turn all warnings into errors
 options("warn" = 2)
 
+<<<<<<< HEAD
 if (.Platform$OS.type == "windows") {
   Sys.setenv(TZ = "GMT")
 }
@@ -40,6 +41,8 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
   sparkRTestMaster <- ""
 }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 test_package("SparkR")
 
 if (identical(Sys.getenv("NOT_CRAN"), "true")) {

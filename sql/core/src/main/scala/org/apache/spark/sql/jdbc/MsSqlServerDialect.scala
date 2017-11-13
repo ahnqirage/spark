@@ -36,10 +36,15 @@ private object MsSqlServerDialect extends JdbcDialect {
 
   override def getJDBCType(dt: DataType): Option[JdbcType] = dt match {
     case TimestampType => Some(JdbcType("DATETIME", java.sql.Types.TIMESTAMP))
+<<<<<<< HEAD
     case StringType => Some(JdbcType("NVARCHAR(MAX)", java.sql.Types.NVARCHAR))
     case BooleanType => Some(JdbcType("BIT", java.sql.Types.BIT))
     case _ => None
   }
 
   override def isCascadingTruncateTable(): Option[Boolean] = Some(false)
+=======
+    case _ => None
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

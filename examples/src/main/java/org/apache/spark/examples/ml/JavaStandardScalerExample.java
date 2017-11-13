@@ -17,17 +17,28 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession;
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SQLContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 // $example on$
 import org.apache.spark.ml.feature.StandardScaler;
 import org.apache.spark.ml.feature.StandardScalerModel;
+<<<<<<< HEAD
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+=======
+import org.apache.spark.sql.DataFrame;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example off$
 
 public class JavaStandardScalerExample {
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaStandardScalerExample")
@@ -36,6 +47,14 @@ public class JavaStandardScalerExample {
     // $example on$
     Dataset<Row> dataFrame =
       spark.read().format("libsvm").load("data/mllib/sample_libsvm_data.txt");
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaStandardScalerExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext jsql = new SQLContext(jsc);
+
+    // $example on$
+    DataFrame dataFrame = jsql.read().format("libsvm").load("data/mllib/sample_libsvm_data.txt");
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     StandardScaler scaler = new StandardScaler()
       .setInputCol("features")
@@ -47,9 +66,18 @@ public class JavaStandardScalerExample {
     StandardScalerModel scalerModel = scaler.fit(dataFrame);
 
     // Normalize each feature to have unit standard deviation.
+<<<<<<< HEAD
     Dataset<Row> scaledData = scalerModel.transform(dataFrame);
     scaledData.show();
     // $example off$
     spark.stop();
   }
 }
+=======
+    DataFrame scaledData = scalerModel.transform(dataFrame);
+    scaledData.show();
+    // $example off$
+    jsc.stop();
+  }
+}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

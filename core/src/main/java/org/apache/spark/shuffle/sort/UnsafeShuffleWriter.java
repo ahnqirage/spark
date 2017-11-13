@@ -41,9 +41,12 @@ import org.apache.spark.annotation.Private;
 import org.apache.spark.executor.ShuffleWriteMetrics;
 import org.apache.spark.io.CompressionCodec;
 import org.apache.spark.io.CompressionCodec$;
+<<<<<<< HEAD
 import org.apache.spark.io.NioBufferedFileInputStream;
 import org.apache.commons.io.output.CloseShieldOutputStream;
 import org.apache.commons.io.output.CountingOutputStream;
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.memory.TaskMemoryManager;
 import org.apache.spark.network.util.LimitedInputStream;
 import org.apache.spark.scheduler.MapStatus;
@@ -56,7 +59,10 @@ import org.apache.spark.storage.BlockManager;
 import org.apache.spark.storage.TimeTrackingOutputStream;
 import org.apache.spark.unsafe.Platform;
 import org.apache.spark.util.Utils;
+<<<<<<< HEAD
 import org.apache.spark.internal.config.package$;
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 @Private
 public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> {

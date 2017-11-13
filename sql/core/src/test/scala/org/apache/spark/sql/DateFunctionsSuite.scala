@@ -490,6 +490,7 @@ class DateFunctionsSuite extends QueryTest with SharedSQLContext {
     checkAnswer(df.selectExpr(s"unix_timestamp(s, '$fmt')"), Seq(
       Row(ts1.getTime / 1000L), Row(ts2.getTime / 1000L)))
 
+<<<<<<< HEAD
     val x1 = "2015-07-24 10:00:00"
     val x2 = "2015-25-07 02:02:02"
     val x3 = "2015-07-24 25:02:02"
@@ -519,6 +520,8 @@ class DateFunctionsSuite extends QueryTest with SharedSQLContext {
     checkAnswer(df2.select(unix_timestamp(col("y"), "yyyy-MM-dd")), Seq(
       Row(ts5.getTime / 1000L), Row(null)))
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val now = sql("select unix_timestamp()").collect().head.getLong(0)
     checkAnswer(sql(s"select cast ($now as timestamp)"), Row(new java.util.Date(now * 1000)))
   }
@@ -542,6 +545,7 @@ class DateFunctionsSuite extends QueryTest with SharedSQLContext {
       Row(date1.getTime / 1000L), Row(date2.getTime / 1000L)))
     checkAnswer(df.selectExpr(s"to_unix_timestamp(s, '$fmt')"), Seq(
       Row(ts1.getTime / 1000L), Row(ts2.getTime / 1000L)))
+<<<<<<< HEAD
 
     val x1 = "2015-07-24 10:00:00"
     val x2 = "2015-25-07 02:02:02"
@@ -594,6 +598,8 @@ class DateFunctionsSuite extends QueryTest with SharedSQLContext {
       Row(ts1), Row(ts2)))
     checkAnswer(df.select(to_timestamp(col("d"), "yyyy-MM-dd")), Seq(
       Row(ts_date1), Row(ts_date2)))
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("datediff") {

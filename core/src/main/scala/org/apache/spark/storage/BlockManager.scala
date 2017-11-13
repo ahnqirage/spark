@@ -18,6 +18,7 @@
 package org.apache.spark.storage
 
 import java.io._
+<<<<<<< HEAD
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 
@@ -28,6 +29,17 @@ import scala.concurrent.duration._
 import scala.reflect.ClassTag
 import scala.util.Random
 import scala.util.control.NonFatal
+=======
+import java.nio.{ByteBuffer, MappedByteBuffer}
+import java.util.concurrent.ConcurrentHashMap
+
+import scala.collection.mutable.{ArrayBuffer, HashMap}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.Random
+import scala.util.control.NonFatal
+import scala.collection.JavaConverters._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import com.codahale.metrics.{MetricRegistry, MetricSet}
 
@@ -42,10 +54,15 @@ import org.apache.spark.network.netty.SparkTransportConf
 import org.apache.spark.network.shuffle.ExternalShuffleClient
 import org.apache.spark.network.shuffle.protocol.ExecutorShuffleInfo
 import org.apache.spark.rpc.RpcEnv
+<<<<<<< HEAD
 import org.apache.spark.serializer.{SerializerInstance, SerializerManager}
 import org.apache.spark.shuffle.ShuffleManager
 import org.apache.spark.storage.memory._
 import org.apache.spark.unsafe.Platform
+=======
+import org.apache.spark.serializer.{Serializer, SerializerInstance}
+import org.apache.spark.shuffle.ShuffleManager
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util._
 import org.apache.spark.util.io.ChunkedByteBuffer
 
@@ -116,7 +133,7 @@ private[spark] class BlockManager(
     val master: BlockManagerMaster,
     val serializerManager: SerializerManager,
     val conf: SparkConf,
-    memoryManager: MemoryManager,
+    val memoryManager: MemoryManager,
     mapOutputTracker: MapOutputTracker,
     shuffleManager: ShuffleManager,
     val blockTransferService: BlockTransferService,
@@ -177,8 +194,13 @@ private[spark] class BlockManager(
   // standard BlockTransferService to directly connect to other Executors.
   private[spark] val shuffleClient = if (externalShuffleServiceEnabled) {
     val transConf = SparkTransportConf.fromSparkConf(conf, "shuffle", numUsableCores)
+<<<<<<< HEAD
     new ExternalShuffleClient(transConf, securityManager,
       securityManager.isAuthenticationEnabled(), conf.get(config.SHUFFLE_REGISTRATION_TIMEOUT))
+=======
+    new ExternalShuffleClient(transConf, securityManager, securityManager.isAuthenticationEnabled(),
+      securityManager.isSaslEncryptionEnabled())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   } else {
     blockTransferService
   }
@@ -202,6 +224,11 @@ private[spark] class BlockManager(
   private var lastPeerFetchTime = 0L
 
   private var blockReplicationPolicy: BlockReplicationPolicy = _
+
+  // Blocks are removing by another thread
+  val pendingToRemove = new ConcurrentHashMap[BlockId, Long]()
+
+  private val NON_TASK_WRITER = -1024L
 
   /**
    * Initializes the BlockManager with the given appId. This is not performed in the constructor as
@@ -574,6 +601,7 @@ private[spark] class BlockManager(
     }
   }
 
+<<<<<<< HEAD
   /**
    * Get block from the local block manager as serialized bytes.
    *
@@ -610,6 +638,128 @@ private[spark] class BlockManager(
           .getOrElse(diskData)
       } else {
         handleLocalReadFailure(blockId)
+=======
+  private def doGetLocal(blockId: BlockId, asBlockResult: Boolean): Option[Any] = {
+    val info = blockInfo.get(blockId).orNull
+    if (info != null) {
+      info.synchronized {
+        // Double check to make sure the block is still there. There is a small chance that the
+        // block has been removed by removeBlock (which also synchronizes on the blockInfo object).
+        // Note that this only checks metadata tracking. If user intentionally deleted the block
+        // on disk or from off heap storage without using removeBlock, this conditional check will
+        // still pass but eventually we will get an exception because we can't find the block.
+        if (blockInfo.get(blockId).isEmpty) {
+          logWarning(s"Block $blockId had been removed")
+          return None
+        }
+
+        // If another thread is writing the block, wait for it to become ready.
+        if (!info.waitForReady()) {
+          // If we get here, the block write failed.
+          logWarning(s"Block $blockId was marked as failure.")
+          return None
+        }
+
+        val level = info.level
+        logDebug(s"Level for block $blockId is $level")
+
+        // Look for the block in memory
+        if (level.useMemory) {
+          logDebug(s"Getting block $blockId from memory")
+          val result = if (asBlockResult) {
+            memoryStore.getValues(blockId).map(new BlockResult(_, DataReadMethod.Memory, info.size))
+          } else {
+            memoryStore.getBytes(blockId)
+          }
+          result match {
+            case Some(values) =>
+              return result
+            case None =>
+              logDebug(s"Block $blockId not found in memory")
+          }
+        }
+
+        // Look for the block in external block store
+        if (level.useOffHeap) {
+          logDebug(s"Getting block $blockId from ExternalBlockStore")
+          if (externalBlockStore.contains(blockId)) {
+            val result = if (asBlockResult) {
+              externalBlockStore.getValues(blockId)
+                .map(new BlockResult(_, DataReadMethod.Memory, info.size))
+            } else {
+              externalBlockStore.getBytes(blockId)
+            }
+            result match {
+              case Some(values) =>
+                return result
+              case None =>
+                logDebug(s"Block $blockId not found in ExternalBlockStore")
+            }
+          }
+        }
+
+        // Look for block on disk, potentially storing it back in memory if required
+        if (level.useDisk) {
+          logDebug(s"Getting block $blockId from disk")
+          val bytes: ByteBuffer = if (diskStore.contains(blockId)) {
+            // DiskStore.getBytes() always returns Some, so this .get() is guaranteed to be safe
+            diskStore.getBytes(blockId).get
+          } else {
+            // Remove the missing block so that its unavailability is reported to the driver
+            removeBlock(blockId)
+            throw new BlockException(
+              blockId, s"Block $blockId not found on disk, though it should be")
+          }
+          assert(0 == bytes.position())
+
+          if (!level.useMemory) {
+            // If the block shouldn't be stored in memory, we can just return it
+            if (asBlockResult) {
+              return Some(new BlockResult(dataDeserialize(blockId, bytes), DataReadMethod.Disk,
+                info.size))
+            } else {
+              return Some(bytes)
+            }
+          } else {
+            // Otherwise, we also have to store something in the memory store
+            if (!level.deserialized || !asBlockResult) {
+              /* We'll store the bytes in memory if the block's storage level includes
+               * "memory serialized", or if it should be cached as objects in memory
+               * but we only requested its serialized bytes. */
+              memoryStore.putBytes(blockId, bytes.limit, () => {
+                // https://issues.apache.org/jira/browse/SPARK-6076
+                // If the file size is bigger than the free memory, OOM will happen. So if we cannot
+                // put it into MemoryStore, copyForMemory should not be created. That's why this
+                // action is put into a `() => ByteBuffer` and created lazily.
+                val copyForMemory = ByteBuffer.allocate(bytes.limit)
+                copyForMemory.put(bytes)
+              })
+              bytes.rewind()
+            }
+            if (!asBlockResult) {
+              return Some(bytes)
+            } else {
+              val values = dataDeserialize(blockId, bytes)
+              if (level.deserialized) {
+                // Cache the values before returning them
+                val putResult = memoryStore.putIterator(
+                  blockId, values, level, returnValues = true, allowPersistToDisk = false)
+                // The put may or may not have succeeded, depending on whether there was enough
+                // space to unroll the block. Either way, the put here should return an iterator.
+                putResult.data match {
+                  case Left(it) =>
+                    return Some(new BlockResult(it, DataReadMethod.Disk, info.size))
+                  case _ =>
+                    // This only happens if we dropped the values back to disk (which is never)
+                    throw new SparkException("Memory store did not return an iterator!")
+                }
+              } else {
+                return Some(new BlockResult(values, DataReadMethod.Disk, info.size))
+              }
+            }
+          }
+        }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
   }
@@ -664,6 +814,7 @@ private[spark] class BlockManager(
           loc.host, loc.port, loc.executorId, blockId.toString).nioByteBuffer()
       } catch {
         case NonFatal(e) =>
+<<<<<<< HEAD
           runningFailureCount += 1
           totalFailureCount += 1
 
@@ -688,6 +839,19 @@ private[spark] class BlockManager(
             logDebug(s"Refreshed locations from the driver " +
               s"after ${runningFailureCount} fetch failures.")
             runningFailureCount = 0
+=======
+          numFetchFailures += 1
+          if (numFetchFailures == locations.size) {
+            // An exception is thrown while fetching this block from all locations
+            logWarning(s"Failed to fetch block from" +
+              s" ${locations.size} locations. Most recent failure cause:", e)
+            return None
+          } else {
+            // This location failed, so we retry fetch from a different one by returning null here
+            logWarning(s"Failed to fetch remote block $blockId " +
+              s"from $loc (failed attempt $numFetchFailures)", e)
+            null
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           }
 
           // This location failed, so we retry fetch from a different one by returning null here
@@ -833,7 +997,11 @@ private[spark] class BlockManager(
       bufferSize: Int,
       writeMetrics: ShuffleWriteMetrics): DiskBlockObjectWriter = {
     val syncWrites = conf.getBoolean("spark.shuffle.sync", false)
+<<<<<<< HEAD
     new DiskBlockObjectWriter(file, serializerManager, serializerInstance, bufferSize,
+=======
+    new DiskBlockObjectWriter(file, serializerInstance, bufferSize, compressStream,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       syncWrites, writeMetrics, blockId)
   }
 
@@ -1391,6 +1559,7 @@ private[spark] class BlockManager(
       blockId: BlockId,
       data: () => Either[Array[T], ChunkedByteBuffer]): StorageLevel = {
     logInfo(s"Dropping block $blockId from memory")
+<<<<<<< HEAD
     val info = blockInfoManager.assertBlockIsLockedForWriting(blockId)
     var blockIsUpdated = false
     val level = info.level
@@ -1426,6 +1595,64 @@ private[spark] class BlockManager(
     val status = getCurrentBlockStatus(blockId, info)
     if (info.tellMaster) {
       reportBlockStatus(blockId, status, droppedMemorySize)
+=======
+    val info = blockInfo.get(blockId).orNull
+
+    // If the block has not already been dropped
+    if (info != null && pendingToRemove.putIfAbsent(blockId, currentTaskAttemptId) == 0L) {
+      try {
+        info.synchronized {
+          // required ? As of now, this will be invoked only for blocks which are ready
+          // But in case this changes in future, adding for consistency sake.
+          if (!info.waitForReady()) {
+            // If we get here, the block write failed.
+            logWarning(s"Block $blockId was marked as failure. Nothing to drop")
+            return None
+          } else if (blockInfo.get(blockId).isEmpty) {
+            logWarning(s"Block $blockId was already dropped.")
+            return None
+          }
+          var blockIsUpdated = false
+          val level = info.level
+
+          // Drop to disk, if storage level requires
+          if (level.useDisk && !diskStore.contains(blockId)) {
+            logInfo(s"Writing block $blockId to disk")
+            data() match {
+              case Left(elements) =>
+                diskStore.putArray(blockId, elements, level, returnValues = false)
+              case Right(bytes) =>
+                diskStore.putBytes(blockId, bytes, level)
+            }
+            blockIsUpdated = true
+          }
+
+          // Actually drop from memory store
+          val droppedMemorySize =
+            if (memoryStore.contains(blockId)) memoryStore.getSize(blockId) else 0L
+          val blockIsRemoved = memoryStore.remove(blockId)
+          if (blockIsRemoved) {
+            blockIsUpdated = true
+          } else {
+            logWarning(s"Block $blockId could not be dropped from memory as it does not exist")
+          }
+
+          val status = getCurrentBlockStatus(blockId, info)
+          if (info.tellMaster) {
+            reportBlockStatus(blockId, info, status, droppedMemorySize)
+          }
+          if (!level.useDisk) {
+            // The block is completely gone from this node;forget it so we can put() it again later.
+            blockInfo.remove(blockId)
+          }
+          if (blockIsUpdated) {
+            return Some(status)
+          }
+        }
+      } finally {
+        pendingToRemove.remove(blockId)
+      }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     if (blockIsUpdated) {
       addUpdatedBlockStatusToTaskMetrics(blockId, status)
@@ -1463,6 +1690,7 @@ private[spark] class BlockManager(
    */
   def removeBlock(blockId: BlockId, tellMaster: Boolean = true): Unit = {
     logDebug(s"Removing block $blockId")
+<<<<<<< HEAD
     blockInfoManager.lockForWriting(blockId) match {
       case None =>
         // The block has already been removed; do nothing.
@@ -1470,6 +1698,111 @@ private[spark] class BlockManager(
       case Some(info) =>
         removeBlockInternal(blockId, tellMaster = tellMaster && info.tellMaster)
         addUpdatedBlockStatusToTaskMetrics(blockId, BlockStatus.empty)
+=======
+    val info = blockInfo.get(blockId).orNull
+    if (info != null && pendingToRemove.putIfAbsent(blockId, currentTaskAttemptId) == 0L) {
+      try {
+        info.synchronized {
+          val level = info.level
+          // Removals are idempotent in disk store and memory store. At worst, we get a warning.
+          val removedFromMemory = if (level.useMemory) memoryStore.remove(blockId) else false
+          val removedFromDisk = if (level.useDisk) diskStore.remove(blockId) else false
+          val removedFromExternalBlockStore =
+            if (externalBlockStoreInitialized) externalBlockStore.remove(blockId) else false
+          if (!removedFromMemory && !removedFromDisk && !removedFromExternalBlockStore) {
+            logWarning(s"Block $blockId could not be removed as it was not found in either " +
+              "the disk, memory, or external block store")
+          }
+          blockInfo.remove(blockId)
+          val status = getCurrentBlockStatus(blockId, info)
+          if (tellMaster && info.tellMaster) {
+            reportBlockStatus(blockId, info, status)
+          }
+          Option(TaskContext.get()).foreach { tc =>
+            val metrics = tc.taskMetrics()
+            val lastUpdatedBlocks = metrics.updatedBlocks.getOrElse(Seq[(BlockId, BlockStatus)]())
+            metrics.updatedBlocks = Some(lastUpdatedBlocks ++ Seq((blockId, status)))
+          }
+        }
+      } finally {
+        pendingToRemove.remove(blockId)
+      }
+    } else {
+      // The block has already been removed; do nothing.
+      logWarning(s"Asked to remove block $blockId, which does not exist")
+    }
+  }
+
+  private def dropOldNonBroadcastBlocks(cleanupTime: Long): Unit = {
+    logInfo(s"Dropping non broadcast blocks older than $cleanupTime")
+    dropOldBlocks(cleanupTime, !_.isBroadcast)
+  }
+
+  private def dropOldBroadcastBlocks(cleanupTime: Long): Unit = {
+    logInfo(s"Dropping broadcast blocks older than $cleanupTime")
+    dropOldBlocks(cleanupTime, _.isBroadcast)
+  }
+
+  private def dropOldBlocks(cleanupTime: Long, shouldDrop: (BlockId => Boolean)): Unit = {
+    val iterator = blockInfo.getEntrySet.iterator
+    while (iterator.hasNext) {
+      val entry = iterator.next()
+      val (id, info, time) = (entry.getKey, entry.getValue.value, entry.getValue.timestamp)
+      if (time < cleanupTime && shouldDrop(id) &&
+        pendingToRemove.putIfAbsent(id, currentTaskAttemptId) == 0L) {
+        try {
+          info.synchronized {
+            val level = info.level
+            if (level.useMemory) { memoryStore.remove(id) }
+            if (level.useDisk) { diskStore.remove(id) }
+            if (level.useOffHeap) { externalBlockStore.remove(id) }
+            iterator.remove()
+            logInfo(s"Dropped block $id")
+          }
+        } finally {
+          pendingToRemove.remove(id)
+        }
+        val status = getCurrentBlockStatus(id, info)
+        reportBlockStatus(id, info, status)
+      }
+    }
+  }
+
+  private def currentTaskAttemptId: Long = {
+    Option(TaskContext.get()).map(_.taskAttemptId()).getOrElse(NON_TASK_WRITER)
+  }
+
+  def getBlockInfo(blockId: BlockId): BlockInfo = {
+    blockInfo.get(blockId).orNull
+  }
+
+  /**
+   * Release all lock held by the given task, clearing that task's pin bookkeeping
+   * structures and updating the global pin counts. This method should be called at the
+   * end of a task (either by a task completion handler or in `TaskRunner.run()`).
+   *
+   * @return the ids of blocks whose pins were released
+   */
+  def releaseAllLocksForTask(taskAttemptId: Long): ArrayBuffer[BlockId] = {
+    var selectLocks = ArrayBuffer[BlockId]()
+    pendingToRemove.entrySet().asScala.foreach { entry =>
+      if (entry.getValue == taskAttemptId) {
+        pendingToRemove.remove(entry.getKey)
+        selectLocks += entry.getKey
+      }
+    }
+    selectLocks
+  }
+
+  private def shouldCompress(blockId: BlockId): Boolean = {
+    blockId match {
+      case _: ShuffleBlockId => compressShuffle
+      case _: BroadcastBlockId => compressBroadcast
+      case _: RDDBlockId => compressRdds
+      case _: TempLocalBlockId => compressShuffleSpill
+      case _: TempShuffleBlockId => compressShuffle
+      case _ => false
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -1477,6 +1810,7 @@ private[spark] class BlockManager(
    * Internal version of [[removeBlock()]] which assumes that the caller already holds a write
    * lock on the block.
    */
+<<<<<<< HEAD
   private def removeBlockInternal(blockId: BlockId, tellMaster: Boolean): Unit = {
     // Removals are idempotent in disk store and memory store. At worst, we get a warning.
     val removedFromMemory = memoryStore.remove(blockId)
@@ -1504,6 +1838,55 @@ private[spark] class BlockManager(
       taskAttemptId: Option[Long] = None): Unit = {
     releaseLock(blockId, taskAttemptId)
     data.dispose()
+=======
+  def wrapForCompression(blockId: BlockId, s: OutputStream): OutputStream = {
+    if (shouldCompress(blockId)) compressionCodec.compressedOutputStream(s) else s
+  }
+
+  /**
+   * Wrap an input stream for compression if block compression is enabled for its block type
+   */
+  def wrapForCompression(blockId: BlockId, s: InputStream): InputStream = {
+    if (shouldCompress(blockId)) compressionCodec.compressedInputStream(s) else s
+  }
+
+  /** Serializes into a stream. */
+  def dataSerializeStream(
+      blockId: BlockId,
+      outputStream: OutputStream,
+      values: Iterator[Any]): Unit = {
+    val byteStream = new BufferedOutputStream(outputStream)
+    val ser = defaultSerializer.newInstance()
+    ser.serializeStream(wrapForCompression(blockId, byteStream)).writeAll(values).close()
+  }
+
+  /** Serializes into a byte buffer. */
+  def dataSerialize(blockId: BlockId, values: Iterator[Any]): ByteBuffer = {
+    val byteStream = new ByteArrayOutputStream(4096)
+    dataSerializeStream(blockId, byteStream, values)
+    ByteBuffer.wrap(byteStream.toByteArray)
+  }
+
+  /**
+   * Deserializes a ByteBuffer into an iterator of values and disposes of it when the end of
+   * the iterator is reached.
+   */
+  def dataDeserialize(blockId: BlockId, bytes: ByteBuffer): Iterator[Any] = {
+    bytes.rewind()
+    dataDeserializeStream(blockId, new ByteBufferInputStream(bytes, true))
+  }
+
+  /**
+   * Deserializes a InputStream into an iterator of values and disposes of it when the end of
+   * the iterator is reached.
+   */
+  def dataDeserializeStream(blockId: BlockId, inputStream: InputStream): Iterator[Any] = {
+    val stream = new BufferedInputStream(inputStream)
+    defaultSerializer
+      .newInstance()
+      .deserializeStream(wrapForCompression(blockId, stream))
+      .asIterator
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def stop(): Unit = {
@@ -1516,6 +1899,16 @@ private[spark] class BlockManager(
     rpcEnv.stop(slaveEndpoint)
     blockInfoManager.clear()
     memoryStore.clear()
+<<<<<<< HEAD
+=======
+    pendingToRemove.clear()
+    diskStore.clear()
+    if (externalBlockStoreInitialized) {
+      externalBlockStore.clear()
+    }
+    metadataCleaner.cancel()
+    broadcastCleaner.cancel()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     futureExecutionContext.shutdownNow()
     logInfo("BlockManager stopped")
   }

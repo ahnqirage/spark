@@ -31,9 +31,17 @@ import org.apache.spark.ml.feature.{StringIndexer, VectorIndexer}
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.regression.{DecisionTreeRegressionModel, DecisionTreeRegressor}
 import org.apache.spark.ml.util.MetadataUtils
+<<<<<<< HEAD
 import org.apache.spark.mllib.evaluation.{MulticlassMetrics, RegressionMetrics}
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.sql.{DataFrame, SparkSession}
+=======
+import org.apache.spark.mllib.evaluation.{RegressionMetrics, MulticlassMetrics}
+import org.apache.spark.mllib.linalg.Vector
+import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.sql.{SQLContext, DataFrame}
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * An example runner for decision trees. Run with
@@ -133,6 +141,7 @@ object DecisionTreeExample {
 
   /** Load a dataset from the given path, using the given format */
   private[ml] def loadData(
+<<<<<<< HEAD
       spark: SparkSession,
       path: String,
       format: String,
@@ -145,6 +154,20 @@ object DecisionTreeExample {
         case Some(numFeatures) => spark.read.option("numFeatures", numFeatures.toString)
           .format("libsvm").load(path)
         case None => spark.read.format("libsvm").load(path)
+=======
+      sqlContext: SQLContext,
+      path: String,
+      format: String,
+      expectedNumFeatures: Option[Int] = None): DataFrame = {
+    import sqlContext.implicits._
+
+    format match {
+      case "dense" => MLUtils.loadLabeledPoints(sqlContext.sparkContext, path).toDF()
+      case "libsvm" => expectedNumFeatures match {
+        case Some(numFeatures) => sqlContext.read.option("numFeatures", numFeatures.toString)
+          .format("libsvm").load(path)
+        case None => sqlContext.read.format("libsvm").load(path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       case _ => throw new IllegalArgumentException(s"Bad data format: $format")
     }
@@ -165,19 +188,30 @@ object DecisionTreeExample {
       testInput: String,
       algo: String,
       fracTest: Double): (DataFrame, DataFrame) = {
+<<<<<<< HEAD
     val spark = SparkSession
       .builder
       .getOrCreate()
 
     // Load training data
     val origExamples: DataFrame = loadData(spark, input, dataFormat)
+=======
+    val sqlContext = new SQLContext(sc)
+
+    // Load training data
+    val origExamples: DataFrame = loadData(sqlContext, input, dataFormat)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Load or create test set
     val dataframes: Array[DataFrame] = if (testInput != "") {
       // Load testInput.
       val numFeatures = origExamples.first().getAs[Vector](1).size
       val origTestExamples: DataFrame =
+<<<<<<< HEAD
         loadData(spark, testInput, dataFormat, Some(numFeatures))
+=======
+        loadData(sqlContext, testInput, dataFormat, Some(numFeatures))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       Array(origExamples, origTestExamples)
     } else {
       // Split input into training, test.

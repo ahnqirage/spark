@@ -18,6 +18,7 @@
 // scalastyle:off println
 package org.apache.spark.examples.ml
 
+<<<<<<< HEAD
 // $example on$
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.AFTSurvivalRegression
@@ -30,10 +31,22 @@ import org.apache.spark.sql.SparkSession
  * {{{
  * bin/run-example ml.AFTSurvivalRegressionExample
  * }}}
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkContext, SparkConf}
+// $example on$
+import org.apache.spark.ml.regression.AFTSurvivalRegression
+import org.apache.spark.mllib.linalg.Vectors
+// $example off$
+
+/**
+ * An example for AFTSurvivalRegression.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 object AFTSurvivalRegressionExample {
 
   def main(args: Array[String]): Unit = {
+<<<<<<< HEAD
     val spark = SparkSession
       .builder
       .appName("AFTSurvivalRegressionExample")
@@ -41,6 +54,14 @@ object AFTSurvivalRegressionExample {
 
     // $example on$
     val training = spark.createDataFrame(Seq(
+=======
+    val conf = new SparkConf().setAppName("AFTSurvivalRegressionExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    val training = sqlContext.createDataFrame(Seq(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       (1.218, 1.0, Vectors.dense(1.560, -0.605)),
       (2.949, 0.0, Vectors.dense(0.346, 2.158)),
       (3.627, 0.0, Vectors.dense(1.380, 0.231)),
@@ -55,6 +76,7 @@ object AFTSurvivalRegressionExample {
     val model = aft.fit(training)
 
     // Print the coefficients, intercept and scale parameter for AFT survival regression
+<<<<<<< HEAD
     println(s"Coefficients: ${model.coefficients}")
     println(s"Intercept: ${model.intercept}")
     println(s"Scale: ${model.scale}")
@@ -62,6 +84,14 @@ object AFTSurvivalRegressionExample {
     // $example off$
 
     spark.stop()
+=======
+    println(s"Coefficients: ${model.coefficients} Intercept: " +
+      s"${model.intercept} Scale: ${model.scale}")
+    model.transform(training).show(false)
+    // $example off$
+
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

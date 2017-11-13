@@ -18,10 +18,20 @@
 package org.apache.spark.deploy.master
 
 import java.text.SimpleDateFormat
+<<<<<<< HEAD
 import java.util.{Date, Locale}
 import java.util.concurrent.{ScheduledFuture, TimeUnit}
 
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+=======
+import java.util.Date
+import java.util.concurrent.{ConcurrentHashMap, ScheduledFuture, TimeUnit}
+
+import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.language.postfixOps
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.util.Random
 
 import org.apache.spark.{SecurityManager, SparkConf, SparkException}
@@ -49,6 +59,10 @@ private[deploy] class Master(
   private val forwardMessageThread =
     ThreadUtils.newDaemonSingleThreadScheduledExecutor("master-forward-message-thread")
 
+  private val rebuildUIThread =
+    ThreadUtils.newDaemonSingleThreadExecutor("master-rebuild-ui-thread")
+  private val rebuildUIContext = ExecutionContext.fromExecutor(rebuildUIThread)
+
   private val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
 
   // For application IDs
@@ -73,6 +87,11 @@ private[deploy] class Master(
   private val addressToApp = new HashMap[RpcAddress, ApplicationInfo]
   private val completedApps = new ArrayBuffer[ApplicationInfo]
   private var nextAppNumber = 0
+<<<<<<< HEAD
+=======
+  // Using ConcurrentHashMap so that master-rebuild-ui-thread can add a UI after asyncRebuildUI
+  private val appIdToUI = new ConcurrentHashMap[String, SparkUI]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private val drivers = new HashSet[DriverInfo]
   private val completedDrivers = new ArrayBuffer[DriverInfo]
@@ -192,6 +211,7 @@ private[deploy] class Master(
       checkForWorkerTimeOutTask.cancel(true)
     }
     forwardMessageThread.shutdownNow()
+    rebuildUIThread.shutdownNow()
     webUi.stop()
     restServer.foreach(_.stop())
     masterMetricsSystem.stop()
@@ -284,7 +304,11 @@ private[deploy] class Master(
             appInfo.resetRetryCount()
           }
 
+<<<<<<< HEAD
           exec.application.driver.send(ExecutorUpdated(execId, state, message, exitStatus, false))
+=======
+          exec.application.driver.send(ExecutorUpdated(execId, state, message, exitStatus))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
           if (ExecutorState.isFinished(state)) {
             // Remove this executor from the worker and app
@@ -312,6 +336,10 @@ private[deploy] class Master(
             }
           }
           schedule()
+<<<<<<< HEAD
+=======
+        }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         case None =>
           logWarning(s"Got status update for unknown executor $appId/$execId")
       }
@@ -407,7 +435,15 @@ private[deploy] class Master(
 
     case CheckForWorkerTimeOut =>
       timeOutDeadWorkers()
+<<<<<<< HEAD
 
+=======
+    }
+
+    case AttachCompletedRebuildUI(appId) =>
+      // An asyncRebuildSparkUI has completed, so need to attach to master webUi
+      Option(appIdToUI.get(appId)).foreach { ui => webUi.attachSparkUI(ui) }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
@@ -856,7 +892,12 @@ private[deploy] class Master(
 
       if (completedApps.size >= RETAINED_APPLICATIONS) {
         val toRemove = math.max(RETAINED_APPLICATIONS / 10, 1)
+<<<<<<< HEAD
         completedApps.take(toRemove).foreach { a =>
+=======
+        completedApps.take(toRemove).foreach( a => {
+          Option(appIdToUI.remove(a.id)).foreach { ui => webUi.detachSparkUI(ui) }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           applicationMetricsSystem.removeSource(a.appSource)
         }
         completedApps.trimStart(toRemove)
@@ -864,6 +905,12 @@ private[deploy] class Master(
       completedApps += app // Remember it in our history
       waitingApps -= app
 
+<<<<<<< HEAD
+=======
+      // If application events are logged, use them to rebuild the UI
+      asyncRebuildSparkUI(app)
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       for (exec <- app.executors.values) {
         killExecutor(exec)
       }
@@ -962,7 +1009,94 @@ private[deploy] class Master(
     exec.state = ExecutorState.KILLED
   }
 
+<<<<<<< HEAD
   /** Generate a new app ID given an app's submission date */
+=======
+  /**
+   * Rebuild a new SparkUI from the given application's event logs.
+   * Return the UI if successful, else None
+   */
+  private[master] def rebuildSparkUI(app: ApplicationInfo): Option[SparkUI] = {
+    val futureUI = asyncRebuildSparkUI(app)
+    Await.result(futureUI, Duration.Inf)
+  }
+
+  /** Rebuild a new SparkUI asynchronously to not block RPC event loop */
+  private[master] def asyncRebuildSparkUI(app: ApplicationInfo): Future[Option[SparkUI]] = {
+    val appName = app.desc.name
+    val notFoundBasePath = HistoryServer.UI_PATH_PREFIX + "/not-found"
+    val eventLogDir = app.desc.eventLogDir
+      .getOrElse {
+        // Event logging is disabled for this application
+        app.appUIUrlAtHistoryServer = Some(notFoundBasePath)
+        return Future.successful(None)
+      }
+    val futureUI = Future {
+      val eventLogFilePrefix = EventLoggingListener.getLogPath(
+        eventLogDir, app.id, appAttemptId = None, compressionCodecName = app.desc.eventLogCodec)
+      val fs = Utils.getHadoopFileSystem(eventLogDir, hadoopConf)
+      val inProgressExists = fs.exists(new Path(eventLogFilePrefix +
+        EventLoggingListener.IN_PROGRESS))
+
+      val eventLogFile = if (inProgressExists) {
+        // Event logging is enabled for this application, but the application is still in progress
+        logWarning(s"Application $appName is still in progress, it may be terminated abnormally.")
+        eventLogFilePrefix + EventLoggingListener.IN_PROGRESS
+      } else {
+        eventLogFilePrefix
+      }
+
+      val logInput = EventLoggingListener.openEventLog(new Path(eventLogFile), fs)
+      val replayBus = new ReplayListenerBus()
+      val ui = SparkUI.createHistoryUI(new SparkConf, replayBus, new SecurityManager(conf),
+        appName, HistoryServer.UI_PATH_PREFIX + s"/${app.id}", app.startTime)
+      try {
+        replayBus.replay(logInput, eventLogFile, inProgressExists)
+      } finally {
+        logInput.close()
+      }
+
+      Some(ui)
+    }(rebuildUIContext)
+
+    futureUI.onSuccess { case Some(ui) =>
+      appIdToUI.put(app.id, ui)
+      // `self` can be null if we are already in the process of shutting down
+      // This happens frequently in tests where `local-cluster` is used
+      if (self != null) {
+        self.send(AttachCompletedRebuildUI(app.id))
+      }
+      // Application UI is successfully rebuilt, so link the Master UI to it
+      // NOTE - app.appUIUrlAtHistoryServer is volatile
+      app.appUIUrlAtHistoryServer = Some(ui.basePath)
+    }(ThreadUtils.sameThread)
+
+    futureUI.onFailure {
+      case fnf: FileNotFoundException =>
+        // Event logging is enabled for this application, but no event logs are found
+        val title = s"Application history not found (${app.id})"
+        var msg = s"No event logs found for application $appName in ${app.desc.eventLogDir.get}."
+        logWarning(msg)
+        msg += " Did you specify the correct logging directory?"
+        msg = URLEncoder.encode(msg, "UTF-8")
+        app.appUIUrlAtHistoryServer = Some(notFoundBasePath + s"?msg=$msg&title=$title")
+
+      case e: Exception =>
+        // Relay exception message to application UI page
+        val title = s"Application history load error (${app.id})"
+        val exception = URLEncoder.encode(Utils.exceptionString(e), "UTF-8")
+        var msg = s"Exception in replaying log for application $appName!"
+        logError(msg, e)
+        msg = URLEncoder.encode(msg, "UTF-8")
+        app.appUIUrlAtHistoryServer =
+            Some(notFoundBasePath + s"?msg=$msg&exception=$exception&title=$title")
+    }(ThreadUtils.sameThread)
+
+    futureUI
+  }
+
+  /** Generate a new app ID given a app's submission date */
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def newApplicationId(submitDate: Date): String = {
     val appId = "app-%s-%04d".format(createDateFormat.format(submitDate), nextAppNumber)
     nextAppNumber += 1

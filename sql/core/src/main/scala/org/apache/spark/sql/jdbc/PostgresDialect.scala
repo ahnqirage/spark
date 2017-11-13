@@ -19,7 +19,11 @@ package org.apache.spark.sql.jdbc
 
 import java.sql.{Connection, Types}
 
+<<<<<<< HEAD
 import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JdbcUtils}
+=======
+import org.apache.spark.sql.execution.datasources.jdbc.JdbcUtils
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 
 
@@ -29,6 +33,7 @@ private object PostgresDialect extends JdbcDialect {
 
   override def getCatalystType(
       sqlType: Int, typeName: String, size: Int, md: MetadataBuilder): Option[DataType] = {
+<<<<<<< HEAD
     if (sqlType == Types.REAL) {
       Some(FloatType)
     } else if (sqlType == Types.SMALLINT) {
@@ -48,6 +53,19 @@ private object PostgresDialect extends JdbcDialect {
       typeName: String,
       precision: Int,
       scale: Int): Option[DataType] = typeName match {
+=======
+    if (sqlType == Types.BIT && typeName.equals("bit") && size != 1) {
+      Some(BinaryType)
+    } else if (sqlType == Types.OTHER) {
+      toCatalystType(typeName).filter(_ == StringType)
+    } else if (sqlType == Types.ARRAY && typeName.length > 1 && typeName(0) == '_') {
+      toCatalystType(typeName.drop(1)).map(ArrayType(_))
+    } else None
+  }
+
+  // TODO: support more type names.
+  private def toCatalystType(typeName: String): Option[DataType] = typeName match {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     case "bool" => Some(BooleanType)
     case "bit" => Some(BinaryType)
     case "int2" => Some(ShortType)
@@ -60,7 +78,11 @@ private object PostgresDialect extends JdbcDialect {
     case "bytea" => Some(BinaryType)
     case "timestamp" | "timestamptz" | "time" | "timetz" => Some(TimestampType)
     case "date" => Some(DateType)
+<<<<<<< HEAD
     case "numeric" | "decimal" => Some(DecimalType.bounded(precision, scale))
+=======
+    case "numeric" => Some(DecimalType.SYSTEM_DEFAULT)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     case _ => None
   }
 
@@ -70,9 +92,12 @@ private object PostgresDialect extends JdbcDialect {
     case BooleanType => Some(JdbcType("BOOLEAN", Types.BOOLEAN))
     case FloatType => Some(JdbcType("FLOAT4", Types.FLOAT))
     case DoubleType => Some(JdbcType("FLOAT8", Types.DOUBLE))
+<<<<<<< HEAD
     case ShortType => Some(JdbcType("SMALLINT", Types.SMALLINT))
     case t: DecimalType => Some(
       JdbcType(s"NUMERIC(${t.precision},${t.scale})", java.sql.Types.NUMERIC))
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     case ArrayType(et, _) if et.isInstanceOf[AtomicType] =>
       getJDBCType(et).map(_.databaseTypeDefinition)
         .orElse(JdbcUtils.getCommonJDBCType(et).map(_.databaseTypeDefinition))
@@ -94,11 +119,18 @@ private object PostgresDialect extends JdbcDialect {
     //
     // See: https://jdbc.postgresql.org/documentation/head/query.html#query-with-cursor
     //
+<<<<<<< HEAD
     if (properties.getOrElse(JDBCOptions.JDBC_BATCH_FETCH_SIZE, "0").toInt > 0) {
+=======
+    if (properties.getOrElse("fetchsize", "0").toInt > 0) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       connection.setAutoCommit(false)
     }
 
   }
+<<<<<<< HEAD
 
   override def isCascadingTruncateTable(): Option[Boolean] = Some(true)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

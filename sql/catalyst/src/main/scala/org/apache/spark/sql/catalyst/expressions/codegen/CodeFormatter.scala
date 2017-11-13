@@ -17,7 +17,11 @@
 
 package org.apache.spark.sql.catalyst.expressions.codegen
 
+<<<<<<< HEAD
 import java.util.regex.Matcher
+=======
+import org.apache.commons.lang3.StringUtils
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * An utility class that indents a block of code based on the curly braces and parentheses.
@@ -26,6 +30,7 @@ import java.util.regex.Matcher
  * Written by Matei Zaharia.
  */
 object CodeFormatter {
+<<<<<<< HEAD
   val commentHolder = """\/\*(.+?)\*\/""".r
 
   def format(code: CodeAndComment, maxLines: Int = -1): String = {
@@ -88,6 +93,15 @@ object CodeFormatter {
       lastLine = line
     }
     new CodeAndComment(code.result().trim(), map)
+=======
+  def format(code: CodeAndComment): String = {
+    new CodeFormatter().addLines(
+      StringUtils.replaceEach(
+        code.body,
+        code.comment.keys.toArray,
+        code.comment.values.toArray)
+    ).result
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

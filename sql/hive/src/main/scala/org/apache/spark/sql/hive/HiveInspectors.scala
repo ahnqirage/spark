@@ -21,9 +21,14 @@ import java.lang.reflect.{ParameterizedType, Type, WildcardType}
 
 import scala.collection.JavaConverters._
 
+<<<<<<< HEAD
 import org.apache.hadoop.{io => hadoopIo}
 import org.apache.hadoop.hive.common.`type`.{HiveChar, HiveDecimal, HiveVarchar}
 import org.apache.hadoop.hive.serde2.{io => hiveIo}
+=======
+import org.apache.hadoop.hive.common.`type`.{HiveChar, HiveDecimal, HiveVarchar}
+import org.apache.hadoop.hive.serde2.objectinspector.primitive._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.hadoop.hive.serde2.objectinspector.{StructField => HiveStructField, _}
 import org.apache.hadoop.hive.serde2.objectinspector.primitive._
 import org.apache.hadoop.hive.serde2.typeinfo.{DecimalTypeInfo, TypeInfoFactory}
@@ -32,8 +37,13 @@ import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util._
+<<<<<<< HEAD
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types._
+=======
+import org.apache.spark.sql.types.{ArrayBasedMapData => _, _}
+import org.apache.spark.sql.{AnalysisException, types}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.unsafe.types.UTF8String
 
 /**
@@ -251,9 +261,145 @@ private[hive] trait HiveInspectors {
     case c => throw new AnalysisException(s"Unsupported java type $c")
   }
 
+<<<<<<< HEAD
   private def isSubClassOf(t: Type, parent: Class[_]): Boolean = t match {
     case cls: Class[_] => parent.isAssignableFrom(cls)
     case _ => false
+=======
+  /**
+   * Converts hive types to native catalyst types.
+   * @param data the data in Hive type
+   * @param oi   the ObjectInspector associated with the Hive Type
+   * @return     convert the data into catalyst type
+   * TODO return the function of (data => Any) instead for performance consideration
+   *
+   * Strictly follows the following order in unwrapping (constant OI has the higher priority):
+   *  Constant Null object inspector =>
+   *    return null
+   *  Constant object inspector =>
+   *    extract the value from constant object inspector
+   *  Check whether the `data` is null =>
+   *    return null if true
+   *  If object inspector prefers writable =>
+   *    extract writable from `data` and then get the catalyst type from the writable
+   *  Extract the java object directly from the object inspector
+   *
+   *  NOTICE: the complex data type requires recursive unwrapping.
+   */
+  def unwrap(data: Any, oi: ObjectInspector): Any = oi match {
+    case coi: ConstantObjectInspector if coi.getWritableConstantValue == null => null
+    case poi: WritableConstantStringObjectInspector =>
+      UTF8String.fromString(poi.getWritableConstantValue.toString)
+    case poi: WritableConstantHiveVarcharObjectInspector =>
+      UTF8String.fromString(poi.getWritableConstantValue.getHiveVarchar.getValue)
+    case poi: WritableConstantHiveCharObjectInspector =>
+      UTF8String.fromString(poi.getWritableConstantValue.getHiveChar.getValue)
+    case poi: WritableConstantHiveDecimalObjectInspector =>
+      HiveShim.toCatalystDecimal(
+        PrimitiveObjectInspectorFactory.javaHiveDecimalObjectInspector,
+        poi.getWritableConstantValue.getHiveDecimal)
+    case poi: WritableConstantTimestampObjectInspector =>
+      val t = poi.getWritableConstantValue
+      t.getSeconds * 1000000L + t.getNanos / 1000L
+    case poi: WritableConstantIntObjectInspector =>
+      poi.getWritableConstantValue.get()
+    case poi: WritableConstantDoubleObjectInspector =>
+      poi.getWritableConstantValue.get()
+    case poi: WritableConstantBooleanObjectInspector =>
+      poi.getWritableConstantValue.get()
+    case poi: WritableConstantLongObjectInspector =>
+      poi.getWritableConstantValue.get()
+    case poi: WritableConstantFloatObjectInspector =>
+      poi.getWritableConstantValue.get()
+    case poi: WritableConstantShortObjectInspector =>
+      poi.getWritableConstantValue.get()
+    case poi: WritableConstantByteObjectInspector =>
+      poi.getWritableConstantValue.get()
+    case poi: WritableConstantBinaryObjectInspector =>
+      val writable = poi.getWritableConstantValue
+      val temp = new Array[Byte](writable.getLength)
+      System.arraycopy(writable.getBytes, 0, temp, 0, temp.length)
+      temp
+    case poi: WritableConstantDateObjectInspector =>
+      DateTimeUtils.fromJavaDate(poi.getWritableConstantValue.get())
+    case mi: StandardConstantMapObjectInspector =>
+      // take the value from the map inspector object, rather than the input data
+      val keyValues = mi.getWritableConstantValue.asScala.toSeq
+      val keys = keyValues.map(kv => unwrap(kv._1, mi.getMapKeyObjectInspector)).toArray
+      val values = keyValues.map(kv => unwrap(kv._2, mi.getMapValueObjectInspector)).toArray
+      ArrayBasedMapData(keys, values)
+    case li: StandardConstantListObjectInspector =>
+      // take the value from the list inspector object, rather than the input data
+      val values = li.getWritableConstantValue.asScala
+        .map(unwrap(_, li.getListElementObjectInspector))
+        .toArray
+      new GenericArrayData(values)
+    // if the value is null, we don't care about the object inspector type
+    case _ if data == null => null
+    case poi: VoidObjectInspector => null // always be null for void object inspector
+    case pi: PrimitiveObjectInspector => pi match {
+      // We think HiveVarchar/HiveChar is also a String
+      case hvoi: HiveVarcharObjectInspector if hvoi.preferWritable() =>
+        UTF8String.fromString(hvoi.getPrimitiveWritableObject(data).getHiveVarchar.getValue)
+      case hvoi: HiveVarcharObjectInspector =>
+        UTF8String.fromString(hvoi.getPrimitiveJavaObject(data).getValue)
+      case hvoi: HiveCharObjectInspector if hvoi.preferWritable() =>
+        UTF8String.fromString(hvoi.getPrimitiveWritableObject(data).getHiveChar.getValue)
+      case hvoi: HiveCharObjectInspector =>
+        UTF8String.fromString(hvoi.getPrimitiveJavaObject(data).getValue)
+      case x: StringObjectInspector if x.preferWritable() =>
+        UTF8String.fromString(x.getPrimitiveWritableObject(data).toString)
+      case x: StringObjectInspector =>
+        UTF8String.fromString(x.getPrimitiveJavaObject(data))
+      case x: IntObjectInspector if x.preferWritable() => x.get(data)
+      case x: BooleanObjectInspector if x.preferWritable() => x.get(data)
+      case x: FloatObjectInspector if x.preferWritable() => x.get(data)
+      case x: DoubleObjectInspector if x.preferWritable() => x.get(data)
+      case x: LongObjectInspector if x.preferWritable() => x.get(data)
+      case x: ShortObjectInspector if x.preferWritable() => x.get(data)
+      case x: ByteObjectInspector if x.preferWritable() => x.get(data)
+      case x: HiveDecimalObjectInspector => HiveShim.toCatalystDecimal(x, data)
+      case x: BinaryObjectInspector if x.preferWritable() =>
+        // BytesWritable.copyBytes() only available since Hadoop2
+        // In order to keep backward-compatible, we have to copy the
+        // bytes with old apis
+        val bw = x.getPrimitiveWritableObject(data)
+        val result = new Array[Byte](bw.getLength())
+        System.arraycopy(bw.getBytes(), 0, result, 0, bw.getLength())
+        result
+      case x: DateObjectInspector if x.preferWritable() =>
+        DateTimeUtils.fromJavaDate(x.getPrimitiveWritableObject(data).get())
+      case x: DateObjectInspector => DateTimeUtils.fromJavaDate(x.getPrimitiveJavaObject(data))
+      case x: TimestampObjectInspector if x.preferWritable() =>
+        val t = x.getPrimitiveWritableObject(data)
+        t.getSeconds * 1000000L + t.getNanos / 1000L
+      case ti: TimestampObjectInspector =>
+        DateTimeUtils.fromJavaTimestamp(ti.getPrimitiveJavaObject(data))
+      case _ => pi.getPrimitiveJavaObject(data)
+    }
+    case li: ListObjectInspector =>
+      Option(li.getList(data))
+        .map { l =>
+          val values = l.asScala.map(unwrap(_, li.getListElementObjectInspector)).toArray
+          new GenericArrayData(values)
+        }
+        .orNull
+    case mi: MapObjectInspector =>
+      val map = mi.getMap(data)
+      if (map == null) {
+        null
+      } else {
+        val keyValues = map.asScala.toSeq
+        val keys = keyValues.map(kv => unwrap(kv._1, mi.getMapKeyObjectInspector)).toArray
+        val values = keyValues.map(kv => unwrap(kv._2, mi.getMapValueObjectInspector)).toArray
+        ArrayBasedMapData(keys, values)
+      }
+    // currently, hive doesn't provide the ConstantStructObjectInspector
+    case si: StructObjectInspector =>
+      val allRefs = si.getAllStructFieldRefs
+      InternalRow.fromSeq(allRefs.asScala.map(
+        r => unwrap(si.getStructFieldData(data, r), r.getFieldObjectInspector)))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private def withNullSafe(f: Any => Any): Any => Any = {
@@ -264,10 +410,32 @@ private[hive] trait HiveInspectors {
    * Wraps with Hive types based on object inspector.
    */
   protected def wrapperFor(oi: ObjectInspector, dataType: DataType): Any => Any = oi match {
+<<<<<<< HEAD
     case _ if dataType.isInstanceOf[UserDefinedType[_]] =>
       val sqlType = dataType.asInstanceOf[UserDefinedType[_]].sqlType
       wrapperFor(oi, sqlType)
     case x: ConstantObjectInspector =>
+=======
+    case _: JavaHiveVarcharObjectInspector =>
+      (o: Any) =>
+        if (o != null) {
+          val s = o.asInstanceOf[UTF8String].toString
+          new HiveVarchar(s, s.size)
+        } else {
+          null
+        }
+
+    case _: JavaHiveCharObjectInspector =>
+      (o: Any) =>
+        if (o != null) {
+          val s = o.asInstanceOf[UTF8String].toString
+          new HiveChar(s, s.size)
+        } else {
+          null
+        }
+
+    case _: JavaHiveDecimalObjectInspector =>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       (o: Any) =>
         x.getWritableConstantValue
     case x: PrimitiveObjectInspector => x match {

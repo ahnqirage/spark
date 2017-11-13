@@ -24,7 +24,11 @@ import org.apache.spark.sql.catalyst.dsl.plans._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.logical.LocalRelation
+<<<<<<< HEAD
 import org.apache.spark.sql.types._
+=======
+import org.apache.spark.sql.types.{LongType, TypeCollection, StringType}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 class ExpressionTypeCheckingSuite extends SparkFunSuite {
 
@@ -87,6 +91,14 @@ class ExpressionTypeCheckingSuite extends SparkFunSuite {
     assertError(BitwiseAnd('booleanField, 'booleanField), "requires integral type")
     assertError(BitwiseOr('booleanField, 'booleanField), "requires integral type")
     assertError(BitwiseXor('booleanField, 'booleanField), "requires integral type")
+<<<<<<< HEAD
+=======
+
+    assertError(MaxOf('mapField, 'mapField),
+      s"requires ${TypeCollection.Ordered.simpleString} type")
+    assertError(MinOf('mapField, 'mapField),
+      s"requires ${TypeCollection.Ordered.simpleString} type")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("check types for predicates") {
@@ -109,6 +121,7 @@ class ExpressionTypeCheckingSuite extends SparkFunSuite {
     assertErrorForDifferingTypes(GreaterThan('intField, 'booleanField))
     assertErrorForDifferingTypes(GreaterThanOrEqual('intField, 'booleanField))
 
+<<<<<<< HEAD
     assertError(EqualTo('mapField, 'mapField), "EqualTo does not support ordering on type MapType")
     assertError(EqualNullSafe('mapField, 'mapField),
       "EqualNullSafe does not support ordering on type MapType")
@@ -120,13 +133,27 @@ class ExpressionTypeCheckingSuite extends SparkFunSuite {
       "GreaterThan does not support ordering on type MapType")
     assertError(GreaterThanOrEqual('mapField, 'mapField),
       "GreaterThanOrEqual does not support ordering on type MapType")
+=======
+    assertError(LessThan('mapField, 'mapField),
+      s"requires ${TypeCollection.Ordered.simpleString} type")
+    assertError(LessThanOrEqual('mapField, 'mapField),
+      s"requires ${TypeCollection.Ordered.simpleString} type")
+    assertError(GreaterThan('mapField, 'mapField),
+      s"requires ${TypeCollection.Ordered.simpleString} type")
+    assertError(GreaterThanOrEqual('mapField, 'mapField),
+      s"requires ${TypeCollection.Ordered.simpleString} type")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     assertError(If('intField, 'stringField, 'stringField),
       "type of predicate expression in If should be boolean")
     assertErrorForDifferingTypes(If('booleanField, 'intField, 'booleanField))
 
     assertError(
+<<<<<<< HEAD
       CaseWhen(Seq(('booleanField.attr, 'intField.attr), ('booleanField.attr, 'mapField.attr))),
+=======
+      CaseWhen(Seq('booleanField, 'intField, 'booleanField, 'mapField)),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       "THEN and ELSE expressions should all be same type or coercible to a common type")
     assertError(
       CaseKeyWhen('intField, Seq('intField, 'stringField, 'intField, 'mapField)),
@@ -210,6 +237,15 @@ class ExpressionTypeCheckingSuite extends SparkFunSuite {
     for (operator <- Seq[(Seq[Expression] => Expression)](Greatest, Least)) {
       assertError(operator(Seq('booleanField)), "requires at least two arguments")
       assertError(operator(Seq('intField, 'stringField)), "should all have the same type")
+      assertError(operator(Seq('mapField, 'mapField)), "does not support ordering")
+    }
+  }
+
+  test("check types for Greatest/Least") {
+    for (operator <- Seq[(Seq[Expression] => Expression)](Greatest, Least)) {
+      assertError(operator(Seq('booleanField)), "requires at least 2 arguments")
+      assertError(operator(Seq('intField, 'stringField)), "should all have the same type")
+      assertError(operator(Seq('intField, 'decimalField)), "should all have the same type")
       assertError(operator(Seq('mapField, 'mapField)), "does not support ordering")
     }
   }

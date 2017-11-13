@@ -23,6 +23,12 @@ import org.apache.spark.storage.BlockId
 class TestMemoryManager(conf: SparkConf)
   extends MemoryManager(conf, numCores = 1, Long.MaxValue, Long.MaxValue) {
 
+<<<<<<< HEAD
+=======
+class TestMemoryManager(conf: SparkConf)
+  extends MemoryManager(conf, numCores = 1, Long.MaxValue, Long.MaxValue) {
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override private[memory] def acquireExecutionMemory(
       numBytes: Long,
       taskAttemptId: Long,
@@ -46,17 +52,26 @@ class TestMemoryManager(conf: SparkConf)
   override def acquireUnrollMemory(
       blockId: BlockId,
       numBytes: Long,
+<<<<<<< HEAD
      memoryMode: MemoryMode): Boolean = true
   override def releaseStorageMemory(numBytes: Long, memoryMode: MemoryMode): Unit = {}
+=======
+      evictedBlocks: mutable.Buffer[(BlockId, BlockStatus)]): Boolean = true
+  override def releaseStorageMemory(numBytes: Long): Unit = {}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override private[memory] def releaseExecutionMemory(
       numBytes: Long,
       taskAttemptId: Long,
       memoryMode: MemoryMode): Unit = {
     available += numBytes
   }
+<<<<<<< HEAD
   override def maxOnHeapStorageMemory: Long = Long.MaxValue
 
   override def maxOffHeapStorageMemory: Long = 0L
+=======
+  override def maxStorageMemory: Long = Long.MaxValue
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private var oomOnce = false
   private var available = Long.MaxValue

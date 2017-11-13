@@ -28,12 +28,12 @@ private[columnar] trait ColumnBuilder {
   /**
    * Initializes with an approximate lower bound on the expected number of elements in this column.
    */
-  def initialize(initialSize: Int, columnName: String = "", useCompression: Boolean = false): Unit
+  def initialize(initialSize: Int, columnName: String = "", useCompression: Boolean = false)
 
   /**
    * Appends `row(ordinal)` to the column builder.
    */
-  def appendFrom(row: InternalRow, ordinal: Int): Unit
+  def appendFrom(row: InternalRow, ordinal: Int)
 
   /**
    * Column statistics information
@@ -185,7 +185,7 @@ private[columnar] object ColumnBuilder {
       case udt: UserDefinedType[_] =>
         return apply(udt.sqlType, initialSize, columnName, useCompression)
       case other =>
-        throw new Exception(s"not supported type: $other")
+        throw new Exception(s"not suppported type: $other")
     }
 
     builder.initialize(initialSize, columnName, useCompression)

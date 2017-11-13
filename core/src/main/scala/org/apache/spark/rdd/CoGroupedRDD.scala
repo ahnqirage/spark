@@ -69,6 +69,12 @@ private[spark] class CoGroupPartition(
  * An RDD that cogroups its parents. For each key k in parent RDDs, the resulting RDD contains a
  * tuple with the list of values for that key.
  *
+<<<<<<< HEAD
+=======
+ * Note: This is an internal API. We recommend users use RDD.cogroup(...) instead of
+ * instantiating this directly.
+ *
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * @param rdds parent RDDs.
  * @param part partitioner used to partition the shuffle output
  *

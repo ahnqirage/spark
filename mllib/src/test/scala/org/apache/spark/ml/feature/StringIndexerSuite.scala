@@ -28,8 +28,11 @@ import org.apache.spark.sql.types.{DoubleType, StringType, StructField, StructTy
 
 class StringIndexerSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new StringIndexer)
@@ -210,6 +213,34 @@ class StringIndexerSuite
     assert(newInstance.labels === instance.labels)
   }
 
+  test("StringIndexerModel can't overwrite output column") {
+    val df = sqlContext.createDataFrame(Seq((1, 2), (3, 4))).toDF("input", "output")
+    val indexer = new StringIndexer()
+      .setInputCol("input")
+      .setOutputCol("output")
+      .fit(df)
+    intercept[IllegalArgumentException] {
+      indexer.transform(df)
+    }
+  }
+
+  test("StringIndexer read/write") {
+    val t = new StringIndexer()
+      .setInputCol("myInputCol")
+      .setOutputCol("myOutputCol")
+      .setHandleInvalid("skip")
+    testDefaultReadWrite(t)
+  }
+
+  test("StringIndexerModel read/write") {
+    val instance = new StringIndexerModel("myStringIndexerModel", Array("a", "b", "c"))
+      .setInputCol("myInputCol")
+      .setOutputCol("myOutputCol")
+      .setHandleInvalid("skip")
+    val newInstance = testDefaultReadWrite(instance)
+    assert(newInstance.labels === instance.labels)
+  }
+
   test("IndexToString params") {
     val idxToStr = new IndexToString()
     ParamsSuite.checkParams(idxToStr)
@@ -273,6 +304,7 @@ class StringIndexerSuite
     testDefaultReadWrite(t)
   }
 
+<<<<<<< HEAD
   test("SPARK 18698: construct IndexToString with custom uid") {
     val uid = "customUID"
     val t = new IndexToString(uid)
@@ -282,6 +314,11 @@ class StringIndexerSuite
   test("StringIndexer metadata") {
     val data = Seq((0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c"))
     val df = data.toDF("id", "label")
+=======
+  test("StringIndexer metadata") {
+    val data = sc.parallelize(Seq((0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c")), 2)
+    val df = sqlContext.createDataFrame(data).toDF("id", "label")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val indexer = new StringIndexer()
       .setInputCol("label")
       .setOutputCol("labelIndex")
@@ -291,6 +328,7 @@ class StringIndexerSuite
       NominalAttribute.decodeStructField(transformed.schema("labelIndex"), preserveName = true)
     assert(attrs.name.nonEmpty && attrs.name.get === "labelIndex")
   }
+<<<<<<< HEAD
 
   test("StringIndexer order types") {
     val data = Seq((0, "b"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "b"))
@@ -314,4 +352,6 @@ class StringIndexerSuite
       idx += 1
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

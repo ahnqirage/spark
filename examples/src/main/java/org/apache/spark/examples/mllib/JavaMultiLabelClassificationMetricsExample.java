@@ -25,8 +25,15 @@ import scala.Tuple2;
 
 import org.apache.spark.api.java.*;
 import org.apache.spark.mllib.evaluation.MultilabelMetrics;
+<<<<<<< HEAD
 import org.apache.spark.SparkConf;
 // $example off$
+=======
+import org.apache.spark.rdd.RDD;
+import org.apache.spark.SparkConf;
+// $example off$
+import org.apache.spark.SparkContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 public class JavaMultiLabelClassificationMetricsExample {
   public static void main(String[] args) {
@@ -34,6 +41,7 @@ public class JavaMultiLabelClassificationMetricsExample {
     JavaSparkContext sc = new JavaSparkContext(conf);
     // $example on$
     List<Tuple2<double[], double[]>> data = Arrays.asList(
+<<<<<<< HEAD
       new Tuple2<>(new double[]{0.0, 1.0}, new double[]{0.0, 2.0}),
       new Tuple2<>(new double[]{0.0, 2.0}, new double[]{0.0, 1.0}),
       new Tuple2<>(new double[]{}, new double[]{0.0}),
@@ -41,6 +49,15 @@ public class JavaMultiLabelClassificationMetricsExample {
       new Tuple2<>(new double[]{2.0, 0.0}, new double[]{2.0, 0.0}),
       new Tuple2<>(new double[]{0.0, 1.0, 2.0}, new double[]{0.0, 1.0}),
       new Tuple2<>(new double[]{1.0}, new double[]{1.0, 2.0})
+=======
+      new Tuple2<double[], double[]>(new double[]{0.0, 1.0}, new double[]{0.0, 2.0}),
+      new Tuple2<double[], double[]>(new double[]{0.0, 2.0}, new double[]{0.0, 1.0}),
+      new Tuple2<double[], double[]>(new double[]{}, new double[]{0.0}),
+      new Tuple2<double[], double[]>(new double[]{2.0}, new double[]{2.0}),
+      new Tuple2<double[], double[]>(new double[]{2.0, 0.0}, new double[]{2.0, 0.0}),
+      new Tuple2<double[], double[]>(new double[]{0.0, 1.0, 2.0}, new double[]{0.0, 1.0}),
+      new Tuple2<double[], double[]>(new double[]{1.0}, new double[]{1.0, 2.0})
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     );
     JavaRDD<Tuple2<double[], double[]>> scoreAndLabels = sc.parallelize(data);
 
@@ -55,12 +72,21 @@ public class JavaMultiLabelClassificationMetricsExample {
 
     // Stats by labels
     for (int i = 0; i < metrics.labels().length - 1; i++) {
+<<<<<<< HEAD
       System.out.format("Class %1.1f precision = %f\n", metrics.labels()[i], metrics.precision(
         metrics.labels()[i]));
       System.out.format("Class %1.1f recall = %f\n", metrics.labels()[i], metrics.recall(
         metrics.labels()[i]));
       System.out.format("Class %1.1f F1 score = %f\n", metrics.labels()[i], metrics.f1Measure(
         metrics.labels()[i]));
+=======
+      System.out.format("Class %1.1f precision = %f\n", metrics.labels()[i], metrics.precision
+        (metrics.labels()[i]));
+      System.out.format("Class %1.1f recall = %f\n", metrics.labels()[i], metrics.recall(metrics
+        .labels()[i]));
+      System.out.format("Class %1.1f F1 score = %f\n", metrics.labels()[i], metrics.f1Measure
+        (metrics.labels()[i]));
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     // Micro stats
@@ -74,7 +100,10 @@ public class JavaMultiLabelClassificationMetricsExample {
     // Subset accuracy
     System.out.format("Subset accuracy = %f\n", metrics.subsetAccuracy());
     // $example off$
+<<<<<<< HEAD
 
     sc.stop();
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

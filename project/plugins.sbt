@@ -37,4 +37,16 @@ addSbtPlugin("com.simplytyped" % "sbt-antlr4" % "0.7.11")
 // In the long run, we should try to merge our patch upstream and switch to an upstream version of
 // the plugin; this is tracked at SPARK-14401.
 
+<<<<<<< HEAD
+=======
+libraryDependencies += "org.ow2.asm"  % "asm-commons" % "5.0.3"
+
+// Spark uses a custom fork of the sbt-pom-reader plugin which contains a patch to fix issues
+// related to test-jar dependencies (https://github.com/sbt/sbt-pom-reader/pull/14). The source for
+// this fork is published at https://github.com/JoshRosen/sbt-pom-reader/tree/v1.0.0-spark
+// and corresponds to commit b160317fcb0b9d1009635a7c5aa05d0f3be61936 in that repository.
+// In the long run, we should try to merge our patch upstream and switch to an upstream version of
+// the plugin; this is tracked at SPARK-14401.
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 addSbtPlugin("org.spark-project" % "sbt-pom-reader" % "1.0.0-spark")

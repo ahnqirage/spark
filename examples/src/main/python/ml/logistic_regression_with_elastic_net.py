@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.classification import LogisticRegression
 # $example off$
@@ -31,6 +32,21 @@ if __name__ == "__main__":
     # $example on$
     # Load training data
     training = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+# $example on$
+from pyspark.ml.classification import LogisticRegression
+# $example off$
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="LogisticRegressionWithElasticNet")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    # Load training data
+    training = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     lr = LogisticRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
 
@@ -40,6 +56,7 @@ if __name__ == "__main__":
     # Print the coefficients and intercept for logistic regression
     print("Coefficients: " + str(lrModel.coefficients))
     print("Intercept: " + str(lrModel.intercept))
+<<<<<<< HEAD
 
     # We can also use the multinomial family for binary classification
     mlr = LogisticRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8, family="multinomial")
@@ -53,3 +70,8 @@ if __name__ == "__main__":
     # $example off$
 
     spark.stop()
+=======
+    # $example off$
+
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

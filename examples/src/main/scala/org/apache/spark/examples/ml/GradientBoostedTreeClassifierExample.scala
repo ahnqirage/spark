@@ -18,12 +18,18 @@
 // scalastyle:off println
 package org.apache.spark.examples.ml
 
+<<<<<<< HEAD
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.classification.{GBTClassificationModel, GBTClassifier}
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.feature.{IndexToString, StringIndexer, VectorIndexer}
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 
 object GradientBoostedTreeClassifierExample {
@@ -36,6 +42,18 @@ object GradientBoostedTreeClassifierExample {
     // $example on$
     // Load and parse the data file, converting it to a DataFrame.
     val data = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+
+object GradientBoostedTreeClassifierExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("GradientBoostedTreeClassifierExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    // Load and parse the data file, converting it to a DataFrame.
+    val data = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Index labels, adding metadata to the label column.
     // Fit on whole dataset to include all labels in index.
@@ -51,7 +69,11 @@ object GradientBoostedTreeClassifierExample {
       .setMaxCategories(4)
       .fit(data)
 
+<<<<<<< HEAD
     // Split the data into training and test sets (30% held out for testing).
+=======
+    // Split the data into training and test sets (30% held out for testing)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val Array(trainingData, testData) = data.randomSplit(Array(0.7, 0.3))
 
     // Train a GBT model.
@@ -66,11 +88,19 @@ object GradientBoostedTreeClassifierExample {
       .setOutputCol("predictedLabel")
       .setLabels(labelIndexer.labels)
 
+<<<<<<< HEAD
     // Chain indexers and GBT in a Pipeline.
     val pipeline = new Pipeline()
       .setStages(Array(labelIndexer, featureIndexer, gbt, labelConverter))
 
     // Train model. This also runs the indexers.
+=======
+    // Chain indexers and GBT in a Pipeline
+    val pipeline = new Pipeline()
+      .setStages(Array(labelIndexer, featureIndexer, gbt, labelConverter))
+
+    // Train model.  This also runs the indexers.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val model = pipeline.fit(trainingData)
 
     // Make predictions.
@@ -79,11 +109,19 @@ object GradientBoostedTreeClassifierExample {
     // Select example rows to display.
     predictions.select("predictedLabel", "label", "features").show(5)
 
+<<<<<<< HEAD
     // Select (prediction, true label) and compute test error.
     val evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("indexedLabel")
       .setPredictionCol("prediction")
       .setMetricName("accuracy")
+=======
+    // Select (prediction, true label) and compute test error
+    val evaluator = new MulticlassClassificationEvaluator()
+      .setLabelCol("indexedLabel")
+      .setPredictionCol("prediction")
+      .setMetricName("precision")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val accuracy = evaluator.evaluate(predictions)
     println("Test Error = " + (1.0 - accuracy))
 
@@ -91,7 +129,11 @@ object GradientBoostedTreeClassifierExample {
     println("Learned classification GBT model:\n" + gbtModel.toDebugString)
     // $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

@@ -810,6 +810,7 @@ class StreamingContextSuite extends SparkFunSuite with BeforeAndAfter with TimeL
     ssc.stop()
   }
 
+<<<<<<< HEAD
   test("SPARK-18560 Receiver data should be deserialized properly.") {
     // Start a two nodes cluster, so receiver will use one node, and Spark jobs will use the
     // other one. Then Spark jobs need to fetch remote blocks and it will trigger SPARK-18560.
@@ -840,6 +841,8 @@ class StreamingContextSuite extends SparkFunSuite with BeforeAndAfter with TimeL
     assert(latch.await(60, TimeUnit.SECONDS))
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def addInputStream(s: StreamingContext): DStream[Int] = {
     val input = (1 to 100).map(i => 1 to i)
     val inputStream = new TestInputStream(s, input, 1)

@@ -17,15 +17,24 @@
 
 package org.apache.spark.sql.hive.execution
 
+<<<<<<< HEAD
 import java.io.{DataInput, DataOutput, File, PrintWriter}
 import java.util.{ArrayList, Arrays, Properties}
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.ql.exec.UDF
 import org.apache.hadoop.hive.ql.udf.{UDAFPercentile, UDFType}
+=======
+import java.io.{PrintWriter, File, DataInput, DataOutput}
+import java.util.{ArrayList, Arrays, Properties}
+
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hive.ql.udf.UDAFPercentile
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.hadoop.hive.ql.udf.generic._
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDF.DeferredObject
 import org.apache.hadoop.hive.serde2.{AbstractSerDe, SerDeStats}
+<<<<<<< HEAD
 import org.apache.hadoop.hive.serde2.objectinspector.{ObjectInspector, ObjectInspectorFactory}
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory
 import org.apache.hadoop.io.{LongWritable, Writable}
@@ -36,7 +45,14 @@ import org.apache.spark.sql.functions.max
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SQLTestUtils
+=======
+import org.apache.hadoop.io.Writable
+import org.apache.spark.sql.test.SQLTestUtils
+import org.apache.spark.sql.{AnalysisException, QueryTest, Row}
+import org.apache.spark.sql.hive.test.TestHiveSingleton
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.Utils
+
 
 case class Fields(f1: Int, f2: Int, f3: Int, f4: Int, f5: Int)
 
@@ -637,6 +653,105 @@ class HiveUDFSuite extends QueryTest with TestHiveSingleton with SQLTestUtils {
         sql("SELECT udtf_count_temp(a) FROM (SELECT 1 AS a FROM src LIMIT 3) t"),
         Row(3) :: Row(3) :: Nil)
     }
+  }
+
+  test("Hive UDF in group by") {
+    withTempTable("tab1") {
+      Seq(Tuple1(1451400761)).toDF("test_date").registerTempTable("tab1")
+      sql(s"CREATE TEMPORARY FUNCTION testUDFToDate AS '${classOf[GenericUDFToDate].getName}'")
+      val count = sql("select testUDFToDate(cast(test_date as timestamp))" +
+        " from tab1 group by testUDFToDate(cast(test_date as timestamp))").count()
+      sql("DROP TEMPORARY FUNCTION IF EXISTS testUDFToDate")
+      assert(count == 1)
+    }
+  }
+
+  test("SPARK-11522 select input_file_name from non-parquet table"){
+
+    withTempDir { tempDir =>
+
+      // EXTERNAL OpenCSVSerde table pointing to LOCATION
+
+      val file1 = new File(tempDir + "/data1")
+      val writer1 = new PrintWriter(file1)
+      writer1.write("1,2")
+      writer1.close()
+
+      val file2 = new File(tempDir + "/data2")
+      val writer2 = new PrintWriter(file2)
+      writer2.write("1,2")
+      writer2.close()
+
+      sql(
+        s"""CREATE EXTERNAL TABLE csv_table(page_id INT, impressions INT)
+        ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+        WITH SERDEPROPERTIES (
+          \"separatorChar\" = \",\",
+          \"quoteChar\"     = \"\\\"\",
+          \"escapeChar\"    = \"\\\\\")
+        LOCATION '$tempDir'
+      """)
+
+      val answer1 =
+        sql("SELECT input_file_name() FROM csv_table").head().getString(0)
+      assert(answer1.contains("data1") || answer1.contains("data2"))
+
+      val count1 = sql("SELECT input_file_name() FROM csv_table").distinct().count()
+      assert(count1 == 2)
+      sql("DROP TABLE csv_table")
+
+      // EXTERNAL pointing to LOCATION
+
+      sql(
+        s"""CREATE EXTERNAL TABLE external_t5 (c1 int, c2 int)
+        ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+        LOCATION '$tempDir'
+      """)
+
+      val answer2 =
+        sql("SELECT input_file_name() as file FROM external_t5").head().getString(0)
+      assert(answer1.contains("data1") || answer1.contains("data2"))
+
+      val count2 = sql("SELECT input_file_name() as file FROM external_t5").distinct().count
+      assert(count2 == 2)
+      sql("DROP TABLE external_t5")
+    }
+
+    withTempDir { tempDir =>
+
+      // External parquet pointing to LOCATION
+
+      val parquetLocation = tempDir + "/external_parquet"
+      sql("SELECT 1, 2").write.parquet(parquetLocation)
+
+      sql(
+        s"""CREATE EXTERNAL TABLE external_parquet(c1 int, c2 int)
+        STORED AS PARQUET
+        LOCATION '$parquetLocation'
+      """)
+
+      val answer3 =
+        sql("SELECT input_file_name() as file FROM external_parquet").head().getString(0)
+      assert(answer3.contains("external_parquet"))
+
+      val count3 = sql("SELECT input_file_name() as file FROM external_parquet").distinct().count
+      assert(count3 == 1)
+      sql("DROP TABLE external_parquet")
+    }
+
+    // Non-External parquet pointing to /tmp/...
+
+    sql("CREATE TABLE parquet_tmp(c1 int, c2 int) " +
+      " STORED AS parquet " +
+      " AS SELECT 1, 2")
+
+    val answer4 =
+      sql("SELECT input_file_name() as file FROM parquet_tmp").head().getString(0)
+    assert(answer4.contains("parquet_tmp"))
+
+    val count4 = sql("SELECT input_file_name() as file FROM parquet_tmp").distinct().count
+    assert(count4 == 1)
+    sql("DROP TABLE parquet_tmp")
   }
 }
 

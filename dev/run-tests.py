@@ -106,9 +106,17 @@ def determine_modules_to_test(changed_modules):
     ['root']
     >>> [x.name for x in determine_modules_to_test([modules.build])]
     ['root']
+<<<<<<< HEAD
     >>> [x.name for x in determine_modules_to_test([modules.graphx])]
     ['graphx', 'examples']
     >>> x = [x.name for x in determine_modules_to_test([modules.sql])]
+=======
+    >>> [x.name for x in determine_modules_to_test([modules.build])]
+    ['root']
+    >>> sorted(x.name for x in determine_modules_to_test([modules.graphx]))
+    ['examples', 'graphx']
+    >>> x = sorted(x.name for x in determine_modules_to_test([modules.sql]))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     >>> x # doctest: +NORMALIZE_WHITESPACE
     ['sql', 'hive', 'mllib', 'sql-kafka-0-10', 'examples', 'hive-thriftserver',
      'pyspark-sql', 'repl', 'sparkr', 'pyspark-mllib', 'pyspark-ml']
@@ -120,8 +128,12 @@ def determine_modules_to_test(changed_modules):
     # If we need to run all of the tests, then we should short-circuit and return 'root'
     if modules.root in modules_to_test:
         return [modules.root]
+<<<<<<< HEAD
     return toposort_flatten(
         {m: set(m.dependencies).intersection(modules_to_test) for m in modules_to_test}, sort=True)
+=======
+    return modules_to_test
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 
 def determine_tags_to_exclude(changed_modules):
@@ -452,6 +464,7 @@ def run_python_tests(test_modules, parallelism):
     run_cmd(command)
 
 
+<<<<<<< HEAD
 def run_python_packaging_tests():
     set_title_and_block("Running PySpark packaging tests", "BLOCK_PYSPARK_PIP_TESTS")
     command = [os.path.join(SPARK_HOME, "dev", "run-pip-tests")]
@@ -462,6 +475,11 @@ def run_build_tests():
     set_title_and_block("Running build tests", "BLOCK_BUILD_TESTS")
     run_cmd([os.path.join(SPARK_HOME, "dev", "test-dependencies.sh")])
     pass
+=======
+def run_build_tests():
+    set_title_and_block("Running build tests", "BLOCK_BUILD_TESTS")
+    run_cmd([os.path.join(SPARK_HOME, "dev", "test-dependencies.sh")])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 
 def run_sparkr_tests():

@@ -22,15 +22,22 @@ import org.apache.spark.ml.attribute.AttributeGroup
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.DefaultReadWriteTest
+<<<<<<< HEAD
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.feature.{HashingTF => MLlibHashingTF}
+=======
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.util.Utils
 
 class HashingTFSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
   import HashingTFSuite.murmur3FeatureIdx
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new HashingTF)
@@ -54,6 +61,7 @@ class HashingTFSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
     assert(features ~== expected absTol 1e-14)
   }
 
+<<<<<<< HEAD
   test("applying binary term freqs") {
     val df = Seq((0, "a a b c c c".split(" ").toSeq)).toDF("id", "words")
     val n = 100
@@ -70,6 +78,8 @@ class HashingTFSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
     assert(features ~== expected absTol 1e-14)
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("read/write") {
     val t = new HashingTF()
       .setInputCol("myInputCol")
@@ -77,6 +87,7 @@ class HashingTFSuite extends SparkFunSuite with MLlibTestSparkContext with Defau
       .setNumFeatures(10)
     testDefaultReadWrite(t)
   }
+<<<<<<< HEAD
 
 }
 
@@ -86,4 +97,6 @@ object HashingTFSuite {
     Utils.nonNegativeMod(MLlibHashingTF.murmur3Hash(term), numFeatures)
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

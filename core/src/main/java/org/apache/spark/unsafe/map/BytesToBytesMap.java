@@ -287,7 +287,11 @@ public final class BytesToBytesMap extends MemoryConsumer {
           }
           try {
             Closeables.close(reader, /* swallowIOException = */ false);
+<<<<<<< HEAD
             reader = spillWriters.getFirst().getReader(serializerManager);
+=======
+            reader = spillWriters.getFirst().getReader(blockManager);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             recordsInPage = -1;
           } catch (IOException e) {
             // Scala iterator does not handle exception
@@ -879,9 +883,15 @@ public final class BytesToBytesMap extends MemoryConsumer {
    * Reset this map to initialized state.
    */
   public void reset() {
+<<<<<<< HEAD
     numKeys = 0;
     numValues = 0;
     freeArray(longArray);
+=======
+    numElements = 0;
+    longArray.zeroOut();
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     while (dataPages.size() > 0) {
       MemoryBlock dataPage = dataPages.removeLast();
       freePage(dataPage);
@@ -923,5 +933,12 @@ public final class BytesToBytesMap extends MemoryConsumer {
       longArray.set(newPos * 2 + 1, hashcode);
     }
     freeArray(oldLongArray);
+<<<<<<< HEAD
+=======
+
+    if (enablePerfMetrics) {
+      timeSpentResizingNs += System.nanoTime() - resizeStartTime;
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

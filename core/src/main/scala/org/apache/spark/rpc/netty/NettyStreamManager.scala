@@ -26,6 +26,7 @@ import org.apache.spark.util.Utils
 
 /**
  * StreamManager implementation for serving files from a NettyRpcEnv.
+<<<<<<< HEAD
  *
  * Three kinds of resources can be registered in this manager, all backed by actual files:
  *
@@ -35,13 +36,18 @@ import org.apache.spark.util.Utils
  *   respecting the directory's hierarchy.
  *
  * Only streaming (openStream) is supported.
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 private[netty] class NettyStreamManager(rpcEnv: NettyRpcEnv)
   extends StreamManager with RpcEnvFileServer {
 
   private val files = new ConcurrentHashMap[String, File]()
   private val jars = new ConcurrentHashMap[String, File]()
+<<<<<<< HEAD
   private val dirs = new ConcurrentHashMap[String, File]()
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def getChunk(streamId: Long, chunkIndex: Int): ManagedBuffer = {
     throw new UnsupportedOperationException()
@@ -52,6 +58,7 @@ private[netty] class NettyStreamManager(rpcEnv: NettyRpcEnv)
     val file = ftype match {
       case "files" => files.get(fname)
       case "jars" => jars.get(fname)
+<<<<<<< HEAD
       case other =>
         val dir = dirs.get(ftype)
         require(dir != null, s"Invalid stream URI: $ftype not found.")
@@ -70,10 +77,23 @@ private[netty] class NettyStreamManager(rpcEnv: NettyRpcEnv)
     require(existingPath == null || existingPath == file,
       s"File ${file.getName} was already registered with a different path " +
         s"(old path = $existingPath, new path = $file")
+=======
+      case _ => throw new IllegalArgumentException(s"Invalid file type: $ftype")
+    }
+
+    require(file != null && file.isFile(), s"File not found: $streamId")
+    new FileSegmentManagedBuffer(rpcEnv.transportConf, file, 0, file.length())
+  }
+
+  override def addFile(file: File): String = {
+    require(files.putIfAbsent(file.getName(), file) == null,
+      s"File ${file.getName()} already registered.")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     s"${rpcEnv.address.toSparkURL}/files/${Utils.encodeFileNameToURIRawPath(file.getName())}"
   }
 
   override def addJar(file: File): String = {
+<<<<<<< HEAD
     val existingPath = jars.putIfAbsent(file.getName, file)
     require(existingPath == null || existingPath == file,
       s"File ${file.getName} was already registered with a different path " +
@@ -88,4 +108,11 @@ private[netty] class NettyStreamManager(rpcEnv: NettyRpcEnv)
     s"${rpcEnv.address.toSparkURL}$fixedBaseUri"
   }
 
+=======
+    require(jars.putIfAbsent(file.getName(), file) == null,
+      s"JAR ${file.getName()} already registered.")
+    s"${rpcEnv.address.toSparkURL}/jars/${Utils.encodeFileNameToURIRawPath(file.getName())}"
+  }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

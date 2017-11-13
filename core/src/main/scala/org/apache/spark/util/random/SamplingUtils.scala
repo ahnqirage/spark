@@ -56,14 +56,21 @@ private[spark] object SamplingUtils {
       val rand = new XORShiftRandom(seed)
       while (input.hasNext) {
         val item = input.next()
+<<<<<<< HEAD
         l += 1
         // There are k elements in the reservoir, and the l-th element has been
         // consumed. It should be chosen with probability k/l. The expression
         // below is a random long chosen uniformly from [0,l)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         val replacementIndex = (rand.nextDouble() * l).toLong
         if (replacementIndex < k) {
           reservoir(replacementIndex.toInt) = item
         }
+<<<<<<< HEAD
+=======
+        l += 1
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       (reservoir, l)
     }

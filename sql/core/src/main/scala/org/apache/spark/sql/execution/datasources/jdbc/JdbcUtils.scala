@@ -17,13 +17,19 @@
 
 package org.apache.spark.sql.execution.datasources.jdbc
 
+<<<<<<< HEAD
 import java.sql.{Connection, Driver, DriverManager, JDBCType, PreparedStatement, ResultSet, ResultSetMetaData, SQLException}
 import java.util.Locale
+=======
+import java.sql.{Connection, Driver, DriverManager, PreparedStatement}
+import java.util.Properties
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
 
+<<<<<<< HEAD
 import org.apache.spark.TaskContext
 import org.apache.spark.executor.InputMetrics
 import org.apache.spark.internal.Logging
@@ -35,6 +41,10 @@ import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
 import org.apache.spark.sql.catalyst.parser.CatalystSqlParser
 import org.apache.spark.sql.catalyst.util.{CaseInsensitiveMap, DateTimeUtils, GenericArrayData}
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects, JdbcType}
+=======
+import org.apache.spark.Logging
+import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcType, JdbcDialects}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SchemaUtils
 import org.apache.spark.unsafe.types.UTF8String
@@ -47,10 +57,25 @@ object JdbcUtils extends Logging {
   /**
    * Returns a factory for creating connections to the given JDBC URL.
    *
+<<<<<<< HEAD
    * @param options - JDBC options that contains url, table and other information.
    */
   def createConnectionFactory(options: JDBCOptions): () => Connection = {
     val driverClass: String = options.driverClass
+=======
+   * @param url the JDBC url to connect to.
+   * @param properties JDBC connection properties.
+   */
+  def createConnectionFactory(url: String, properties: Properties): () => Connection = {
+    val userSpecifiedDriverClass = Option(properties.getProperty("driver"))
+    userSpecifiedDriverClass.foreach(DriverRegistry.register)
+    // Performing this part of the logic on the driver guards against the corner-case where the
+    // driver returned for a URL is different on the driver and executors due to classpath
+    // differences.
+    val driverClass: String = userSpecifiedDriverClass.getOrElse {
+      DriverManager.getDriver(url).getClass.getCanonicalName
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     () => {
       DriverRegistry.register(driverClass)
       val driver: Driver = DriverManager.getDrivers.asScala.collectFirst {
@@ -60,7 +85,11 @@ object JdbcUtils extends Logging {
         throw new IllegalStateException(
           s"Did not find registered driver with class $driverClass")
       }
+<<<<<<< HEAD
       driver.connect(options.url, options.asConnectionProperties)
+=======
+      driver.connect(url, properties)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -72,9 +101,15 @@ object JdbcUtils extends Logging {
 
     // Somewhat hacky, but there isn't a good way to identify whether a table exists for all
     // SQL database systems using JDBC meta data calls, considering "table" could also include
+<<<<<<< HEAD
     // the database name. Query used to find table exists can be overridden by the dialects.
     Try {
       val statement = conn.prepareStatement(dialect.getTableExistsQuery(options.table))
+=======
+    // the database name. Query used to find table exists can be overriden by the dialects.
+    Try {
+      val statement = conn.prepareStatement(dialect.getTableExistsQuery(table))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       try {
         statement.executeQuery()
       } finally {
@@ -98,6 +133,7 @@ object JdbcUtils extends Logging {
   /**
    * Truncates a table from the JDBC database.
    */
+<<<<<<< HEAD
   def truncateTable(conn: Connection, table: String): Unit = {
     val statement = conn.createStatement
     try {
@@ -571,6 +607,42 @@ object JdbcUtils extends Logging {
       (_: PreparedStatement, _: Row, pos: Int) =>
         throw new IllegalArgumentException(
           s"Can't translate non-null value for field $pos")
+=======
+  def insertStatement(conn: Connection, table: String, rddSchema: StructType): PreparedStatement = {
+    val columns = rddSchema.fields.map(_.name).mkString(",")
+    val placeholders = rddSchema.fields.map(_ => "?").mkString(",")
+    val sql = s"INSERT INTO $table ($columns) VALUES ($placeholders)"
+    conn.prepareStatement(sql)
+  }
+
+  /**
+   * Retrieve standard jdbc types.
+   * @param dt The datatype (e.g. [[org.apache.spark.sql.types.StringType]])
+   * @return The default JdbcType for this DataType
+   */
+  def getCommonJDBCType(dt: DataType): Option[JdbcType] = {
+    dt match {
+      case IntegerType => Option(JdbcType("INTEGER", java.sql.Types.INTEGER))
+      case LongType => Option(JdbcType("BIGINT", java.sql.Types.BIGINT))
+      case DoubleType => Option(JdbcType("DOUBLE PRECISION", java.sql.Types.DOUBLE))
+      case FloatType => Option(JdbcType("REAL", java.sql.Types.FLOAT))
+      case ShortType => Option(JdbcType("INTEGER", java.sql.Types.SMALLINT))
+      case ByteType => Option(JdbcType("BYTE", java.sql.Types.TINYINT))
+      case BooleanType => Option(JdbcType("BIT(1)", java.sql.Types.BIT))
+      case StringType => Option(JdbcType("TEXT", java.sql.Types.CLOB))
+      case BinaryType => Option(JdbcType("BLOB", java.sql.Types.BLOB))
+      case TimestampType => Option(JdbcType("TIMESTAMP", java.sql.Types.TIMESTAMP))
+      case DateType => Option(JdbcType("DATE", java.sql.Types.DATE))
+      case t: DecimalType => Option(
+        JdbcType(s"DECIMAL(${t.precision},${t.scale})", java.sql.Types.DECIMAL))
+      case _ => None
+    }
+  }
+
+  private def getJdbcType(dt: DataType, dialect: JdbcDialect): JdbcType = {
+    dialect.getJDBCType(dt).orElse(getCommonJDBCType(dt)).getOrElse(
+      throw new IllegalArgumentException(s"Can't get JDBC type for ${dt.simpleString}"))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -592,6 +664,7 @@ object JdbcUtils extends Logging {
       table: String,
       iterator: Iterator[Row],
       rddSchema: StructType,
+<<<<<<< HEAD
       insertStmt: String,
       batchSize: Int,
       dialect: JdbcDialect,
@@ -623,10 +696,26 @@ object JdbcUtils extends Logging {
       }
     }
     val supportsTransactions = finalIsolationLevel != Connection.TRANSACTION_NONE
+=======
+      nullTypes: Array[Int],
+      batchSize: Int,
+      dialect: JdbcDialect): Iterator[Byte] = {
+    val conn = getConnection()
+    var committed = false
+    val supportsTransactions = try {
+      conn.getMetaData().supportsDataManipulationTransactionsOnly() ||
+      conn.getMetaData().supportsDataDefinitionAndDataManipulationTransactions()
+    } catch {
+      case NonFatal(e) =>
+        logWarning("Exception while detecting transaction support", e)
+        true
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     try {
       if (supportsTransactions) {
         conn.setAutoCommit(false) // Everything in the same db transaction.
+<<<<<<< HEAD
         conn.setTransactionIsolation(finalIsolationLevel)
       }
       val stmt = conn.prepareStatement(insertStmt)
@@ -634,6 +723,10 @@ object JdbcUtils extends Logging {
       val nullTypes = rddSchema.fields.map(f => getJdbcType(f.dataType, dialect).jdbcNullType)
       val numFields = rddSchema.fields.length
 
+=======
+      }
+      val stmt = insertStatement(conn, table, rddSchema)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       try {
         var rowCount = 0
         while (iterator.hasNext) {
@@ -643,7 +736,31 @@ object JdbcUtils extends Logging {
             if (row.isNullAt(i)) {
               stmt.setNull(i + 1, nullTypes(i))
             } else {
+<<<<<<< HEAD
               setters(i).apply(stmt, row, i)
+=======
+              rddSchema.fields(i).dataType match {
+                case IntegerType => stmt.setInt(i + 1, row.getInt(i))
+                case LongType => stmt.setLong(i + 1, row.getLong(i))
+                case DoubleType => stmt.setDouble(i + 1, row.getDouble(i))
+                case FloatType => stmt.setFloat(i + 1, row.getFloat(i))
+                case ShortType => stmt.setInt(i + 1, row.getShort(i))
+                case ByteType => stmt.setInt(i + 1, row.getByte(i))
+                case BooleanType => stmt.setBoolean(i + 1, row.getBoolean(i))
+                case StringType => stmt.setString(i + 1, row.getString(i))
+                case BinaryType => stmt.setBytes(i + 1, row.getAs[Array[Byte]](i))
+                case TimestampType => stmt.setTimestamp(i + 1, row.getAs[java.sql.Timestamp](i))
+                case DateType => stmt.setDate(i + 1, row.getAs[java.sql.Date](i))
+                case t: DecimalType => stmt.setBigDecimal(i + 1, row.getDecimal(i))
+                case ArrayType(et, _) =>
+                  val array = conn.createArrayOf(
+                    getJdbcType(et, dialect).databaseTypeDefinition.toLowerCase,
+                    row.getSeq[AnyRef](i).toArray)
+                  stmt.setArray(i + 1, array)
+                case _ => throw new IllegalArgumentException(
+                  s"Can't translate non-null value for field $i")
+              }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             }
             i = i + 1
           }
@@ -714,6 +831,7 @@ object JdbcUtils extends Logging {
       createTableColumnTypes: Option[String] = None): String = {
     val sb = new StringBuilder()
     val dialect = JdbcDialects.get(url)
+<<<<<<< HEAD
     val userSpecifiedColTypesMap = createTableColumnTypes
       .map(parseUserSpecifiedCreateTableColumnTypes(df, _))
       .getOrElse(Map.empty[String, String])
@@ -721,6 +839,11 @@ object JdbcUtils extends Logging {
       val name = dialect.quoteIdentifier(field.name)
       val typ = userSpecifiedColTypesMap
         .getOrElse(field.name, getJdbcType(field.dataType, dialect).databaseTypeDefinition)
+=======
+    df.schema.fields foreach { field => {
+      val name = field.name
+      val typ: String = getJdbcType(field.dataType, dialect).databaseTypeDefinition
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val nullable = if (field.nullable) "" else "NOT NULL"
       sb.append(s", $name $typ $nullable")
     }
@@ -798,6 +921,7 @@ object JdbcUtils extends Logging {
    */
   def saveTable(
       df: DataFrame,
+<<<<<<< HEAD
       tableSchema: Option[StructType],
       isCaseSensitive: Boolean,
       options: JDBCOptions): Unit = {
@@ -816,6 +940,21 @@ object JdbcUtils extends Logging {
           "via JDBC. The minimum value is 1.")
       case Some(n) if n < df.rdd.getNumPartitions => df.coalesce(n)
       case _ => df
+=======
+      url: String,
+      table: String,
+      properties: Properties) {
+    val dialect = JdbcDialects.get(url)
+    val nullTypes: Array[Int] = df.schema.fields.map { field =>
+      getJdbcType(field.dataType, dialect).jdbcNullType
+    }
+
+    val rddSchema = df.schema
+    val getConnection: () => Connection = createConnectionFactory(url, properties)
+    val batchSize = properties.getProperty("batchsize", "1000").toInt
+    df.foreachPartition { iterator =>
+      savePartition(getConnection, table, iterator, rddSchema, nullTypes, batchSize, dialect)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     repartitionedDF.rdd.foreachPartition(iterator => savePartition(
       getConnection, table, iterator, rddSchema, insertStmt, batchSize, dialect, isolationLevel)

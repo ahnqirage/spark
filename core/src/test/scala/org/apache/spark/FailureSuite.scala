@@ -17,6 +17,12 @@
 
 package org.apache.spark
 
+<<<<<<< HEAD
+=======
+import org.apache.spark.storage.StorageLevel
+import org.apache.spark.util.NonSerializable
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.io.{IOException, NotSerializableException, ObjectInputStream}
 
 import org.apache.spark.memory.TestMemoryConsumer
@@ -242,7 +248,11 @@ class FailureSuite extends SparkFunSuite with LocalSparkContext {
     FailureSuiteState.clear()
   }
 
+<<<<<<< HEAD
   test("failure because cached RDD partitions are missing from DiskStore (SPARK-15736)") {
+=======
+  test("failure because cached RDD files are missing") {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     sc = new SparkContext("local[1,2]", "test")
     val rdd = sc.parallelize(1 to 2, 2).persist(StorageLevel.DISK_ONLY)
     rdd.count()
@@ -253,6 +263,7 @@ class FailureSuite extends SparkFunSuite with LocalSparkContext {
     rdd.count()
   }
 
+<<<<<<< HEAD
   test("SPARK-16304: Link error should not crash executor") {
     sc = new SparkContext("local[1,2]", "test")
     intercept[SparkException] {
@@ -262,6 +273,8 @@ class FailureSuite extends SparkFunSuite with LocalSparkContext {
     }
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   // TODO: Need to add tests with shuffle fetch failures.
 }
 

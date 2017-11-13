@@ -25,7 +25,11 @@ import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.catalyst.analysis._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.objects.Invoke
+=======
+import org.apache.spark.sql.catalyst.plans.logical._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.plans.{Inner, JoinType}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.types._
@@ -159,9 +163,13 @@ package object dsl {
     def first(e: Expression): Expression = new First(e).toAggregateExpression()
     def last(e: Expression): Expression = new Last(e).toAggregateExpression()
     def min(e: Expression): Expression = Min(e).toAggregateExpression()
+<<<<<<< HEAD
     def minDistinct(e: Expression): Expression = Min(e).toAggregateExpression(isDistinct = true)
     def max(e: Expression): Expression = Max(e).toAggregateExpression()
     def maxDistinct(e: Expression): Expression = Max(e).toAggregateExpression(isDistinct = true)
+=======
+    def max(e: Expression): Expression = Max(e).toAggregateExpression()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def upper(e: Expression): Expression = Upper(e)
     def lower(e: Expression): Expression = Lower(e)
     def sqrt(e: Expression): Expression = Sqrt(e)
@@ -261,6 +269,7 @@ package object dsl {
         AttributeReference(s, structType, nullable = true)()
       def struct(attrs: AttributeReference*): AttributeReference =
         struct(StructType.fromAttributes(attrs))
+<<<<<<< HEAD
 
       /** Creates a new AttributeReference of object type */
       def obj(cls: Class[_]): AttributeReference =
@@ -271,6 +280,8 @@ package object dsl {
         UnresolvedFunction(s, exprs, isDistinct = false)
       def distinctFunction(exprs: Expression*): UnresolvedFunction =
         UnresolvedFunction(s, exprs, isDistinct = true)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     implicit class DslAttribute(a: AttributeReference) {

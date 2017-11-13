@@ -24,7 +24,11 @@ import org.json4s._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
+<<<<<<< HEAD
 import org.apache.spark.SparkContext
+=======
+import org.apache.spark.{Logging, SparkContext}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.annotation.{DeveloperApi, Since}
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.internal.Logging
@@ -406,7 +410,12 @@ private[tree] object TreeEnsembleModel extends Logging {
     case class EnsembleNodeData(treeId: Int, node: NodeData)
 
     def save(sc: SparkContext, path: String, model: TreeEnsembleModel, className: String): Unit = {
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+      import sqlContext.implicits._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // SPARK-6120: We do a hacky check here so users understand why save() is failing
       //             when they run the ML guide example.
@@ -464,10 +473,17 @@ private[tree] object TreeEnsembleModel extends Logging {
         sc: SparkContext,
         path: String,
         treeAlgo: String): Array[DecisionTreeModel] = {
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
       import spark.implicits._
       val nodes = spark.read.parquet(Loader.dataPath(path)).map(NodeData.apply)
       val trees = constructTrees(nodes.rdd)
+=======
+      val datapath = Loader.dataPath(path)
+      val sqlContext = SQLContext.getOrCreate(sc)
+      val nodes = sqlContext.read.parquet(datapath).map(NodeData.apply)
+      val trees = constructTrees(nodes)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       trees.map(new DecisionTreeModel(_, Algo.fromString(treeAlgo)))
     }
   }

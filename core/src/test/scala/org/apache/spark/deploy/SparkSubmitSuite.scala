@@ -27,6 +27,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
 import com.google.common.io.ByteStreams
+<<<<<<< HEAD
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, FSDataInputStream, Path}
@@ -36,6 +37,13 @@ import org.scalatest.time.SpanSugar._
 
 import org.apache.spark._
 import org.apache.spark.TestUtils.JavaSourceFromString
+=======
+import org.scalatest.{BeforeAndAfterEach, Matchers}
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.time.SpanSugar._
+
+import org.apache.spark._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.api.r.RUtils
 import org.apache.spark.deploy.SparkSubmit._
 import org.apache.spark.deploy.SparkSubmitUtils.MavenCoordinate
@@ -44,8 +52,24 @@ import org.apache.spark.internal.config._
 import org.apache.spark.scheduler.EventLoggingListener
 import org.apache.spark.util.{CommandLineUtils, ResetSystemProperties, Utils}
 
+<<<<<<< HEAD
 trait TestPrematureExit {
   suite: SparkFunSuite =>
+=======
+// Note: this suite mixes in ResetSystemProperties because SparkSubmit.main() sets a bunch
+// of properties that neeed to be cleared after tests.
+class SparkSubmitSuite
+  extends SparkFunSuite
+  with Matchers
+  with BeforeAndAfterEach
+  with ResetSystemProperties
+  with Timeouts {
+
+  override def beforeEach() {
+    super.beforeEach()
+    System.setProperty("spark.testing", "true")
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private val noOpOutputStream = new OutputStream {
     def write(b: Int) = {}
@@ -492,6 +516,7 @@ class SparkSubmitSuite
     }
   }
 
+<<<<<<< HEAD
   test("includes jars passed through spark.jars.packages and spark.jars.repositories") {
     val unusedJar = TestUtils.createJarWithClasses(Seq.empty)
     val main = MavenCoordinate("my.great.lib", "mylib", "0.1")
@@ -512,6 +537,8 @@ class SparkSubmitSuite
     }
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   // TODO(SPARK-9603): Building a package is flaky on Jenkins Maven builds.
   // See https://gist.github.com/shivaram/3a2fecce60768a603dac for a error log
   ignore("correctly builds R packages included in a jar with --packages") {
@@ -534,6 +561,7 @@ class SparkSubmitSuite
         rScriptDir)
       runSparkSubmit(args)
     }
+<<<<<<< HEAD
   }
 
   test("include an external JAR in SparkR") {
@@ -569,6 +597,8 @@ class SparkSubmitSuite
       "--conf", "spark.ui.enabled=false",
       rScriptDir)
     runSparkSubmit(args)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("resolves command line argument paths correctly") {

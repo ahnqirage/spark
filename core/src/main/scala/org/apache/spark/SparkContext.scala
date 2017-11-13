@@ -44,9 +44,14 @@ import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFor
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.deploy.{LocalSparkCluster, SparkHadoopUtil}
+<<<<<<< HEAD
 import org.apache.spark.input.{FixedLengthBinaryInputFormat, PortableDataStream, StreamInputFormat, WholeTextFileInputFormat}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
+=======
+import org.apache.spark.input.{StreamInputFormat, PortableDataStream, WholeTextFileInputFormat,
+  FixedLengthBinaryInputFormat}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.io.CompressionCodec
 import org.apache.spark.partial.{ApproximateEvaluator, PartialResult}
 import org.apache.spark.rdd._
@@ -56,7 +61,11 @@ import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, Standa
 import org.apache.spark.scheduler.local.LocalSchedulerBackend
 import org.apache.spark.storage._
 import org.apache.spark.storage.BlockManagerMessages.TriggerThreadDump
+<<<<<<< HEAD
 import org.apache.spark.ui.{ConsoleProgressBar, SparkUI}
+=======
+import org.apache.spark.ui.{SparkUI, ConsoleProgressBar}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ui.jobs.JobProgressListener
 import org.apache.spark.util._
 
@@ -530,6 +539,13 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // Optionally scale number of executors dynamically based on workload. Exposed for testing.
     val dynamicAllocationEnabled = Utils.isDynamicAllocationEnabled(_conf)
+<<<<<<< HEAD
+=======
+    if (!dynamicAllocationEnabled && _conf.getBoolean("spark.dynamicAllocation.enabled", false)) {
+      logWarning("Dynamic Allocation and num executors both set, thus dynamic allocation disabled.")
+    }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     _executorAllocationManager =
       if (dynamicAllocationEnabled) {
         schedulerBackend match {
@@ -598,7 +614,11 @@ class SparkContext(config: SparkConf) extends Logging {
         Some(Utils.getThreadDump())
       } else {
         val endpointRef = env.blockManager.master.getExecutorEndpointRef(executorId).get
+<<<<<<< HEAD
         Some(endpointRef.askSync[Array[ThreadStackTrace]](TriggerThreadDump))
+=======
+        Some(endpointRef.askWithRetry[Array[ThreadStackTrace]](TriggerThreadDump))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     } catch {
       case e: Exception =>
@@ -1645,7 +1665,11 @@ class SparkContext(config: SparkConf) extends Logging {
   def killExecutors(executorIds: Seq[String]): Boolean = {
     schedulerBackend match {
       case b: CoarseGrainedSchedulerBackend =>
+<<<<<<< HEAD
         b.killExecutors(executorIds, replace = false, force = true).nonEmpty
+=======
+        b.killExecutors(executorIds, replace = false, force = true)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case _ =>
         logWarning("Killing executors is only supported in coarse-grained mode")
         false
@@ -1683,7 +1707,11 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def killAndReplaceExecutor(executorId: String): Boolean = {
     schedulerBackend match {
       case b: CoarseGrainedSchedulerBackend =>
+<<<<<<< HEAD
         b.killExecutors(Seq(executorId), replace = true, force = true).nonEmpty
+=======
+        b.killExecutors(Seq(executorId), replace = true, force = true)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case _ =>
         logWarning("Killing executors is only supported in coarse-grained mode")
         false
@@ -1825,14 +1853,54 @@ class SparkContext(config: SparkConf) extends Logging {
     } else {
       val key = if (path.contains("\\")) {
         // For local paths with backslashes on Windows, URI throws an exception
+<<<<<<< HEAD
         addJarFile(new File(path))
+=======
+        key = env.rpcEnv.fileServer.addJar(new File(path))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       } else {
         val uri = new URI(path)
         // SPARK-17650: Make sure this is a valid URL before adding it to the list of dependencies
         Utils.validateURL(uri)
         uri.getScheme match {
           // A JAR file which exists only on the driver node
+<<<<<<< HEAD
           case null | "file" => addJarFile(new File(uri.getPath))
+=======
+          case null | "file" =>
+            // yarn-standalone is deprecated, but still supported
+            if (SparkHadoopUtil.get.isYarnMode() &&
+                (master == "yarn-standalone" || master == "yarn-cluster")) {
+              // In order for this to work in yarn-cluster mode the user must specify the
+              // --addJars option to the client to upload the file into the distributed cache
+              // of the AM to make it show up in the current working directory.
+              val fileName = new Path(uri.getPath).getName()
+              try {
+                env.rpcEnv.fileServer.addJar(new File(fileName))
+              } catch {
+                case e: Exception =>
+                  // For now just log an error but allow to go through so spark examples work.
+                  // The spark examples don't really need the jar distributed since its also
+                  // the app jar.
+                  logError("Error adding jar (" + e + "), was the --addJars option used?")
+                  null
+              }
+            } else {
+              try {
+                env.rpcEnv.fileServer.addJar(new File(uri.getPath))
+              } catch {
+                case exc: FileNotFoundException =>
+                  logError(s"Jar not found at $path")
+                  null
+                case e: Exception =>
+                  // For now just log an error but allow to go through so spark examples work.
+                  // The spark examples don't really need the jar distributed since its also
+                  // the app jar.
+                  logError("Error adding jar (" + e + "), was the --addJars option used?")
+                  null
+              }
+            }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           // A JAR file which exists locally on every worker node
           case "local" => "file:" + uri.getPath
           case _ => path
@@ -1874,12 +1942,20 @@ class SparkContext(config: SparkConf) extends Logging {
     }.start()
   }
 
+<<<<<<< HEAD
   /**
    * Shut down the SparkContext.
    */
   def stop(): Unit = {
     if (LiveListenerBus.withinListenerThread.value) {
       throw new SparkException(s"Cannot stop SparkContext within listener bus thread.")
+=======
+  // Shut down the SparkContext.
+  def stop() {
+    if (AsynchronousListenerBus.withinListenerThread.value) {
+      throw new SparkException("Cannot stop SparkContext within listener thread of" +
+        " AsynchronousListenerBus")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     // Use the stopping variable to ensure no contention for the stop scenario.
     // Still track the stopped variable for use elsewhere in the code.
@@ -1989,7 +2065,11 @@ class SparkContext(config: SparkConf) extends Logging {
    * has overridden the call site using `setCallSite()`, this will return the user's version.
    */
   private[spark] def getCallSite(): CallSite = {
+<<<<<<< HEAD
     lazy val callSite = Utils.getCallSite()
+=======
+    val callSite = Utils.getCallSite()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     CallSite(
       Option(getLocalProperty(CallSite.SHORT_FORM)).getOrElse(callSite.shortForm),
       Option(getLocalProperty(CallSite.LONG_FORM)).getOrElse(callSite.longForm)
@@ -2773,6 +2853,7 @@ object SparkContext extends Logging {
     }
   }
 
+<<<<<<< HEAD
   private def getClusterManager(url: String): Option[ExternalClusterManager] = {
     val loader = Utils.getContextOrSparkClassLoader
     val serviceLoaders =
@@ -2780,6 +2861,36 @@ object SparkContext extends Logging {
     if (serviceLoaders.size > 1) {
       throw new SparkException(
         s"Multiple external cluster managers registered for the url $url: $serviceLoaders")
+=======
+        scheduler.initialize(backend)
+        (backend, scheduler)
+
+      case MESOS_REGEX(mesosUrl) =>
+        MesosNativeLibrary.load()
+        val scheduler = new TaskSchedulerImpl(sc)
+        val coarseGrained = sc.conf.getBoolean("spark.mesos.coarse", defaultValue = true)
+        val backend = if (coarseGrained) {
+          new CoarseMesosSchedulerBackend(scheduler, sc, mesosUrl, sc.env.securityManager)
+        } else {
+          new MesosSchedulerBackend(scheduler, sc, mesosUrl)
+        }
+        scheduler.initialize(backend)
+        (backend, scheduler)
+
+      case SIMR_REGEX(simrUrl) =>
+        val scheduler = new TaskSchedulerImpl(sc)
+        val backend = new SimrSchedulerBackend(scheduler, sc, simrUrl)
+        scheduler.initialize(backend)
+        (backend, scheduler)
+
+      case zkUrl if zkUrl.startsWith("zk://") =>
+        logWarning("Master URL for a multi-master Mesos cluster managed by ZooKeeper should be " +
+          "in the form mesos://zk://host:port. Current Master URL will stop working in Spark 2.0.")
+        createTaskScheduler(sc, "mesos://" + zkUrl)
+
+      case _ =>
+        throw new SparkException("Could not parse Master URL: '" + master + "'")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     serviceLoaders.headOption
   }
@@ -2797,6 +2908,13 @@ private object SparkMasterRegex {
   val LOCAL_CLUSTER_REGEX = """local-cluster\[\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*]""".r
   // Regular expression for connecting to Spark deploy clusters
   val SPARK_REGEX = """spark://(.*)""".r
+<<<<<<< HEAD
+=======
+  // Regular expression for connection to Mesos cluster by mesos:// or mesos://zk:// url
+  val MESOS_REGEX = """mesos://(.*)""".r
+  // Regular expression for connection to Simr cluster
+  val SIMR_REGEX = """simr://(.*)""".r
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**

@@ -19,20 +19,34 @@ package org.apache.spark.ml.regression
 
 import org.apache.hadoop.fs.Path
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.{Vector, Vectors, VectorUDT}
+=======
+import org.apache.spark.Logging
+import org.apache.spark.annotation.{Experimental, Since}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.regression.IsotonicRegressionModel.IsotonicRegressionModelWriter
 import org.apache.spark.ml.util._
+<<<<<<< HEAD
 import org.apache.spark.mllib.regression.{IsotonicRegression => MLlibIsotonicRegression}
 import org.apache.spark.mllib.regression.{IsotonicRegressionModel => MLlibIsotonicRegressionModel}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
+=======
+import org.apache.spark.ml.{Estimator, Model}
+import org.apache.spark.mllib.linalg.{Vector, VectorUDT, Vectors}
+import org.apache.spark.mllib.regression.{IsotonicRegression => MLlibIsotonicRegression}
+import org.apache.spark.mllib.regression.{IsotonicRegressionModel => MLlibIsotonicRegressionModel}
+import org.apache.spark.rdd.RDD
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions.{col, lit, udf}
 import org.apache.spark.sql.types.{DoubleType, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.storage.StorageLevel
 
 /**
@@ -287,7 +301,11 @@ object IsotonicRegressionModel extends MLReadable[IsotonicRegressionModel] {
       val data = Data(
         instance.oldModel.boundaries, instance.oldModel.predictions, instance.oldModel.isotonic)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+=======
+      sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -300,7 +318,11 @@ object IsotonicRegressionModel extends MLReadable[IsotonicRegressionModel] {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
 
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       val data = sparkSession.read.parquet(dataPath)
+=======
+      val data = sqlContext.read.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .select("boundaries", "predictions", "isotonic").head()
       val boundaries = data.getAs[Seq[Double]](0).toArray
       val predictions = data.getAs[Seq[Double]](1).toArray

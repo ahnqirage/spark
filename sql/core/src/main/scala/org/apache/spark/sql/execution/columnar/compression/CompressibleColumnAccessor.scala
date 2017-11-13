@@ -17,9 +17,8 @@
 
 package org.apache.spark.sql.execution.columnar.compression
 
-import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.MutableRow
 import org.apache.spark.sql.execution.columnar.{ColumnAccessor, NativeColumnAccessor}
-import org.apache.spark.sql.execution.vectorized.WritableColumnVector
 import org.apache.spark.sql.types.AtomicType
 
 private[columnar] trait CompressibleColumnAccessor[T <: AtomicType] extends ColumnAccessor {
@@ -34,10 +33,7 @@ private[columnar] trait CompressibleColumnAccessor[T <: AtomicType] extends Colu
 
   abstract override def hasNext: Boolean = super.hasNext || decoder.hasNext
 
-  override def extractSingle(row: InternalRow, ordinal: Int): Unit = {
+  override def extractSingle(row: MutableRow, ordinal: Int): Unit = {
     decoder.next(row, ordinal)
   }
-
-  def decompress(columnVector: WritableColumnVector, capacity: Int): Unit =
-    decoder.decompress(columnVector, capacity)
 }

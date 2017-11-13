@@ -44,7 +44,11 @@ if __name__ == "__main__":
     # Evaluate model on test instances and compute test error
     predictions = model.predict(testData.map(lambda x: x.features))
     labelsAndPredictions = testData.map(lambda lp: lp.label).zip(predictions)
+<<<<<<< HEAD
     testMSE = labelsAndPredictions.map(lambda lp: (lp[0] - lp[1]) * (lp[0] - lp[1])).sum() /\
+=======
+    testMSE = labelsAndPredictions.map(lambda (v, p): (v - p) * (v - p)).sum() /\
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         float(testData.count())
     print('Test Mean Squared Error = ' + str(testMSE))
     print('Learned regression tree model:')

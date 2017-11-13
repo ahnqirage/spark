@@ -17,6 +17,7 @@
 
 package org.apache.spark.ml.classification
 
+<<<<<<< HEAD
 import org.apache.spark.{SparkException, SparkFunSuite}
 import org.apache.spark.ml.classification.ClassifierSuite.MockClassifier
 import org.apache.spark.ml.feature.LabeledPoint
@@ -93,6 +94,8 @@ class ClassifierSuite extends SparkFunSuite with MLlibTestSparkContext {
   }
 }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 object ClassifierSuite {
 
   /**
@@ -105,6 +108,7 @@ object ClassifierSuite {
     "rawPredictionCol" -> "myRawPrediction"
   )
 
+<<<<<<< HEAD
   class MockClassifier(override val uid: String)
     extends Classifier[Vector, MockClassifier, MockClassificationModel] {
 
@@ -133,4 +137,6 @@ object ClassifierSuite {
     override def numClasses: Int = throw new NotImplementedError()
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

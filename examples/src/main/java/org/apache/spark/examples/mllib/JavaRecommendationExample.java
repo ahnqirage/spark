@@ -21,6 +21,10 @@ package org.apache.spark.examples.mllib;
 import scala.Tuple2;
 
 import org.apache.spark.api.java.*;
+<<<<<<< HEAD
+=======
+import org.apache.spark.api.java.function.Function;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.recommendation.ALS;
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModel;
 import org.apache.spark.mllib.recommendation.Rating;
@@ -28,7 +32,11 @@ import org.apache.spark.SparkConf;
 // $example off$
 
 public class JavaRecommendationExample {
+<<<<<<< HEAD
   public static void main(String[] args) {
+=======
+  public static void main(String args[]) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // $example on$
     SparkConf conf = new SparkConf().setAppName("Java Collaborative Filtering Example");
     JavaSparkContext jsc = new JavaSparkContext(conf);
@@ -36,12 +44,24 @@ public class JavaRecommendationExample {
     // Load and parse the data
     String path = "data/mllib/als/test.data";
     JavaRDD<String> data = jsc.textFile(path);
+<<<<<<< HEAD
     JavaRDD<Rating> ratings = data.map(s -> {
       String[] sarray = s.split(",");
       return new Rating(Integer.parseInt(sarray[0]),
         Integer.parseInt(sarray[1]),
         Double.parseDouble(sarray[2]));
     });
+=======
+    JavaRDD<Rating> ratings = data.map(
+      new Function<String, Rating>() {
+        public Rating call(String s) {
+          String[] sarray = s.split(",");
+          return new Rating(Integer.parseInt(sarray[0]), Integer.parseInt(sarray[1]),
+            Double.parseDouble(sarray[2]));
+        }
+      }
+    );
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Build the recommendation model using ALS
     int rank = 10;
@@ -49,6 +69,7 @@ public class JavaRecommendationExample {
     MatrixFactorizationModel model = ALS.train(JavaRDD.toRDD(ratings), rank, numIterations, 0.01);
 
     // Evaluate the model on rating data
+<<<<<<< HEAD
     JavaRDD<Tuple2<Object, Object>> userProducts =
       ratings.map(r -> new Tuple2<>(r.user(), r.product()));
     JavaPairRDD<Tuple2<Integer, Integer>, Double> predictions = JavaPairRDD.fromJavaRDD(
@@ -62,6 +83,41 @@ public class JavaRecommendationExample {
       double err = pair._1() - pair._2();
       return err * err;
     }).mean();
+=======
+    JavaRDD<Tuple2<Object, Object>> userProducts = ratings.map(
+      new Function<Rating, Tuple2<Object, Object>>() {
+        public Tuple2<Object, Object> call(Rating r) {
+          return new Tuple2<Object, Object>(r.user(), r.product());
+        }
+      }
+    );
+    JavaPairRDD<Tuple2<Integer, Integer>, Double> predictions = JavaPairRDD.fromJavaRDD(
+      model.predict(JavaRDD.toRDD(userProducts)).toJavaRDD().map(
+        new Function<Rating, Tuple2<Tuple2<Integer, Integer>, Double>>() {
+          public Tuple2<Tuple2<Integer, Integer>, Double> call(Rating r){
+            return new Tuple2<Tuple2<Integer, Integer>, Double>(
+              new Tuple2<Integer, Integer>(r.user(), r.product()), r.rating());
+          }
+        }
+      ));
+    JavaRDD<Tuple2<Double, Double>> ratesAndPreds =
+      JavaPairRDD.fromJavaRDD(ratings.map(
+        new Function<Rating, Tuple2<Tuple2<Integer, Integer>, Double>>() {
+          public Tuple2<Tuple2<Integer, Integer>, Double> call(Rating r){
+            return new Tuple2<Tuple2<Integer, Integer>, Double>(
+              new Tuple2<Integer, Integer>(r.user(), r.product()), r.rating());
+          }
+        }
+      )).join(predictions).values();
+    double MSE = JavaDoubleRDD.fromRDD(ratesAndPreds.map(
+      new Function<Tuple2<Double, Double>, Object>() {
+        public Object call(Tuple2<Double, Double> pair) {
+          Double err = pair._1() - pair._2();
+          return err * err;
+        }
+      }
+    ).rdd()).mean();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     System.out.println("Mean Squared Error = " + MSE);
 
     // Save and load model
@@ -69,7 +125,10 @@ public class JavaRecommendationExample {
     MatrixFactorizationModel sameModel = MatrixFactorizationModel.load(jsc.sc(),
       "target/tmp/myCollaborativeFilter");
     // $example off$
+<<<<<<< HEAD
 
     jsc.stop();
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

@@ -20,7 +20,7 @@ package org.apache.spark.streaming.scheduler
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import scala.collection.mutable.HashMap
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Future, ExecutionContext}
 import scala.language.existentials
 import scala.util.{Failure, Success}
 
@@ -461,6 +461,13 @@ class ReceiverTracker(ssc: StreamingContext, skipReceiverLaunch: Boolean = false
   /** RpcEndpoint to receive messages from the receivers. */
   private class ReceiverTrackerEndpoint(override val rpcEnv: RpcEnv) extends ThreadSafeRpcEndpoint {
 
+<<<<<<< HEAD
+=======
+    // TODO Remove this thread pool after https://github.com/apache/spark/issues/7385 is merged
+    private val submitJobThreadPool = ExecutionContext.fromExecutorService(
+      ThreadUtils.newDaemonCachedThreadPool("submit-job-thread-pool"))
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     private val walBatchingThreadPool = ExecutionContext.fromExecutorService(
       ThreadUtils.newDaemonCachedThreadPool("wal-batching-thread-pool"))
 
@@ -640,6 +647,10 @@ class ReceiverTracker(ssc: StreamingContext, skipReceiverLaunch: Boolean = false
     }
 
     override def onStop(): Unit = {
+<<<<<<< HEAD
+=======
+      submitJobThreadPool.shutdownNow()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       active = false
       walBatchingThreadPool.shutdown()
     }

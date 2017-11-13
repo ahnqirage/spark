@@ -62,6 +62,7 @@ class UIUtilsSuite extends SparkFunSuite {
     )
   }
 
+<<<<<<< HEAD
   test("makeDescription(plainText = true)") {
     verify(
       """test <a href="/link"> text </a>""",
@@ -111,6 +112,10 @@ class UIUtilsSuite extends SparkFunSuite {
 
   test("SPARK-11906: Progress bar should not overflow because of speculative tasks") {
     val generated = makeProgressBar(2, 3, 0, 0, Map.empty, 4).head.child.filter(_.label == "div")
+=======
+  test("SPARK-11906: Progress bar should not overflow because of speculative tasks") {
+    val generated = makeProgressBar(2, 3, 0, 0, 4).head.child.filter(_.label == "div")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val expected = Seq(
       <div class="bar bar-completed" style="width: 75.0%"></div>,
       <div class="bar bar-running" style="width: 25.0%"></div>
@@ -133,6 +138,7 @@ class UIUtilsSuite extends SparkFunSuite {
     assert(decoded2 === decodeURLParameter(decoded2))
   }
 
+<<<<<<< HEAD
   test("SPARK-20393: Prevent newline characters in parameters.") {
     val encoding = "Encoding:base64%0d%0a%0d%0aPGh0bWw%2bjcmlwdD48L2h0bWw%2b"
     val stripEncoding = "Encoding:base64PGh0bWw%2bjcmlwdD48L2h0bWw%2b"
@@ -172,6 +178,8 @@ class UIUtilsSuite extends SparkFunSuite {
     assert(stripPopup === stripXSS(popup))
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def verify(
       desc: String,
       expected: Node,

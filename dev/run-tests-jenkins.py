@@ -167,10 +167,21 @@ def main():
     if "test-maven" in ghprb_pull_title:
         os.environ["AMPLAB_JENKINS_BUILD_TOOL"] = "maven"
     # Switch the Hadoop profile based on the PR title:
+<<<<<<< HEAD
     if "test-hadoop2.6" in ghprb_pull_title:
         os.environ["AMPLAB_JENKINS_BUILD_PROFILE"] = "hadoop2.6"
     if "test-hadoop2.7" in ghprb_pull_title:
         os.environ["AMPLAB_JENKINS_BUILD_PROFILE"] = "hadoop2.7"
+=======
+    if "test-hadoop1.0" in ghprb_pull_title:
+        os.environ["AMPLAB_JENKINS_BUILD_PROFILE"] = "hadoop1.0"
+    if "test-hadoop2.0" in ghprb_pull_title:
+        os.environ["AMPLAB_JENKINS_BUILD_PROFILE"] = "hadoop2.0"
+    if "test-hadoop2.2" in ghprb_pull_title:
+        os.environ["AMPLAB_JENKINS_BUILD_PROFILE"] = "hadoop2.2"
+    if "test-hadoop2.3" in ghprb_pull_title:
+        os.environ["AMPLAB_JENKINS_BUILD_PROFILE"] = "hadoop2.3"
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     build_display_name = os.environ["BUILD_DISPLAY_NAME"]
     build_url = os.environ["BUILD_URL"]

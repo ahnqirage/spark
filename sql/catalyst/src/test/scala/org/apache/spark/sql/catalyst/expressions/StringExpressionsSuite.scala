@@ -600,6 +600,77 @@ class StringExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper {
     checkEvaluation(StringSpace(s1), null, row2)
   }
 
+<<<<<<< HEAD
+=======
+  test("RegexReplace") {
+    val row1 = create_row("100-200", "(\\d+)", "num")
+    val row2 = create_row("100-200", "(\\d+)", "###")
+    val row3 = create_row("100-200", "(-)", "###")
+    val row4 = create_row(null, "(\\d+)", "###")
+    val row5 = create_row("100-200", null, "###")
+    val row6 = create_row("100-200", "(-)", null)
+
+    val s = 's.string.at(0)
+    val p = 'p.string.at(1)
+    val r = 'r.string.at(2)
+
+    val expr = RegExpReplace(s, p, r)
+    checkEvaluation(expr, "num-num", row1)
+    checkEvaluation(expr, "###-###", row2)
+    checkEvaluation(expr, "100###200", row3)
+    checkEvaluation(expr, null, row4)
+    checkEvaluation(expr, null, row5)
+    checkEvaluation(expr, null, row6)
+
+    val nonNullExpr = RegExpReplace(Literal("100-200"), Literal("(\\d+)"), Literal("num"))
+    checkEvaluation(nonNullExpr, "num-num", row1)
+  }
+
+  test("RegexExtract") {
+    val row1 = create_row("100-200", "(\\d+)-(\\d+)", 1)
+    val row2 = create_row("100-200", "(\\d+)-(\\d+)", 2)
+    val row3 = create_row("100-200", "(\\d+).*", 1)
+    val row4 = create_row("100-200", "([a-z])", 1)
+    val row5 = create_row(null, "([a-z])", 1)
+    val row6 = create_row("100-200", null, 1)
+    val row7 = create_row("100-200", "([a-z])", null)
+
+    val s = 's.string.at(0)
+    val p = 'p.string.at(1)
+    val r = 'r.int.at(2)
+
+    val expr = RegExpExtract(s, p, r)
+    checkEvaluation(expr, "100", row1)
+    checkEvaluation(expr, "200", row2)
+    checkEvaluation(expr, "100", row3)
+    checkEvaluation(expr, "", row4) // will not match anything, empty string get
+    checkEvaluation(expr, null, row5)
+    checkEvaluation(expr, null, row6)
+    checkEvaluation(expr, null, row7)
+
+    val expr1 = new RegExpExtract(s, p)
+    checkEvaluation(expr1, "100", row1)
+
+    val nonNullExpr = RegExpExtract(Literal("100-200"), Literal("(\\d+)-(\\d+)"), Literal(1))
+    checkEvaluation(nonNullExpr, "100", row1)
+  }
+
+  test("SPLIT") {
+    val s1 = 'a.string.at(0)
+    val s2 = 'b.string.at(1)
+    val row1 = create_row("aa2bb3cc", "[1-9]+")
+    val row2 = create_row(null, "[1-9]+")
+    val row3 = create_row("aa2bb3cc", null)
+
+    checkEvaluation(
+      StringSplit(Literal("aa2bb3cc"), Literal("[1-9]+")), Seq("aa", "bb", "cc"), row1)
+    checkEvaluation(
+      StringSplit(s1, s2), Seq("aa", "bb", "cc"), row1)
+    checkEvaluation(StringSplit(s1, s2), null, row2)
+    checkEvaluation(StringSplit(s1, s2), null, row3)
+  }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("length for string / binary") {
     val a = 'a.string.at(0)
     val b = 'b.binary.at(0)

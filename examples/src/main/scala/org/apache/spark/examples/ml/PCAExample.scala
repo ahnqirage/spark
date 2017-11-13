@@ -20,6 +20,7 @@ package org.apache.spark.examples.ml
 
 // $example on$
 import org.apache.spark.ml.feature.PCA
+<<<<<<< HEAD
 import org.apache.spark.ml.linalg.Vectors
 // $example off$
 import org.apache.spark.sql.SparkSession
@@ -30,6 +31,18 @@ object PCAExample {
       .builder
       .appName("PCAExample")
       .getOrCreate()
+=======
+import org.apache.spark.mllib.linalg.Vectors
+// $example off$
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object PCAExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("PCAExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // $example on$
     val data = Array(
@@ -37,19 +50,31 @@ object PCAExample {
       Vectors.dense(2.0, 0.0, 3.0, 4.0, 5.0),
       Vectors.dense(4.0, 0.0, 0.0, 6.0, 7.0)
     )
+<<<<<<< HEAD
     val df = spark.createDataFrame(data.map(Tuple1.apply)).toDF("features")
 
+=======
+    val df = sqlContext.createDataFrame(data.map(Tuple1.apply)).toDF("features")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val pca = new PCA()
       .setInputCol("features")
       .setOutputCol("pcaFeatures")
       .setK(3)
       .fit(df)
+<<<<<<< HEAD
 
     val result = pca.transform(df).select("pcaFeatures")
     result.show(false)
     // $example off$
 
     spark.stop()
+=======
+    val pcaDF = pca.transform(df)
+    val result = pcaDF.select("pcaFeatures")
+    result.show()
+    // $example off$
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

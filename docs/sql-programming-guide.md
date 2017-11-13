@@ -12,16 +12,24 @@ title: Spark SQL and DataFrames
 Spark SQL is a Spark module for structured data processing. Unlike the basic Spark RDD API, the interfaces provided
 by Spark SQL provide Spark with more information about the structure of both the data and the computation being performed. Internally,
 Spark SQL uses this extra information to perform extra optimizations. There are several ways to
+<<<<<<< HEAD
 interact with Spark SQL including SQL and the Dataset API. When computing a result
 the same execution engine is used, independent of which API/language you are using to express the
 computation. This unification means that developers can easily switch back and forth between
 different APIs based on which provides the most natural way to express a given transformation.
+=======
+interact with Spark SQL including SQL, the DataFrames API and the Datasets API. When computing a result
+the same execution engine is used, independent of which API/language you are using to express the
+computation. This unification means that developers can easily switch back and forth between the
+various APIs based on which provides the most natural way to express a given transformation.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 All of the examples on this page use sample data included in the Spark distribution and can be run in
 the `spark-shell`, `pyspark` shell, or `sparkR` shell.
 
 ## SQL
 
+<<<<<<< HEAD
 One use of Spark SQL is to execute SQL queries.
 Spark SQL can also be used to read data from an existing Hive installation. For more on how to
 configure this feature, please refer to the [Hive Tables](#hive-tables) section. When running
@@ -59,32 +67,109 @@ Throughout this document, we will often refer to Scala/Java Datasets of `Row`s a
 # Getting Started
 
 ## Starting Point: SparkSession
+=======
+One use of Spark SQL is to execute SQL queries written using either a basic SQL syntax or HiveQL.
+Spark SQL can also be used to read data from an existing Hive installation. For more on how to
+configure this feature, please refer to the [Hive Tables](#hive-tables) section. When running
+SQL from within another programming language the results will be returned as a [DataFrame](#DataFrames).
+You can also interact with the SQL interface using the [command-line](#running-the-spark-sql-cli)
+or over [JDBC/ODBC](#running-the-thrift-jdbcodbc-server).
+
+## DataFrames
+
+A DataFrame is a distributed collection of data organized into named columns. It is conceptually
+equivalent to a table in a relational database or a data frame in R/Python, but with richer
+optimizations under the hood. DataFrames can be constructed from a wide array of [sources](#data-sources) such
+as: structured data files, tables in Hive, external databases, or existing RDDs.
+
+The DataFrame API is available in [Scala](api/scala/index.html#org.apache.spark.sql.DataFrame),
+[Java](api/java/index.html?org/apache/spark/sql/DataFrame.html),
+[Python](api/python/pyspark.sql.html#pyspark.sql.DataFrame), and [R](api/R/index.html).
+
+## Datasets
+
+A Dataset is a new experimental interface added in Spark 1.6 that tries to provide the benefits of
+RDDs (strong typing, ability to use powerful lambda functions) with the benefits of Spark SQL's
+optimized execution engine. A Dataset can be [constructed](#creating-datasets) from JVM objects and then manipulated
+using functional transformations (map, flatMap, filter, etc.).
+
+The unified Dataset API can be used both in [Scala](api/scala/index.html#org.apache.spark.sql.Dataset) and
+[Java](api/java/index.html?org/apache/spark/sql/Dataset.html). Python does not yet have support for
+the Dataset API, but due to its dynamic nature many of the benefits are already available (i.e. you can
+access the field of a row by name naturally `row.columnName`). Full python support will be added
+in a future release.
+
+# Getting Started
+
+## Starting Point: SQLContext
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div class="codetabs">
 <div data-lang="scala"  markdown="1">
 
+<<<<<<< HEAD
 The entry point into all functionality in Spark is the [`SparkSession`](api/scala/index.html#org.apache.spark.sql.SparkSession) class. To create a basic `SparkSession`, just use `SparkSession.builder()`:
+=======
+The entry point into all functionality in Spark SQL is the
+[`SQLContext`](api/scala/index.html#org.apache.spark.sql.SQLContext) class, or one of its
+descendants. To create a basic `SQLContext`, all you need is a SparkContext.
+
+{% highlight scala %}
+val sc: SparkContext // An existing SparkContext.
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+// this is used to implicitly convert an RDD to a DataFrame.
+import sqlContext.implicits._
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example init_session scala/org/apache/spark/examples/sql/SparkSQLExample.scala %}
 </div>
 
 <div data-lang="java" markdown="1">
 
+<<<<<<< HEAD
 The entry point into all functionality in Spark is the [`SparkSession`](api/java/index.html#org.apache.spark.sql.SparkSession) class. To create a basic `SparkSession`, just use `SparkSession.builder()`:
+=======
+The entry point into all functionality in Spark SQL is the
+[`SQLContext`](api/java/index.html#org.apache.spark.sql.SQLContext) class, or one of its
+descendants. To create a basic `SQLContext`, all you need is a SparkContext.
+
+{% highlight java %}
+JavaSparkContext sc = ...; // An existing JavaSparkContext.
+SQLContext sqlContext = new org.apache.spark.sql.SQLContext(sc);
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example init_session java/org/apache/spark/examples/sql/JavaSparkSQLExample.java %}
 </div>
 
 <div data-lang="python"  markdown="1">
 
+<<<<<<< HEAD
 The entry point into all functionality in Spark is the [`SparkSession`](api/python/pyspark.sql.html#pyspark.sql.SparkSession) class. To create a basic `SparkSession`, just use `SparkSession.builder`:
+=======
+The entry point into all relational functionality in Spark is the
+[`SQLContext`](api/python/pyspark.sql.html#pyspark.sql.SQLContext) class, or one
+of its decedents. To create a basic `SQLContext`, all you need is a SparkContext.
+
+{% highlight python %}
+from pyspark.sql import SQLContext
+sqlContext = SQLContext(sc)
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example init_session python/sql/basic.py %}
 </div>
 
 <div data-lang="r"  markdown="1">
 
+<<<<<<< HEAD
 The entry point into all functionality in Spark is the [`SparkSession`](api/R/sparkR.session.html) class. To initialize a basic `SparkSession`, just call `sparkR.session()`:
+=======
+The entry point into all relational functionality in Spark is the
+`SQLContext` class, or one of its decedents. To create a basic `SQLContext`, all you need is a SparkContext.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example init_session r/RSparkSQLExample.R %}
 
@@ -92,9 +177,29 @@ Note that when invoked for the first time, `sparkR.session()` initializes a glob
 </div>
 </div>
 
+<<<<<<< HEAD
 `SparkSession` in Spark 2.0 provides builtin support for Hive features including the ability to
 write queries using HiveQL, access to Hive UDFs, and the ability to read data from Hive tables.
 To use these features, you do not need to have an existing Hive setup.
+=======
+In addition to the basic `SQLContext`, you can also create a `HiveContext`, which provides a
+superset of the functionality provided by the basic `SQLContext`. Additional features include
+the ability to write queries using the more complete HiveQL parser, access to Hive UDFs, and the
+ability to read data from Hive tables. To use a `HiveContext`, you do not need to have an
+existing Hive setup, and all of the data sources available to a `SQLContext` are still available.
+`HiveContext` is only packaged separately to avoid including all of Hive's dependencies in the default
+Spark build. If these dependencies are not a problem for your application then using `HiveContext`
+is recommended for the 1.3 release of Spark. Future releases will focus on bringing `SQLContext` up
+to feature parity with a `HiveContext`.
+
+The specific variant of SQL that is used to parse queries can also be selected using the
+`spark.sql.dialect` option. This parameter can be changed using either the `setConf` method on
+a `SQLContext` or by using a `SET key=value` command in SQL. For a `SQLContext`, the only dialect
+available is "sql" which uses a simple SQL parser provided by Spark SQL. In a `HiveContext`, the
+default is "hiveql", though "sql" is also available. Since the HiveQL parser is much more complete,
+this is recommended for most use cases.
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 ## Creating DataFrames
 
@@ -148,7 +253,60 @@ Here we include some basic examples of structured data processing using Datasets
 
 <div class="codetabs">
 <div data-lang="scala"  markdown="1">
+<<<<<<< HEAD
 {% include_example untyped_ops scala/org/apache/spark/examples/sql/SparkSQLExample.scala %}
+=======
+{% highlight scala %}
+val sc: SparkContext // An existing SparkContext.
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+// Create the DataFrame
+val df = sqlContext.read.json("examples/src/main/resources/people.json")
+
+// Show the content of the DataFrame
+df.show()
+// age  name
+// null Michael
+// 30   Andy
+// 19   Justin
+
+// Print the schema in a tree format
+df.printSchema()
+// root
+// |-- age: long (nullable = true)
+// |-- name: string (nullable = true)
+
+// Select only the "name" column
+df.select("name").show()
+// name
+// Michael
+// Andy
+// Justin
+
+// Select everybody, but increment the age by 1
+df.select(df("name"), df("age") + 1).show()
+// name    (age + 1)
+// Michael null
+// Andy    31
+// Justin  20
+
+// Select people older than 21
+df.filter(df("age") > 21).show()
+// age name
+// 30  Andy
+
+// Count people by age
+df.groupBy("age").count().show()
+// age  count
+// null 1
+// 19   1
+// 30   1
+{% endhighlight %}
+
+For a complete list of the types of operations that can be performed on a DataFrame refer to the [API Documentation](api/scala/index.html#org.apache.spark.sql.DataFrame).
+
+In addition to simple column references and expressions, DataFrames also have a rich library of functions including string manipulation, date arithmetic, common math operations and more. The complete list is available in the [DataFrame Function Reference](api/scala/index.html#org.apache.spark.sql.functions$).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 For a complete list of the types of operations that can be performed on a Dataset refer to the [API Documentation](api/scala/index.html#org.apache.spark.sql.Dataset).
 
@@ -159,7 +317,11 @@ In addition to simple column references and expressions, Datasets also have a ri
 
 {% include_example untyped_ops java/org/apache/spark/examples/sql/JavaSparkSQLExample.java %}
 
+<<<<<<< HEAD
 For a complete list of the types of operations that can be performed on a Dataset refer to the [API Documentation](api/java/org/apache/spark/sql/Dataset.html).
+=======
+In addition to simple column references and expressions, DataFrames also have a rich library of functions including string manipulation, date arithmetic, common math operations and more. The complete list is available in the [DataFrame Function Reference](api/java/org/apache/spark/sql/functions.html).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 In addition to simple column references and expressions, Datasets also have a rich library of functions including string manipulation, date arithmetic, common math operations and more. The complete list is available in the [DataFrame Function Reference](api/java/org/apache/spark/sql/functions.html).
 </div>
@@ -184,7 +346,11 @@ In addition to simple column references and expressions, DataFrames also have a 
 
 For a complete list of the types of operations that can be performed on a DataFrame refer to the [API Documentation](api/R/index.html).
 
+<<<<<<< HEAD
 In addition to simple column references and expressions, DataFrames also have a rich library of functions including string manipulation, date arithmetic, common math operations and more. The complete list is available in the [DataFrame Function Reference](api/R/SparkDataFrame.html).
+=======
+In addition to simple column references and expressions, DataFrames also have a rich library of functions including string manipulation, date arithmetic, common math operations and more. The complete list is available in the [DataFrame Function Reference](api/R/index.html).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 </div>
 
@@ -194,6 +360,7 @@ In addition to simple column references and expressions, DataFrames also have a 
 
 <div class="codetabs">
 <div data-lang="scala"  markdown="1">
+<<<<<<< HEAD
 The `sql` function on a `SparkSession` enables applications to run SQL queries programmatically and returns the result as a `DataFrame`.
 
 {% include_example run_sql scala/org/apache/spark/examples/sql/SparkSQLExample.scala %}
@@ -203,6 +370,19 @@ The `sql` function on a `SparkSession` enables applications to run SQL queries p
 The `sql` function on a `SparkSession` enables applications to run SQL queries programmatically and returns the result as a `Dataset<Row>`.
 
 {% include_example run_sql java/org/apache/spark/examples/sql/JavaSparkSQLExample.java %}
+=======
+{% highlight scala %}
+val sqlContext = ... // An existing SQLContext
+val df = sqlContext.sql("SELECT * FROM table")
+{% endhighlight %}
+</div>
+
+<div data-lang="java" markdown="1">
+{% highlight java %}
+SQLContext sqlContext = ... // An existing SQLContext
+DataFrame df = sqlContext.sql("SELECT * FROM table")
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 
 <div data-lang="python"  markdown="1">
@@ -219,6 +399,7 @@ The `sql` function enables applications to run SQL queries programmatically and 
 </div>
 </div>
 
+<<<<<<< HEAD
 
 ## Global Temporary View
 
@@ -227,15 +408,81 @@ terminates. If you want to have a temporary view that is shared among all sessio
 until the Spark application terminates, you can create a global temporary view. Global temporary
 view is tied to a system preserved database `global_temp`, and we must use the qualified name to
 refer it, e.g. `SELECT * FROM global_temp.view1`.
+=======
+## Creating Datasets
+
+Datasets are similar to RDDs, however, instead of using Java Serialization or Kryo they use
+a specialized [Encoder](api/scala/index.html#org.apache.spark.sql.Encoder) to serialize the objects
+for processing or transmitting over the network. While both encoders and standard serialization are
+responsible for turning an object into bytes, encoders are code generated dynamically and use a format
+that allows Spark to perform many operations like filtering, sorting and hashing without deserializing
+the bytes back into an object.
+
+<div class="codetabs">
+<div data-lang="scala"  markdown="1">
+
+{% highlight scala %}
+// Encoders for most common types are automatically provided by importing sqlContext.implicits._
+val ds = Seq(1, 2, 3).toDS()
+ds.map(_ + 1).collect() // Returns: Array(2, 3, 4)
+
+// Encoders are also created for case classes.
+case class Person(name: String, age: Long)
+val ds = Seq(Person("Andy", 32)).toDS()
+
+// DataFrames can be converted to a Dataset by providing a class. Mapping will be done by name.
+val path = "examples/src/main/resources/people.json"
+val people = sqlContext.read.json(path).as[Person]
+
+{% endhighlight %}
+
+</div>
+
+<div data-lang="java" markdown="1">
+
+{% highlight java %}
+JavaSparkContext sc = ...; // An existing JavaSparkContext.
+SQLContext sqlContext = new org.apache.spark.sql.SQLContext(sc);
+{% endhighlight %}
+
+</div>
+</div>
+
+## Interoperating with RDDs
+
+Spark SQL supports two different methods for converting existing RDDs into DataFrames. The first
+method uses reflection to infer the schema of an RDD that contains specific types of objects. This
+reflection based approach leads to more concise code and works well when you already know the schema
+while writing your Spark application.
+
+The second method for creating DataFrames is through a programmatic interface that allows you to
+construct a schema and then apply it to an existing RDD. While this method is more verbose, it allows
+you to construct DataFrames when the columns and their types are not known until runtime.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div class="codetabs">
 <div data-lang="scala"  markdown="1">
 {% include_example global_temp_view scala/org/apache/spark/examples/sql/SparkSQLExample.scala %}
 </div>
 
+<<<<<<< HEAD
 <div data-lang="java" markdown="1">
 {% include_example global_temp_view java/org/apache/spark/examples/sql/JavaSparkSQLExample.java %}
 </div>
+=======
+The Scala interface for Spark SQL supports automatically converting an RDD containing case classes
+to a DataFrame. The case class
+defines the schema of the table. The names of the arguments to the case class are read using
+reflection and become the names of the columns. Case classes can also be nested or contain complex
+types such as Sequences or Arrays. This RDD can be implicitly converted to a DataFrame and then be
+registered as a table. Tables can be used in subsequent SQL statements.
+
+{% highlight scala %}
+// sc is an existing SparkContext.
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+// this is used to implicitly convert an RDD to a DataFrame.
+import sqlContext.implicits._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div data-lang="python"  markdown="1">
 {% include_example global_temp_view python/sql/basic.py %}
@@ -255,7 +502,15 @@ SELECT * FROM global_temp.temp_view
 </div>
 
 
+<<<<<<< HEAD
 ## Creating Datasets
+=======
+Spark SQL supports automatically converting an RDD of [JavaBeans](http://stackoverflow.com/questions/3295496/what-is-a-javabean-exactly)
+into a DataFrame. The BeanInfo, obtained using reflection, defines the schema of the table.
+Currently, Spark SQL does not support JavaBeans that contain
+nested or contain complex types such as Lists or Arrays. You can create a JavaBean by creating a
+class that implements Serializable and has getters and setters for all of its fields.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Datasets are similar to RDDs, however, instead of using Java serialization or Kryo they use
 a specialized [Encoder](api/scala/index.html#org.apache.spark.sql.Encoder) to serialize the objects
@@ -316,7 +571,37 @@ Serializable and has getters and setters for all of its fields.
 
 Spark SQL can convert an RDD of Row objects to a DataFrame, inferring the datatypes. Rows are constructed by passing a list of
 key/value pairs as kwargs to the Row class. The keys of this list define the column names of the table,
+<<<<<<< HEAD
 and the types are inferred by sampling the whole dataset, similar to the inference that is performed on JSON files.
+=======
+and the types are inferred by looking at the first row. Since we currently only look at the first
+row, it is important that there is no missing data in the first row of the RDD. In future versions we
+plan to more completely infer the schema by looking at more data, similar to the inference that is
+performed on JSON files.
+
+{% highlight python %}
+# sc is an existing SparkContext.
+from pyspark.sql import SQLContext, Row
+sqlContext = SQLContext(sc)
+
+# Load a text file and convert each line to a Row.
+lines = sc.textFile("examples/src/main/resources/people.txt")
+parts = lines.map(lambda l: l.split(","))
+people = parts.map(lambda p: Row(name=p[0], age=int(p[1])))
+
+# Infer the schema, and register the DataFrame as a table.
+schemaPeople = sqlContext.createDataFrame(people)
+schemaPeople.registerTempTable("people")
+
+# SQL can be run over DataFrames that have been registered as a table.
+teenagers = sqlContext.sql("SELECT name FROM people WHERE age >= 13 AND age <= 19")
+
+# The results of SQL queries are RDDs and support all the normal RDD operations.
+teenNames = teenagers.map(lambda p: "Name: " + p.name)
+for teenName in teenNames.collect():
+  print(teenName)
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example schema_inferring python/sql/basic.py %}
 </div>
@@ -421,9 +706,15 @@ For example, a type-safe user-defined average can look like:
 
 # Data Sources
 
+<<<<<<< HEAD
 Spark SQL supports operating on a variety of data sources through the DataFrame interface.
 A DataFrame can be operated on using relational transformations and can also be used to create a temporary view.
 Registering a DataFrame as a temporary view allows you to run SQL queries over its data. This section
+=======
+Spark SQL supports operating on a variety of data sources through the `DataFrame` interface.
+A DataFrame can be operated on as normal RDDs and can also be registered as a temporary table.
+Registering a DataFrame as a table allows you to run SQL queries over its data. This section
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 describes the general methods for loading and saving data using the Spark Data Sources and then
 goes into specific options that are available for the built-in data sources.
 
@@ -458,8 +749,13 @@ In the simplest form, the default data source (`parquet` unless otherwise config
 You can also manually specify the data source that will be used along with any extra options
 that you would like to pass to the data source. Data sources are specified by their fully qualified
 name (i.e., `org.apache.spark.sql.parquet`), but for built-in sources you can also use their short
+<<<<<<< HEAD
 names (`json`, `parquet`, `jdbc`, `orc`, `libsvm`, `csv`, `text`). DataFrames loaded from any data
 source type can be converted into other types using this syntax.
+=======
+names (`json`, `parquet`, `jdbc`). DataFrames of any type can be converted into other types
+using this syntax.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div class="codetabs">
 <div data-lang="scala"  markdown="1">
@@ -507,7 +803,11 @@ file directly with SQL.
 
 Save operations can optionally take a `SaveMode`, that specifies how to handle existing data if
 present. It is important to realize that these save modes do not utilize any locking and are not
+<<<<<<< HEAD
 atomic. Additionally, when performing an `Overwrite`, the data will be deleted before writing out the
+=======
+atomic. Additionally, when performing a `Overwrite`, the data will be deleted before writing out the
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 new data.
 
 <table class="table">
@@ -550,6 +850,7 @@ new data.
 
 ### Saving to Persistent Tables
 
+<<<<<<< HEAD
 `DataFrames` can also be saved as persistent tables into Hive metastore using the `saveAsTable`
 command. Notice that an existing Hive deployment is not necessary to use this feature. Spark will create a
 default local Hive metastore (using Derby) for you. Unlike the `createOrReplaceTempView` command,
@@ -563,11 +864,30 @@ For file-based data source, e.g. text, parquet, json, etc. you can specify a cus
 the custom table path will not be removed and the table data is still there. If no custom table path is
 specified, Spark will write data to a default table path under the warehouse directory. When the table is
 dropped, the default table path will be removed too.
+=======
+When working with a `HiveContext`, `DataFrames` can also be saved as persistent tables using the
+`saveAsTable` command. Unlike the `registerTempTable` command, `saveAsTable` will materialize the
+contents of the dataframe and create a pointer to the data in the HiveMetastore. Persistent tables
+will still exist even after your Spark program has restarted, as long as you maintain your connection
+to the same metastore. A DataFrame for a persistent table can be created by calling the `table`
+method on a `SQLContext` with the name of the table.
+
+By default `saveAsTable` will create a "managed table", meaning that the location of the data will
+be controlled by the metastore. Managed tables will also have their data deleted automatically
+when a table is dropped.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Starting from Spark 2.1, persistent datasource tables have per-partition metadata stored in the Hive metastore. This brings several benefits:
 
+<<<<<<< HEAD
 - Since the metastore can return only necessary partitions for a query, discovering all the partitions on the first query to the table is no longer needed.
 - Hive DDLs such as `ALTER TABLE PARTITION ... SET LOCATION` are now available for tables created with the Datasource API.
+=======
+[Parquet](http://parquet.io) is a columnar format that is supported by many other data processing systems.
+Spark SQL provides support for both reading and writing Parquet files that automatically preserves the schema
+of the original data. When writing Parquet files, all columns are automatically converted to be nullable for 
+compatibility reasons.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Note that partition information is not gathered by default when creating external datasource tables (those with a `path` option). To sync the partition information in the metastore, you can invoke `MSCK REPAIR TABLE`.
 
@@ -592,6 +912,7 @@ Bucketing and sorting are applicable only to persistent tables:
 
 <div data-lang="sql"  markdown="1">
 
+<<<<<<< HEAD
 {% highlight sql %}
 
 CREATE TABLE users_bucketed_by_name(
@@ -600,6 +921,11 @@ CREATE TABLE users_bucketed_by_name(
   favorite_numbers array<integer>
 ) USING parquet 
 CLUSTERED BY(name) INTO 42 BUCKETS;
+=======
+// Read in the parquet file created above. Parquet files are self-describing so the schema is preserved.
+// The result of loading a Parquet file is also a DataFrame.
+val parquetFile = sqlContext.read.parquet("people.parquet")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% endhighlight %}
 
@@ -628,11 +954,17 @@ while partitioning can be used with both `save` and `saveAsTable` when using the
 
 {% highlight sql %}
 
+<<<<<<< HEAD
 CREATE TABLE users_by_favorite_color(
   name STRING, 
   favorite_color STRING,
   favorite_numbers array<integer>
 ) USING csv PARTITIONED BY(favorite_color);
+=======
+// Read in the Parquet file created above. Parquet files are self-describing so the schema is preserved.
+// The result of loading a parquet file is also a DataFrame.
+DataFrame parquetFile = sqlContext.read().parquet("people.parquet");
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% endhighlight %}
 
@@ -656,6 +988,7 @@ It is possible to use both partitioning and bucketing for a single table:
 {% include_example write_partition_and_bucket python/sql/datasource.py %}
 </div>
 
+<<<<<<< HEAD
 <div data-lang="sql"  markdown="1">
 
 {% highlight sql %}
@@ -667,6 +1000,11 @@ CREATE TABLE users_bucketed_and_partitioned(
 ) USING parquet 
 PARTITIONED BY (favorite_color)
 CLUSTERED BY(name) SORTED BY (favorite_numbers) INTO 42 BUCKETS;
+=======
+# Read in the Parquet file created above. Parquet files are self-describing so the schema is preserved.
+# The result of loading a parquet file is also a DataFrame.
+parquetFile = sqlContext.read.parquet("people.parquet")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% endhighlight %}
 
@@ -686,7 +1024,13 @@ Spark SQL provides support for both reading and writing Parquet files that autom
 of the original data. When writing Parquet files, all columns are automatically converted to be nullable for
 compatibility reasons.
 
+<<<<<<< HEAD
 ### Loading Data Programmatically
+=======
+# Read in the Parquet file created above. Parquet files are self-describing so the schema is preserved.
+# The result of loading a parquet file is also a DataFrame.
+parquetFile <- parquetFile(sqlContext, "people.parquet")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Using the data from the above example:
 
@@ -700,6 +1044,7 @@ Using the data from the above example:
 {% include_example basic_parquet_example java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java %}
 </div>
 
+<<<<<<< HEAD
 <div data-lang="python"  markdown="1">
 
 {% include_example basic_parquet_example python/sql/datasource.py %}
@@ -711,6 +1056,8 @@ Using the data from the above example:
 
 </div>
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 <div data-lang="sql"  markdown="1">
 
 {% highlight sql %}
@@ -733,9 +1080,14 @@ SELECT * FROM parquetTable
 
 Table partitioning is a common optimization approach used in systems like Hive. In a partitioned
 table, data are usually stored in different directories, with partitioning column values encoded in
+<<<<<<< HEAD
 the path of each partition directory. All built-in file sources (including Text/CSV/JSON/ORC/Parquet)
 are able to discover and infer partitioning information automatically.
 For example, we can store all our previously used
+=======
+the path of each partition directory. The Parquet data source is now able to discover and infer
+partitioning information automatically. For example, we can store all our previously used
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 population data into a partitioned table using the following directory structure, with two extra
 columns, `gender` and `country` as partitioning columns:
 
@@ -784,8 +1136,13 @@ can be configured by `spark.sql.sources.partitionColumnTypeInference.enabled`, w
 `true`. When type inference is disabled, string type will be used for the partitioning columns.
 
 Starting from Spark 1.6.0, partition discovery only finds partitions under the given paths
+<<<<<<< HEAD
 by default. For the above example, if users pass `path/to/table/gender=male` to either
 `SparkSession.read.parquet` or `SparkSession.read.load`, `gender` will not be considered as a
+=======
+by default. For the above example, if users pass `path/to/table/gender=male` to either 
+`SQLContext.read.parquet` or `SQLContext.read.load`, `gender` will not be considered as a
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 partitioning column. If users need to specify the base path that partition discovery
 should start with, they can set `basePath` in the data source options. For example,
 when `path/to/table/gender=male` is the path of the data and
@@ -951,8 +1308,34 @@ Configuration of Parquet can be done using the `setConf` method on `SparkSession
   <td>false</td>
   <td>
     <p>
+<<<<<<< HEAD
       When true, the Parquet data source merges schemas collected from all data files, otherwise the
       schema is picked from the summary file or a random data file if no summary file is available.
+=======
+      The output committer class used by Parquet. The specified class needs to be a subclass of
+      <code>org.apache.hadoop.<br />mapreduce.OutputCommitter</code>. Typically, it's also a
+      subclass of <code>org.apache.parquet.hadoop.ParquetOutputCommitter</code>.
+    </p>
+    <p>
+      <b>Note:</b>
+      <ul>
+        <li>
+          This option is automatically ignored if <code>spark.speculation</code> is turned on.
+        </li>
+        <li>
+          This option must be set via Hadoop <code>Configuration</code> rather than Spark
+          <code>SQLConf</code>.
+        </li>
+        <li>
+          This option overrides <code>spark.sql.sources.<br />outputCommitterClass</code>.
+        </li>
+      </ul>
+    </p>
+    <p>
+      Spark SQL comes with a builtin
+      <code>org.apache.spark.sql.<br />parquet.DirectParquetOutputCommitter</code>, which can be more
+      efficient then the default Parquet output committer when writing data to S3.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     </p>
   </td>
 </tr>
@@ -1050,6 +1433,7 @@ SELECT * FROM jsonTable
 ## Hive Tables
 
 Spark SQL also supports reading and writing data stored in [Apache Hive](http://hive.apache.org/).
+<<<<<<< HEAD
 However, since Hive has a large number of dependencies, these dependencies are not included in the
 default Spark distribution. If Hive dependencies can be found on the classpath, Spark will load them
 automatically. Note that these Hive dependencies must also be present on all of the worker nodes, as
@@ -1068,11 +1452,49 @@ creates a directory configured by `spark.sql.warehouse.dir`, which defaults to t
 the `hive.metastore.warehouse.dir` property in `hive-site.xml` is deprecated since Spark 2.0.0.
 Instead, use `spark.sql.warehouse.dir` to specify the default location of database in warehouse.
 You may need to grant write privilege to the user who starts the Spark application.
+=======
+However, since Hive has a large number of dependencies, it is not included in the default Spark assembly.
+Hive support is enabled by adding the `-Phive` and `-Phive-thriftserver` flags to Spark's build.
+This command builds a new assembly jar that includes Hive. Note that this Hive assembly jar must also be present
+on all of the worker nodes, as they will need access to the Hive serialization and deserialization libraries
+(SerDes) in order to access data stored in Hive.
+
+Configuration of Hive is done by placing your `hive-site.xml`, `core-site.xml` (for security configuration),
+ `hdfs-site.xml` (for HDFS configuration) file in `conf/`. Please note when running
+the query on a YARN cluster (`cluster` mode), the `datanucleus` jars under the `lib` directory
+and `hive-site.xml` under `conf/` directory need to be available on the driver and all executors launched by the
+YARN cluster. The convenient way to do this is adding them through the `--jars` option and `--file` option of the
+`spark-submit` command.
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div class="codetabs">
 
 <div data-lang="scala"  markdown="1">
+<<<<<<< HEAD
 {% include_example spark_hive scala/org/apache/spark/examples/sql/hive/SparkHiveExample.scala %}
+=======
+
+When working with Hive one must construct a `HiveContext`, which inherits from `SQLContext`, and
+adds support for finding tables in the MetaStore and writing queries using HiveQL. Users who do
+not have an existing Hive deployment can still create a `HiveContext`. When not configured by the
+hive-site.xml, the context automatically creates `metastore_db` in the current directory and
+creates `warehouse` directory indicated by HiveConf, which defaults to `/user/hive/warehouse`.
+Note that you may need to grant write privilege on `/user/hive/warehouse` to the user who starts
+the spark application.
+
+{% highlight scala %}
+// sc is an existing SparkContext.
+val sqlContext = new org.apache.spark.sql.hive.HiveContext(sc)
+
+sqlContext.sql("CREATE TABLE IF NOT EXISTS src (key INT, value STRING)")
+sqlContext.sql("LOAD DATA LOCAL INPATH 'examples/src/main/resources/kv1.txt' INTO TABLE src")
+
+// Queries are expressed in HiveQL
+sqlContext.sql("FROM src SELECT key, value").collect().foreach(println)
+{% endhighlight %}
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 
 <div data-lang="java"  markdown="1">
@@ -1227,11 +1649,16 @@ following command:
 bin/spark-shell --driver-class-path postgresql-9.4.1207.jar --jars postgresql-9.4.1207.jar
 {% endhighlight %}
 
+<<<<<<< HEAD
 Tables from the remote database can be loaded as a DataFrame or Spark SQL temporary view using
 the Data Sources API. Users can specify the JDBC connection properties in the data source options.
 <code>user</code> and <code>password</code> are normally provided as connection properties for
 logging into the data sources. In addition to the connection properties, Spark also supports
 the following case-insensitive options:
+=======
+Tables from the remote database can be loaded as a DataFrame or Spark SQL Temporary table using
+the Data Sources API. The following options are supported:
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <table class="table">
   <tr><th>Property Name</th><th>Meaning</th></tr>
@@ -1257,19 +1684,41 @@ the following case-insensitive options:
       The class name of the JDBC driver to use to connect to this URL.
     </td>
   </tr>
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   <tr>
     <td><code>partitionColumn, lowerBound, upperBound</code></td>
     <td>
+<<<<<<< HEAD
       These options must all be specified if any of them is specified. In addition,
       <code>numPartitions</code> must be specified. They describe how to partition the table when
       reading in parallel from multiple workers.
+=======
+      These options must all be specified if any of them is specified. They describe how to
+      partition the table when reading in parallel from multiple workers.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       <code>partitionColumn</code> must be a numeric column from the table in question. Notice
       that <code>lowerBound</code> and <code>upperBound</code> are just used to decide the
       partition stride, not for filtering the rows in table. So all rows in the table will be
       partitioned and returned. This option applies only to reading.
     </td>
   </tr>
+<<<<<<< HEAD
+=======
+  
+  <tr>
+    <td><code>fetchSize</code></td>
+    <td>
+      The JDBC fetch size, which determines how many rows to fetch per round trip. This can help performance on JDBC drivers which default to low fetch size (eg. Oracle with 10 rows).
+    </td>
+  </tr>
+</table>
+
+<div class="codetabs">
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   <tr>
      <td><code>numPartitions</code></td>
@@ -1550,6 +1999,7 @@ options.
 
 # Migration Guide
 
+<<<<<<< HEAD
 ## Upgrading From Spark SQL 2.2 to 2.3
 
   - Since Spark 2.3, the queries from raw JSON/CSV files are disallowed when the referenced columns only include the internal corrupt record column (named `_corrupt_record` by default). For example, `spark.read.schema(schema).json(file).filter($"_corrupt_record".isNotNull).count()` and `spark.read.schema(schema).json(file).select("_corrupt_record").show()`. Instead, you can cache or save the parsed results and then send the same query. For example, `val df = spark.read.schema(schema).json(file).cache()` and then `df.filter($"_corrupt_record".isNotNull).count()`.
@@ -1596,6 +2046,8 @@ options.
  - `spark.sql.parquet.cacheMetadata` is no longer used.
    See [SPARK-13664](https://issues.apache.org/jira/browse/SPARK-13664) for details.
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ## Upgrading From Spark SQL 1.5 to 1.6
 
  - From Spark 1.6, by default the Thrift server runs in multi-session mode. Which means each JDBC/ODBC
@@ -1609,8 +2061,11 @@ options.
      --conf spark.sql.hive.thriftServer.singleSession=true \
      ...
    {% endhighlight %}
+<<<<<<< HEAD
  - Since 1.6.1, withColumn method in sparkR supports adding a new column to or replacing existing columns
    of the same name of a DataFrame.
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
  - From Spark 1.6, LongType casts to TimestampType expect seconds instead of microseconds. This
    change was made to match the behavior of Hive 1.2 for more consistent type casting to TimestampType
@@ -1626,7 +2081,11 @@ options.
    `spark.sql.parquet.mergeSchema` to `true`.
  - Resolution of strings to columns in python now supports using dots (`.`) to qualify the column or
    access nested values. For example `df['table.column.nestedField']`. However, this means that if
+<<<<<<< HEAD
    your column name contains any dots you must now escape them using backticks (e.g., ``table.`column.with.dots`.nested``).
+=======
+   your column name contains any dots you must now escape them using backticks (e.g., ``table.`column.with.dots`.nested``).  
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  - In-memory columnar storage partition pruning is on by default. It can be disabled by setting
    `spark.sql.inMemoryColumnarStorage.partitionPruning` to `false`.
  - Unlimited precision decimal columns are no longer supported, instead Spark SQL enforces a maximum
@@ -1818,7 +2277,11 @@ referencing a singleton.
 Spark SQL is designed to be compatible with the Hive Metastore, SerDes and UDFs.
 Currently Hive SerDes and UDFs are based on Hive 1.2.1,
 and Spark SQL can be connected to different versions of Hive Metastore
+<<<<<<< HEAD
 (from 0.12.0 to 2.1.1. Also see [Interacting with Different Versions of Hive Metastore] (#interacting-with-different-versions-of-hive-metastore)).
+=======
+(from 0.12.0 to 1.2.1. Also see [Interacting with Different Versions of Hive Metastore] (#interacting-with-different-versions-of-hive-metastore)).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #### Deploying in Existing Hive Warehouses
 

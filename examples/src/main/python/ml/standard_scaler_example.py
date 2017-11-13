@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.feature import StandardScaler
 # $example off$
@@ -30,6 +31,20 @@ if __name__ == "__main__":
 
     # $example on$
     dataFrame = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+# $example on$
+from pyspark.ml.feature import StandardScaler
+# $example off$
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="StandardScalerExample")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    dataFrame = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     scaler = StandardScaler(inputCol="features", outputCol="scaledFeatures",
                             withStd=True, withMean=False)
 
@@ -41,4 +56,8 @@ if __name__ == "__main__":
     scaledData.show()
     # $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

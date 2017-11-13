@@ -76,6 +76,7 @@ class SQLContextSuite extends SparkFunSuite with SharedSparkContext {
     }
   }
 
+<<<<<<< HEAD
   test("Catalyst optimization passes are modifiable at runtime") {
     val sqlContext = SQLContext.getOrCreate(sc)
     sqlContext.experimental.extraOptimizations = Seq(DummyRule)
@@ -142,4 +143,22 @@ class SQLContextSuite extends SparkFunSuite with SharedSparkContext {
     }
   }
 
+=======
+  test("SPARK-13390: createDataFrame(java.util.List[_],Class[_]) NotSerializableException") {
+    val rows = new java.util.ArrayList[IntJavaBean]()
+    rows.add(new IntJavaBean(1))
+    val sqlContext = SQLContext.getOrCreate(sc)
+    // Without the fix for SPARK-13390, this will throw NotSerializableException
+    sqlContext.createDataFrame(rows, classOf[IntJavaBean]).groupBy("int").count().collect()
+  }
+}
+
+class IntJavaBean(private var i: Int) extends Serializable {
+
+  def getInt(): Int = i
+
+  def setInt(i: Int): Unit = {
+    this.i = i
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

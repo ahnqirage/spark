@@ -34,6 +34,7 @@ getInternalType <- function(x) {
          Date = "date",
          POSIXlt = "timestamp",
          POSIXct = "timestamp",
+<<<<<<< HEAD
          stop(paste("Unsupported type for SparkDataFrame:", class(x))))
 }
 
@@ -76,6 +77,9 @@ getSparkSession <- function() {
   } else {
     stop("SparkSession not initialized")
   }
+=======
+         stop(paste("Unsupported type for DataFrame:", class(x))))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 #' infer the SQL type
@@ -301,6 +305,7 @@ as.DataFrame.default <- function(data, schema = NULL, samplingRatio = 1.0, numPa
   createDataFrame(data, schema, samplingRatio, numPartitions)
 }
 
+<<<<<<< HEAD
 #' @param ... additional argument(s).
 #' @rdname createDataFrame
 #' @aliases as.DataFrame
@@ -320,6 +325,20 @@ as.DataFrame <- function(data, ...) {
 #' @examples
 #'\dontrun{
 #' sparkR.session()
+=======
+#' toDF
+#'
+#' Converts an RDD to a DataFrame by infer the types.
+#'
+#' @param x An RDD
+#'
+#' @rdname DataFrame
+#' @noRd
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' rdd <- lapply(parallelize(sc, 1:10), function(x) list(a=x, b=as.character(x)))
 #' df <- toDF(rdd)
 #'}
@@ -339,14 +358,21 @@ setMethod("toDF", signature(x = "RDD"),
 #' It goes through the entire dataset once to determine the schema.
 #'
 #' @param path Path of file to read. A vector of multiple paths is allowed.
+<<<<<<< HEAD
 #' @param ... additional external data source specific named properties.
 #' @return SparkDataFrame
 #' @rdname read.json
+=======
+#' @return DataFrame
+#' @rdname read.json
+#' @name read.json
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
 #' df <- read.json(path, multiLine = TRUE)
 #' df <- jsonFile(path)
@@ -386,16 +412,50 @@ jsonFile <- function(x, ...) {
 #' JSON RDD
 #'
 #' Loads an RDD storing one JSON object per string as a SparkDataFrame.
+=======
+#' df <- read.json(sqlContext, path)
+#' df <- jsonFile(sqlContext, path)
+#' }
+read.json <- function(sqlContext, path) {
+  # Allow the user to have a more flexible definiton of the text file path
+  paths <- as.list(suppressWarnings(normalizePath(path)))
+  read <- callJMethod(sqlContext, "read")
+  sdf <- callJMethod(read, "json", paths)
+  dataFrame(sdf)
+}
+
+#' @rdname read.json
+#' @name jsonFile
+#' @export
+jsonFile <- function(sqlContext, path) {
+  .Deprecated("read.json")
+  read.json(sqlContext, path)
+}
+
+
+#' JSON RDD
+#'
+#' Loads an RDD storing one JSON object per string as a DataFrame.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param sqlContext SQLContext to use
 #' @param rdd An RDD of JSON string
 #' @param schema A StructType object to use as schema
 #' @param samplingRatio The ratio of simpling used to infer the schema
+<<<<<<< HEAD
 #' @return A SparkDataFrame
 #' @noRd
 #' @examples
 #'\dontrun{
 #' sparkR.session()
+=======
+#' @return A DataFrame
+#' @noRd
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' rdd <- texFile(sc, "path/to/json")
 #' df <- jsonRDD(sqlContext, rdd)
 #'}
@@ -415,10 +475,15 @@ jsonRDD <- function(sqlContext, rdd, schema = NULL, samplingRatio = 1.0) {
   }
 }
 
+<<<<<<< HEAD
 #' Create a SparkDataFrame from an ORC file.
+=======
+#' Create a DataFrame from a Parquet file.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' Loads an ORC file, returning the result as a SparkDataFrame.
 #'
+<<<<<<< HEAD
 #' @param path Path of file to read.
 #' @param ... additional external data source specific named properties.
 #' @return SparkDataFrame
@@ -438,6 +503,84 @@ read.orc <- function(path, ...) {
 }
 
 #' Create a SparkDataFrame from a Parquet file.
+=======
+#' @param sqlContext SQLContext to use
+#' @param path Path of file to read. A vector of multiple paths is allowed.
+#' @return DataFrame
+#' @rdname read.parquet
+#' @name read.parquet
+#' @export
+read.parquet <- function(sqlContext, path) {
+  # Allow the user to have a more flexible definiton of the text file path
+  paths <- as.list(suppressWarnings(normalizePath(path)))
+  read <- callJMethod(sqlContext, "read")
+  sdf <- callJMethod(read, "parquet", paths)
+  dataFrame(sdf)
+}
+
+#' @rdname read.parquet
+#' @name parquetFile
+#' @export
+# TODO: Implement saveasParquetFile and write examples for both
+parquetFile <- function(sqlContext, ...) {
+  .Deprecated("read.parquet")
+  # Allow the user to have a more flexible definiton of the text file path
+  paths <- lapply(list(...), function(x) suppressWarnings(normalizePath(x)))
+  sdf <- callJMethod(sqlContext, "parquetFile", paths)
+  dataFrame(sdf)
+}
+
+#' Create a DataFrame from a text file.
+#'
+#' Loads a text file and returns a DataFrame with a single string column named "value".
+#' Each line in the text file is a new row in the resulting DataFrame.
+#'
+#' @param sqlContext SQLContext to use
+#' @param path Path of file to read. A vector of multiple paths is allowed.
+#' @return DataFrame
+#' @rdname read.text
+#' @name read.text
+#' @export
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.txt"
+#' df <- read.text(sqlContext, path)
+#' }
+read.text <- function(sqlContext, path) {
+  # Allow the user to have a more flexible definiton of the text file path
+  paths <- as.list(suppressWarnings(normalizePath(path)))
+  read <- callJMethod(sqlContext, "read")
+  sdf <- callJMethod(read, "text", paths)
+  dataFrame(sdf)
+}
+
+#' SQL Query
+#'
+#' Executes a SQL query using Spark, returning the result as a DataFrame.
+#'
+#' @param sqlContext SQLContext to use
+#' @param sqlQuery A character vector containing the SQL query
+#' @return DataFrame
+#' @export
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.json"
+#' df <- read.json(sqlContext, path)
+#' registerTempTable(df, "table")
+#' new_df <- sql(sqlContext, "SELECT * FROM table")
+#' }
+
+sql <- function(sqlContext, sqlQuery) {
+ sdf <- callJMethod(sqlContext, "sql", sqlQuery)
+ dataFrame(sdf)
+}
+
+#' Create a DataFrame from a SparkSQL Table
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' Loads a Parquet file, returning the result as a SparkDataFrame.
 #'
@@ -445,6 +588,7 @@ read.orc <- function(path, ...) {
 #' @return SparkDataFrame
 #' @rdname read.parquet
 #' @export
+<<<<<<< HEAD
 #' @name read.parquet
 #' @method read.parquet default
 #' @note read.parquet since 1.6.0
@@ -456,6 +600,20 @@ read.parquet.default <- function(path, ...) {
   read <- callJMethod(sparkSession, "read")
   read <- callJMethod(read, "options", options)
   sdf <- handledCallJMethod(read, "parquet", paths)
+=======
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.json"
+#' df <- read.json(sqlContext, path)
+#' registerTempTable(df, "table")
+#' new_df <- table(sqlContext, "table")
+#' }
+
+table <- function(sqlContext, tableName) {
+  sdf <- callJMethod(sqlContext, "table", tableName)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   dataFrame(sdf)
 }
 
@@ -527,9 +685,15 @@ read.text <- function(x, ...) {
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
 #' createOrReplaceTempView(df, "table")
 #' new_df <- sql("SELECT * FROM table")
+=======
+#' df <- read.json(sqlContext, path)
+#' registerTempTable(df, "table")
+#' cacheTable(sqlContext, "table")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' }
 #' @name sql
 #' @method sql default
@@ -561,9 +725,15 @@ sql <- function(x, ...) {
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
 #' createOrReplaceTempView(df, "table")
 #' new_df <- tableToDF("table")
+=======
+#' df <- read.json(sqlContext, path)
+#' registerTempTable(df, "table")
+#' uncacheTable(sqlContext, "table")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' }
 #' @note tableToDF since 2.0.0
 tableToDF <- function(tableName) {

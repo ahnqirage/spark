@@ -18,6 +18,11 @@
 from __future__ import print_function
 import sys
 import warnings
+<<<<<<< HEAD
+=======
+import json
+from functools import reduce
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 if sys.version >= '3':
     basestring = unicode = str
@@ -184,8 +189,12 @@ class SQLContext(object):
 
         :param name: name of the UDF
         :param f: python function
+<<<<<<< HEAD
         :param returnType: a :class:`pyspark.sql.types.DataType` object
         :return: a wrapped :class:`UserDefinedFunction`
+=======
+        :param returnType: a :class:`DataType` object
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         >>> strlen = sqlContext.registerFunction("stringLengthString", lambda x: len(x))
         >>> sqlContext.sql("SELECT stringLengthString('test')").collect()
@@ -202,7 +211,34 @@ class SQLContext(object):
         >>> from pyspark.sql.types import IntegerType
         >>> _ = sqlContext.udf.register("stringLengthInt", lambda x: len(x), IntegerType())
         >>> sqlContext.sql("SELECT stringLengthInt('test')").collect()
+<<<<<<< HEAD
         [Row(stringLengthInt(test)=4)]
+=======
+        [Row(_c0=4)]
+        """
+        udf = UserDefinedFunction(f, returnType, name)
+        self._ssql_ctx.udf().registerPython(name, udf._judf)
+
+    def _inferSchemaFromList(self, data):
+        """
+        Infer schema from list of Row or tuple.
+
+        :param data: list of Row or tuple
+        :return: StructType
+        """
+        if not data:
+            raise ValueError("can not infer schema from empty dataset")
+        first = data[0]
+        if type(first) is dict:
+            warnings.warn("inferring schema from dict is deprecated,"
+                          "please use pyspark.sql.Row instead")
+        schema = reduce(_merge_type, map(_infer_schema, data))
+        if _has_nulltype(schema):
+            raise ValueError("Some of types cannot be determined after inferring")
+        return schema
+
+    def _inferSchema(self, rdd, samplingRatio=None):
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         return self.sparkSession.catalog.registerFunction(name, f, returnType)
 
@@ -361,7 +397,99 @@ class SQLContext(object):
 
         >>> sqlContext.registerDataFrameAsTable(df, "table1")
         """
+<<<<<<< HEAD
         df.createOrReplaceTempView(tableName)
+=======
+        if (df.__class__ is DataFrame):
+            self._ssql_ctx.registerDataFrameAsTable(df._jdf, tableName)
+        else:
+            raise ValueError("Can only register DataFrame as table")
+
+    @since(1.6)
+    def dropTempTable(self, tableName):
+        """ Remove the temp table from catalog.
+
+        >>> sqlContext.registerDataFrameAsTable(df, "table1")
+        >>> sqlContext.dropTempTable("table1")
+        """
+        self._ssql_ctx.dropTempTable(tableName)
+
+    def parquetFile(self, *paths):
+        """Loads a Parquet file, returning the result as a :class:`DataFrame`.
+
+        .. note:: Deprecated in 1.4, use :func:`DataFrameReader.parquet` instead.
+
+        >>> sqlContext.parquetFile('python/test_support/sql/parquet_partitioned').dtypes
+        [('name', 'string'), ('year', 'int'), ('month', 'int'), ('day', 'int')]
+        """
+        warnings.warn("parquetFile is deprecated. Use read.parquet() instead.")
+        gateway = self._sc._gateway
+        jpaths = gateway.new_array(gateway.jvm.java.lang.String, len(paths))
+        for i in range(0, len(paths)):
+            jpaths[i] = paths[i]
+        jdf = self._ssql_ctx.parquetFile(jpaths)
+        return DataFrame(jdf, self)
+
+    def jsonFile(self, path, schema=None, samplingRatio=1.0):
+        """Loads a text file storing one JSON object per line as a :class:`DataFrame`.
+
+        .. note:: Deprecated in 1.4, use :func:`DataFrameReader.json` instead.
+
+        >>> sqlContext.jsonFile('python/test_support/sql/people.json').dtypes
+        [('age', 'bigint'), ('name', 'string')]
+        """
+        warnings.warn("jsonFile is deprecated. Use read.json() instead.")
+        if schema is None:
+            df = self._ssql_ctx.jsonFile(path, samplingRatio)
+        else:
+            scala_datatype = self._ssql_ctx.parseDataType(schema.json())
+            df = self._ssql_ctx.jsonFile(path, scala_datatype)
+        return DataFrame(df, self)
+
+    @ignore_unicode_prefix
+    @since(1.0)
+    def jsonRDD(self, rdd, schema=None, samplingRatio=1.0):
+        """Loads an RDD storing one JSON object per string as a :class:`DataFrame`.
+
+        If the schema is provided, applies the given schema to this JSON dataset.
+        Otherwise, it samples the dataset with ratio ``samplingRatio`` to determine the schema.
+
+        >>> df1 = sqlContext.jsonRDD(json)
+        >>> df1.first()
+        Row(field1=1, field2=u'row1', field3=Row(field4=11, field5=None), field6=None)
+
+        >>> df2 = sqlContext.jsonRDD(json, df1.schema)
+        >>> df2.first()
+        Row(field1=1, field2=u'row1', field3=Row(field4=11, field5=None), field6=None)
+
+        >>> from pyspark.sql.types import *
+        >>> schema = StructType([
+        ...     StructField("field2", StringType()),
+        ...     StructField("field3",
+        ...                 StructType([StructField("field5", ArrayType(IntegerType()))]))
+        ... ])
+        >>> df3 = sqlContext.jsonRDD(json, schema)
+        >>> df3.first()
+        Row(field2=u'row1', field3=Row(field5=None))
+        """
+
+        def func(iterator):
+            for x in iterator:
+                if not isinstance(x, basestring):
+                    x = unicode(x)
+                if isinstance(x, unicode):
+                    x = x.encode("utf-8")
+                yield x
+        keyed = rdd.mapPartitions(func)
+        keyed._bypass_serializer = True
+        jrdd = keyed._jrdd.map(self._jvm.BytesToString())
+        if schema is None:
+            df = self._ssql_ctx.jsonRDD(jrdd.rdd(), samplingRatio)
+        else:
+            scala_datatype = self._ssql_ctx.parseDataType(schema.json())
+            df = self._ssql_ctx.jsonRDD(jrdd.rdd(), scala_datatype)
+        return DataFrame(df, self)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     @since(1.6)
     def dropTempTable(self, tableName):
@@ -537,6 +665,7 @@ class HiveContext(SQLContext):
             sparkSession = SparkSession(sparkContext, jhiveContext.sparkSession())
         SQLContext.__init__(self, sparkContext, sparkSession, jhiveContext)
 
+<<<<<<< HEAD
     @classmethod
     def _createForTesting(cls, sparkContext):
         """(Internal use only) Create a new HiveContext for testing.
@@ -548,6 +677,22 @@ class HiveContext(SQLContext):
         jsc = sparkContext._jsc.sc()
         jtestHive = sparkContext._jvm.org.apache.spark.sql.hive.test.TestHiveContext(jsc, False)
         return cls(sparkContext, jtestHive)
+=======
+    @property
+    def _ssql_ctx(self):
+        try:
+            if not hasattr(self, '_scala_HiveContext'):
+                self._scala_HiveContext = self._get_hive_ctx()
+            return self._scala_HiveContext
+        except Py4JError as e:
+            print("You must build Spark with Hive. "
+                  "Export 'SPARK_HIVE=true' and run "
+                  "build/sbt assembly", file=sys.stderr)
+            raise
+
+    def _get_hive_ctx(self):
+        return self._jvm.HiveContext(self._jsc.sc())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def refreshTable(self, tableName):
         """Invalidate and refresh all the cached the metadata of the given

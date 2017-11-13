@@ -26,8 +26,13 @@ import org.scalatest.BeforeAndAfterAll
 
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
+<<<<<<< HEAD
 import org.apache.spark.streaming.{State, Time}
 import org.apache.spark.streaming.util.OpenHashMapBasedStateMap
+=======
+import org.apache.spark.streaming.util.OpenHashMapBasedStateMap
+import org.apache.spark.streaming.{State, Time}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.Utils
 
 class MapWithStateRDDSuite extends SparkFunSuite with RDDCheckpointTester with BeforeAndAfterAll {
@@ -36,7 +41,10 @@ class MapWithStateRDDSuite extends SparkFunSuite with RDDCheckpointTester with B
   private var checkpointDir: File = _
 
   override def beforeAll(): Unit = {
+<<<<<<< HEAD
     super.beforeAll()
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     sc = new SparkContext(
       new SparkConf().setMaster("local").setAppName("MapWithStateRDDSuite"))
     checkpointDir = Utils.createTempDir()
@@ -44,6 +52,7 @@ class MapWithStateRDDSuite extends SparkFunSuite with RDDCheckpointTester with B
   }
 
   override def afterAll(): Unit = {
+<<<<<<< HEAD
     try {
       if (sc != null) {
         sc.stop()
@@ -52,6 +61,12 @@ class MapWithStateRDDSuite extends SparkFunSuite with RDDCheckpointTester with B
     } finally {
       super.afterAll()
     }
+=======
+    if (sc != null) {
+      sc.stop()
+    }
+    Utils.deleteRecursively(checkpointDir)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def sparkContext: SparkContext = sc
@@ -326,7 +341,11 @@ class MapWithStateRDDSuite extends SparkFunSuite with RDDCheckpointTester with B
       // Create a MapWithStateRDD that has a long lineage using the data RDD with a long lineage
       val stateRDDWithLongLineage = makeStateRDDWithLongLineageDataRDD(longLineageRDD)
 
+<<<<<<< HEAD
       // Create a new MapWithStateRDD, with the lineage MapWithStateRDD as the parent
+=======
+      // Create a new MapWithStateRDD, with the lineage lineage MapWithStateRDD as the parent
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       new MapWithStateRDD[Int, Int, Int, Int](
         stateRDDWithLongLineage,
         stateRDDWithLongLineage.sparkContext.emptyRDD[(Int, Int)].partitionBy(partitioner),

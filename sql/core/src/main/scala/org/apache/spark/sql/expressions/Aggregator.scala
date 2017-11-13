@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.expressions
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.{Experimental, InterfaceStability}
 import org.apache.spark.sql.{Dataset, Encoder, TypedColumn}
 import org.apache.spark.sql.catalyst.encoders.encoderFor
@@ -27,6 +28,16 @@ import org.apache.spark.sql.execution.aggregate.TypedAggregateExpression
  * :: Experimental ::
  * A base class for user-defined aggregations, which can be used in `Dataset` operations to take
  * all of the elements of a group and reduce them to a single value.
+=======
+import org.apache.spark.sql.catalyst.encoders.encoderFor
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Complete}
+import org.apache.spark.sql.execution.aggregate.TypedAggregateExpression
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, TypedColumn}
+
+/**
+ * A base class for user-defined aggregations, which can be used in [[DataFrame]] and [[Dataset]]
+ * operations to take all of the elements of a group and reduce them to a single value.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  *
  * For example, the following aggregator extracts an `int` from a specific class and adds them up:
  * {{{
@@ -45,6 +56,7 @@ import org.apache.spark.sql.execution.aggregate.TypedAggregateExpression
  *
  * Based loosely on Aggregator from Algebird: https://github.com/twitter/algebird
  *
+<<<<<<< HEAD
  * @tparam IN The input type for the aggregation.
  * @tparam BUF The type of the intermediate value of the reduction.
  * @tparam OUT The type of the final output result.
@@ -53,30 +65,52 @@ import org.apache.spark.sql.execution.aggregate.TypedAggregateExpression
 @Experimental
 @InterfaceStability.Evolving
 abstract class Aggregator[-IN, BUF, OUT] extends Serializable {
+=======
+ * @tparam I The input type for the aggregation.
+ * @tparam B The type of the intermediate value of the reduction.
+ * @tparam O The type of the final output result.
+ *
+ * @since 1.6.0
+ */
+abstract class Aggregator[-I, B, O] extends Serializable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * A zero value for this aggregation. Should satisfy the property that any b + zero = b.
    * @since 1.6.0
    */
+<<<<<<< HEAD
   def zero: BUF
+=======
+  def zero: B
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Combine two values to produce a new value.  For performance, the function may modify `b` and
    * return it instead of constructing new object for b.
    * @since 1.6.0
    */
+<<<<<<< HEAD
   def reduce(b: BUF, a: IN): BUF
+=======
+  def reduce(b: B, a: I): B
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Merge two intermediate values.
    * @since 1.6.0
    */
+<<<<<<< HEAD
   def merge(b1: BUF, b2: BUF): BUF
+=======
+  def merge(b1: B, b2: B): B
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Transform the output of the reduction.
    * @since 1.6.0
    */
+<<<<<<< HEAD
   def finish(reduction: BUF): OUT
 
   /**
@@ -107,5 +141,24 @@ abstract class Aggregator[-IN, BUF, OUT] extends Serializable {
         isDistinct = false)
 
     new TypedColumn[IN, OUT](expr, encoderFor[OUT])
+=======
+  def finish(reduction: B): O
+
+  /**
+   * Returns this `Aggregator` as a [[TypedColumn]] that can be used in [[Dataset]] or [[DataFrame]]
+   * operations.
+   * @since 1.6.0
+   */
+  def toColumn(
+      implicit bEncoder: Encoder[B],
+      cEncoder: Encoder[O]): TypedColumn[I, O] = {
+    val expr =
+      new AggregateExpression(
+        TypedAggregateExpression(this),
+        Complete,
+        false)
+
+    new TypedColumn[I, O](expr, encoderFor[O])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

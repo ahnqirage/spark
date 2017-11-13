@@ -48,7 +48,20 @@ class RDDFunctions[T: ClassTag](self: RDD[T]) extends Serializable {
   }
 
   /**
+<<<<<<< HEAD
    * `sliding(Int, Int)*` with step = 1.
+=======
+   * [[sliding(Int, Int)*]] with step = 1.
+   */
+  def sliding(windowSize: Int): RDD[Array[T]] = sliding(windowSize, 1)
+
+  /**
+   * Reduces the elements of this RDD in a multi-level tree pattern.
+   *
+   * @param depth suggested depth of the tree (default: 2)
+   * @see [[org.apache.spark.rdd.RDD#treeReduce]]
+   * @deprecated Use [[org.apache.spark.rdd.RDD#treeReduce]] instead.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   def sliding(windowSize: Int): RDD[Array[T]] = sliding(windowSize, 1)
 

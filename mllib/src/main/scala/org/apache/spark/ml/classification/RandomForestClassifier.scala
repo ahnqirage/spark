@@ -17,12 +17,17 @@
 
 package org.apache.spark.ml.classification
 
+<<<<<<< HEAD
 import org.json4s.{DefaultFormats, JObject}
 import org.json4s.JsonDSL._
 
 import org.apache.spark.annotation.Since
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
+=======
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.tree.impl.RandomForest
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.tree._
 import org.apache.spark.ml.tree.impl.RandomForest
@@ -42,7 +47,12 @@ import org.apache.spark.sql.functions._
  * features.
  */
 @Since("1.4.0")
+<<<<<<< HEAD
 class RandomForestClassifier @Since("1.4.0") (
+=======
+@Experimental
+final class RandomForestClassifier @Since("1.4.0") (
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     @Since("1.4.0") override val uid: String)
   extends ProbabilisticClassifier[Vector, RandomForestClassifier, RandomForestClassificationModel]
   with RandomForestClassifierParams with DefaultParamsWritable {
@@ -54,6 +64,7 @@ class RandomForestClassifier @Since("1.4.0") (
 
   // Parameters from TreeClassifierParams:
 
+<<<<<<< HEAD
   /** @group setParam */
   @Since("1.4.0")
   override def setMaxDepth(value: Int): this.type = set(maxDepth, value)
@@ -111,6 +122,46 @@ class RandomForestClassifier @Since("1.4.0") (
   override def setNumTrees(value: Int): this.type = set(numTrees, value)
 
   /** @group setParam */
+=======
+  @Since("1.4.0")
+  override def setMaxDepth(value: Int): this.type = super.setMaxDepth(value)
+
+  @Since("1.4.0")
+  override def setMaxBins(value: Int): this.type = super.setMaxBins(value)
+
+  @Since("1.4.0")
+  override def setMinInstancesPerNode(value: Int): this.type =
+    super.setMinInstancesPerNode(value)
+
+  @Since("1.4.0")
+  override def setMinInfoGain(value: Double): this.type = super.setMinInfoGain(value)
+
+  @Since("1.4.0")
+  override def setMaxMemoryInMB(value: Int): this.type = super.setMaxMemoryInMB(value)
+
+  @Since("1.4.0")
+  override def setCacheNodeIds(value: Boolean): this.type = super.setCacheNodeIds(value)
+
+  @Since("1.4.0")
+  override def setCheckpointInterval(value: Int): this.type = super.setCheckpointInterval(value)
+
+  @Since("1.4.0")
+  override def setImpurity(value: String): this.type = super.setImpurity(value)
+
+  // Parameters from TreeEnsembleParams:
+
+  @Since("1.4.0")
+  override def setSubsamplingRate(value: Double): this.type = super.setSubsamplingRate(value)
+
+  @Since("1.4.0")
+  override def setSeed(value: Long): this.type = super.setSeed(value)
+
+  // Parameters from RandomForestParams:
+
+  @Since("1.4.0")
+  override def setNumTrees(value: Int): this.type = super.setNumTrees(value)
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.4.0")
   override def setFeatureSubsetStrategy(value: String): this.type =
     set(featureSubsetStrategy, value)
@@ -150,7 +201,12 @@ class RandomForestClassifier @Since("1.4.0") (
 }
 
 @Since("1.4.0")
+<<<<<<< HEAD
 object RandomForestClassifier extends DefaultParamsReadable[RandomForestClassifier] {
+=======
+@Experimental
+object RandomForestClassifier {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   /** Accessor for supported impurity settings: entropy, gini */
   @Since("1.4.0")
   final val supportedImpurities: Array[String] = TreeClassifierParams.supportedImpurities
@@ -173,7 +229,12 @@ object RandomForestClassifier extends DefaultParamsReadable[RandomForestClassifi
  *                Warning: These have null parents.
  */
 @Since("1.4.0")
+<<<<<<< HEAD
 class RandomForestClassificationModel private[ml] (
+=======
+@Experimental
+final class RandomForestClassificationModel private[ml] (
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     @Since("1.5.0") override val uid: String,
     private val _trees: Array[DecisionTreeClassificationModel],
     @Since("1.6.0") override val numFeatures: Int,
@@ -196,7 +257,11 @@ class RandomForestClassificationModel private[ml] (
     this(Identifiable.randomUID("rfc"), trees, numFeatures, numClasses)
 
   @Since("1.4.0")
+<<<<<<< HEAD
   override def trees: Array[DecisionTreeClassificationModel] = _trees
+=======
+  override def trees: Array[DecisionTreeModel] = _trees.asInstanceOf[Array[DecisionTreeModel]]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   // Note: We may add support for weights (based on tree performance) later on.
   private lazy val _treeWeights: Array[Double] = Array.fill[Double](_trees.length)(1.0)

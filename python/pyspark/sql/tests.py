@@ -362,6 +362,7 @@ class SQLTests(ReusedPySparkTestCase):
         [res] = self.spark.sql("SELECT strlen(a) FROM test WHERE strlen(a) > 1").collect()
         self.assertEqual(4, res[0])
 
+<<<<<<< HEAD
     def test_chained_udf(self):
         self.spark.catalog.registerFunction("double", lambda x: x + x, IntegerType())
         [row] = self.spark.sql("SELECT double(1)").collect()
@@ -407,6 +408,11 @@ class SQLTests(ReusedPySparkTestCase):
     def test_udf_without_arguments(self):
         self.spark.catalog.registerFunction("foo", lambda: "bar")
         [row] = self.spark.sql("SELECT foo()").collect()
+=======
+    def test_udf_without_arguments(self):
+        self.sqlCtx.registerFunction("foo", lambda: "bar")
+        [row] = self.sqlCtx.sql("SELECT foo()").collect()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         self.assertEqual(row[0], "bar")
 
     def test_udf_with_array_type(self):
@@ -735,7 +741,11 @@ class SQLTests(ReusedPySparkTestCase):
 
     def test_basic_functions(self):
         rdd = self.sc.parallelize(['{"foo":"bar"}', '{"foo":"baz"}'])
+<<<<<<< HEAD
         df = self.spark.read.json(rdd)
+=======
+        df = self.sqlCtx.read.json(rdd)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         df.count()
         df.collect()
         df.schema
@@ -754,8 +764,13 @@ class SQLTests(ReusedPySparkTestCase):
         df.collect()
 
     def test_apply_schema_to_row(self):
+<<<<<<< HEAD
         df = self.spark.read.json(self.sc.parallelize(["""{"a":2}"""]))
         df2 = self.spark.createDataFrame(df.rdd.map(lambda x: x), df.schema)
+=======
+        df = self.sqlCtx.read.json(self.sc.parallelize(["""{"a":2}"""]))
+        df2 = self.sqlCtx.createDataFrame(df.map(lambda x: x), df.schema)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         self.assertEqual(df.collect(), df2.collect())
 
         rdd = self.sc.parallelize(range(10)).map(lambda x: Row(a=x))
@@ -773,6 +788,7 @@ class SQLTests(ReusedPySparkTestCase):
         df3 = self.spark.createDataFrame(rdd, df.schema)
         self.assertEqual(10, df3.count())
 
+<<<<<<< HEAD
     def test_apply_schema_to_dict_and_rows(self):
         schema = StructType().add("b", StringType()).add("a", IntegerType())
         input = [{"a": 1}, {"b": "coffee"}]
@@ -788,13 +804,32 @@ class SQLTests(ReusedPySparkTestCase):
             input = [Row(a=x, b=str(x)) for x in range(10)]
             df4 = self.spark.createDataFrame(input, schema, verifySchema=verify)
             self.assertEqual(10, df4.count())
+=======
+    def test_infer_schema_to_local(self):
+        input = [{"a": 1}, {"b": "coffee"}]
+        rdd = self.sc.parallelize(input)
+        df = self.sqlCtx.createDataFrame(input)
+        df2 = self.sqlCtx.createDataFrame(rdd, samplingRatio=1.0)
+        self.assertEqual(df.schema, df2.schema)
+
+        rdd = self.sc.parallelize(range(10)).map(lambda x: Row(a=x, b=None))
+        df3 = self.sqlCtx.createDataFrame(rdd, df.schema)
+        self.assertEqual(10, df3.count())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def test_create_dataframe_schema_mismatch(self):
         input = [Row(a=1)]
         rdd = self.sc.parallelize(range(3)).map(lambda i: Row(a=i))
         schema = StructType([StructField("a", IntegerType()), StructField("b", StringType())])
+<<<<<<< HEAD
         df = self.spark.createDataFrame(rdd, schema)
         self.assertRaises(Exception, lambda: df.show())
+=======
+        df = self.sqlCtx.createDataFrame(rdd, schema)
+        message = ".*Input row doesn't have expected number of values required by the schema.*"
+        with self.assertRaisesRegexp(Exception, message):
+            df.show()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def test_serialize_nested_array_and_map(self):
         d = [Row(l=[Row(a=1, b='s')], d={"key": Row(c=1.0, d="2")})]
@@ -1062,16 +1097,27 @@ class SQLTests(ReusedPySparkTestCase):
         point = df1.head().point
         self.assertEqual(point, PythonOnlyPoint(1.0, 2.0))
 
+<<<<<<< HEAD
     def test_union_with_udt(self):
+=======
+    def test_unionAll_with_udt(self):
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         from pyspark.sql.tests import ExamplePoint, ExamplePointUDT
         row1 = (1.0, ExamplePoint(1.0, 2.0))
         row2 = (2.0, ExamplePoint(3.0, 4.0))
         schema = StructType([StructField("label", DoubleType(), False),
                              StructField("point", ExamplePointUDT(), False)])
+<<<<<<< HEAD
         df1 = self.spark.createDataFrame([row1], schema)
         df2 = self.spark.createDataFrame([row2], schema)
 
         result = df1.union(df2).orderBy("label").collect()
+=======
+        df1 = self.sqlCtx.createDataFrame([row1], schema)
+        df2 = self.sqlCtx.createDataFrame([row2], schema)
+
+        result = df1.unionAll(df2).orderBy("label").collect()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         self.assertEqual(
             result,
             [
@@ -1348,6 +1394,13 @@ class SQLTests(ReusedPySparkTestCase):
                              StructField("f2", StringType(), True, {'a': None})])
         rdd = self.sc.parallelize([["a", "b"], ["c", "d"]])
         self.spark.createDataFrame(rdd, schema)
+
+    def test_metadata_null(self):
+        from pyspark.sql.types import StructType, StringType, StructField
+        schema = StructType([StructField("f1", StringType(), True, None),
+                             StructField("f2", StringType(), True, {'a': None})])
+        rdd = self.sc.parallelize([["a", "b"], ["c", "d"]])
+        self.sqlCtx.createDataFrame(rdd, schema)
 
     def test_save_and_load(self):
         df = self.df
@@ -1644,7 +1697,11 @@ class SQLTests(ReusedPySparkTestCase):
     def test_help_command(self):
         # Regression test for SPARK-5464
         rdd = self.sc.parallelize(['{"foo":"bar"}', '{"foo":"baz"}'])
+<<<<<<< HEAD
         df = self.spark.read.json(rdd)
+=======
+        df = self.sqlCtx.read.json(rdd)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         # render_doc() reproduces the help() exception without printing output
         pydoc.render_doc(df)
         pydoc.render_doc(df.foo)
@@ -2782,6 +2839,7 @@ class HiveContextSQLTests(ReusedPySparkTestCase):
         for r, ex in zip(rs, expected):
             self.assertEqual(tuple(r), ex[:len(r)])
 
+<<<<<<< HEAD
     def test_window_functions_cumulative_sum(self):
         df = self.spark.createDataFrame([("one", 1), ("two", 2)], ["key", "value"])
         from pyspark.sql import functions as F
@@ -2816,6 +2874,10 @@ class HiveContextSQLTests(ReusedPySparkTestCase):
 
     def test_collect_functions(self):
         df = self.spark.createDataFrame([(1, "1"), (2, "2"), (1, "2"), (1, "2")], ["key", "value"])
+=======
+    def test_collect_functions(self):
+        df = self.sqlCtx.createDataFrame([(1, "1"), (2, "2"), (1, "2"), (1, "2")], ["key", "value"])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         from pyspark.sql import functions
 
         self.assertEqual(
@@ -2831,6 +2893,7 @@ class HiveContextSQLTests(ReusedPySparkTestCase):
             sorted(df.select(functions.collect_list(df.value).alias('r')).collect()[0].r),
             ["1", "2", "2", "2"])
 
+<<<<<<< HEAD
     def test_limit_and_take(self):
         df = self.spark.range(1, 1000, numPartitions=10)
 
@@ -3375,6 +3438,8 @@ class VectorizedUDFTests(ReusedPySparkTestCase):
         f = pandas_udf(lambda x: x, LongType())
         res = df.select(f(col('id')))
         self.assertEquals(df.collect(), res.collect())
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 if __name__ == "__main__":
     from pyspark.sql.tests import *

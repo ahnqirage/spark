@@ -26,11 +26,16 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.SparkContext
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.TableIdentifier
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.catalog.{CatalogStorageFormat, CatalogTable, CatalogTableType}
 import org.apache.spark.sql.execution.command.CreateTableCommand
 import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRelation}
 import org.apache.spark.sql.hive.HiveExternalCatalog._
 import org.apache.spark.sql.hive.client.HiveClient
+=======
+import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.hive.client.{HiveTable, ManagedTable}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.internal.StaticSQLConf._
@@ -708,11 +713,26 @@ class MetastoreDataSourcesSuite extends QueryTest with SQLTestUtils with TestHiv
     }
   }
 
+  test("a table with an invalid path can be still dropped") {
+    val schema = StructType(StructField("int", IntegerType, true) :: Nil)
+    val tableIdent = TableIdentifier("test_drop_table_with_invalid_path")
+    catalog.createDataSourceTable(
+      tableIdent = tableIdent,
+      userSpecifiedSchema = Some(schema),
+      partitionColumns = Array.empty[String],
+      provider = "json",
+      options = Map("path" -> "an invalid path"),
+      isExternal = false)
+
+    sql("DROP TABLE test_drop_table_with_invalid_path")
+  }
+
   test("SPARK-6024 wide schema support") {
     assert(spark.sparkContext.conf.get(SCHEMA_STRING_LENGTH_THRESHOLD) == 4000)
     withTable("wide_schema") {
       withTempDir { tempDir =>
         // We will need 80 splits for this schema if the threshold is 4000.
+<<<<<<< HEAD
         val schema = StructType((1 to 5000).map(i => StructField(s"c_$i", StringType)))
 
         val tableDesc = CatalogTable(
@@ -725,6 +745,19 @@ class MetastoreDataSourcesSuite extends QueryTest with SQLTestUtils with TestHiv
           provider = Some("json")
         )
         spark.sessionState.catalog.createTable(tableDesc, ignoreIfExists = false)
+=======
+        val schema = StructType((1 to 5000).map(i => StructField(s"c_$i", StringType, true)))
+        val tableIdent = TableIdentifier("wide_schema")
+        val path = catalog.hiveDefaultTableFilePath(tableIdent)
+        // Manually create a metastore data source table.
+        catalog.createDataSourceTable(
+          tableIdent = tableIdent,
+          userSpecifiedSchema = Some(schema),
+          partitionColumns = Array.empty[String],
+          provider = "json",
+          options = Map("path" -> path),
+          isExternal = false)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         sessionState.refreshTable("wide_schema")
 
@@ -1363,5 +1396,35 @@ class MetastoreDataSourcesSuite extends QueryTest with SQLTestUtils with TestHiv
     } finally {
       sparkSession.sparkContext.conf.set(DEBUG_MODE, previousValue)
     }
+  }
+
+  test("skip hive metadata on table creation") {
+    val schema = StructType((1 to 5).map(i => StructField(s"c_$i", StringType)))
+
+    catalog.createDataSourceTable(
+      tableIdent = TableIdentifier("not_skip_hive_metadata"),
+      userSpecifiedSchema = Some(schema),
+      partitionColumns = Array.empty[String],
+      provider = "parquet",
+      options = Map("path" -> "just a dummy path", "skipHiveMetadata" -> "false"),
+      isExternal = false)
+
+    // As a proxy for verifying that the table was stored in Hive compatible format, we verify that
+    // each column of the table is of native type StringType.
+    assert(catalog.client.getTable("default", "not_skip_hive_metadata").schema
+      .forall(column => HiveMetastoreTypes.toDataType(column.hiveType) == StringType))
+
+    catalog.createDataSourceTable(
+      tableIdent = TableIdentifier("skip_hive_metadata"),
+      userSpecifiedSchema = Some(schema),
+      partitionColumns = Array.empty[String],
+      provider = "parquet",
+      options = Map("path" -> "just a dummy path", "skipHiveMetadata" -> "true"),
+      isExternal = false)
+
+    // As a proxy for verifying that the table was stored in SparkSQL format, we verify that
+    // the table has a column type as array of StringType.
+    assert(catalog.client.getTable("default", "skip_hive_metadata").schema
+      .forall(column => HiveMetastoreTypes.toDataType(column.hiveType) == ArrayType(StringType)))
   }
 }

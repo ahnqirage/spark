@@ -17,6 +17,7 @@
 
 package org.apache.spark.examples.ml;
 // $example on$
+<<<<<<< HEAD
 import org.apache.spark.ml.clustering.LDA;
 import org.apache.spark.ml.clustering.LDAModel;
 import org.apache.spark.sql.Dataset;
@@ -26,6 +27,30 @@ import org.apache.spark.sql.SparkSession;
 
 /**
  * An example demonstrating LDA.
+=======
+import java.util.regex.Pattern;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.ml.clustering.LDA;
+import org.apache.spark.ml.clustering.LDAModel;
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.VectorUDT;
+import org.apache.spark.mllib.linalg.Vectors;
+import org.apache.spark.sql.DataFrame;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.catalyst.expressions.GenericRow;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+// $example off$
+
+/**
+ * An example demonstrating LDA
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * Run with
  * <pre>
  * bin/run-example ml.JavaLDAExample
@@ -33,6 +58,7 @@ import org.apache.spark.sql.SparkSession;
  */
 public class JavaLDAExample {
 
+<<<<<<< HEAD
   public static void main(String[] args) {
     // Creates a SparkSession
     SparkSession spark = SparkSession
@@ -66,4 +92,54 @@ public class JavaLDAExample {
 
     spark.stop();
   }
+=======
+  // $example on$
+  private static class ParseVector implements Function<String, Row> {
+    private static final Pattern separator = Pattern.compile(" ");
+
+    @Override
+    public Row call(String line) {
+      String[] tok = separator.split(line);
+      double[] point = new double[tok.length];
+      for (int i = 0; i < tok.length; ++i) {
+        point[i] = Double.parseDouble(tok[i]);
+      }
+      Vector[] points = {Vectors.dense(point)};
+      return new GenericRow(points);
+    }
+  }
+
+  public static void main(String[] args) {
+
+    String inputFile = "data/mllib/sample_lda_data.txt";
+
+    // Parses the arguments
+    SparkConf conf = new SparkConf().setAppName("JavaLDAExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext sqlContext = new SQLContext(jsc);
+
+    // Loads data
+    JavaRDD<Row> points = jsc.textFile(inputFile).map(new ParseVector());
+    StructField[] fields = {new StructField("features", new VectorUDT(), false, Metadata.empty())};
+    StructType schema = new StructType(fields);
+    DataFrame dataset = sqlContext.createDataFrame(points, schema);
+
+    // Trains a LDA model
+    LDA lda = new LDA()
+      .setK(10)
+      .setMaxIter(10);
+    LDAModel model = lda.fit(dataset);
+
+    System.out.println(model.logLikelihood(dataset));
+    System.out.println(model.logPerplexity(dataset));
+
+    // Shows the result
+    DataFrame topics = model.describeTopics(3);
+    topics.show(false);
+    model.transform(dataset).show(false);
+
+    jsc.stop();
+  }
+  // $example off$
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

@@ -207,12 +207,20 @@ private[spark] class TaskSetManager(
   private[scheduler] var emittedTaskSizeWarning = false
 
   /** Add a task to all the pending-task lists that it should be on. */
+<<<<<<< HEAD
   private[spark] def addPendingTask(index: Int) {
+=======
+  private def addPendingTask(index: Int) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     for (loc <- tasks(index).preferredLocations) {
       loc match {
         case e: ExecutorCacheTaskLocation =>
           pendingTasksForExecutor.getOrElseUpdate(e.executorId, new ArrayBuffer) += index
+<<<<<<< HEAD
         case e: HDFSCacheTaskLocation =>
+=======
+        case e: HDFSCacheTaskLocation => {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           val exe = sched.getExecutorsAliveOnHost(loc.host)
           exe match {
             case Some(set) =>
@@ -844,10 +852,30 @@ private[spark] class TaskSetManager(
         logWarning(failureReason)
         None
     }
+<<<<<<< HEAD
 
     sched.dagScheduler.taskEnded(tasks(index), reason, null, accumUpdates, info)
 
     if (!isZombie && reason.countTowardsTaskFailures) {
+=======
+    // always add to failed executors
+    failedExecutors.getOrElseUpdate(index, new HashMap[String, Long]()).
+      put(info.executorId, clock.getTimeMillis())
+    sched.dagScheduler.taskEnded(tasks(index), reason, null, null, info, taskMetrics)
+
+    if (successful(index)) {
+      logInfo(
+        s"Task ${info.id} in stage ${taskSet.id} (TID $tid) failed, " +
+          "but another instance of the task has already succeeded, " +
+          "so not re-queuing the task to be re-executed.")
+    } else {
+      addPendingTask(index)
+    }
+
+    if (!isZombie && state != TaskState.KILLED
+        && reason.isInstanceOf[TaskFailedReason]
+        && reason.asInstanceOf[TaskFailedReason].countTowardsTaskFailures) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       assert (null != failureReason)
       taskSetBlacklistHelperOpt.foreach(_.updateBlacklistForFailedTask(
         info.host, info.executorId, index, failureReason))

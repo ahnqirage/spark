@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.catalyst.expressions
 
+<<<<<<< HEAD
 import java.lang.{Boolean => JavaBoolean}
 import java.lang.{Byte => JavaByte}
 import java.lang.{Double => JavaDouble}
@@ -26,6 +27,9 @@ import java.lang.{Long => JavaLong}
 import java.lang.{Short => JavaShort}
 import java.math.{BigDecimal => JavaBigDecimal}
 import java.nio.charset.StandardCharsets
+=======
+import org.json4s.JsonAST._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.sql.{Date, Timestamp}
 import java.util
 import java.util.Objects
@@ -78,6 +82,7 @@ object Literal {
   }
 
   /**
+<<<<<<< HEAD
    * Returns the Spark SQL DataType for a given class object. Since this type needs to be resolved
    * in runtime, we use match-case idioms for class objects here. However, there are similar
    * functions in other files (e.g., HiveInspectors), so these functions need to merged into one.
@@ -122,6 +127,12 @@ object Literal {
    */
   def fromObject(obj: Any, objType: DataType): Literal = new Literal(obj, objType)
   def fromObject(obj: Any): Literal = new Literal(obj, ObjectType(obj.getClass))
+=======
+   * Constructs a [[Literal]] of [[ObjectType]], for example when you need to pass an object
+   * into code generation.
+   */
+  def fromObject(obj: AnyRef): Literal = new Literal(obj, ObjectType(obj.getClass))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   def fromJSON(json: JValue): Literal = {
     val dataType = DataType.parseDataType(json \ "dataType")
@@ -264,7 +275,11 @@ case class Literal (value: Any, dataType: DataType) extends LeafExpression {
 
   override protected def jsonFields: List[JField] = {
     // Turns all kinds of literal values to string in json field, as the type info is hard to
+<<<<<<< HEAD
     // retain in json format, e.g. {"a": 123} can be an int, or double, or decimal, etc.
+=======
+    // retain in json format, e.g. {"a": 123} can be a int, or double, or decimal, etc.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val jsonValue = (value, dataType) match {
       case (null, _) => JNull
       case (i: Int, DateType) => JString(DateTimeUtils.toJavaDate(i).toString)

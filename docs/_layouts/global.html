@@ -69,11 +69,19 @@
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Programming Guides<b class="caret"></b></a>
                             <ul class="dropdown-menu">
                                 <li><a href="quick-start.html">Quick Start</a></li>
+<<<<<<< HEAD
                                 <li><a href="rdd-programming-guide.html">RDDs, Accumulators, Broadcasts Vars</a></li>
                                 <li><a href="sql-programming-guide.html">SQL, DataFrames, and Datasets</a></li>
                                 <li><a href="structured-streaming-programming-guide.html">Structured Streaming</a></li>
                                 <li><a href="streaming-programming-guide.html">Spark Streaming (DStreams)</a></li>
                                 <li><a href="ml-guide.html">MLlib (Machine Learning)</a></li>
+=======
+                                <li><a href="programming-guide.html">Spark Programming Guide</a></li>
+                                <li class="divider"></li>
+                                <li><a href="streaming-programming-guide.html">Spark Streaming</a></li>
+                                <li><a href="sql-programming-guide.html">DataFrames, Datasets and SQL</a></li>
+                                <li><a href="mllib-guide.html">MLlib (Machine Learning)</a></li>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                                 <li><a href="graphx-programming-guide.html">GraphX (Graph Processing)</a></li>
                                 <li><a href="sparkr.html">SparkR (R on Spark)</a></li>
                             </ul>
@@ -124,6 +132,14 @@
         </div>
 
         <div class="container-wrapper">
+<<<<<<< HEAD
+
+            {% if page.url contains "/ml" %}
+                {% include nav-left-wrapper-ml.html nav-mllib=site.data.menu-mllib nav-ml=site.data.menu-ml %}
+                <input id="nav-trigger" class="nav-trigger" checked type="checkbox">
+                <label for="nav-trigger"></label>
+                <div class="content-with-sidebar" id="content">
+=======
 
             {% if page.url contains "/ml" %}
                 {% include nav-left-wrapper-ml.html nav-mllib=site.data.menu-mllib nav-ml=site.data.menu-ml %}
@@ -141,6 +157,7 @@
                 </div>
             {% else %}
                 <div class="content" id="content">
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                     {% if page.displayTitle %}
                         <h1 class="title">{{ page.displayTitle }}</h1>
                     {% else %}
@@ -150,6 +167,20 @@
                     {{ content }}
 
                 </div>
+<<<<<<< HEAD
+            {% else %}
+                <div class="content" id="content">
+                    {% if page.displayTitle %}
+                        <h1 class="title">{{ page.displayTitle }}</h1>
+                    {% else %}
+                        <h1 class="title">{{ page.title }}</h1>
+                    {% endif %}
+
+                    {{ content }}
+
+                </div>
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             {% endif %}
              <!-- /container -->
         </div>

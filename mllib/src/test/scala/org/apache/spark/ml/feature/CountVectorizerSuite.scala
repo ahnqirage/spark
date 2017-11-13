@@ -19,15 +19,23 @@ package org.apache.spark.ml.feature
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
+<<<<<<< HEAD
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
+=======
+import org.apache.spark.ml.util.DefaultReadWriteTest
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.Row
 
 class CountVectorizerSuite extends SparkFunSuite with MLlibTestSparkContext
   with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new CountVectorizer)
@@ -172,6 +180,7 @@ class CountVectorizerSuite extends SparkFunSuite with MLlibTestSparkContext
     }
   }
 
+<<<<<<< HEAD
   test("CountVectorizerModel and CountVectorizer with binary") {
     val df = Seq(
       (0, split("a a a a b b b b c d"),
@@ -202,6 +211,8 @@ class CountVectorizerSuite extends SparkFunSuite with MLlibTestSparkContext
     }
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("CountVectorizer read/write") {
     val t = new CountVectorizer()
       .setInputCol("myInputCol")

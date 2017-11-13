@@ -30,7 +30,15 @@ import org.apache.spark.sql.catalyst.plans.physical.BroadcastMode
 import org.apache.spark.sql.types.LongType
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.unsafe.map.BytesToBytesMap
+<<<<<<< HEAD
 import org.apache.spark.util.{KnownSizeEstimation, Utils}
+=======
+import org.apache.spark.unsafe.memory.MemoryLocation
+import org.apache.spark.util.{SizeEstimator, KnownSizeEstimation, Utils}
+import org.apache.spark.util.collection.CompactBuffer
+import org.apache.spark.{SparkConf, SparkEnv}
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Interface for a hashed relation by some key. Use [[HashedRelation.apply]] to create a concrete
@@ -121,10 +129,18 @@ private[execution] object HashedRelation {
  *  [number of keys]
  *  [size of key] [size of value] [key bytes] [bytes for value]
  */
+<<<<<<< HEAD
 private[joins] class UnsafeHashedRelation(
     private var numFields: Int,
     private var binaryMap: BytesToBytesMap)
   extends HashedRelation with Externalizable with KryoSerializable {
+=======
+private[joins] final class UnsafeHashedRelation(
+    private var hashTable: JavaHashMap[UnsafeRow, CompactBuffer[UnsafeRow]])
+  extends HashedRelation
+  with KnownSizeEstimation
+  with Externalizable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private[joins] def this() = this(0, null)  // Needed for serialization
 
@@ -134,10 +150,23 @@ private[joins] class UnsafeHashedRelation(
     new UnsafeHashedRelation(numFields, binaryMap)
   }
 
+<<<<<<< HEAD
   override def estimatedSize: Long = binaryMap.getTotalMemoryConsumption
 
   // re-used in get()/getValue()
   var resultRow = new UnsafeRow(numFields)
+=======
+  override def estimatedSize: Long = {
+    if (binaryMap != null) {
+      binaryMap.getTotalMemoryConsumption
+    } else {
+      SizeEstimator.estimate(hashTable)
+    }
+  }
+
+  override def get(key: InternalRow): Seq[InternalRow] = {
+    val unsafeKey = key.asInstanceOf[UnsafeRow]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def get(key: InternalRow): Iterator[InternalRow] = {
     val unsafeKey = key.asInstanceOf[UnsafeRow]

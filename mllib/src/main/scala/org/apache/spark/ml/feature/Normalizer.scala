@@ -17,7 +17,11 @@
 
 package org.apache.spark.ml.feature
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.UnaryTransformer
 import org.apache.spark.ml.linalg.{Vector, VectorUDT}
 import org.apache.spark.ml.param.{DoubleParam, ParamValidators}
@@ -29,8 +33,13 @@ import org.apache.spark.sql.types.DataType
 /**
  * Normalize a vector to have unit norm using the given p-norm.
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 class Normalizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+=======
+@Experimental
+class Normalizer(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends UnaryTransformer[Vector, Vector, Normalizer] with DefaultParamsWritable {
 
   @Since("1.4.0")

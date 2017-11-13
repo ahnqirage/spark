@@ -258,11 +258,14 @@ case class HashPartitioning(expressions: Seq[Expression], numPartitions: Int)
     case _ => false
   }
 
+<<<<<<< HEAD
   /**
    * Returns an expression that will produce a valid partition ID(i.e. non-negative and is less
    * than numPartitions) based on hashing expressions.
    */
   def partitionIdExpression: Expression = Pmod(new Murmur3Hash(expressions), Literal(numPartitions))
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**

@@ -19,11 +19,17 @@
 
 setOldClass("jobj")
 
+<<<<<<< HEAD
 #' S4 class that represents an RDD
 #'
 #' RDD can be created using functions like
 #'              \code{parallelize}, \code{textFile} etc.
 #'
+=======
+#' @title S4 class that represents an RDD
+#' @description RDD can be created using functions like
+#'              \code{parallelize}, \code{textFile} etc.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname RDD
 #' @seealso parallelize, textFile
 #' @slot env An R environment that stores bookkeeping states of the RDD
@@ -116,7 +122,11 @@ setMethod("initialize", "PipelinedRDD", function(.Object, prev, func, jrdd_val) 
 #' @noRd
 #' @param jrdd Java object reference to the backing JavaRDD
 #' @param serializedMode Use "byte" if the RDD stores data serialized in R, "string" if the RDD
+<<<<<<< HEAD
 #' stores strings, and "row" if the RDD stores the rows of a SparkDataFrame
+=======
+#' stores strings, and "row" if the RDD stores the rows of a DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @param isCached TRUE if the RDD is cached
 #' @param isCheckpointed TRUE if the RDD has been checkpointed
 RDD <- function(jrdd, serializedMode = "byte", isCached = FALSE,
@@ -215,7 +225,11 @@ setValidity("RDD",
 #' @rdname cache-methods
 #' @aliases cache,RDD-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("cacheRDD",
+=======
+setMethod("cache",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x) {
             callJMethod(getJRDD(x), "cache")
@@ -227,7 +241,11 @@ setMethod("cacheRDD",
 #'
 #' Persist this RDD with the specified storage level. For details of the
 #' supported storage levels, refer to
+<<<<<<< HEAD
 #'\url{http://spark.apache.org/docs/latest/rdd-programming-guide.html#rdd-persistence}.
+=======
+#'\url{http://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence}.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param x The RDD to persist
 #' @param newLevel The new storage level to be assigned
@@ -235,12 +253,20 @@ setMethod("cacheRDD",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10, 2L)
+<<<<<<< HEAD
 #' persistRDD(rdd, "MEMORY_AND_DISK")
+=======
+#' persist(rdd, "MEMORY_AND_DISK")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @rdname persist
 #' @aliases persist,RDD-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("persistRDD",
+=======
+setMethod("persist",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD", newLevel = "character"),
           function(x, newLevel = "MEMORY_ONLY") {
             callJMethod(getJRDD(x), "persist", getStorageLevel(newLevel))
@@ -259,12 +285,21 @@ setMethod("persistRDD",
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10, 2L)
 #' cache(rdd) # rdd@@env$isCached == TRUE
+<<<<<<< HEAD
 #' unpersistRDD(rdd) # rdd@@env$isCached == FALSE
 #'}
 #' @rdname unpersist
 #' @aliases unpersist,RDD-method
 #' @noRd
 setMethod("unpersistRDD",
+=======
+#' unpersist(rdd) # rdd@@env$isCached == FALSE
+#'}
+#' @rdname unpersist-methods
+#' @aliases unpersist,RDD-method
+#' @noRd
+setMethod("unpersist",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x) {
             callJMethod(getJRDD(x), "unpersist")
@@ -291,7 +326,11 @@ setMethod("unpersistRDD",
 #' @rdname checkpoint-methods
 #' @aliases checkpoint,RDD-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("checkpointRDD",
+=======
+setMethod("checkpoint",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x) {
             jrdd <- getJRDD(x)
@@ -313,7 +352,11 @@ setMethod("checkpointRDD",
 #' @rdname getNumPartitions
 #' @aliases getNumPartitions,RDD-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("getNumPartitionsRDD",
+=======
+setMethod("getNumPartitions",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x) {
             callJMethod(getJRDD(x), "getNumPartitions")
@@ -329,7 +372,11 @@ setMethod("numPartitions",
           signature(x = "RDD"),
           function(x) {
             .Deprecated("getNumPartitions")
+<<<<<<< HEAD
             getNumPartitionsRDD(x)
+=======
+            getNumPartitions(x)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           })
 
 #' Collect elements of an RDD
@@ -345,13 +392,21 @@ setMethod("numPartitions",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10, 2L)
+<<<<<<< HEAD
 #' collectRDD(rdd) # list from 1 to 10
+=======
+#' collect(rdd) # list from 1 to 10
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' collectPartition(rdd, 0L) # list from 1 to 5
 #'}
 #' @rdname collect-methods
 #' @aliases collect,RDD-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("collectRDD",
+=======
+setMethod("collect",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x, flatten = TRUE) {
             # Assumes a pairwise RDD is backed by a JavaPairRDD.
@@ -411,13 +466,21 @@ setMethod("collectAsMap",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
+<<<<<<< HEAD
 #' countRDD(rdd) # 10
+=======
+#' count(rdd) # 10
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' length(rdd) # Same as count
 #'}
 #' @rdname count
 #' @aliases count,RDD-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("countRDD",
+=======
+setMethod("count",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x) {
             countPartition <- function(part) {
@@ -431,7 +494,11 @@ setMethod("countRDD",
 #' Return the number of elements in the RDD
 #' @rdname count
 #' @noRd
+<<<<<<< HEAD
 setMethod("lengthRDD",
+=======
+setMethod("length",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x) {
             countRDD(x)
@@ -460,7 +527,11 @@ setMethod("countByValue",
           signature(x = "RDD"),
           function(x) {
             ones <- lapply(x, function(item) { list(item, 1L) })
+<<<<<<< HEAD
             collectRDD(reduceByKey(ones, `+`, getNumPartitionsRDD(x)))
+=======
+            collect(reduceByKey(ones, `+`, getNumPartitions(x)))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           })
 
 #' Apply a function to all elements
@@ -479,7 +550,11 @@ setMethod("countByValue",
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
 #' multiplyByTwo <- lapply(rdd, function(x) { x * 2 })
+<<<<<<< HEAD
 #' collectRDD(multiplyByTwo) # 2,4,6...
+=======
+#' collect(multiplyByTwo) # 2,4,6...
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 setMethod("lapply",
           signature(X = "RDD", FUN = "function"),
@@ -499,9 +574,15 @@ setMethod("map",
             lapply(X, FUN)
           })
 
+<<<<<<< HEAD
 #' Flatten results after applying a function to all elements
 #'
 #' This function returns a new RDD by first applying a function to all
+=======
+#' Flatten results after apply a function to all elements
+#'
+#' This function return a new RDD by first applying a function to all
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' elements of this RDD, and then flattening the results.
 #'
 #' @param X The RDD to apply the transformation.
@@ -512,7 +593,11 @@ setMethod("map",
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
 #' multiplyByTwo <- flatMap(rdd, function(x) { list(x*2, x*10) })
+<<<<<<< HEAD
 #' collectRDD(multiplyByTwo) # 2,20,4,40,6,60...
+=======
+#' collect(multiplyByTwo) # 2,20,4,40,6,60...
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @rdname flatMap
 #' @aliases flatMap,RDD,function-method
@@ -541,7 +626,11 @@ setMethod("flatMap",
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
 #' partitionSum <- lapplyPartition(rdd, function(part) { Reduce("+", part) })
+<<<<<<< HEAD
 #' collectRDD(partitionSum) # 15, 40
+=======
+#' collect(partitionSum) # 15, 40
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @rdname lapplyPartition
 #' @aliases lapplyPartition,RDD,function-method
@@ -576,7 +665,11 @@ setMethod("mapPartitions",
 #' rdd <- parallelize(sc, 1:10, 5L)
 #' prod <- lapplyPartitionsWithIndex(rdd, function(partIndex, part) {
 #'                                          partIndex * Reduce("+", part) })
+<<<<<<< HEAD
 #' collectRDD(prod, flatten = FALSE) # 0, 7, 22, 45, 76
+=======
+#' collect(prod, flatten = FALSE) # 0, 7, 22, 45, 76
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @rdname lapplyPartitionsWithIndex
 #' @aliases lapplyPartitionsWithIndex,RDD,function-method
@@ -607,7 +700,11 @@ setMethod("mapPartitionsWithIndex",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
+<<<<<<< HEAD
 #' unlist(collectRDD(filterRDD(rdd, function (x) { x < 3 }))) # c(1, 2)
+=======
+#' unlist(collect(filterRDD(rdd, function (x) { x < 3 }))) # c(1, 2)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname filterRDD
@@ -715,7 +812,11 @@ setMethod("sumRDD",
             reduce(x, "+")
           })
 
+<<<<<<< HEAD
 #' Applies a function to all elements in an RDD, and forces evaluation.
+=======
+#' Applies a function to all elements in an RDD, and force evaluation.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param x The RDD to apply the function
 #' @param func The function to be applied.
@@ -739,7 +840,11 @@ setMethod("foreach",
             invisible(collectRDD(mapPartitions(x, partition.func)))
           })
 
+<<<<<<< HEAD
 #' Applies a function to each partition in an RDD, and forces evaluation.
+=======
+#' Applies a function to each partition in an RDD, and force evaluation.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @examples
 #'\dontrun{
@@ -768,19 +873,31 @@ setMethod("foreachPartition",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
+<<<<<<< HEAD
 #' takeRDD(rdd, 2L) # list(1, 2)
+=======
+#' take(rdd, 2L) # list(1, 2)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname take
 #' @aliases take,RDD,numeric-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("takeRDD",
+=======
+setMethod("take",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD", num = "numeric"),
           function(x, num) {
             resList <- list()
             index <- -1
             jrdd <- getJRDD(x)
+<<<<<<< HEAD
             numPartitions <- getNumPartitionsRDD(x)
+=======
+            numPartitions <- getNumPartitions(x)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             serializedModeRDD <- getSerializedMode(x)
 
             # TODO(shivaram): Collect more than one partition based on size
@@ -817,10 +934,17 @@ setMethod("takeRDD",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
+<<<<<<< HEAD
 #' firstRDD(rdd)
 #' }
 #' @noRd
 setMethod("firstRDD",
+=======
+#' first(rdd)
+#' }
+#' @noRd
+setMethod("first",
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD"),
           function(x) {
             takeRDD(x, 1)[[1]]
@@ -838,15 +962,25 @@ setMethod("firstRDD",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, c(1,2,2,3,3,3))
+<<<<<<< HEAD
 #' sort(unlist(collectRDD(distinctRDD(rdd)))) # c(1, 2, 3)
+=======
+#' sort(unlist(collect(distinct(rdd)))) # c(1, 2, 3)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname distinct
 #' @aliases distinct,RDD-method
 #' @noRd
+<<<<<<< HEAD
 setMethod("distinctRDD",
           signature(x = "RDD"),
           function(x, numPartitions = SparkR:::getNumPartitionsRDD(x)) {
+=======
+setMethod("distinct",
+          signature(x = "RDD"),
+          function(x, numPartitions = SparkR:::getNumPartitions(x)) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             identical.mapped <- lapply(x, function(x) { list(x, NULL) })
             reduced <- reduceByKey(identical.mapped,
                                    function(x, y) { x },
@@ -868,8 +1002,13 @@ setMethod("distinctRDD",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
+<<<<<<< HEAD
 #' collectRDD(sampleRDD(rdd, FALSE, 0.5, 1618L)) # ~5 distinct elements
 #' collectRDD(sampleRDD(rdd, TRUE, 0.5, 9L)) # ~5 elements possibly with duplicates
+=======
+#' collect(sampleRDD(rdd, FALSE, 0.5, 1618L)) # ~5 distinct elements
+#' collect(sampleRDD(rdd, TRUE, 0.5, 9L)) # ~5 elements possibly with duplicates
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @rdname sampleRDD
 #' @aliases sampleRDD,RDD
@@ -990,7 +1129,11 @@ setMethod("takeSample", signature(x = "RDD", withReplacement = "logical",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list(1, 2, 3))
+<<<<<<< HEAD
 #' collectRDD(keyBy(rdd, function(x) { x*x })) # list(list(1, 1), list(4, 2), list(9, 3))
+=======
+#' collect(keyBy(rdd, function(x) { x*x })) # list(list(1, 1), list(4, 2), list(9, 3))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname keyBy
@@ -1019,13 +1162,22 @@ setMethod("keyBy",
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list(1, 2, 3, 4, 5, 6, 7), 4L)
 #' getNumPartitions(rdd)                   # 4
+<<<<<<< HEAD
 #' getNumPartitions(repartitionRDD(rdd, 2L))  # 2
+=======
+#' getNumPartitions(repartition(rdd, 2L))  # 2
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @rdname repartition
 #' @aliases repartition,RDD
 #' @noRd
+<<<<<<< HEAD
 setMethod("repartitionRDD",
           signature(x = "RDD"),
+=======
+setMethod("repartition",
+          signature(x = "RDD", numPartitions = "numeric"),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           function(x, numPartitions) {
             if (!is.null(numPartitions) && is.numeric(numPartitions)) {
               coalesceRDD(x, numPartitions, TRUE)
@@ -1049,11 +1201,19 @@ setMethod("repartitionRDD",
 #' @rdname coalesce
 #' @aliases coalesce,RDD
 #' @noRd
+<<<<<<< HEAD
 setMethod("coalesceRDD",
            signature(x = "RDD", numPartitions = "numeric"),
            function(x, numPartitions, shuffle = FALSE) {
              numPartitions <- numToInt(numPartitions)
              if (shuffle || numPartitions > SparkR:::getNumPartitionsRDD(x)) {
+=======
+setMethod("coalesce",
+           signature(x = "RDD", numPartitions = "numeric"),
+           function(x, numPartitions, shuffle = FALSE) {
+             numPartitions <- numToInt(numPartitions)
+             if (shuffle || numPartitions > SparkR:::getNumPartitions(x)) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                func <- function(partIndex, part) {
                  set.seed(partIndex)  # partIndex as seed
                  start <- as.integer(base::sample(numPartitions, 1) - 1)
@@ -1135,7 +1295,11 @@ setMethod("saveAsTextFile",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list(3, 2, 1))
+<<<<<<< HEAD
 #' collectRDD(sortBy(rdd, function(x) { x })) # list (1, 2, 3)
+=======
+#' collect(sortBy(rdd, function(x) { x })) # list (1, 2, 3)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname sortBy
@@ -1143,7 +1307,11 @@ setMethod("saveAsTextFile",
 #' @noRd
 setMethod("sortBy",
           signature(x = "RDD", func = "function"),
+<<<<<<< HEAD
           function(x, func, ascending = TRUE, numPartitions = SparkR:::getNumPartitionsRDD(x)) {
+=======
+          function(x, func, ascending = TRUE, numPartitions = SparkR:::getNumPartitions(x)) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             values(sortByKey(keyBy(x, func), ascending, numPartitions))
           })
 
@@ -1175,7 +1343,11 @@ takeOrderedElem <- function(x, num, ascending = TRUE) {
   resList <- list()
   index <- -1
   jrdd <- getJRDD(newRdd)
+<<<<<<< HEAD
   numPartitions <- getNumPartitionsRDD(newRdd)
+=======
+  numPartitions <- getNumPartitions(newRdd)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   serializedModeRDD <- getSerializedMode(newRdd)
 
   while (TRUE) {
@@ -1322,7 +1494,11 @@ setMethod("aggregateRDD",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
+<<<<<<< HEAD
 #' pipeRDD(rdd, "more")
+=======
+#' collect(pipeRDD(rdd, "more")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' Output: c("1", "2", ..., "10")
 #'}
 #' @aliases pipeRDD,RDD,character-method
@@ -1397,7 +1573,11 @@ setMethod("setName",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list("a", "b", "c", "d", "e"), 3L)
+<<<<<<< HEAD
 #' collectRDD(zipWithUniqueId(rdd))
+=======
+#' collect(zipWithUniqueId(rdd))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' # list(list("a", 0), list("b", 3), list("c", 1), list("d", 4), list("e", 2))
 #'}
 # nolint end
@@ -1407,7 +1587,11 @@ setMethod("setName",
 setMethod("zipWithUniqueId",
           signature(x = "RDD"),
           function(x) {
+<<<<<<< HEAD
             n <- getNumPartitionsRDD(x)
+=======
+            n <- getNumPartitions(x)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
             partitionFunc <- function(partIndex, part) {
               mapply(
@@ -1440,7 +1624,11 @@ setMethod("zipWithUniqueId",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list("a", "b", "c", "d", "e"), 3L)
+<<<<<<< HEAD
 #' collectRDD(zipWithIndex(rdd))
+=======
+#' collect(zipWithIndex(rdd))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' # list(list("a", 0), list("b", 1), list("c", 2), list("d", 3), list("e", 4))
 #'}
 # nolint end
@@ -1450,7 +1638,11 @@ setMethod("zipWithUniqueId",
 setMethod("zipWithIndex",
           signature(x = "RDD"),
           function(x) {
+<<<<<<< HEAD
             n <- getNumPartitionsRDD(x)
+=======
+            n <- getNumPartitions(x)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             if (n > 1) {
               nums <- collectRDD(lapplyPartition(x,
                                               function(part) {
@@ -1488,7 +1680,11 @@ setMethod("zipWithIndex",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, as.list(1:4), 2L)
+<<<<<<< HEAD
 #' collectRDD(glom(rdd))
+=======
+#' collect(glom(rdd))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' # list(list(1, 2), list(3, 4))
 #'}
 # nolint end
@@ -1556,7 +1752,11 @@ setMethod("unionRDD",
 #' sc <- sparkR.init()
 #' rdd1 <- parallelize(sc, 0:4)
 #' rdd2 <- parallelize(sc, 1000:1004)
+<<<<<<< HEAD
 #' collectRDD(zipRDD(rdd1, rdd2))
+=======
+#' collect(zipRDD(rdd1, rdd2))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' # list(list(0, 1000), list(1, 1001), list(2, 1002), list(3, 1003), list(4, 1004))
 #'}
 # nolint end
@@ -1566,8 +1766,13 @@ setMethod("unionRDD",
 setMethod("zipRDD",
           signature(x = "RDD", other = "RDD"),
           function(x, other) {
+<<<<<<< HEAD
             n1 <- getNumPartitionsRDD(x)
             n2 <- getNumPartitionsRDD(other)
+=======
+            n1 <- getNumPartitions(x)
+            n2 <- getNumPartitions(other)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             if (n1 != n2) {
               stop("Can only zip RDDs which have the same number of partitions.")
             }
@@ -1628,7 +1833,11 @@ setMethod("cartesian",
 #' sc <- sparkR.init()
 #' rdd1 <- parallelize(sc, list(1, 1, 2, 2, 3, 4))
 #' rdd2 <- parallelize(sc, list(2, 4))
+<<<<<<< HEAD
 #' collectRDD(subtract(rdd1, rdd2))
+=======
+#' collect(subtract(rdd1, rdd2))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' # list(1, 1, 3)
 #'}
 # nolint end
@@ -1637,7 +1846,11 @@ setMethod("cartesian",
 #' @noRd
 setMethod("subtract",
           signature(x = "RDD", other = "RDD"),
+<<<<<<< HEAD
           function(x, other, numPartitions = SparkR:::getNumPartitionsRDD(x)) {
+=======
+          function(x, other, numPartitions = SparkR:::getNumPartitions(x)) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             mapFunction <- function(e) { list(e, NA) }
             rdd1 <- map(x, mapFunction)
             rdd2 <- map(other, mapFunction)
@@ -1662,7 +1875,11 @@ setMethod("subtract",
 #' sc <- sparkR.init()
 #' rdd1 <- parallelize(sc, list(1, 10, 2, 3, 4, 5))
 #' rdd2 <- parallelize(sc, list(1, 6, 2, 3, 7, 8))
+<<<<<<< HEAD
 #' collectRDD(sortBy(intersection(rdd1, rdd2), function(x) { x }))
+=======
+#' collect(sortBy(intersection(rdd1, rdd2), function(x) { x }))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' # list(1, 2, 3)
 #'}
 # nolint end
@@ -1671,7 +1888,11 @@ setMethod("subtract",
 #' @noRd
 setMethod("intersection",
           signature(x = "RDD", other = "RDD"),
+<<<<<<< HEAD
           function(x, other, numPartitions = SparkR:::getNumPartitionsRDD(x)) {
+=======
+          function(x, other, numPartitions = SparkR:::getNumPartitions(x)) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             rdd1 <- map(x, function(v) { list(v, NA) })
             rdd2 <- map(other, function(v) { list(v, NA) })
 
@@ -1699,7 +1920,11 @@ setMethod("intersection",
 #' rdd1 <- parallelize(sc, 1:2, 2L)  # 1, 2
 #' rdd2 <- parallelize(sc, 1:4, 2L)  # 1:2, 3:4
 #' rdd3 <- parallelize(sc, 1:6, 2L)  # 1:3, 4:6
+<<<<<<< HEAD
 #' collectRDD(zipPartitions(rdd1, rdd2, rdd3,
+=======
+#' collect(zipPartitions(rdd1, rdd2, rdd3,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'                       func = function(x, y, z) { list(list(x, y, z))} ))
 #' # list(list(1, c(1,2), c(1,2,3)), list(2, c(3,4), c(4,5,6)))
 #'}
@@ -1714,7 +1939,11 @@ setMethod("zipPartitions",
             if (length(rrdds) == 1) {
               return(rrdds[[1]])
             }
+<<<<<<< HEAD
             nPart <- sapply(rrdds, getNumPartitionsRDD)
+=======
+            nPart <- sapply(rrdds, getNumPartitions)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             if (length(unique(nPart)) != 1) {
               stop("Can only zipPartitions RDDs which have the same number of partitions.")
             }

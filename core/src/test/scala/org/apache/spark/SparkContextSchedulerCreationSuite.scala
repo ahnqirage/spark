@@ -129,4 +129,61 @@ class SparkContextSchedulerCreationSuite
       case _ => fail()
     }
   }
+<<<<<<< HEAD
+=======
+
+  def testYarn(master: String, expectedClassName: String) {
+    try {
+      val sched = createTaskScheduler(master)
+      assert(sched.getClass === Utils.classForName(expectedClassName))
+    } catch {
+      case e: SparkException =>
+        assert(e.getMessage.contains("YARN mode not available"))
+        logWarning("YARN not available, could not test actual YARN scheduler creation")
+      case e: Throwable => fail(e)
+    }
+  }
+
+  test("yarn-cluster") {
+    testYarn("yarn-cluster", "org.apache.spark.scheduler.cluster.YarnClusterScheduler")
+  }
+
+  test("yarn-standalone") {
+    testYarn("yarn-standalone", "org.apache.spark.scheduler.cluster.YarnClusterScheduler")
+  }
+
+  test("yarn-client") {
+    testYarn("yarn-client", "org.apache.spark.scheduler.cluster.YarnScheduler")
+  }
+
+  def testMesos(master: String, expectedClass: Class[_], coarse: Boolean) {
+    val conf = new SparkConf().set("spark.mesos.coarse", coarse.toString)
+    try {
+      val sched = createTaskScheduler(master, conf)
+      assert(sched.backend.getClass === expectedClass)
+    } catch {
+      case e: UnsatisfiedLinkError =>
+        assert(e.getMessage.contains("mesos"))
+        logWarning("Mesos not available, could not test actual Mesos scheduler creation")
+      case e: Throwable => fail(e)
+    }
+  }
+
+  test("mesos fine-grained") {
+    testMesos("mesos://localhost:1234", classOf[MesosSchedulerBackend], coarse = false)
+  }
+
+  test("mesos coarse-grained") {
+    testMesos("mesos://localhost:1234", classOf[CoarseMesosSchedulerBackend], coarse = true)
+  }
+
+  test("mesos with zookeeper") {
+    testMesos("mesos://zk://localhost:1234,localhost:2345",
+      classOf[MesosSchedulerBackend], coarse = false)
+  }
+
+  test("mesos with zookeeper and Master URL starting with zk://") {
+    testMesos("zk://localhost:1234,localhost:2345", classOf[MesosSchedulerBackend], coarse = false)
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

@@ -24,9 +24,13 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.{Cross, FullOuter, Inner, LeftOuter, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Repartition}
 import org.apache.spark.sql.catalyst.plans.physical._
+<<<<<<< HEAD
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.sql.execution.exchange.{EnsureRequirements, ReusedExchangeExec, ReuseExchange, ShuffleExchangeExec}
 import org.apache.spark.sql.execution.joins.{BroadcastHashJoinExec, SortMergeJoinExec}
+=======
+import org.apache.spark.sql.execution.joins.{SortMergeJoin, BroadcastHashJoin}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSQLContext
@@ -46,8 +50,15 @@ class PlannerSuite extends SharedSQLContext {
         fail(s"Could query play aggregation query $query. Is it an aggregation query?"))
     val aggregations = planned.collect { case n if n.nodeName contains "Aggregate" => n }
 
+<<<<<<< HEAD
     // For the new aggregation code path, there will be four aggregate operator for
     // distinct aggregations.
+=======
+    // For the new aggregation code path, there will be three aggregate operator for
+    // distinct aggregations. There used to be four aggregate operators because single
+    // distinct aggregate used to trigger DistinctAggregationRewriter rewrite. Now the
+    // the rewrite only happens when there are multiple distinct aggregations.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(
       aggregations.size == 2 || aggregations.size == 4,
       s"The plan of query $query does not have partial aggregations.")
@@ -86,8 +97,13 @@ class PlannerSuite extends SharedSQLContext {
             |FROM testData2 l JOIN (SELECT * FROM testLimit LIMIT 1) r ON (l.a = r.key)
           """.stripMargin).queryExecution.sparkPlan
 
+<<<<<<< HEAD
         val broadcastHashJoins = planned.collect { case join: BroadcastHashJoinExec => join }
         val sortMergeJoins = planned.collect { case join: SortMergeJoinExec => join }
+=======
+        val broadcastHashJoins = planned.collect { case join: BroadcastHashJoin => join }
+        val sortMergeJoins = planned.collect { case join: SortMergeJoin => join }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         assert(broadcastHashJoins.size === 1, "Should use broadcast hash join")
         assert(sortMergeJoins.isEmpty, "Should not use sort merge join")
@@ -139,11 +155,19 @@ class PlannerSuite extends SharedSQLContext {
         val b = spark.table("tiny").as("b")
         val planned = a.join(b, $"a.key" === $"b.key").queryExecution.sparkPlan
 
+<<<<<<< HEAD
         val broadcastHashJoins = planned.collect { case join: BroadcastHashJoinExec => join }
         val sortMergeJoins = planned.collect { case join: SortMergeJoinExec => join }
 
         assert(broadcastHashJoins.size === 1, "Should use broadcast hash join")
         assert(sortMergeJoins.isEmpty, "Should not use shuffled hash join")
+=======
+        val broadcastHashJoins = planned.collect { case join: BroadcastHashJoin => join }
+        val sortMergeJoins = planned.collect { case join: SortMergeJoin => join }
+
+        assert(broadcastHashJoins.size === 1, "Should use broadcast hash join")
+        assert(sortMergeJoins.isEmpty, "Should not use sort merge join")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         spark.catalog.clearCache()
       }
@@ -154,8 +178,29 @@ class PlannerSuite extends SharedSQLContext {
     withTempPath { file =>
       val path = file.getCanonicalPath
       testData.write.parquet(path)
+<<<<<<< HEAD
       val df = spark.read.parquet(path)
       df.createOrReplaceTempView("testPushed")
+=======
+      val df = sqlContext.read.parquet(path)
+      sqlContext.registerDataFrameAsTable(df, "testPushed")
+
+      withTempTable("testPushed") {
+        val exp = sql("select * from testPushed where key = 15").queryExecution.executedPlan
+        assert(exp.toString.contains("PushedFilters: [EqualTo(key,15)]"))
+      }
+    }
+  }
+
+  test("efficient limit -> project -> sort") {
+    {
+      val query =
+        testData.select('key, 'value).sort('key).limit(2).logicalPlan
+      val planned = sqlContext.planner.TakeOrderedAndProject(query)
+      assert(planned.head.isInstanceOf[execution.TakeOrderedAndProject])
+      assert(planned.head.output === testData.select('key, 'value).logicalPlan.output)
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       withTempView("testPushed") {
         val exp = sql("select * from testPushed where key = 15").queryExecution.sparkPlan
@@ -400,8 +445,13 @@ class PlannerSuite extends SharedSQLContext {
 
     val outputPlan = EnsureRequirements(spark.sessionState.conf).apply(inputPlan)
     assertDistributionRequirementsAreSatisfied(outputPlan)
+<<<<<<< HEAD
     if (outputPlan.collect { case e: ShuffleExchangeExec => true }.size == 2) {
       fail(s"Topmost Exchange should have been eliminated:\n$outputPlan")
+=======
+    if (outputPlan.collect { case s: Sort => true }.isEmpty) {
+      fail(s"Sort should have been added:\n$outputPlan")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -420,8 +470,13 @@ class PlannerSuite extends SharedSQLContext {
 
     val outputPlan = EnsureRequirements(spark.sessionState.conf).apply(inputPlan)
     assertDistributionRequirementsAreSatisfied(outputPlan)
+<<<<<<< HEAD
     if (outputPlan.collect { case e: ShuffleExchangeExec => true }.size == 1) {
       fail(s"Topmost Exchange should not have been eliminated:\n$outputPlan")
+=======
+    if (outputPlan.collect { case s: Sort => true }.nonEmpty) {
+      fail(s"No sorts should have been added:\n$outputPlan")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -501,6 +556,7 @@ class PlannerSuite extends SharedSQLContext {
     )
     val outputPlan = EnsureRequirements(spark.sessionState.conf).apply(inputPlan)
     assertDistributionRequirementsAreSatisfied(outputPlan)
+<<<<<<< HEAD
     if (shouldHaveSort) {
       if (outputPlan.collect { case s: SortExec => true }.isEmpty) {
         fail(s"Sort should have been added:\n$outputPlan")
@@ -548,6 +604,10 @@ class PlannerSuite extends SharedSQLContext {
         childPlan = leftSmj,
         requiredOrdering = Seq(ordering),
         shouldHaveSort = needSort)
+=======
+    if (outputPlan.collect { case s: Sort => true }.isEmpty) {
+      fail(s"Sort should have been added:\n$outputPlan")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

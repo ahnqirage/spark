@@ -152,7 +152,11 @@ class DataFrameReader(OptionUtils):
         >>> df.dtypes
         [('name', 'string'), ('year', 'int'), ('month', 'int'), ('day', 'int')]
 
+<<<<<<< HEAD
         >>> df = spark.read.format('json').load(['python/test_support/sql/people.json',
+=======
+        >>> df = sqlContext.read.format('json').load(['python/test_support/sql/people.json',
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         ...     'python/test_support/sql/people1.json'])
         >>> df.dtypes
         [('age', 'bigint'), ('aka', 'string'), ('name', 'string')]
@@ -162,12 +166,21 @@ class DataFrameReader(OptionUtils):
         if schema is not None:
             self.schema(schema)
         self.options(**options)
+<<<<<<< HEAD
         if isinstance(path, basestring):
             return self._df(self._jreader.load(path))
         elif path is not None:
             if type(path) != list:
                 path = [path]
             return self._df(self._jreader.load(self._spark._sc._jvm.PythonUtils.toSeq(path)))
+=======
+        if path is not None:
+            if type(path) == list:
+                return self._df(
+                    self._jreader.load(self._sqlContext._sc._jvm.PythonUtils.toSeq(path)))
+            else:
+                return self._df(self._jreader.load(path))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         else:
             return self._df(self._jreader.load())
 
@@ -188,6 +201,7 @@ class DataFrameReader(OptionUtils):
 
         :param path: string represents path to the JSON dataset, or a list of paths,
                      or RDD of Strings storing JSON objects.
+<<<<<<< HEAD
         :param schema: an optional :class:`pyspark.sql.types.StructType` for the input schema or
                        a DDL-formatted string (For example ``col0 INT, col1 DOUBLE``).
         :param primitivesAsString: infers all primitive values as a string type. If None is set,
@@ -239,6 +253,21 @@ class DataFrameReader(OptionUtils):
                                           including tab and line feed characters) or not.
 
         >>> df1 = spark.read.json('python/test_support/sql/people.json')
+=======
+        :param schema: an optional :class:`StructType` for the input schema.
+
+        You can set the following JSON-specific options to deal with non-standard JSON files:
+            * ``primitivesAsString`` (default ``false``): infers all primitive values as a string \
+                type
+            * ``allowComments`` (default ``false``): ignores Java/C++ style comment in JSON records
+            * ``allowUnquotedFieldNames`` (default ``false``): allows unquoted JSON field names
+            * ``allowSingleQuotes`` (default ``true``): allows single quotes in addition to double \
+                quotes
+            * ``allowNumericLeadingZeros`` (default ``false``): allows leading zeros in numbers \
+                (e.g. 00012)
+
+        >>> df1 = sqlContext.read.json('python/test_support/sql/people.json')
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         >>> df1.dtypes
         [('age', 'bigint'), ('name', 'string')]
         >>> rdd = sc.textFile('python/test_support/sql/people.json')
@@ -256,9 +285,15 @@ class DataFrameReader(OptionUtils):
             timestampFormat=timestampFormat, multiLine=multiLine,
             allowUnquotedControlChars=allowUnquotedControlChars)
         if isinstance(path, basestring):
+<<<<<<< HEAD
             path = [path]
         if type(path) == list:
             return self._df(self._jreader.json(self._spark._sc._jvm.PythonUtils.toSeq(path)))
+=======
+            return self._df(self._jreader.json(path))
+        elif type(path) == list:
+            return self._df(self._jreader.json(self._sqlContext._sc._jvm.PythonUtils.toSeq(path)))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         elif isinstance(path, RDD):
             def func(iterator):
                 for x in iterator:
@@ -269,7 +304,11 @@ class DataFrameReader(OptionUtils):
                     yield x
             keyed = path.mapPartitions(func)
             keyed._bypass_serializer = True
+<<<<<<< HEAD
             jrdd = keyed._jrdd.map(self._spark._jvm.BytesToString())
+=======
+            jrdd = keyed._jrdd.map(self._sqlContext._jvm.BytesToString())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             return self._df(self._jreader.json(jrdd))
         else:
             raise TypeError("path can be only string, list or RDD")
@@ -305,21 +344,30 @@ class DataFrameReader(OptionUtils):
     @ignore_unicode_prefix
     @since(1.6)
     def text(self, paths):
+<<<<<<< HEAD
         """
         Loads text files and returns a :class:`DataFrame` whose schema starts with a
         string column named "value", and followed by partitioned columns if there
         are any.
+=======
+        """Loads a text file and returns a [[DataFrame]] with a single string column named "value".
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         Each line in the text file is a new row in the resulting DataFrame.
 
         :param paths: string, or list of strings, for input path(s).
 
+<<<<<<< HEAD
         >>> df = spark.read.text('python/test_support/sql/text-test.txt')
+=======
+        >>> df = sqlContext.read.text('python/test_support/sql/text-test.txt')
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         >>> df.collect()
         [Row(value=u'hello'), Row(value=u'this')]
         """
         if isinstance(paths, basestring):
             paths = [paths]
+<<<<<<< HEAD
         return self._df(self._jreader.text(self._spark._sc._jvm.PythonUtils.toSeq(paths)))
 
     @since(2.0)
@@ -448,6 +496,9 @@ class DataFrameReader(OptionUtils):
             return self._df(self._jreader.csv(jdataset))
         else:
             raise TypeError("path can be only string, list or RDD")
+=======
+        return self._df(self._jreader.text(self._sqlContext._sc._jvm.PythonUtils.toSeq(paths)))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     @since(1.5)
     def orc(self, path):
@@ -509,7 +560,11 @@ class DataFrameReader(OptionUtils):
             return self._df(self._jreader.jdbc(url, table, column, int(lowerBound), int(upperBound),
                                                int(numPartitions), jprop))
         if predicates is not None:
+<<<<<<< HEAD
             gateway = self._spark._sc._gateway
+=======
+            gateway = self._sqlContext._sc._gateway
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             jpredicates = utils.toJArray(gateway, gateway.jvm.java.lang.String, predicates)
             return self._df(self._jreader.jdbc(url, table, jpredicates, jprop))
         return self._df(self._jreader.jdbc(url, table, jprop))

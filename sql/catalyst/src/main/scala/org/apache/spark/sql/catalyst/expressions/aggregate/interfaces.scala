@@ -24,7 +24,11 @@ import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.types._
 
 /** The mode of an [[AggregateFunction]]. */
+<<<<<<< HEAD
 sealed trait AggregateMode
+=======
+private[sql] sealed trait AggregateMode
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * An [[AggregateFunction]] with [[Partial]] mode is used for partial aggregation.
@@ -84,6 +88,7 @@ object AggregateExpression {
  * A container for an [[AggregateFunction]] with its [[AggregateMode]] and a field
  * (`isDistinct`) indicating if DISTINCT keyword is specified for this function.
  */
+<<<<<<< HEAD
 case class AggregateExpression(
     aggregateFunction: AggregateFunction,
     mode: AggregateMode,
@@ -121,6 +126,14 @@ case class AggregateExpression(
       isDistinct,
       ExprId(0))
   }
+=======
+private[sql] case class AggregateExpression(
+    aggregateFunction: AggregateFunction,
+    mode: AggregateMode,
+    isDistinct: Boolean)
+  extends Expression
+  with Unevaluable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def children: Seq[Expression] = aggregateFunction :: Nil
   override def dataType: DataType = aggregateFunction.dataType
@@ -136,6 +149,7 @@ case class AggregateExpression(
     AttributeSet(childReferences)
   }
 
+<<<<<<< HEAD
   override def toString: String = {
     val prefix = mode match {
       case Partial => "partial_"
@@ -146,6 +160,11 @@ case class AggregateExpression(
   }
 
   override def sql: String = aggregateFunction.sql(isDistinct)
+=======
+  override def prettyString: String = aggregateFunction.prettyString
+
+  override def toString: String = s"(${aggregateFunction},mode=$mode,isDistinct=$isDistinct)"
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -165,7 +184,11 @@ case class AggregateExpression(
  * Code which accepts [[AggregateFunction]] instances should be prepared to handle both types of
  * aggregate functions.
  */
+<<<<<<< HEAD
 abstract class AggregateFunction extends Expression {
+=======
+sealed abstract class AggregateFunction extends Expression with ImplicitCastInputTypes {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /** An aggregate function is not foldable. */
   final override def foldable: Boolean = false
@@ -215,10 +238,41 @@ abstract class AggregateFunction extends Expression {
     s"$prettyName($distinct${children.map(_.sql).mkString(", ")})"
   }
 
+<<<<<<< HEAD
   /** String representation used in explain plans. */
   def toAggString(isDistinct: Boolean): String = {
     val start = if (isDistinct) "(distinct " else "("
     prettyName + flatArguments.mkString(start, ", ", ")")
+=======
+  /**
+   * Result of the aggregate function when the input is empty. This is currently only used for the
+   * proper rewriting of distinct aggregate functions.
+   */
+  def defaultResult: Option[Literal] = None
+
+  override protected def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String =
+    throw new UnsupportedOperationException(s"Cannot evaluate expression: $this")
+
+  /**
+   * Wraps this [[AggregateFunction]] in an [[AggregateExpression]] because
+   * [[AggregateExpression]] is the container of an [[AggregateFunction]], aggregation mode,
+   * and the flag indicating if this aggregation is distinct aggregation or not.
+   * An [[AggregateFunction]] should not be used without being wrapped in
+   * an [[AggregateExpression]].
+   */
+  def toAggregateExpression(): AggregateExpression = toAggregateExpression(isDistinct = false)
+
+  /**
+   * Wraps this [[AggregateFunction]] in an [[AggregateExpression]] and set isDistinct
+   * field of the [[AggregateExpression]] to the given value because
+   * [[AggregateExpression]] is the container of an [[AggregateFunction]], aggregation mode,
+   * and the flag indicating if this aggregation is distinct aggregation or not.
+   * An [[AggregateFunction]] should not be used without being wrapped in
+   * an [[AggregateExpression]].
+   */
+  def toAggregateExpression(isDistinct: Boolean): AggregateExpression = {
+    AggregateExpression(aggregateFunction = this, mode = Complete, isDistinct = isDistinct)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
@@ -240,7 +294,11 @@ abstract class AggregateFunction extends Expression {
  * `inputAggBufferOffset`, but not on the correctness of the attribute ids in `aggBufferAttributes`
  * and `inputAggBufferAttributes`.
  */
+<<<<<<< HEAD
 abstract class ImperativeAggregate extends AggregateFunction with CodegenFallback {
+=======
+abstract class ImperativeAggregate extends AggregateFunction {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * The offset of this function's first buffer value in the underlying shared mutable aggregation

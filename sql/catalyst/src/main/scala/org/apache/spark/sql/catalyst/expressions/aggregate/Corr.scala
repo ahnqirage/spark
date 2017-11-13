@@ -17,8 +17,14 @@
 
 package org.apache.spark.sql.catalyst.expressions.aggregate
 
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.dsl.expressions._
+=======
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.util.TypeUtils
 import org.apache.spark.sql.types._
 
 /**
@@ -28,6 +34,7 @@ import org.apache.spark.sql.types._
  * Definition of Pearson correlation can be found at
  * http://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
  */
+<<<<<<< HEAD
 // scalastyle:off line.size.limit
 @ExpressionDescription(
   usage = "_FUNC_(expr1, expr2) - Returns Pearson coefficient of correlation between a set of number pairs.")
@@ -37,9 +44,26 @@ case class Corr(x: Expression, y: Expression)
 
   override def children: Seq[Expression] = Seq(x, y)
   override def nullable: Boolean = true
+=======
+case class Corr(
+    left: Expression,
+    right: Expression,
+    mutableAggBufferOffset: Int = 0,
+    inputAggBufferOffset: Int = 0)
+  extends ImperativeAggregate {
+
+  def this(left: Expression, right: Expression) =
+    this(left, right, mutableAggBufferOffset = 0, inputAggBufferOffset = 0)
+
+  override def children: Seq[Expression] = Seq(left, right)
+
+  override def nullable: Boolean = false
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def dataType: DataType = DoubleType
   override def inputTypes: Seq[AbstractDataType] = Seq(DoubleType, DoubleType)
 
+<<<<<<< HEAD
   protected val n = AttributeReference("n", DoubleType, nullable = false)()
   protected val xAvg = AttributeReference("xAvg", DoubleType, nullable = false)()
   protected val yAvg = AttributeReference("yAvg", DoubleType, nullable = false)()
@@ -72,6 +96,22 @@ case class Corr(x: Expression, y: Expression)
       If(isNull, xMk, newXMk),
       If(isNull, yMk, newYMk)
     )
+=======
+  override def checkInputDataTypes(): TypeCheckResult = {
+    if (left.dataType.isInstanceOf[DoubleType] && right.dataType.isInstanceOf[DoubleType]) {
+      TypeCheckResult.TypeCheckSuccess
+    } else {
+      TypeCheckResult.TypeCheckFailure(
+        s"corr requires that both arguments are double type, " +
+          s"not (${left.dataType}, ${right.dataType}).")
+    }
+  }
+
+  override def aggBufferSchema: StructType = StructType.fromAttributes(aggBufferAttributes)
+
+  override def inputAggBufferAttributes: Seq[AttributeReference] = {
+    aggBufferAttributes.map(_.newInstance())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override val mergeExpressions: Seq[Expression] = {

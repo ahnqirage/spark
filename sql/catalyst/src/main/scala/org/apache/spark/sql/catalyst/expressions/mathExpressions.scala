@@ -1058,7 +1058,11 @@ abstract class RoundBase(child: Expression, scale: Expression,
         if (f.isNaN || f.isInfinite) {
           f
         } else {
+<<<<<<< HEAD
           BigDecimal(f.toDouble).setScale(_scale, mode).toFloat
+=======
+          BigDecimal(f.toDouble).setScale(_scale, HALF_UP).toFloat
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       case DoubleType =>
         val d = input1.asInstanceOf[Double]
@@ -1116,6 +1120,7 @@ abstract class RoundBase(child: Expression, scale: Expression,
         }
       case FloatType => // if child eval to NaN or Infinity, just return it.
         s"""
+<<<<<<< HEAD
           if (Float.isNaN(${ce.value}) || Float.isInfinite(${ce.value})) {
             ${ev.value} = ${ce.value};
           } else {
@@ -1129,6 +1134,21 @@ abstract class RoundBase(child: Expression, scale: Expression,
           } else {
             ${ev.value} = java.math.BigDecimal.valueOf(${ce.value}).
               setScale(${_scale}, java.math.BigDecimal.${modeStr}).doubleValue();
+=======
+          if (Float.isNaN(${ce.value}) || Float.isInfinite(${ce.value})){
+            ${ev.value} = ${ce.value};
+          } else {
+            ${ev.value} = java.math.BigDecimal.valueOf(${ce.value}).
+              setScale(${_scale}, java.math.BigDecimal.ROUND_HALF_UP).floatValue();
+          }"""
+      case DoubleType => // if child eval to NaN or Infinity, just return it.
+        s"""
+          if (Double.isNaN(${ce.value}) || Double.isInfinite(${ce.value})){
+            ${ev.value} = ${ce.value};
+          } else {
+            ${ev.value} = java.math.BigDecimal.valueOf(${ce.value}).
+              setScale(${_scale}, java.math.BigDecimal.ROUND_HALF_UP).doubleValue();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           }"""
     }
 

@@ -52,13 +52,18 @@ case class ComplexPlan(exprs: Seq[Seq[Expression]])
   override def output: Seq[Attribute] = Nil
 }
 
+<<<<<<< HEAD
 case class ExpressionInMap(map: Map[String, Expression]) extends Unevaluable {
+=======
+case class ExpressionInMap(map: Map[String, Expression]) extends Expression with Unevaluable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def children: Seq[Expression] = map.values.toSeq
   override def nullable: Boolean = true
   override def dataType: NullType = NullType
   override lazy val resolved = true
 }
 
+<<<<<<< HEAD
 case class SeqTupleExpression(sons: Seq[(Expression, Expression)],
     nonSons: Seq[(Expression, Expression)]) extends Unevaluable {
   override def children: Seq[Expression] = sons.flatMap(t => Iterator(t._1, t._2))
@@ -81,6 +86,8 @@ case class SelfReferenceUDF(
   def apply(key: String): Boolean = config.contains(key)
 }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class TreeNodeSuite extends SparkFunSuite {
   test("top node changed") {
     val after = Literal(1) transform { case Literal(1, _) => Literal(2) }
@@ -308,6 +315,7 @@ class TreeNodeSuite extends SparkFunSuite {
       assert(actual === expected)
     }
   }
+<<<<<<< HEAD
 
   test("toJSON") {
     def assertJSON(input: Any, json: JValue): Unit = {
@@ -574,4 +582,6 @@ class TreeNodeSuite extends SparkFunSuite {
     val right = JsonMethods.parse(rightJson)
     assert(left == right)
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

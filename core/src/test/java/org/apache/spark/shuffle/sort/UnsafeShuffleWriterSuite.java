@@ -131,6 +131,7 @@ public class UnsafeShuffleWriterSuite {
       });
 
     when(shuffleBlockResolver.getDataFile(anyInt(), anyInt())).thenReturn(mergedOutputFile);
+<<<<<<< HEAD
     doAnswer(invocationOnMock -> {
       partitionSizesInMergedFile = (long[]) invocationOnMock.getArguments()[2];
       File tmp = (File) invocationOnMock.getArguments()[3];
@@ -146,6 +147,31 @@ public class UnsafeShuffleWriterSuite {
       spillFilesCreated.add(file);
       return Tuple2$.MODULE$.apply(blockId, file);
     });
+=======
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+        partitionSizesInMergedFile = (long[]) invocationOnMock.getArguments()[2];
+        File tmp = (File) invocationOnMock.getArguments()[3];
+        mergedOutputFile.delete();
+        tmp.renameTo(mergedOutputFile);
+        return null;
+      }
+    }).when(shuffleBlockResolver)
+      .writeIndexFileAndCommit(anyInt(), anyInt(), any(long[].class), any(File.class));
+
+    when(diskBlockManager.createTempShuffleBlock()).thenAnswer(
+      new Answer<Tuple2<TempShuffleBlockId, File>>() {
+        @Override
+        public Tuple2<TempShuffleBlockId, File> answer(
+          InvocationOnMock invocationOnMock) throws Throwable {
+          TempShuffleBlockId blockId = new TempShuffleBlockId(UUID.randomUUID());
+          File file = File.createTempFile("spillFile", ".spill", tempDir);
+          spillFilesCreated.add(file);
+          return Tuple2$.MODULE$.apply(blockId, file);
+        }
+      });
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     when(taskContext.taskMetrics()).thenReturn(taskMetrics);
     when(shuffleDep.serializer()).thenReturn(serializer);
@@ -444,8 +470,13 @@ public class UnsafeShuffleWriterSuite {
     memoryManager.limit(UnsafeShuffleWriter.DEFAULT_INITIAL_SORT_BUFFER_SIZE * 16);
     final UnsafeShuffleWriter<Object, Object> writer = createWriter(false);
     final ArrayList<Product2<Object, Object>> dataToWrite = new ArrayList<>();
+<<<<<<< HEAD
     for (int i = 0; i < UnsafeShuffleWriter.DEFAULT_INITIAL_SORT_BUFFER_SIZE + 1; i++) {
       dataToWrite.add(new Tuple2<>(i, i));
+=======
+    for (int i = 0; i < UnsafeShuffleWriter.INITIAL_SORT_BUFFER_SIZE + 1; i++) {
+      dataToWrite.add(new Tuple2<Object, Object>(i, i));
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     writer.write(dataToWrite.iterator());
     writer.stop(true);

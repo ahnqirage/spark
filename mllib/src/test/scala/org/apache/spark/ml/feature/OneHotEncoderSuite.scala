@@ -22,6 +22,10 @@ import org.apache.spark.ml.attribute.{AttributeGroup, BinaryAttribute, NominalAt
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.DefaultReadWriteTest
+<<<<<<< HEAD
+=======
+import org.apache.spark.mllib.linalg.Vector
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
@@ -29,8 +33,11 @@ import org.apache.spark.sql.types._
 
 class OneHotEncoderSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   def stringIndexed(): DataFrame = {
     val data = Seq((0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c"))
@@ -116,6 +123,7 @@ class OneHotEncoderSuite
       .setDropLast(false)
     testDefaultReadWrite(t)
   }
+<<<<<<< HEAD
 
   test("OneHotEncoder with varying types") {
     val df = stringIndexed()
@@ -144,4 +152,6 @@ class OneHotEncoderSuite
       assert(output === expected)
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

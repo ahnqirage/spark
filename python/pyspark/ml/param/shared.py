@@ -284,10 +284,20 @@ class HasCheckpointInterval(Params):
     Mixin for param checkpointInterval: set checkpoint interval (>= 1) or disable checkpoint (-1). E.g. 10 means that the cache will get checkpointed every 10 iterations.
     """
 
+<<<<<<< HEAD
     checkpointInterval = Param(Params._dummy(), "checkpointInterval", "set checkpoint interval (>= 1) or disable checkpoint (-1). E.g. 10 means that the cache will get checkpointed every 10 iterations.", typeConverter=TypeConverters.toInt)
 
     def __init__(self):
         super(HasCheckpointInterval, self).__init__()
+=======
+    # a placeholder to make it appear in the generated doc
+    checkpointInterval = Param(Params._dummy(), "checkpointInterval", "set checkpoint interval (>= 1) or disable checkpoint (-1). E.g. 10 means that the cache will get checkpointed every 10 iterations.")
+
+    def __init__(self):
+        super(HasCheckpointInterval, self).__init__()
+        #: param for set checkpoint interval (>= 1) or disable checkpoint (-1). E.g. 10 means that the cache will get checkpointed every 10 iterations.
+        self.checkpointInterval = Param(self, "checkpointInterval", "set checkpoint interval (>= 1) or disable checkpoint (-1). E.g. 10 means that the cache will get checkpointed every 10 iterations.")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def setCheckpointInterval(self, value):
         """
@@ -637,17 +647,43 @@ class DecisionTreeParams(Params):
     Mixin for Decision Tree parameters.
     """
 
+<<<<<<< HEAD
     maxDepth = Param(Params._dummy(), "maxDepth", "Maximum depth of the tree. (>= 0) E.g., depth 0 means 1 leaf node; depth 1 means 1 internal node + 2 leaf nodes.", typeConverter=TypeConverters.toInt)
     maxBins = Param(Params._dummy(), "maxBins", "Max number of bins for discretizing continuous features.  Must be >=2 and >= number of categories for any categorical feature.", typeConverter=TypeConverters.toInt)
     minInstancesPerNode = Param(Params._dummy(), "minInstancesPerNode", "Minimum number of instances each child must have after split. If a split causes the left or right child to have fewer than minInstancesPerNode, the split will be discarded as invalid. Should be >= 1.", typeConverter=TypeConverters.toInt)
     minInfoGain = Param(Params._dummy(), "minInfoGain", "Minimum information gain for a split to be considered at a tree node.", typeConverter=TypeConverters.toFloat)
     maxMemoryInMB = Param(Params._dummy(), "maxMemoryInMB", "Maximum memory in MB allocated to histogram aggregation. If too small, then 1 node will be split per iteration, and its aggregates may exceed this size.", typeConverter=TypeConverters.toInt)
     cacheNodeIds = Param(Params._dummy(), "cacheNodeIds", "If false, the algorithm will pass trees to executors to match instances with nodes. If true, the algorithm will cache node IDs for each instance. Caching can speed up training of deeper trees. Users can set how often should the cache be checkpointed or disable it by setting checkpointInterval.", typeConverter=TypeConverters.toBoolean)
+=======
+    # a placeholder to make it appear in the generated doc
+    maxDepth = Param(Params._dummy(), "maxDepth", "Maximum depth of the tree. (>= 0) E.g., depth 0 means 1 leaf node; depth 1 means 1 internal node + 2 leaf nodes.")
+    maxBins = Param(Params._dummy(), "maxBins", "Max number of bins for discretizing continuous features.  Must be >=2 and >= number of categories for any categorical feature.")
+    minInstancesPerNode = Param(Params._dummy(), "minInstancesPerNode", "Minimum number of instances each child must have after split. If a split causes the left or right child to have fewer than minInstancesPerNode, the split will be discarded as invalid. Should be >= 1.")
+    minInfoGain = Param(Params._dummy(), "minInfoGain", "Minimum information gain for a split to be considered at a tree node.")
+    maxMemoryInMB = Param(Params._dummy(), "maxMemoryInMB", "Maximum memory in MB allocated to histogram aggregation.")
+    cacheNodeIds = Param(Params._dummy(), "cacheNodeIds", "If false, the algorithm will pass trees to executors to match instances with nodes. If true, the algorithm will cache node IDs for each instance. Caching can speed up training of deeper trees. Users can set how often should the cache be checkpointed or disable it by setting checkpointInterval.")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     
 
     def __init__(self):
         super(DecisionTreeParams, self).__init__()
+<<<<<<< HEAD
 
+=======
+        #: param for Maximum depth of the tree. (>= 0) E.g., depth 0 means 1 leaf node; depth 1 means 1 internal node + 2 leaf nodes.
+        self.maxDepth = Param(self, "maxDepth", "Maximum depth of the tree. (>= 0) E.g., depth 0 means 1 leaf node; depth 1 means 1 internal node + 2 leaf nodes.")
+        #: param for Max number of bins for discretizing continuous features.  Must be >=2 and >= number of categories for any categorical feature.
+        self.maxBins = Param(self, "maxBins", "Max number of bins for discretizing continuous features.  Must be >=2 and >= number of categories for any categorical feature.")
+        #: param for Minimum number of instances each child must have after split. If a split causes the left or right child to have fewer than minInstancesPerNode, the split will be discarded as invalid. Should be >= 1.
+        self.minInstancesPerNode = Param(self, "minInstancesPerNode", "Minimum number of instances each child must have after split. If a split causes the left or right child to have fewer than minInstancesPerNode, the split will be discarded as invalid. Should be >= 1.")
+        #: param for Minimum information gain for a split to be considered at a tree node.
+        self.minInfoGain = Param(self, "minInfoGain", "Minimum information gain for a split to be considered at a tree node.")
+        #: param for Maximum memory in MB allocated to histogram aggregation.
+        self.maxMemoryInMB = Param(self, "maxMemoryInMB", "Maximum memory in MB allocated to histogram aggregation.")
+        #: param for If false, the algorithm will pass trees to executors to match instances with nodes. If true, the algorithm will cache node IDs for each instance. Caching can speed up training of deeper trees. Users can set how often should the cache be checkpointed or disable it by setting checkpointInterval.
+        self.cacheNodeIds = Param(self, "cacheNodeIds", "If false, the algorithm will pass trees to executors to match instances with nodes. If true, the algorithm will cache node IDs for each instance. Caching can speed up training of deeper trees. Users can set how often should the cache be checkpointed or disable it by setting checkpointInterval.")
+        
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def setMaxDepth(self, value):
         """
         Sets the value of :py:attr:`maxDepth`.

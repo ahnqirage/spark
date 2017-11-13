@@ -24,6 +24,7 @@ import scala.collection.JavaConverters._
 
 import org.apache.hadoop.fs.Path
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.attribute._
@@ -32,6 +33,16 @@ import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
+=======
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.{Estimator, Model}
+import org.apache.spark.ml.attribute._
+import org.apache.spark.ml.param._
+import org.apache.spark.ml.param.shared._
+import org.apache.spark.ml.util._
+import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector, VectorUDT}
+import org.apache.spark.sql.{DataFrame, Row}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.util.collection.OpenHashSet
@@ -93,10 +104,16 @@ private[ml] trait VectorIndexerParams extends Params with HasInputCol with HasOu
  *  - Add warning if a categorical feature has only 1 category.
  *  - Add option for allowing unknown categories.
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 class VectorIndexer @Since("1.4.0") (
     @Since("1.4.0") override val uid: String)
   extends Estimator[VectorIndexerModel] with VectorIndexerParams with DefaultParamsWritable {
+=======
+@Experimental
+class VectorIndexer(override val uid: String) extends Estimator[VectorIndexerModel]
+  with VectorIndexerParams with DefaultParamsWritable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("vecIdx"))
@@ -263,9 +280,15 @@ object VectorIndexer extends DefaultParamsReadable[VectorIndexer] {
  */
 @Since("1.4.0")
 class VectorIndexerModel private[ml] (
+<<<<<<< HEAD
     @Since("1.4.0") override val uid: String,
     @Since("1.4.0") val numFeatures: Int,
     @Since("1.4.0") val categoryMaps: Map[Int, Map[Double, Int]])
+=======
+    override val uid: String,
+    val numFeatures: Int,
+    val categoryMaps: Map[Int, Map[Double, Int]])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Model[VectorIndexerModel] with VectorIndexerParams with MLWritable {
 
   import VectorIndexerModel._
@@ -447,7 +470,11 @@ object VectorIndexerModel extends MLReadable[VectorIndexerModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = Data(instance.numFeatures, instance.categoryMaps)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+=======
+      sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -458,7 +485,11 @@ object VectorIndexerModel extends MLReadable[VectorIndexerModel] {
     override def load(path: String): VectorIndexerModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       val data = sparkSession.read.parquet(dataPath)
+=======
+      val data = sqlContext.read.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .select("numFeatures", "categoryMaps")
         .head()
       val numFeatures = data.getAs[Int](0)

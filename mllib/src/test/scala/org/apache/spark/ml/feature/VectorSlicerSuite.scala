@@ -22,6 +22,10 @@ import org.apache.spark.ml.attribute.{Attribute, AttributeGroup, NumericAttribut
 import org.apache.spark.ml.linalg.{Vector, Vectors, VectorUDT}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.DefaultReadWriteTest
+<<<<<<< HEAD
+=======
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{StructField, StructType}

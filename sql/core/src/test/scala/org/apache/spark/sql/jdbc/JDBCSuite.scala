@@ -18,6 +18,7 @@
 package org.apache.spark.sql.jdbc
 
 import java.math.BigDecimal
+<<<<<<< HEAD
 import java.sql.{Date, DriverManager, SQLException, Timestamp}
 import java.util.{Calendar, GregorianCalendar, Properties}
 
@@ -34,8 +35,20 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JDBCRDD, JDBCRelation, JdbcUtils}
 import org.apache.spark.sql.execution.metric.InputOutputMetricsHelper
 import org.apache.spark.sql.sources._
+=======
+import java.sql.{Date, DriverManager, Timestamp}
+import java.util.{Calendar, GregorianCalendar, Properties}
+
+import org.h2.jdbc.JdbcSQLException
+import org.scalatest.BeforeAndAfter
+import org.scalatest.PrivateMethodTester
+
+import org.apache.spark.SparkFunSuite
+import org.apache.spark.sql.execution.datasources.jdbc.JDBCRDD
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.sources._
 import org.apache.spark.util.Utils
 
 class JDBCSuite extends SparkFunSuite
@@ -695,6 +708,7 @@ class JDBCSuite extends SparkFunSuite
   }
 
   test("compile filters") {
+<<<<<<< HEAD
     val compileFilter = PrivateMethod[Option[String]]('compileFilter)
     def doCompileFilter(f: Filter): String =
       JDBCRDD invokePrivate compileFilter(f, JdbcDialects.get("jdbc:")) getOrElse("")
@@ -722,6 +736,21 @@ class JDBCSuite extends SparkFunSuite
     assert(doCompileFilter(And(EqualNullSafe("col0", "abc"), EqualTo("col1", "def")))
       === """((NOT ("col0" != 'abc' OR "col0" IS NULL OR 'abc' IS NULL) """
         + """OR ("col0" IS NULL AND 'abc' IS NULL))) AND ("col1" = 'def')""")
+=======
+    val compileFilter = PrivateMethod[String]('compileFilter)
+    def doCompileFilter(f: Filter): String = JDBCRDD invokePrivate compileFilter(f)
+    assert(doCompileFilter(EqualTo("col0", 3)) === "col0 = 3")
+    assert(doCompileFilter(Not(EqualTo("col1", "abc"))) === "col1 != 'abc'")
+    assert(doCompileFilter(LessThan("col0", 5)) === "col0 < 5")
+    assert(doCompileFilter(LessThan("col3",
+      Timestamp.valueOf("1995-11-21 00:00:00.0"))) === "col3 < '1995-11-21 00:00:00.0'")
+    assert(doCompileFilter(LessThan("col4", Date.valueOf("1983-08-04"))) === "col4 < '1983-08-04'")
+    assert(doCompileFilter(LessThanOrEqual("col0", 5)) === "col0 <= 5")
+    assert(doCompileFilter(GreaterThan("col0", 3)) === "col0 > 3")
+    assert(doCompileFilter(GreaterThanOrEqual("col0", 3)) === "col0 >= 3")
+    assert(doCompileFilter(IsNull("col1")) === "col1 IS NULL")
+    assert(doCompileFilter(IsNotNull("col1")) === "col1 IS NOT NULL")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("Dialect unregister") {
@@ -837,13 +866,18 @@ class JDBCSuite extends SparkFunSuite
     // Regression test for bug SPARK-11788
     val timestamp = java.sql.Timestamp.valueOf("2001-02-20 11:22:33.543543");
     val date = java.sql.Date.valueOf("1995-01-01")
+<<<<<<< HEAD
     val jdbcDf = spark.read.jdbc(urlWithUserAndPass, "TEST.TIMETYPES", new Properties())
+=======
+    val jdbcDf = sqlContext.read.jdbc(urlWithUserAndPass, "TEST.TIMETYPES", new Properties)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val rows = jdbcDf.where($"B" > date && $"C" > timestamp).collect()
     assert(rows(0).getAs[java.sql.Date](1) === java.sql.Date.valueOf("1996-01-01"))
     assert(rows(0).getAs[java.sql.Timestamp](2)
       === java.sql.Timestamp.valueOf("2002-02-20 11:22:33.543543"))
   }
 
+<<<<<<< HEAD
   test("test credentials in the properties are not in plan output") {
     val df = sql("SELECT * FROM parts")
     val explain = ExplainCommand(df.queryExecution.logical, extended = true)
@@ -893,11 +927,14 @@ class JDBCSuite extends SparkFunSuite
     }
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("SPARK 12941: The data type mapping for StringType to Oracle") {
     val oracleDialect = JdbcDialects.get("jdbc:oracle://127.0.0.1/db")
     assert(oracleDialect.getJDBCType(StringType).
       map(_.databaseTypeDefinition).get == "VARCHAR2(255)")
   }
+<<<<<<< HEAD
 
   test("SPARK-16625: General data types to be mapped to Oracle") {
 
@@ -1131,4 +1168,6 @@ class JDBCSuite extends SparkFunSuite
       val df3 = sql("SELECT * FROM test_sessionInitStatement")
       assert(df3.collect() === Array(Row(21519, 1234)))
     }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

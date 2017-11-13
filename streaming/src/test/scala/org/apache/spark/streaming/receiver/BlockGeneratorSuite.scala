@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.language.reflectiveCalls
 
 import org.scalatest.BeforeAndAfter
 import org.scalatest.Matchers._

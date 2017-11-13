@@ -17,8 +17,11 @@
 
 package org.apache.spark.util.collection
 
+<<<<<<< HEAD
 import java.util.Arrays
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 /**
  * A simple, fixed-size bit set implementation. This implementation is fast because it avoids
  * safety/bound checking.

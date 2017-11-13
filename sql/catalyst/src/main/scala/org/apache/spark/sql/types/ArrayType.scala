@@ -18,11 +18,19 @@
 package org.apache.spark.sql.types
 
 import scala.math.Ordering
+<<<<<<< HEAD
 
 import org.json4s.JsonDSL._
 
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.sql.catalyst.util.ArrayData
+=======
+
+import org.json4s.JsonDSL._
+
+import org.apache.spark.annotation.DeveloperApi
+import org.apache.spark.sql.catalyst.util.{ArrayData => _}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Companion object for ArrayType.

@@ -18,7 +18,11 @@
 package org.apache.spark.launcher;
 
 import java.io.IOException;
+<<<<<<< HEAD
 import java.io.InputStream;
+=======
+import java.lang.reflect.Method;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -98,10 +102,27 @@ class ChildProcAppHandle implements SparkAppHandle {
   public synchronized void kill() {
     disconnect();
     if (childProc != null) {
+<<<<<<< HEAD
       if (childProc.isAlive()) {
         childProc.destroyForcibly();
       }
       childProc = null;
+=======
+      try {
+        childProc.exitValue();
+      } catch (IllegalThreadStateException e) {
+        // Child is still alive. Try to use Java 8's "destroyForcibly()" if available,
+        // fall back to the old API if it's not there.
+        try {
+          Method destroy = childProc.getClass().getMethod("destroyForcibly");
+          destroy.invoke(childProc);
+        } catch (Exception inner) {
+          childProc.destroy();
+        }
+      } finally {
+        childProc = null;
+      }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     setState(State.KILLED);
   }

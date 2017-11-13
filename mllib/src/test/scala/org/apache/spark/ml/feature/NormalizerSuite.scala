@@ -18,16 +18,24 @@
 package org.apache.spark.ml.feature
 
 import org.apache.spark.SparkFunSuite
+<<<<<<< HEAD
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
 import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.ml.util.TestingUtils._
+=======
+import org.apache.spark.ml.util.DefaultReadWriteTest
+import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{DataFrame, Row}
 
 
 class NormalizerSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @transient var data: Array[Vector] = _
   @transient var dataFrame: DataFrame = _

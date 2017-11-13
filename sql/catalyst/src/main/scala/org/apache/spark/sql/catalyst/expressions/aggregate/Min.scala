@@ -36,10 +36,20 @@ case class Min(child: Expression) extends DeclarativeAggregate {
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForOrderingExpr(child.dataType, "function min")
 
+<<<<<<< HEAD
   private lazy val min = AttributeReference("min", child.dataType)()
 
   override lazy val aggBufferAttributes: Seq[AttributeReference] = min :: Nil
 
+=======
+  override def checkInputDataTypes(): TypeCheckResult =
+    TypeUtils.checkForOrderingExpr(child.dataType, "function min")
+
+  private lazy val min = AttributeReference("min", child.dataType)()
+
+  override lazy val aggBufferAttributes: Seq[AttributeReference] = min :: Nil
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override lazy val initialValues: Seq[Expression] = Seq(
     /* min = */ Literal.create(null, child.dataType)
   )

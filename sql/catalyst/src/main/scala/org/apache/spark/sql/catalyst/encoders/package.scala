@@ -18,6 +18,10 @@
 package org.apache.spark.sql.catalyst
 
 import org.apache.spark.sql.Encoder
+<<<<<<< HEAD
+=======
+import org.apache.spark.sql.catalyst.expressions.AttributeReference
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 package object encoders {
   /**
@@ -26,7 +30,11 @@ package object encoders {
    * references from a specific schema.)  This requirement allows us to preserve whether a given
    * object type is being bound by name or by ordinal when doing resolution.
    */
+<<<<<<< HEAD
   def encoderFor[A : Encoder]: ExpressionEncoder[A] = implicitly[Encoder[A]] match {
+=======
+  private[sql] def encoderFor[A : Encoder]: ExpressionEncoder[A] = implicitly[Encoder[A]] match {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     case e: ExpressionEncoder[A] =>
       e.assertUnresolved()
       e

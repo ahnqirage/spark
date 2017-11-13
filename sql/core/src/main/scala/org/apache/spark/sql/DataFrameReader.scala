@@ -21,11 +21,20 @@ import java.util.{Locale, Properties}
 
 import scala.collection.JavaConverters._
 
+<<<<<<< HEAD
 import org.apache.spark.Partition
 import org.apache.spark.annotation.InterfaceStability
+=======
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.util.StringUtils
+
+import org.apache.spark.{Logging, Partition}
+import org.apache.spark.annotation.Experimental
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.json.{CreateJacksonParser, JacksonParser, JSONOptions}
 import org.apache.spark.sql.execution.command.DDLUtils
 import org.apache.spark.sql.execution.datasources.{DataSource, FailureSafeParser}
@@ -36,6 +45,14 @@ import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.sources.v2.{DataSourceV2, DataSourceV2Options, ReadSupport, ReadSupportWithSchema}
 import org.apache.spark.sql.types.{StringType, StructType}
 import org.apache.spark.unsafe.types.UTF8String
+=======
+import org.apache.spark.sql.catalyst.SqlParser
+import org.apache.spark.sql.execution.datasources.jdbc.{JDBCPartition, JDBCPartitioningInfo, JDBCRelation}
+import org.apache.spark.sql.execution.datasources.json.JSONRelation
+import org.apache.spark.sql.execution.datasources.parquet.ParquetRelation
+import org.apache.spark.sql.execution.datasources.{LogicalRelation, ResolvedDataSource}
+import org.apache.spark.sql.types.StructType
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Interface used to load a [[Dataset]] from external storage systems (e.g. file systems,
@@ -155,8 +172,14 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    *
    * @since 1.4.0
    */
+<<<<<<< HEAD
   def load(): DataFrame = {
     load(Seq.empty: _*) // force invocation of `load(...varargs...)`
+=======
+  // TODO: Remove this one in Spark 2.0.
+  def load(path: String): DataFrame = {
+    option("path", path).load()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -177,6 +200,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    */
   @scala.annotation.varargs
   def load(paths: String*): DataFrame = {
+<<<<<<< HEAD
     if (source.toLowerCase(Locale.ROOT) == DDLUtils.HIVE_PROVIDER) {
       throw new AnalysisException("Hive data source can only be used with tables, you can not " +
         "read files of Hive data source directly.")
@@ -219,6 +243,9 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
           className = source,
           options = extraOptions.toMap).resolveRelation())
     }
+=======
+    option("paths", paths.map(StringUtils.escapeString(_, '\\', ',')).mkString(",")).load()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -332,16 +359,21 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * schema in advance, use the version that specifies the schema to avoid the extra scan.
    *
    * You can set the following JSON-specific options to deal with non-standard JSON files:
+<<<<<<< HEAD
    * <ul>
    * <li>`primitivesAsString` (default `false`): infers all primitive values as a string type</li>
    * <li>`prefersDecimal` (default `false`): infers all floating-point values as a decimal
    * type. If the values do not fit in decimal, then it infers them as doubles.</li>
+=======
+   * <li>`primitivesAsString` (default `false`): infers all primitive values as a string type</li>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * <li>`allowComments` (default `false`): ignores Java/C++ style comment in JSON records</li>
    * <li>`allowUnquotedFieldNames` (default `false`): allows unquoted JSON field names</li>
    * <li>`allowSingleQuotes` (default `true`): allows single quotes in addition to double quotes
    * </li>
    * <li>`allowNumericLeadingZeros` (default `false`): allows leading zeros in numbers
    * (e.g. 00012)</li>
+<<<<<<< HEAD
    * <li>`allowBackslashEscapingAnyCharacter` (default `false`): allows accepting quoting of all
    * character using backslash quoting mechanism</li>
    * <li>`allowUnquotedControlChars` (default `false`): allows JSON Strings to contain unquoted
@@ -382,6 +414,36 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * Loads a `JavaRDD[String]` storing JSON objects (<a href="http://jsonlines.org/">JSON
    * Lines text format or newline-delimited JSON</a>) and returns the result as
    * a `DataFrame`.
+=======
+   *
+   * @since 1.4.0
+   */
+  // TODO: Remove this one in Spark 2.0.
+  def json(path: String): DataFrame = format("json").load(path)
+
+  /**
+   * Loads a JSON file (one object per line) and returns the result as a [[DataFrame]].
+   *
+   * This function goes through the input once to determine the input schema. If you know the
+   * schema in advance, use the version that specifies the schema to avoid the extra scan.
+   *
+   * You can set the following JSON-specific options to deal with non-standard JSON files:
+   * <li>`primitivesAsString` (default `false`): infers all primitive values as a string type</li>
+   * <li>`allowComments` (default `false`): ignores Java/C++ style comment in JSON records</li>
+   * <li>`allowUnquotedFieldNames` (default `false`): allows unquoted JSON field names</li>
+   * <li>`allowSingleQuotes` (default `true`): allows single quotes in addition to double quotes
+   * </li>
+   * <li>`allowNumericLeadingZeros` (default `false`): allows leading zeros in numbers
+   * (e.g. 00012)</li>
+   *
+   * @since 1.6.0
+   */
+  def json(paths: String*): DataFrame = format("json").load(paths : _*)
+
+  /**
+   * Loads an `JavaRDD[String]` storing JSON objects (one object per record) and
+   * returns the result as a [[DataFrame]].
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * Unless the schema is specified using `schema` function, this function goes through the
    * input once to determine the input schema.
@@ -404,7 +466,18 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    */
   @deprecated("Use json(Dataset[String]) instead.", "2.2.0")
   def json(jsonRDD: RDD[String]): DataFrame = {
+<<<<<<< HEAD
     json(sparkSession.createDataset(jsonRDD)(Encoders.STRING))
+=======
+    sqlContext.baseRelationToDataFrame(
+      new JSONRelation(
+        Some(jsonRDD),
+        maybeDataSchema = userSpecifiedSchema,
+        maybePartitionSpec = None,
+        userDefinedPartitionColumns = None,
+        parameters = extraOptions.toMap)(sqlContext)
+    )
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -627,6 +700,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * @since 1.4.0
    */
   def table(tableName: String): DataFrame = {
+<<<<<<< HEAD
     assertNoSpecifiedSchema("table")
     sparkSession.table(tableName)
   }
@@ -648,6 +722,15 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * "value", and followed by partitioned columns if there are any.
    *
    * Each line in the text files is a new row in the resulting DataFrame. For example:
+=======
+    DataFrame(sqlContext,
+      sqlContext.catalog.lookupRelation(SqlParser.parseTableIdentifier(tableName)))
+  }
+
+  /**
+   * Loads a text file and returns a [[DataFrame]] with a single string column named "value".
+   * Each line in the text file is a new row in the resulting DataFrame. For example:
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * {{{
    *   // Scala:
    *   spark.read.text("/path/to/spark/README.md")
@@ -656,11 +739,16 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    *   spark.read().text("/path/to/spark/README.md")
    * }}}
    *
+<<<<<<< HEAD
    * @param paths input paths
+=======
+   * @param paths input path
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * @since 1.6.0
    */
   @scala.annotation.varargs
   def text(paths: String*): DataFrame = format("text").load(paths : _*)
+<<<<<<< HEAD
 
   /**
    * Loads text files and returns a [[Dataset]] of String. See the documentation on the
@@ -721,6 +809,8 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
       }
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Builder pattern config options

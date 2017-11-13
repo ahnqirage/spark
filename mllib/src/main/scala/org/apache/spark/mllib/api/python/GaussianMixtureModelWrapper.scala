@@ -31,17 +31,25 @@ private[python] class GaussianMixtureModelWrapper(model: GaussianMixtureModel) {
   val k: Int = weights.size
 
   /**
+<<<<<<< HEAD
    * Returns gaussians as a List of Vectors and Matrices corresponding each MultivariateGaussian
    */
+=======
+    * Returns gaussians as a List of Vectors and Matrices corresponding each MultivariateGaussian
+    */
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   val gaussians: Array[Byte] = {
     val modelGaussians = model.gaussians.map { gaussian =>
       Array[Any](gaussian.mu, gaussian.sigma)
     }
     SerDe.dumps(JavaConverters.seqAsJavaListConverter(modelGaussians).asJava)
+<<<<<<< HEAD
   }
 
   def predictSoft(point: Vector): Vector = {
     Vectors.dense(model.predictSoft(point))
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def save(sc: SparkContext, path: String): Unit = model.save(sc, path)

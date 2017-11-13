@@ -20,6 +20,7 @@ package org.apache.spark.examples.ml
 
 // $example on$
 import org.apache.spark.ml.feature.{RegexTokenizer, Tokenizer}
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 // $example off$
@@ -37,6 +38,24 @@ object TokenizerExample {
       (1, "I wish Java could use case classes"),
       (2, "Logistic,regression,models,are,neat")
     )).toDF("id", "sentence")
+=======
+// $example off$
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object TokenizerExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("TokenizerExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    val sentenceDataFrame = sqlContext.createDataFrame(Seq(
+      (0, "Hi I heard about Spark"),
+      (1, "I wish Java could use case classes"),
+      (2, "Logistic,regression,models,are,neat")
+    )).toDF("label", "sentence")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val tokenizer = new Tokenizer().setInputCol("sentence").setOutputCol("words")
     val regexTokenizer = new RegexTokenizer()
@@ -44,6 +63,7 @@ object TokenizerExample {
       .setOutputCol("words")
       .setPattern("\\W") // alternatively .setPattern("\\w+").setGaps(false)
 
+<<<<<<< HEAD
     val countTokens = udf { (words: Seq[String]) => words.length }
 
     val tokenized = tokenizer.transform(sentenceDataFrame)
@@ -56,6 +76,14 @@ object TokenizerExample {
     // $example off$
 
     spark.stop()
+=======
+    val tokenized = tokenizer.transform(sentenceDataFrame)
+    tokenized.select("words", "label").take(3).foreach(println)
+    val regexTokenized = regexTokenizer.transform(sentenceDataFrame)
+    regexTokenized.select("words", "label").take(3).foreach(println)
+    // $example off$
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

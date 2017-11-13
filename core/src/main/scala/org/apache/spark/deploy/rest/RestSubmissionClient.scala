@@ -19,21 +19,33 @@ package org.apache.spark.deploy.rest
 
 import java.io.{DataOutputStream, FileNotFoundException}
 import java.net.{ConnectException, HttpURLConnection, SocketException, URL}
+<<<<<<< HEAD
 import java.nio.charset.StandardCharsets
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.util.concurrent.TimeoutException
 import javax.servlet.http.HttpServletResponse
 
 import scala.collection.mutable
+<<<<<<< HEAD
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+=======
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.io.Source
 import scala.util.control.NonFatal
 
 import com.fasterxml.jackson.core.JsonProcessingException
 
+<<<<<<< HEAD
 import org.apache.spark.{SPARK_VERSION => sparkVersion, SparkConf, SparkException}
 import org.apache.spark.internal.Logging
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.Utils
+import org.apache.spark.{Logging, SPARK_VERSION => sparkVersion, SparkConf}
 
 /**
  * A client that submits applications to a [[RestSubmissionServer]].
@@ -259,17 +271,24 @@ private[spark] class RestSubmissionClient(master: String) extends Logging {
       }
     }
 
+<<<<<<< HEAD
     // scalastyle:off awaitresult
     try { Await.result(responseFuture, 10.seconds) } catch {
       // scalastyle:on awaitresult
+=======
+    try { Await.result(responseFuture, 10.seconds) } catch {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case unreachable @ (_: FileNotFoundException | _: SocketException) =>
         throw new SubmitRestConnectionException("Unable to connect to server", unreachable)
       case malformed @ (_: JsonProcessingException | _: SubmitRestProtocolException) =>
         throw new SubmitRestProtocolException("Malformed response received from server", malformed)
       case timeout: TimeoutException =>
         throw new SubmitRestConnectionException("No response from server", timeout)
+<<<<<<< HEAD
       case NonFatal(t) =>
         throw new SparkException("Exception while waiting for response", t)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

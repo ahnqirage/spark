@@ -30,9 +30,7 @@ trait TempDirectory extends BeforeAndAfterAll { self: Suite =>
 
   private var _tempDir: File = _
 
-  /**
-   * Returns the temporary directory as a `File` instance.
-   */
+  /** Returns the temporary directory as a [[File]] instance. */
   protected def tempDir: File = _tempDir
 
   override def beforeAll(): Unit = {
@@ -41,10 +39,7 @@ trait TempDirectory extends BeforeAndAfterAll { self: Suite =>
   }
 
   override def afterAll(): Unit = {
-    try {
-      Utils.deleteRecursively(_tempDir)
-    } finally {
-      super.afterAll()
-    }
+    Utils.deleteRecursively(_tempDir)
+    super.afterAll()
   }
 }

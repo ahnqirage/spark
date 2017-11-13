@@ -20,13 +20,20 @@ package org.apache.spark.ml.evaluation
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param.ParamsSuite
+<<<<<<< HEAD
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+=======
+import org.apache.spark.ml.util.DefaultReadWriteTest
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 
 class BinaryClassificationEvaluatorSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new BinaryClassificationEvaluator)
@@ -39,6 +46,7 @@ class BinaryClassificationEvaluatorSuite
       .setMetricName("areaUnderPR")
     testDefaultReadWrite(evaluator)
   }
+<<<<<<< HEAD
 
   test("should accept both vector and double raw prediction col") {
     val evaluator = new BinaryClassificationEvaluator()
@@ -75,4 +83,6 @@ class BinaryClassificationEvaluatorSuite
     val evaluator = new BinaryClassificationEvaluator().setRawPredictionCol("prediction")
     MLTestingUtils.checkNumericTypes(evaluator, spark)
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

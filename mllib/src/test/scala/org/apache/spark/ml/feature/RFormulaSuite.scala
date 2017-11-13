@@ -348,8 +348,14 @@ class RFormulaSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("vector attribute generation") {
     val formula = new RFormula().setFormula("id ~ vec")
+<<<<<<< HEAD
     val original = Seq((1, Vectors.dense(0.0, 1.0)), (2, Vectors.dense(1.0, 2.0)))
       .toDF("id", "vec")
+=======
+    val original = sqlContext.createDataFrame(
+      Seq((1, Vectors.dense(0.0, 1.0)), (2, Vectors.dense(1.0, 2.0)))
+    ).toDF("id", "vec")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val model = formula.fit(original)
     val result = model.transform(original)
     val attrs = AttributeGroup.fromStructField(result.schema("features"))
@@ -363,13 +369,23 @@ class RFormulaSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("vector attribute generation with unnamed input attrs") {
     val formula = new RFormula().setFormula("id ~ vec2")
+<<<<<<< HEAD
     val base = Seq((1, Vectors.dense(0.0, 1.0)), (2, Vectors.dense(1.0, 2.0)))
       .toDF("id", "vec")
+=======
+    val base = sqlContext.createDataFrame(
+      Seq((1, Vectors.dense(0.0, 1.0)), (2, Vectors.dense(1.0, 2.0)))
+    ).toDF("id", "vec")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val metadata = new AttributeGroup(
       "vec2",
       Array[Attribute](
         NumericAttribute.defaultAttr,
+<<<<<<< HEAD
         NumericAttribute.defaultAttr)).toMetadata()
+=======
+        NumericAttribute.defaultAttr)).toMetadata
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val original = base.select(base.col("id"), base.col("vec").as("vec2", metadata))
     val model = formula.fit(original)
     val result = model.transform(original)

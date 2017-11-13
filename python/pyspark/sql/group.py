@@ -178,6 +178,7 @@ class GroupedData(object):
         :param pivot_col: Name of the column to pivot.
         :param values: List of values that will be translated to columns in the output DataFrame.
 
+<<<<<<< HEAD
         # Compute the sum of earnings for each year by course with each course as a separate column
 
         >>> df4.groupBy("year").pivot("course", ["dotNET", "Java"]).sum("earnings").collect()
@@ -185,13 +186,26 @@ class GroupedData(object):
 
         # Or without specifying column values (less efficient)
 
+=======
+        // Compute the sum of earnings for each year by course with each course as a separate column
+        >>> df4.groupBy("year").pivot("course", ["dotNET", "Java"]).sum("earnings").collect()
+        [Row(year=2012, dotNET=15000, Java=20000), Row(year=2013, dotNET=48000, Java=30000)]
+
+        // Or without specifying column values (less efficient)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         >>> df4.groupBy("year").pivot("course").sum("earnings").collect()
         [Row(year=2012, Java=20000, dotNET=15000), Row(year=2013, Java=30000, dotNET=48000)]
         """
         if values is None:
+<<<<<<< HEAD
             jgd = self._jgd.pivot(pivot_col)
         else:
             jgd = self._jgd.pivot(pivot_col, values)
+=======
+            jgd = self._jdf.pivot(pivot_col)
+        else:
+            jgd = self._jdf.pivot(pivot_col, values)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         return GroupedData(jgd, self.sql_ctx)
 
 

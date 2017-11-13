@@ -20,6 +20,10 @@ package org.apache.spark.streaming.flume
 import java.nio.charset.StandardCharsets
 import java.util.{Collections, List => JList, Map => JMap}
 import java.util.concurrent._
+<<<<<<< HEAD
+=======
+import java.util.{Collections, List => JList, Map => JMap}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.mutable.ArrayBuffer
 

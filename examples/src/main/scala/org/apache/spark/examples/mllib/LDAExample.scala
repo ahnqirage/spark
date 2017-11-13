@@ -18,6 +18,7 @@
 // scalastyle:off println
 package org.apache.spark.examples.mllib
 
+<<<<<<< HEAD
 import java.util.Locale
 
 import org.apache.log4j.{Level, Logger}
@@ -31,6 +32,18 @@ import org.apache.spark.mllib.clustering.{DistributedLDAModel, EMLDAOptimizer, L
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
+=======
+import scopt.OptionParser
+
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel, RegexTokenizer, StopWordsRemover}
+import org.apache.spark.mllib.clustering.{DistributedLDAModel, EMLDAOptimizer, LDA, OnlineLDAOptimizer}
+import org.apache.spark.mllib.linalg.Vector
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.{SparkConf, SparkContext}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * An example Latent Dirichlet Allocation (LDA) app. Run with
@@ -190,11 +203,16 @@ object LDAExample {
       vocabSize: Int,
       stopwordFile: String): (RDD[(Long, Vector)], Array[String], Long) = {
 
+<<<<<<< HEAD
     val spark = SparkSession
       .builder
       .sparkContext(sc)
       .getOrCreate()
     import spark.implicits._
+=======
+    val sqlContext = SQLContext.getOrCreate(sc)
+    import sqlContext.implicits._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Get dataset of document texts
     // One document per line in each text file. If the input consists of many small files,
@@ -225,8 +243,12 @@ object LDAExample {
     val model = pipeline.fit(df)
     val documents = model.transform(df)
       .select("features")
+<<<<<<< HEAD
       .rdd
       .map { case Row(features: MLVector) => Vectors.fromML(features) }
+=======
+      .map { case Row(features: Vector) => features }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .zipWithIndex()
       .map(_.swap)
 

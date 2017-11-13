@@ -179,12 +179,25 @@ private[deploy] object RPackageUtils extends Logging {
       val file = new File(Utils.resolveURI(jarPath))
       if (file.exists()) {
         val jar = new JarFile(file)
+<<<<<<< HEAD
         Utils.tryWithSafeFinally {
           if (checkManifestForR(jar)) {
             print(s"$file contains R source code. Now installing package.", printStream, Level.INFO)
             val rSource = extractRFolder(jar, printStream, verbose)
             if (RUtils.rPackages.isEmpty) {
               RUtils.rPackages = Some(Utils.createTempDir().getAbsolutePath)
+=======
+        if (checkManifestForR(jar)) {
+          print(s"$file contains R source code. Now installing package.", printStream, Level.INFO)
+          val rSource = extractRFolder(jar, printStream, verbose)
+          if (RUtils.rPackages.isEmpty) {
+            RUtils.rPackages = Some(Utils.createTempDir().getAbsolutePath)
+          }
+          try {
+            if (!rPackageBuilder(rSource, printStream, verbose, RUtils.rPackages.get)) {
+              print(s"ERROR: Failed to build R package in $file.", printStream)
+              print(RJarDoc, printStream)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             }
             try {
               if (!rPackageBuilder(rSource, printStream, verbose, RUtils.rPackages.get)) {

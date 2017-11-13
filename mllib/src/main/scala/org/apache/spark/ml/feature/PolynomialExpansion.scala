@@ -19,6 +19,7 @@ package org.apache.spark.ml.feature
 
 import scala.collection.mutable
 
+<<<<<<< HEAD
 import org.apache.commons.math3.util.CombinatoricsUtils
 
 import org.apache.spark.annotation.Since
@@ -26,6 +27,13 @@ import org.apache.spark.ml.UnaryTransformer
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.param.{IntParam, ParamMap, ParamValidators}
 import org.apache.spark.ml.util._
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+import org.apache.spark.ml.UnaryTransformer
+import org.apache.spark.ml.param.{ParamMap, IntParam, ParamValidators}
+import org.apache.spark.ml.util._
+import org.apache.spark.mllib.linalg._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types.DataType
 
 /**
@@ -37,8 +45,13 @@ import org.apache.spark.sql.types.DataType
  * as an example: `(x, y)`, if we want to expand it with degree 2, then we get
  * `(x, x * x, y, x * y, y * y)`.
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 class PolynomialExpansion @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+=======
+@Experimental
+class PolynomialExpansion(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends UnaryTransformer[Vector, Vector, PolynomialExpansion] with DefaultParamsWritable {
 
   @Since("1.4.0")

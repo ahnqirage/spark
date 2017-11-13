@@ -17,6 +17,7 @@
 
 package org.apache.spark.mllib.clustering;
 
+<<<<<<< HEAD
 import java.util.Arrays;
 
 import org.junit.Assert;
@@ -35,6 +36,41 @@ public class JavaBisectingKMeansSuite extends SharedSparkSession {
       Vectors.dense(4, -1),
       Vectors.dense(4, 1),
       Vectors.sparse(2, new int[]{0}, new double[]{1.0})
+=======
+import java.io.Serializable;
+
+import com.google.common.collect.Lists;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.Vectors;
+
+public class JavaBisectingKMeansSuite implements Serializable {
+  private transient JavaSparkContext sc;
+
+  @Before
+  public void setUp() {
+    sc = new JavaSparkContext("local", this.getClass().getSimpleName());
+  }
+
+  @After
+  public void tearDown() {
+    sc.stop();
+    sc = null;
+  }
+
+  @Test
+  public void twoDimensionalData() {
+    JavaRDD<Vector> points = sc.parallelize(Lists.newArrayList(
+      Vectors.dense(4, -1),
+      Vectors.dense(4, 1),
+      Vectors.sparse(2, new int[] {0}, new double[] {1.0})
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     ), 2);
 
     BisectingKMeans bkm = new BisectingKMeans()
@@ -43,6 +79,7 @@ public class JavaBisectingKMeansSuite extends SharedSparkSession {
       .setSeed(1L);
     BisectingKMeansModel model = bkm.run(points);
     Assert.assertEquals(3, model.k());
+<<<<<<< HEAD
     Assert.assertArrayEquals(new double[]{3.0, 0.0}, model.root().center().toArray(), 1e-12);
     for (ClusteringTreeNode child : model.root().children()) {
       double[] center = child.center().toArray();
@@ -52,6 +89,17 @@ public class JavaBisectingKMeansSuite extends SharedSparkSession {
       } else {
         Assert.assertEquals(1, child.size());
         Assert.assertArrayEquals(new double[]{1.0, 0.0}, center, 1e-12);
+=======
+    Assert.assertArrayEquals(new double[] {3.0, 0.0}, model.root().center().toArray(), 1e-12);
+    for (ClusteringTreeNode child: model.root().children()) {
+      double[] center = child.center().toArray();
+      if (center[0] > 2) {
+        Assert.assertEquals(2, child.size());
+        Assert.assertArrayEquals(new double[] {4.0, 0.0}, center, 1e-12);
+      } else {
+        Assert.assertEquals(1, child.size());
+        Assert.assertArrayEquals(new double[] {1.0, 0.0}, center, 1e-12);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
   }

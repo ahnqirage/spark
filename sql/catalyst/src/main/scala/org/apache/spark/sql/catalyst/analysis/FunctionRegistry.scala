@@ -30,8 +30,12 @@ import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.xml._
 import org.apache.spark.sql.types._
+=======
+import org.apache.spark.sql.catalyst.util.StringKeyHashMap
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 
 /**
@@ -369,6 +373,7 @@ object FunctionRegistry {
     expression[AddMonths]("add_months"),
     expression[CurrentDate]("current_date"),
     expression[CurrentTimestamp]("current_timestamp"),
+    expression[CurrentTimestamp]("now"),
     expression[DateDiff]("datediff"),
     expression[DateAdd]("date_add"),
     expression[DateFormatClass]("date_format"),
@@ -387,8 +392,12 @@ object FunctionRegistry {
     expression[CurrentTimestamp]("now"),
     expression[Quarter]("quarter"),
     expression[Second]("second"),
+<<<<<<< HEAD
     expression[ParseToTimestamp]("to_timestamp"),
     expression[ParseToDate]("to_date"),
+=======
+    expression[ToDate]("to_date"),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     expression[ToUnixTimestamp]("to_unix_timestamp"),
     expression[ToUTCTimestamp]("to_utc_timestamp"),
     expression[TruncDate]("trunc"),
@@ -420,6 +429,7 @@ object FunctionRegistry {
     expression[Sha2]("sha2"),
     expression[SparkPartitionID]("spark_partition_id"),
     expression[InputFileName]("input_file_name"),
+<<<<<<< HEAD
     expression[InputFileBlockStart]("input_file_block_start"),
     expression[InputFileBlockLength]("input_file_block_length"),
     expression[MonotonicallyIncreasingID]("monotonically_increasing_id"),
@@ -484,6 +494,9 @@ object FunctionRegistry {
     castAlias("timestamp", TimestampType),
     castAlias("binary", BinaryType),
     castAlias("string", StringType)
+=======
+    expression[MonotonicallyIncreasingID]("monotonically_increasing_id")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   )
 
   val builtin: SimpleFunctionRegistry = {

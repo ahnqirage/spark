@@ -17,11 +17,49 @@
 
 package org.apache.spark.ml.feature
 
+<<<<<<< HEAD
 import org.apache.spark.{SparkException, SparkFunSuite}
 import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.udf
+=======
+import org.apache.spark.ml.attribute.{Attribute, NominalAttribute}
+import org.apache.spark.ml.util.DefaultReadWriteTest
+import org.apache.spark.mllib.util.MLlibTestSparkContext
+import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.{SparkContext, SparkFunSuite}
+
+class QuantileDiscretizerSuite
+  extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+
+  import org.apache.spark.ml.feature.QuantileDiscretizerSuite._
+
+  test("Test quantile discretizer") {
+    checkDiscretizedData(sc,
+      Array[Double](1, 2, 3, 3, 3, 3, 3, 3, 3),
+      10,
+      Array[Double](1, 2, 3, 3, 3, 3, 3, 3, 3),
+      Array("-Infinity, 1.0", "1.0, 2.0", "2.0, 3.0", "3.0, Infinity"))
+
+    checkDiscretizedData(sc,
+      Array[Double](1, 2, 3, 3, 3, 3, 3, 3, 3),
+      4,
+      Array[Double](1, 2, 3, 3, 3, 3, 3, 3, 3),
+      Array("-Infinity, 1.0", "1.0, 2.0", "2.0, 3.0", "3.0, Infinity"))
+
+    checkDiscretizedData(sc,
+      Array[Double](1, 2, 3, 3, 3, 3, 3, 3, 3),
+      3,
+      Array[Double](0, 1, 2, 2, 2, 2, 2, 2, 2),
+      Array("-Infinity, 2.0", "2.0, 3.0", "3.0, Infinity"))
+
+    checkDiscretizedData(sc,
+      Array[Double](1, 2, 3, 3, 3, 3, 3, 3, 3),
+      2,
+      Array[Double](0, 1, 1, 1, 1, 1, 1, 1, 1),
+      Array("-Infinity, 2.0", "2.0, Infinity"))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 class QuantileDiscretizerSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
@@ -104,6 +142,38 @@ class QuantileDiscretizerSuite
         }
     }
   }
+<<<<<<< HEAD
+=======
+
+  test("Test splits on dataset larger than minSamplesRequired") {
+    val sqlCtx = SQLContext.getOrCreate(sc)
+    import sqlCtx.implicits._
+
+    val datasetSize = QuantileDiscretizer.minSamplesRequired + 1
+    val numBuckets = 5
+    val df = sc.parallelize((1.0 to datasetSize by 1.0).map(Tuple1.apply)).toDF("input")
+    val discretizer = new QuantileDiscretizer()
+      .setInputCol("input")
+      .setOutputCol("result")
+      .setNumBuckets(numBuckets)
+      .setSeed(1)
+
+    val result = discretizer.fit(df).transform(df)
+    val observedNumBuckets = result.select("result").distinct.count
+
+    assert(observedNumBuckets === numBuckets,
+      "Observed number of buckets does not equal expected number of buckets.")
+  }
+
+  test("read/write") {
+    val t = new QuantileDiscretizer()
+      .setInputCol("myInputCol")
+      .setOutputCol("myOutputCol")
+      .setNumBuckets(6)
+    testDefaultReadWrite(t)
+  }
+}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("Test transform method on unseen data") {
     val spark = this.spark
@@ -116,6 +186,7 @@ class QuantileDiscretizerSuite
       .setOutputCol("result")
       .setNumBuckets(5)
 
+<<<<<<< HEAD
     val result = discretizer.fit(trainDF).transform(testDF)
     val firstBucketSize = result.filter(result("result") === 0.0).count
     val lastBucketSize = result.filter(result("result") === 4.0).count
@@ -133,6 +204,12 @@ class QuantileDiscretizerSuite
       .setNumBuckets(6)
     testDefaultReadWrite(t)
   }
+=======
+    val df = sc.parallelize(data.map(Tuple1.apply)).toDF("input")
+    val discretizer = new QuantileDiscretizer().setInputCol("input").setOutputCol("result")
+      .setNumBuckets(numBucket).setSeed(1)
+    val result = discretizer.fit(df).transform(df)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("Verify resulting model has parent") {
     val spark = this.spark

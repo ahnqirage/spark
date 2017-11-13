@@ -82,8 +82,14 @@ setMethod("cov",
 #' Currently only supports the Pearson Correlation Coefficient.
 #' For Spearman Correlation, consider using RDD methods found in MLlib's Statistics.
 #'
+<<<<<<< HEAD
 #' @param colName1 the name of the first column
 #' @param colName2 the name of the second column
+=======
+#' @param x A SparkSQL DataFrame
+#' @param col1 the name of the first column
+#' @param col2 the name of the second column
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @param method Optional. A character specifying the method for calculating the correlation.
 #'               only "pearson" is allowed now.
 #' @return The Pearson Correlation Coefficient as a Double.
@@ -100,9 +106,15 @@ setMethod("cov",
 #' corr(df, "mpg", "hp", method = "pearson")}
 #' @note corr since 1.6.0
 setMethod("corr",
+<<<<<<< HEAD
           signature(x = "SparkDataFrame"),
           function(x, colName1, colName2, method = "pearson") {
             stopifnot(class(colName1) == "character" && class(colName2) == "character")
+=======
+          signature(x = "DataFrame"),
+          function(x, col1, col2, method = "pearson") {
+            stopifnot(class(col1) == "character" && class(col2) == "character")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             statFunctions <- callJMethod(x@sdf, "stat")
             callJMethod(statFunctions, "corr", colName1, colName2, method)
           })
@@ -116,7 +128,11 @@ setMethod("corr",
 #'
 #' @param x A SparkDataFrame.
 #' @param cols A vector column names to search frequent items in.
+<<<<<<< HEAD
 #' @param support (Optional) The minimum frequency for an item to be considered \code{frequent}.
+=======
+#' @param support (Optional) The minimum frequency for an item to be considered `frequent`.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'                Should be greater than 1e-4. Default support = 0.01.
 #' @return a local R data.frame with the frequent items in each column
 #'
@@ -194,7 +210,13 @@ setMethod("approxQuantile",
 #' Returns a stratified sample without replacement based on the fraction given on each
 #' stratum.
 #'
+<<<<<<< HEAD
 #' @param x A SparkDataFrame
+=======
+#' Returns a stratified sample without replacement based on the fraction given on each stratum.
+#'
+#' @param x A SparkSQL DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @param col column that defines strata
 #' @param fractions A named list giving sampling fraction for each stratum. If a stratum is
 #'                  not specified, we treat its fraction as zero.

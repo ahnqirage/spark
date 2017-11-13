@@ -225,10 +225,17 @@ class JavaPairRDD[K, V](val rdd: RDD[(K, V)])
   /**
    * Generic function to combine the elements for each key using a custom set of aggregation
    * functions. Turns a JavaPairRDD[(K, V)] into a result of type JavaPairRDD[(K, C)], for a
+<<<<<<< HEAD
    * "combined type" C.
    *
    * Users provide three functions:
    *
+=======
+   * "combined type" C. Note that V and C can be different -- for example, one might group an
+   * RDD of type (Int, Int) into an RDD of type (Int, List[Int]). Users provide three
+   * functions:
+   *
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *  - `createCombiner`, which turns a V into a C (e.g., creates a one-element list)
    *  - `mergeValue`, to merge a V into a C (e.g., adds it to the end of a list)
    *  - `mergeCombiners`, to combine two C's into a single one.
@@ -260,10 +267,17 @@ class JavaPairRDD[K, V](val rdd: RDD[(K, V)])
   /**
    * Generic function to combine the elements for each key using a custom set of aggregation
    * functions. Turns a JavaPairRDD[(K, V)] into a result of type JavaPairRDD[(K, C)], for a
+<<<<<<< HEAD
    * "combined type" C.
    *
    * Users provide three functions:
    *
+=======
+   * "combined type" C. Note that V and C can be different -- for example, one might group an
+   * RDD of type (Int, Int) into an RDD of type (Int, List[Int]). Users provide three
+   * functions:
+   *
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *  - `createCombiner`, which turns a V into a C (e.g., creates a one-element list)
    *  - `mergeValue`, to merge a V into a C (e.g., adds it to the end of a list)
    *  - `mergeCombiners`, to combine two C's into a single one.

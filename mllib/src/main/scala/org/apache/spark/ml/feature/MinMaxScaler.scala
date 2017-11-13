@@ -17,6 +17,7 @@
 
 package org.apache.spark.ml.feature
 
+<<<<<<< HEAD
 import org.apache.hadoop.fs.Path
 
 import org.apache.spark.annotation.Since
@@ -27,6 +28,17 @@ import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.linalg.{Vector => OldVector, Vectors => OldVectors}
 import org.apache.spark.mllib.linalg.VectorImplicits._
+=======
+
+import org.apache.hadoop.fs.Path
+
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.{Estimator, Model}
+import org.apache.spark.ml.param.{DoubleParam, ParamMap, Params}
+import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
+import org.apache.spark.ml.util._
+import org.apache.spark.mllib.linalg.{Vector, VectorUDT, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.rdd.RDD
@@ -89,8 +101,13 @@ private[feature] trait MinMaxScalerParams extends Params with HasInputCol with H
  * @note Since zero values will probably be transformed to non-zero values, output of the
  * transformer will be DenseVector even for sparse input.
  */
+<<<<<<< HEAD
 @Since("1.5.0")
 class MinMaxScaler @Since("1.5.0") (@Since("1.5.0") override val uid: String)
+=======
+@Experimental
+class MinMaxScaler(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Estimator[MinMaxScalerModel] with MinMaxScalerParams with DefaultParamsWritable {
 
   @Since("1.5.0")
@@ -150,9 +167,15 @@ object MinMaxScaler extends DefaultParamsReadable[MinMaxScaler] {
  */
 @Since("1.5.0")
 class MinMaxScalerModel private[ml] (
+<<<<<<< HEAD
     @Since("1.5.0") override val uid: String,
     @Since("2.0.0") val originalMin: Vector,
     @Since("2.0.0") val originalMax: Vector)
+=======
+    override val uid: String,
+    val originalMin: Vector,
+    val originalMax: Vector)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Model[MinMaxScalerModel] with MinMaxScalerParams with MLWritable {
 
   import MinMaxScalerModel._
@@ -226,7 +249,11 @@ object MinMaxScalerModel extends MLReadable[MinMaxScalerModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = new Data(instance.originalMin, instance.originalMax)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+=======
+      sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -237,11 +264,17 @@ object MinMaxScalerModel extends MLReadable[MinMaxScalerModel] {
     override def load(path: String): MinMaxScalerModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       val data = sparkSession.read.parquet(dataPath)
       val Row(originalMin: Vector, originalMax: Vector) =
         MLUtils.convertVectorColumnsToML(data, "originalMin", "originalMax")
           .select("originalMin", "originalMax")
           .head()
+=======
+      val Row(originalMin: Vector, originalMax: Vector) = sqlContext.read.parquet(dataPath)
+        .select("originalMin", "originalMax")
+        .head()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val model = new MinMaxScalerModel(metadata.uid, originalMin, originalMax)
       DefaultParamsReader.getAndSetParams(model, metadata)
       model

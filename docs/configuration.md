@@ -1005,9 +1005,14 @@ Apart from these, the following properties are also available, and may be useful
     more frequently spills and cached data eviction occur. The purpose of this config is to set
     aside memory for internal metadata, user data structures, and imprecise size estimation
     in the case of sparse, unusually large records. Leaving this at the default value is
+<<<<<<< HEAD
     recommended. For more detail, including important information about correctly tuning JVM
     garbage collection when increasing this value, see
     <a href="tuning.html#memory-management-overview">this description</a>.
+=======
+    recommended. For more detail, see <a href="tuning.html#memory-management-overview">
+    this description</a>.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   </td>
 </tr>
 <tr>
@@ -1634,7 +1639,11 @@ Apart from these, the following properties are also available, and may be useful
   <td>false</td>
   <td>
     Whether to use dynamic resource allocation, which scales the number of executors registered
+<<<<<<< HEAD
     with this application up and down based on the workload.
+=======
+    with this application up and down based on the workload. 
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     For more detail, see the description
     <a href="job-scheduling.html#dynamic-resource-allocation">here</a>.
     <br><br>
@@ -2301,8 +2310,12 @@ The following variables can be set in `spark-env.sh`:
   </tr>
   <tr>
     <td><code>PYSPARK_PYTHON</code></td>
+<<<<<<< HEAD
     <td>Python binary executable to use for PySpark in both driver and workers (default is <code>python2.7</code> if available, otherwise <code>python</code>).
     Property <code>spark.pyspark.python</code> take precedence if it is set</td>
+=======
+    <td>Python binary executable to use for PySpark in both driver and workers (default is <code>python2.7</code> if available, otherwise <code>python</code>).</td>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   </tr>
   <tr>
     <td><code>PYSPARK_DRIVER_PYTHON</code></td>

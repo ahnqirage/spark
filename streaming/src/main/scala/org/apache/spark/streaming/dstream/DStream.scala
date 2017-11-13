@@ -625,7 +625,11 @@ abstract class DStream[T: ClassTag] (
    */
   def foreachRDD(foreachFunc: RDD[T] => Unit): Unit = ssc.withScope {
     val cleanedF = context.sparkContext.clean(foreachFunc, false)
+<<<<<<< HEAD
     foreachRDD((r: RDD[T], _: Time) => cleanedF(r), displayInnerRDDOps = true)
+=======
+    foreachRDD((r: RDD[T], t: Time) => cleanedF(r), displayInnerRDDOps = true)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**

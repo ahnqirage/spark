@@ -17,6 +17,11 @@
 // scalastyle:off println
 package org.apache.spark.examples.ml;
 // $example on$
+<<<<<<< HEAD
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
@@ -24,13 +29,19 @@ import org.apache.spark.ml.classification.DecisionTreeClassifier;
 import org.apache.spark.ml.classification.DecisionTreeClassificationModel;
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator;
 import org.apache.spark.ml.feature.*;
+<<<<<<< HEAD
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+=======
+import org.apache.spark.sql.DataFrame;
+import org.apache.spark.sql.SQLContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example off$
 
 public class JavaDecisionTreeClassificationExample {
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaDecisionTreeClassificationExample")
@@ -42,6 +53,15 @@ public class JavaDecisionTreeClassificationExample {
       .read()
       .format("libsvm")
       .load("data/mllib/sample_libsvm_data.txt");
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaDecisionTreeClassificationExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext sqlContext = new SQLContext(jsc);
+
+    // $example on$
+    // Load the data stored in LIBSVM format as a DataFrame.
+    DataFrame data = sqlContext.read().format("libsvm").load("data/mllib/sample_libsvm_data.txt");
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Index labels, adding metadata to the label column.
     // Fit on whole dataset to include all labels in index.
@@ -54,6 +74,7 @@ public class JavaDecisionTreeClassificationExample {
     VectorIndexerModel featureIndexer = new VectorIndexer()
       .setInputCol("features")
       .setOutputCol("indexedFeatures")
+<<<<<<< HEAD
       .setMaxCategories(4) // features with > 4 distinct values are treated as continuous.
       .fit(data);
 
@@ -61,6 +82,15 @@ public class JavaDecisionTreeClassificationExample {
     Dataset<Row>[] splits = data.randomSplit(new double[]{0.7, 0.3});
     Dataset<Row> trainingData = splits[0];
     Dataset<Row> testData = splits[1];
+=======
+      .setMaxCategories(4) // features with > 4 distinct values are treated as continuous
+      .fit(data);
+
+    // Split the data into training and test sets (30% held out for testing)
+    DataFrame[] splits = data.randomSplit(new double[]{0.7, 0.3});
+    DataFrame trainingData = splits[0];
+    DataFrame testData = splits[1];
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Train a DecisionTree model.
     DecisionTreeClassifier dt = new DecisionTreeClassifier()
@@ -73,6 +103,7 @@ public class JavaDecisionTreeClassificationExample {
       .setOutputCol("predictedLabel")
       .setLabels(labelIndexer.labels());
 
+<<<<<<< HEAD
     // Chain indexers and tree in a Pipeline.
     Pipeline pipeline = new Pipeline()
       .setStages(new PipelineStage[]{labelIndexer, featureIndexer, dt, labelConverter});
@@ -82,15 +113,34 @@ public class JavaDecisionTreeClassificationExample {
 
     // Make predictions.
     Dataset<Row> predictions = model.transform(testData);
+=======
+    // Chain indexers and tree in a Pipeline
+    Pipeline pipeline = new Pipeline()
+      .setStages(new PipelineStage[]{labelIndexer, featureIndexer, dt, labelConverter});
+
+    // Train model.  This also runs the indexers.
+    PipelineModel model = pipeline.fit(trainingData);
+
+    // Make predictions.
+    DataFrame predictions = model.transform(testData);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Select example rows to display.
     predictions.select("predictedLabel", "label", "features").show(5);
 
+<<<<<<< HEAD
     // Select (prediction, true label) and compute test error.
     MulticlassClassificationEvaluator evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("indexedLabel")
       .setPredictionCol("prediction")
       .setMetricName("accuracy");
+=======
+    // Select (prediction, true label) and compute test error
+    MulticlassClassificationEvaluator evaluator = new MulticlassClassificationEvaluator()
+      .setLabelCol("indexedLabel")
+      .setPredictionCol("prediction")
+      .setMetricName("precision");
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     double accuracy = evaluator.evaluate(predictions);
     System.out.println("Test Error = " + (1.0 - accuracy));
 
@@ -98,7 +148,10 @@ public class JavaDecisionTreeClassificationExample {
       (DecisionTreeClassificationModel) (model.stages()[2]);
     System.out.println("Learned classification tree model:\n" + treeModel.toDebugString());
     // $example off$
+<<<<<<< HEAD
 
     spark.stop();
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

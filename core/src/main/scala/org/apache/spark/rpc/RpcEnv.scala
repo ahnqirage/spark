@@ -147,6 +147,10 @@ private[spark] abstract class RpcEnv(conf: SparkConf) {
    * @param uri URI with location of the file.
    */
   def openChannel(uri: String): ReadableByteChannel
+<<<<<<< HEAD
+=======
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -175,6 +179,7 @@ private[spark] trait RpcEnvFileServer {
    */
   def addJar(file: File): String
 
+<<<<<<< HEAD
   /**
    * Adds a local directory to be served via this file server.
    *
@@ -193,6 +198,8 @@ private[spark] trait RpcEnvFileServer {
     fixedBaseUri
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 private[spark] case class RpcEnvConfig(

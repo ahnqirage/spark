@@ -43,6 +43,7 @@ import java.util.Properties
  * level interfaces. These are subject to changes or removal in minor releases.
  */
 package object spark {
+<<<<<<< HEAD
 
   private object SparkBuildInfo {
 
@@ -94,5 +95,9 @@ package object spark {
   val SPARK_BUILD_USER = SparkBuildInfo.spark_build_user
   val SPARK_REPO_URL = SparkBuildInfo.spark_repo_url
   val SPARK_BUILD_DATE = SparkBuildInfo.spark_build_date
+=======
+  // For package docs only
+  val SPARK_VERSION = "1.6.3"
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 

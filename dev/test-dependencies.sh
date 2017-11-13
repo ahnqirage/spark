@@ -28,12 +28,22 @@ export LC_ALL=C
 
 # TODO: This would be much nicer to do in SBT, once SBT supports Maven-style resolution.
 
+<<<<<<< HEAD
 # NOTE: These should match those in the release publishing script
 HADOOP2_MODULE_PROFILES="-Phive-thriftserver -Pmesos -Pkafka-0-8 -Pyarn -Pflume -Phive"
 MVN="build/mvn"
 HADOOP_PROFILES=(
     hadoop-2.6
     hadoop-2.7
+=======
+MVN="build/mvn --force"
+HADOOP_PROFILES=(
+    hadoop-1
+    hadoop-2.2
+    hadoop-2.3
+    hadoop-2.4
+    hadoop-2.6
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 )
 
 # We'll switch the version to a temp. one, publish POMs using that new version, then switch back to
@@ -46,7 +56,11 @@ OLD_VERSION=$($MVN -q \
     -Dexec.executable="echo" \
     -Dexec.args='${project.version}' \
     --non-recursive \
+<<<<<<< HEAD
     org.codehaus.mojo:exec-maven-plugin:1.6.0:exec)
+=======
+    org.codehaus.mojo:exec-maven-plugin:1.3.1:exec)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 if [ $? != 0 ]; then
     echo -e "Error while getting version string from Maven:\n$OLD_VERSION"
     exit 1
@@ -67,6 +81,7 @@ $MVN -q versions:set -DnewVersion=$TEMP_VERSION -DgenerateBackupPoms=false > /de
 
 # Generate manifests for each Hadoop profile:
 for HADOOP_PROFILE in "${HADOOP_PROFILES[@]}"; do
+<<<<<<< HEAD
   echo "Performing Maven install for $HADOOP_PROFILE"
   $MVN $HADOOP2_MODULE_PROFILES -P$HADOOP_PROFILE jar:jar jar:test-jar install:install clean -q
 
@@ -76,6 +91,24 @@ for HADOOP_PROFILE in "${HADOOP_PROFILES[@]}"; do
   echo "Generating dependency manifest for $HADOOP_PROFILE"
   mkdir -p dev/pr-deps
   $MVN $HADOOP2_MODULE_PROFILES -P$HADOOP_PROFILE dependency:build-classpath -pl assembly \
+=======
+  if [[ $HADOOP_PROFILE = hadoop-1* ]]; then
+    # NOTE: These should match those in the release publishing script
+    HADOOP_MODULE_PROFILES="-Phive-thriftserver -Phive"
+  else
+    # NOTE: These should match those in the release publishing script
+    HADOOP_MODULE_PROFILES="-Phive-thriftserver -Pyarn -Phive"
+  fi
+  echo "Performing Maven install for $HADOOP_PROFILE"
+  $MVN $HADOOP_MODULE_PROFILES -P$HADOOP_PROFILE jar:jar jar:test-jar install:install clean -q
+
+  echo "Performing Maven validate for $HADOOP_PROFILE"
+  $MVN $HADOOP_MODULE_PROFILES -P$HADOOP_PROFILE validate -q
+
+  echo "Generating dependency manifest for $HADOOP_PROFILE"
+  mkdir -p dev/pr-deps
+  $MVN $HADOOP_MODULE_PROFILES -P$HADOOP_PROFILE dependency:build-classpath -pl assembly \
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     | grep "Dependencies classpath:" -A 1 \
     | tail -n 1 | tr ":" "\n" | rev | cut -d "/" -f 1 | rev | sort \
     | grep -v spark > dev/pr-deps/spark-deps-$HADOOP_PROFILE

@@ -55,8 +55,11 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * Generic function to combine the elements for each key using a custom set of aggregation
    * functions. Turns an RDD[(K, V)] into a result of type RDD[(K, C)], for a "combined type" C
    *
+<<<<<<< HEAD
    * Users provide three functions:
    *
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *  - `createCombiner`, which turns a V into a C (e.g., creates a one-element list)
    *  - `mergeValue`, to merge a V into a C (e.g., adds it to the end of a list)
    *  - `mergeCombiners`, to combine two C's into a single one.
@@ -1079,10 +1082,84 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * result of using direct output committer with speculation enabled.
    */
   def saveAsNewAPIHadoopDataset(conf: Configuration): Unit = self.withScope {
+<<<<<<< HEAD
     val config = new HadoopMapReduceWriteConfigUtil[K, V](new SerializableConfiguration(conf))
     SparkHadoopWriter.write(
       rdd = self,
       config = config)
+=======
+    // Rename this as hadoopConf internally to avoid shadowing (see SPARK-2038).
+    val hadoopConf = conf
+    val job = new NewAPIHadoopJob(hadoopConf)
+    val formatter = new SimpleDateFormat("yyyyMMddHHmm")
+    val jobtrackerID = formatter.format(new Date())
+    val stageId = self.id
+    val jobConfiguration = SparkHadoopUtil.get.getConfigurationFromJobContext(job)
+    val wrappedConf = new SerializableConfiguration(jobConfiguration)
+    val outfmt = job.getOutputFormatClass
+    val jobFormat = outfmt.newInstance
+
+    if (isOutputSpecValidationEnabled) {
+      // FileOutputFormat ignores the filesystem parameter
+      jobFormat.checkOutputSpecs(job)
+    }
+
+    val writeShard = (context: TaskContext, iter: Iterator[(K, V)]) => {
+      val config = wrappedConf.value
+      /* "reduce task" <split #> <attempt # = spark task #> */
+      val attemptId = newTaskAttemptID(jobtrackerID, stageId, isMap = false, context.partitionId,
+        context.attemptNumber)
+      val hadoopContext = newTaskAttemptContext(config, attemptId)
+      val format = outfmt.newInstance
+      format match {
+        case c: Configurable => c.setConf(config)
+        case _ => ()
+      }
+      val committer = format.getOutputCommitter(hadoopContext)
+      committer.setupTask(hadoopContext)
+
+      val (outputMetrics, bytesWrittenCallback) = initHadoopOutputMetrics(context)
+
+      val writer = format.getRecordWriter(hadoopContext).asInstanceOf[NewRecordWriter[K, V]]
+      require(writer != null, "Unable to obtain RecordWriter")
+      var recordsWritten = 0L
+      Utils.tryWithSafeFinallyAndFailureCallbacks {
+        while (iter.hasNext) {
+          val pair = iter.next()
+          writer.write(pair._1, pair._2)
+
+          // Update bytes written metric every few records
+          maybeUpdateOutputMetrics(bytesWrittenCallback, outputMetrics, recordsWritten)
+          recordsWritten += 1
+        }
+      }(finallyBlock = writer.close(hadoopContext))
+      committer.commitTask(hadoopContext)
+      bytesWrittenCallback.foreach { fn => outputMetrics.setBytesWritten(fn()) }
+      outputMetrics.setRecordsWritten(recordsWritten)
+      1
+    } : Int
+
+    val jobAttemptId = newTaskAttemptID(jobtrackerID, stageId, isMap = true, 0, 0)
+    val jobTaskContext = newTaskAttemptContext(wrappedConf.value, jobAttemptId)
+    val jobCommitter = jobFormat.getOutputCommitter(jobTaskContext)
+
+    // When speculation is on and output committer class name contains "Direct", we should warn
+    // users that they may loss data if they are using a direct output committer.
+    val speculationEnabled = self.conf.getBoolean("spark.speculation", false)
+    val outputCommitterClass = jobCommitter.getClass.getSimpleName
+    if (speculationEnabled && outputCommitterClass.contains("Direct")) {
+      val warningMessage =
+        s"$outputCommitterClass may be an output committer that writes data directly to " +
+          "the final location. Because speculation is enabled, this output committer may " +
+          "cause data loss (see the case in SPARK-10063). If possible, please use a output " +
+          "committer that does not have this behavior (e.g. FileOutputCommitter)."
+      logWarning(warningMessage)
+    }
+
+    jobCommitter.setupJob(jobTaskContext)
+    self.context.runJob(self, writeShard)
+    jobCommitter.commitJob(jobTaskContext)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -1092,10 +1169,86 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * MapReduce job.
    */
   def saveAsHadoopDataset(conf: JobConf): Unit = self.withScope {
+<<<<<<< HEAD
     val config = new HadoopMapRedWriteConfigUtil[K, V](new SerializableJobConf(conf))
     SparkHadoopWriter.write(
       rdd = self,
       config = config)
+=======
+    // Rename this as hadoopConf internally to avoid shadowing (see SPARK-2038).
+    val hadoopConf = conf
+    val outputFormatInstance = hadoopConf.getOutputFormat
+    val keyClass = hadoopConf.getOutputKeyClass
+    val valueClass = hadoopConf.getOutputValueClass
+    if (outputFormatInstance == null) {
+      throw new SparkException("Output format class not set")
+    }
+    if (keyClass == null) {
+      throw new SparkException("Output key class not set")
+    }
+    if (valueClass == null) {
+      throw new SparkException("Output value class not set")
+    }
+    SparkHadoopUtil.get.addCredentials(hadoopConf)
+
+    logDebug("Saving as hadoop file of type (" + keyClass.getSimpleName + ", " +
+      valueClass.getSimpleName + ")")
+
+    if (isOutputSpecValidationEnabled) {
+      // FileOutputFormat ignores the filesystem parameter
+      val ignoredFs = FileSystem.get(hadoopConf)
+      hadoopConf.getOutputFormat.checkOutputSpecs(ignoredFs, hadoopConf)
+    }
+
+    val writer = new SparkHadoopWriter(hadoopConf)
+    writer.preSetup()
+
+    val writeToFile = (context: TaskContext, iter: Iterator[(K, V)]) => {
+      // Hadoop wants a 32-bit task attempt ID, so if ours is bigger than Int.MaxValue, roll it
+      // around by taking a mod. We expect that no task will be attempted 2 billion times.
+      val taskAttemptId = (context.taskAttemptId % Int.MaxValue).toInt
+
+      val (outputMetrics, bytesWrittenCallback) = initHadoopOutputMetrics(context)
+
+      writer.setup(context.stageId, context.partitionId, taskAttemptId)
+      writer.open()
+      var recordsWritten = 0L
+
+      Utils.tryWithSafeFinallyAndFailureCallbacks {
+        while (iter.hasNext) {
+          val record = iter.next()
+          writer.write(record._1.asInstanceOf[AnyRef], record._2.asInstanceOf[AnyRef])
+
+          // Update bytes written metric every few records
+          maybeUpdateOutputMetrics(bytesWrittenCallback, outputMetrics, recordsWritten)
+          recordsWritten += 1
+        }
+      }(finallyBlock = writer.close())
+      writer.commit()
+      bytesWrittenCallback.foreach { fn => outputMetrics.setBytesWritten(fn()) }
+      outputMetrics.setRecordsWritten(recordsWritten)
+    }
+
+    self.context.runJob(self, writeToFile)
+    writer.commitJob()
+  }
+
+  private def initHadoopOutputMetrics(context: TaskContext): (OutputMetrics, Option[() => Long]) = {
+    val bytesWrittenCallback = SparkHadoopUtil.get.getFSBytesWrittenOnThreadCallback()
+    val outputMetrics = new OutputMetrics(DataWriteMethod.Hadoop)
+    if (bytesWrittenCallback.isDefined) {
+      context.taskMetrics.outputMetrics = Some(outputMetrics)
+    }
+    (outputMetrics, bytesWrittenCallback)
+  }
+
+  private def maybeUpdateOutputMetrics(bytesWrittenCallback: Option[() => Long],
+      outputMetrics: OutputMetrics, recordsWritten: Long): Unit = {
+    if (recordsWritten % PairRDDFunctions.RECORDS_BETWEEN_BYTES_WRITTEN_METRIC_UPDATES == 0) {
+      bytesWrittenCallback.foreach { fn => outputMetrics.setBytesWritten(fn()) }
+      outputMetrics.setRecordsWritten(recordsWritten)
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**

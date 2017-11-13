@@ -124,7 +124,11 @@ object GenerateOrdering extends CodeGenerator[Seq[SortOrder], Ordering[InternalR
       """
     }
 
+<<<<<<< HEAD
     val code = ctx.splitExpressions(
+=======
+    ctx.splitExpressions(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       expressions = comparisons,
       funcName = "compare",
       arguments = Seq(("InternalRow", "a"), ("InternalRow", "b")),
@@ -147,20 +151,28 @@ object GenerateOrdering extends CodeGenerator[Seq[SortOrder], Ordering[InternalR
           """
         }.mkString
       })
+<<<<<<< HEAD
     // make sure INPUT_ROW is declared even if splitExpressions
     // returns an inlined block
     s"""
        |InternalRow ${ctx.INPUT_ROW} = null;
        |$code
      """.stripMargin
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   protected def create(ordering: Seq[SortOrder]): BaseOrdering = {
     val ctx = newCodeGenContext()
     val comparisons = genComparisons(ctx, ordering)
     val codeBody = s"""
+<<<<<<< HEAD
       public SpecificOrdering generate(Object[] references) {
         return new SpecificOrdering(references);
+=======
+      public SpecificOrdering generate($exprType[] expr) {
+        return new SpecificOrdering(expr);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
 
       class SpecificOrdering extends ${classOf[BaseOrdering].getName} {
@@ -181,6 +193,7 @@ object GenerateOrdering extends CodeGenerator[Seq[SortOrder], Ordering[InternalR
         ${ctx.declareAddedFunctions()}
       }"""
 
+<<<<<<< HEAD
     val code = CodeFormatter.stripOverlappingComments(
       new CodeAndComment(codeBody, ctx.getPlaceHolderToComments()))
     logDebug(s"Generated Ordering by ${ordering.mkString(",")}:\n${CodeFormatter.format(code)}")
@@ -198,6 +211,10 @@ class LazilyGeneratedOrdering(val ordering: Seq[SortOrder])
 
   def this(ordering: Seq[SortOrder], inputSchema: Seq[Attribute]) =
     this(ordering.map(BindReferences.bindReference(_, inputSchema)))
+=======
+    val code = new CodeAndComment(codeBody, ctx.getPlaceHolderToComments())
+    logDebug(s"Generated Ordering: ${CodeFormatter.format(code)}")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @transient
   private[this] var generatedOrdering = GenerateOrdering.generate(ordering)

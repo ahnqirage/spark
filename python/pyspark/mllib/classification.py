@@ -680,9 +680,15 @@ class NaiveBayes(object):
 @inherit_doc
 class StreamingLogisticRegressionWithSGD(StreamingLinearAlgorithm):
     """
+<<<<<<< HEAD
     Train or predict a logistic regression model on streaming data.
     Training uses Stochastic Gradient Descent to update the model based on
     each new batch of incoming data from a DStream.
+=======
+    Train or predict a logistic regression model on streaming data. Training uses
+    Stochastic Gradient Descent to update the model based on each new batch of
+    incoming data from a DStream.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     Each batch of data is assumed to be an RDD of LabeledPoints.
     The number of data points per batch can vary, but the number

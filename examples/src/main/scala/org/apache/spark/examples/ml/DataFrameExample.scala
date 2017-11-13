@@ -20,6 +20,7 @@ package org.apache.spark.examples.ml
 
 import java.io.File
 
+<<<<<<< HEAD
 import scopt.OptionParser
 
 import org.apache.spark.examples.mllib.AbstractParams
@@ -31,6 +32,19 @@ import org.apache.spark.util.Utils
 
 /**
  * An example of how to use [[DataFrame]] for ML. Run with
+=======
+import com.google.common.io.Files
+import scopt.OptionParser
+
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.examples.mllib.AbstractParams
+import org.apache.spark.mllib.linalg.Vector
+import org.apache.spark.mllib.stat.MultivariateOnlineSummarizer
+import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+
+/**
+ * An example of how to use [[org.apache.spark.sql.DataFrame]] for ML. Run with
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * {{{
  * ./bin/run-example ml.DataFrameExample [options]
  * }}}
@@ -54,6 +68,7 @@ object DataFrameExample {
       }
     }
 
+<<<<<<< HEAD
     parser.parse(args, defaultParams) match {
       case Some(params) => run(params)
       case _ => sys.exit(1)
@@ -69,6 +84,24 @@ object DataFrameExample {
     // Load input data
     println(s"Loading LIBSVM file with UDT from ${params.input}.")
     val df: DataFrame = spark.read.format("libsvm").load(params.input).cache()
+=======
+    parser.parse(args, defaultParams).map { params =>
+      run(params)
+    }.getOrElse {
+      sys.exit(1)
+    }
+  }
+
+  def run(params: Params) {
+
+    val conf = new SparkConf().setAppName(s"DataFrameExample with $params")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // Load input data
+    println(s"Loading LIBSVM file with UDT from ${params.input}.")
+    val df: DataFrame = sqlContext.read.format("libsvm").load(params.input).cache()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     println("Schema from LIBSVM:")
     df.printSchema()
     println(s"Loaded training data as a DataFrame with ${df.count()} records.")
@@ -78,25 +111,44 @@ object DataFrameExample {
     labelSummary.show()
 
     // Convert features column to an RDD of vectors.
+<<<<<<< HEAD
     val features = df.select("features").rdd.map { case Row(v: Vector) => v }
     val featureSummary = features.aggregate(new MultivariateOnlineSummarizer())(
       (summary, feat) => summary.add(Vectors.fromML(feat)),
+=======
+    val features = df.select("features").map { case Row(v: Vector) => v }
+    val featureSummary = features.aggregate(new MultivariateOnlineSummarizer())(
+      (summary, feat) => summary.add(feat),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       (sum1, sum2) => sum1.merge(sum2))
     println(s"Selected features column with average values:\n ${featureSummary.mean.toString}")
 
     // Save the records in a parquet file.
+<<<<<<< HEAD
     val tmpDir = Utils.createTempDir()
+=======
+    val tmpDir = Files.createTempDir()
+    tmpDir.deleteOnExit()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val outputDir = new File(tmpDir, "dataframe").toString
     println(s"Saving to $outputDir as Parquet file.")
     df.write.parquet(outputDir)
 
     // Load the records back.
     println(s"Loading Parquet file with UDT from $outputDir.")
+<<<<<<< HEAD
     val newDF = spark.read.parquet(outputDir)
     println(s"Schema from Parquet:")
     newDF.printSchema()
 
     spark.stop()
+=======
+    val newDF = sqlContext.read.parquet(outputDir)
+    println(s"Schema from Parquet:")
+    newDF.printSchema()
+
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

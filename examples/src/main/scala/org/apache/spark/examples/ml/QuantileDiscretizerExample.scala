@@ -15,11 +15,16 @@
  * limitations under the License.
  */
 
+<<<<<<< HEAD
+=======
+// scalastyle:off println
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 package org.apache.spark.examples.ml
 
 // $example on$
 import org.apache.spark.ml.feature.QuantileDiscretizer
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 
 object QuantileDiscretizerExample {
@@ -39,6 +44,22 @@ object QuantileDiscretizerExample {
         .repartition(1)
 
     // $example on$
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object QuantileDiscretizerExample {
+  def main(args: Array[String]) {
+    val conf = new SparkConf().setAppName("QuantileDiscretizerExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+    import sqlContext.implicits._
+
+    // $example on$
+    val data = Array((0, 18.0), (1, 19.0), (2, 8.0), (3, 5.0), (4, 2.2))
+    val df = sc.parallelize(data).toDF("id", "hour")
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val discretizer = new QuantileDiscretizer()
       .setInputCol("hour")
       .setOutputCol("result")
@@ -47,7 +68,14 @@ object QuantileDiscretizerExample {
     val result = discretizer.fit(df).transform(df)
     result.show()
     // $example off$
+<<<<<<< HEAD
 
     spark.stop()
   }
 }
+=======
+    sc.stop()
+  }
+}
+// scalastyle:on println
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

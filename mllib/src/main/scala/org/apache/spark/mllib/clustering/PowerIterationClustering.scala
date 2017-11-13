@@ -25,7 +25,10 @@ import org.apache.spark.{SparkContext, SparkException}
 import org.apache.spark.annotation.Since
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.graphx._
+<<<<<<< HEAD
 import org.apache.spark.internal.Logging
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.util.{Loader, MLUtils, Saveable}
 import org.apache.spark.rdd.RDD
@@ -70,7 +73,12 @@ object PowerIterationClusteringModel extends Loader[PowerIterationClusteringMode
 
     @Since("1.4.0")
     def save(sc: SparkContext, model: PowerIterationClusteringModel, path: String): Unit = {
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+      import sqlContext.implicits._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       val metadata = compact(render(
         ("class" -> thisClassName) ~ ("version" -> thisFormatVersion) ~ ("k" -> model.k)))
@@ -82,7 +90,11 @@ object PowerIterationClusteringModel extends Loader[PowerIterationClusteringMode
     @Since("1.4.0")
     def load(sc: SparkContext, path: String): PowerIterationClusteringModel = {
       implicit val formats = DefaultFormats
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       val (className, formatVersion, metadata) = Loader.loadMetadata(sc, path)
       assert(className == thisClassName)

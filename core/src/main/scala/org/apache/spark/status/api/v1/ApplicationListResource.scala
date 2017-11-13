@@ -96,4 +96,29 @@ private[spark] object ApplicationsListResource {
       }
     )
   }
+<<<<<<< HEAD
+=======
+
+  def convertApplicationInfo(
+      internal: InternalApplicationInfo,
+      completed: Boolean): ApplicationInfo = {
+    // standalone application info always has just one attempt
+    new ApplicationInfo(
+      id = internal.id,
+      name = internal.desc.name,
+      coresGranted = Some(internal.coresGranted),
+      maxCores = internal.desc.maxCores,
+      coresPerExecutor = internal.desc.coresPerExecutor,
+      memoryPerExecutorMB = Some(internal.desc.memoryPerExecutorMB),
+      attempts = Seq(new ApplicationAttemptInfo(
+        attemptId = None,
+        startTime = new Date(internal.startTime),
+        endTime = new Date(internal.endTime),
+        sparkUser = internal.desc.user,
+        completed = completed
+      ))
+    )
+  }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

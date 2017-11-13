@@ -17,6 +17,7 @@
 
 package org.apache.spark.ml.classification
 
+<<<<<<< HEAD
 import org.apache.hadoop.fs.Path
 import org.json4s.{DefaultFormats, JObject}
 import org.json4s.JsonDSL._
@@ -24,6 +25,9 @@ import org.json4s.JsonDSL._
 import org.apache.spark.annotation.Since
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
+=======
+import org.apache.spark.annotation.{Experimental, Since}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.tree._
 import org.apache.spark.ml.tree.DecisionTreeModelReadWrite._
@@ -42,7 +46,12 @@ import org.apache.spark.sql.Dataset
  * features.
  */
 @Since("1.4.0")
+<<<<<<< HEAD
 class DecisionTreeClassifier @Since("1.4.0") (
+=======
+@Experimental
+final class DecisionTreeClassifier @Since("1.4.0") (
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     @Since("1.4.0") override val uid: String)
   extends ProbabilisticClassifier[Vector, DecisionTreeClassifier, DecisionTreeClassificationModel]
   with DecisionTreeClassifierParams with DefaultParamsWritable {
@@ -52,6 +61,7 @@ class DecisionTreeClassifier @Since("1.4.0") (
 
   // Override parameter setters from parent trait for Java API compatibility.
 
+<<<<<<< HEAD
   /** @group setParam */
   @Since("1.4.0")
   override def setMaxDepth(value: Int): this.type = set(maxDepth, value)
@@ -97,6 +107,37 @@ class DecisionTreeClassifier @Since("1.4.0") (
   override def setSeed(value: Long): this.type = set(seed, value)
 
   override protected def train(dataset: Dataset[_]): DecisionTreeClassificationModel = {
+=======
+  @Since("1.4.0")
+  override def setMaxDepth(value: Int): this.type = super.setMaxDepth(value)
+
+  @Since("1.4.0")
+  override def setMaxBins(value: Int): this.type = super.setMaxBins(value)
+
+  @Since("1.4.0")
+  override def setMinInstancesPerNode(value: Int): this.type =
+    super.setMinInstancesPerNode(value)
+
+  @Since("1.4.0")
+  override def setMinInfoGain(value: Double): this.type = super.setMinInfoGain(value)
+
+  @Since("1.4.0")
+  override def setMaxMemoryInMB(value: Int): this.type = super.setMaxMemoryInMB(value)
+
+  @Since("1.4.0")
+  override def setCacheNodeIds(value: Boolean): this.type = super.setCacheNodeIds(value)
+
+  @Since("1.4.0")
+  override def setCheckpointInterval(value: Int): this.type = super.setCheckpointInterval(value)
+
+  @Since("1.4.0")
+  override def setImpurity(value: String): this.type = super.setImpurity(value)
+
+  @Since("1.6.0")
+  override def setSeed(value: Long): this.type = super.setSeed(value)
+
+  override protected def train(dataset: DataFrame): DecisionTreeClassificationModel = {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val categoricalFeatures: Map[Int, Int] =
       MetadataUtils.getCategoricalFeatures(dataset.schema($(featuresCol)))
     val numClasses: Int = getNumClasses(dataset)
@@ -114,6 +155,7 @@ class DecisionTreeClassifier @Since("1.4.0") (
     instr.logParams(params: _*)
 
     val trees = RandomForest.run(oldDataset, strategy, numTrees = 1, featureSubsetStrategy = "all",
+<<<<<<< HEAD
       seed = $(seed), instr = Some(instr), parentUID = Some(uid))
 
     val m = trees.head.asInstanceOf[DecisionTreeClassificationModel]
@@ -133,6 +175,10 @@ class DecisionTreeClassifier @Since("1.4.0") (
     val m = trees.head.asInstanceOf[DecisionTreeClassificationModel]
     instr.logSuccess(m)
     m
+=======
+      seed = $(seed), parentUID = Some(uid))
+    trees.head.asInstanceOf[DecisionTreeClassificationModel]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /** (private[ml]) Create a Strategy instance to use with the old API. */
@@ -148,7 +194,12 @@ class DecisionTreeClassifier @Since("1.4.0") (
 }
 
 @Since("1.4.0")
+<<<<<<< HEAD
 object DecisionTreeClassifier extends DefaultParamsReadable[DecisionTreeClassifier] {
+=======
+@Experimental
+object DecisionTreeClassifier {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   /** Accessor for supported impurities: entropy, gini */
   @Since("1.4.0")
   final val supportedImpurities: Array[String] = TreeClassifierParams.supportedImpurities
@@ -163,7 +214,12 @@ object DecisionTreeClassifier extends DefaultParamsReadable[DecisionTreeClassifi
  * features.
  */
 @Since("1.4.0")
+<<<<<<< HEAD
 class DecisionTreeClassificationModel private[ml] (
+=======
+@Experimental
+final class DecisionTreeClassificationModel private[ml] (
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     @Since("1.4.0")override val uid: String,
     @Since("1.4.0")override val rootNode: Node,
     @Since("1.6.0")override val numFeatures: Int,

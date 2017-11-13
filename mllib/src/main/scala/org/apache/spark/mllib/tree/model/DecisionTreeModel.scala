@@ -202,6 +202,12 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
     }
 
     def save(sc: SparkContext, path: String, model: DecisionTreeModel): Unit = {
+<<<<<<< HEAD
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+      import sqlContext.implicits._
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // SPARK-6120: We do a hacky check here so users understand why save() is failing
       //             when they run the ML guide example.
       // TODO: Fix this issue for real.
@@ -238,6 +244,11 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
     }
 
     def load(sc: SparkContext, path: String, algo: String, numNodes: Int): DecisionTreeModel = {
+<<<<<<< HEAD
+=======
+      val datapath = Loader.dataPath(path)
+      val sqlContext = SQLContext.getOrCreate(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // Load Parquet data.
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
       val dataPath = Loader.dataPath(path)

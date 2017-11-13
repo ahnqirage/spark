@@ -66,6 +66,10 @@ class FilterPushdownSuite extends PlanTest {
   test("simple push down") {
     val originalQuery =
       testRelation
+<<<<<<< HEAD
+=======
+        .groupBy('a)('a, count('b))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .select('a)
         .where('a === 1)
 
@@ -82,8 +86,13 @@ class FilterPushdownSuite extends PlanTest {
   test("combine redundant filters") {
     val originalQuery =
       testRelation
+<<<<<<< HEAD
         .where('a === 1 && 'b === 1)
         .where('a === 1 && 'c === 1)
+=======
+        .groupBy('a)('a as 'c, count('b))
+        .select('c)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val optimized = Optimize.execute(originalQuery.analyze)
     val correctAnswer =
@@ -135,7 +144,11 @@ class FilterPushdownSuite extends PlanTest {
     comparePlans(optimized, correctAnswer)
   }
 
+<<<<<<< HEAD
   test("nondeterministic: can always push down filter through project with deterministic field") {
+=======
+  test("nondeterministic: can't push down filter with nondeterministic condition through project") {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val originalQuery = testRelation
       .select('a)
       .where(Rand(10) > 5 || 'a > 5)
@@ -154,6 +167,7 @@ class FilterPushdownSuite extends PlanTest {
   test("nondeterministic: can't push down filter through project with nondeterministic field") {
     val originalQuery = testRelation
       .select(Rand(10).as('rand), 'a)
+<<<<<<< HEAD
       .where('a > 5)
       .analyze
 
@@ -186,8 +200,14 @@ class FilterPushdownSuite extends PlanTest {
       .groupBy('a)('a)
       .where(Rand(10) > 5)
       .analyze
+=======
+      .where('a > 5)
+      .analyze
 
-    comparePlans(optimized, correctAnswer)
+    val optimized = Optimize.execute(originalQuery)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+
+    comparePlans(optimized, originalQuery)
   }
 
   test("filters: combines filters") {
@@ -720,7 +740,10 @@ class FilterPushdownSuite extends PlanTest {
 
     val correctAnswer = testRelation
                         .where('a === 3)
+<<<<<<< HEAD
                         .select('a, 'b)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                         .groupBy('a)('a, count('b) as 'c)
                         .where('c === 2L)
                         .analyze
@@ -737,8 +760,13 @@ class FilterPushdownSuite extends PlanTest {
     val optimized = Optimize.execute(originalQuery.analyze)
 
     val correctAnswer = testRelation
+<<<<<<< HEAD
       .where('a + 1 < 3)
       .select('a, 'b)
+=======
+      .select('a, 'b)
+      .where('a + 1 < 3)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .groupBy('a)(('a + 1) as 'aa, count('b) as 'c)
       .where('c === 2L || 'aa > 4)
       .analyze
@@ -755,8 +783,13 @@ class FilterPushdownSuite extends PlanTest {
     val optimized = Optimize.execute(originalQuery.analyze)
 
     val correctAnswer = testRelation
+<<<<<<< HEAD
       .where("s" === "s")
       .select('a, 'b)
+=======
+      .select('a, 'b)
+      .where("s" === "s")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .groupBy('a)('a, count('b) as 'c, "s" as 'd)
       .where('c === 2L)
       .analyze
@@ -780,6 +813,7 @@ class FilterPushdownSuite extends PlanTest {
 
     comparePlans(optimized, correctAnswer)
   }
+<<<<<<< HEAD
 
   test("SPARK-17712: aggregate: don't push down filters that are data-independent") {
     val originalQuery = LocalRelation.apply(testRelation.output, Seq.empty)
@@ -1191,4 +1225,6 @@ class FilterPushdownSuite extends PlanTest {
     comparePlans(Optimize.execute(originalQuery.analyze), originalQuery.analyze,
       checkAnalysis = false)
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

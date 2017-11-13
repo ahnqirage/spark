@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.hive.execution
 
+<<<<<<< HEAD
 import scala.util.control.NonFatal
 
 import org.apache.hadoop.fs.Path
@@ -30,6 +31,36 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.command.CommandUtils
+=======
+import java.io.IOException
+import java.net.URI
+import java.text.SimpleDateFormat
+import java.util
+import java.util.{Date, Random}
+
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.hive.common.FileUtils
+
+import scala.util.control.NonFatal
+
+import scala.collection.JavaConverters._
+import org.apache.hadoop.hive.conf.HiveConf
+import org.apache.hadoop.hive.conf.HiveConf.ConfVars
+import org.apache.hadoop.hive.ql.exec.TaskRunner
+import org.apache.hadoop.hive.ql.plan.TableDesc
+import org.apache.hadoop.hive.ql.{Context, ErrorMsg}
+import org.apache.hadoop.hive.serde2.Serializer
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils.ObjectInspectorCopyOption
+import org.apache.hadoop.hive.serde2.objectinspector._
+import org.apache.hadoop.mapred.{FileOutputCommitter, FileOutputFormat, JobConf}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.execution.{SparkPlan, UnaryNode}
+import org.apache.spark.sql.hive.HiveShim.{ShimFileSinkDesc => FileSinkDesc}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.HiveShim.{ShimFileSinkDesc => FileSinkDesc}
 import org.apache.spark.sql.hive.client.HiveClientImpl
@@ -70,7 +101,132 @@ case class InsertIntoHiveTable(
     partition: Map[String, Option[String]],
     query: LogicalPlan,
     overwrite: Boolean,
+<<<<<<< HEAD
     ifPartitionNotExists: Boolean) extends SaveAsHiveFile {
+=======
+    ifNotExists: Boolean) extends UnaryNode with HiveInspectors {
+
+  @transient val sc: HiveContext = sqlContext.asInstanceOf[HiveContext]
+  @transient lazy val outputClass = newSerializer(table.tableDesc).getSerializedClass
+  @transient private lazy val hiveContext = new Context(sc.hiveconf)
+  @transient private lazy val catalog = sc.catalog
+
+  @transient var createdTempDir: Option[Path] = None
+  val stagingDir = new HiveConf().getVar(HiveConf.ConfVars.STAGINGDIR)
+
+  private def executionId: String = {
+    val rand: Random = new Random
+    val format: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS")
+    val executionId: String = "hive_" + format.format(new Date) + "_" + Math.abs(rand.nextLong)
+    executionId
+  }
+
+  private def getStagingDir(inputPath: Path, hadoopConf: Configuration): Path = {
+    val inputPathUri: URI = inputPath.toUri
+    val inputPathName: String = inputPathUri.getPath
+    val fs: FileSystem = inputPath.getFileSystem(hadoopConf)
+    val stagingPathName: String =
+      if (inputPathName.indexOf(stagingDir) == -1) {
+        new Path(inputPathName, stagingDir).toString
+      } else {
+        inputPathName.substring(0, inputPathName.indexOf(stagingDir) + stagingDir.length)
+      }
+    val dir: Path =
+      fs.makeQualified(
+        new Path(stagingPathName + "_" + executionId + "-" + TaskRunner.getTaskRunnerID))
+    logDebug("Created staging dir = " + dir + " for path = " + inputPath)
+    try {
+      if (!FileUtils.mkdir(fs, dir, true, hadoopConf)) {
+        throw new IllegalStateException("Cannot create staging directory  '" + dir.toString + "'")
+      }
+      createdTempDir = Some(dir)
+      fs.deleteOnExit(dir)
+    }
+    catch {
+      case e: IOException =>
+        throw new RuntimeException(
+          "Cannot create staging directory '" + dir.toString + "': " + e.getMessage, e)
+
+    }
+    return dir
+  }
+
+  private def getExternalScratchDir(extURI: URI, hadoopConf: Configuration): Path = {
+    getStagingDir(new Path(extURI.getScheme, extURI.getAuthority, extURI.getPath), hadoopConf)
+  }
+
+  def getExternalTmpPath(path: Path, hadoopConf: Configuration): Path = {
+    val extURI: URI = path.toUri
+    if (extURI.getScheme == "viewfs") {
+      getExtTmpPathRelTo(path.getParent, hadoopConf)
+    } else {
+      new Path(getExternalScratchDir(extURI, hadoopConf), "-ext-10000")
+    }
+  }
+
+  def getExtTmpPathRelTo(path: Path, hadoopConf: Configuration): Path = {
+    new Path(getStagingDir(path, hadoopConf), "-ext-10000") // Hive uses 10000
+  }
+
+  private def newSerializer(tableDesc: TableDesc): Serializer = {
+    val serializer = tableDesc.getDeserializerClass.newInstance().asInstanceOf[Serializer]
+    serializer.initialize(null, tableDesc.getProperties)
+    serializer
+  }
+
+  def output: Seq[Attribute] = Seq.empty
+
+  private def saveAsHiveFile(
+      rdd: RDD[InternalRow],
+      valueClass: Class[_],
+      fileSinkConf: FileSinkDesc,
+      conf: SerializableJobConf,
+      writerContainer: SparkHiveWriterContainer): Unit = {
+    assert(valueClass != null, "Output value class not set")
+    conf.value.setOutputValueClass(valueClass)
+
+    val outputFileFormatClassName = fileSinkConf.getTableInfo.getOutputFileFormatClassName
+    assert(outputFileFormatClassName != null, "Output format class not set")
+    conf.value.set("mapred.output.format.class", outputFileFormatClassName)
+
+    FileOutputFormat.setOutputPath(
+      conf.value,
+      SparkHiveWriterContainer.createPathFromString(fileSinkConf.getDirName, conf.value))
+    log.debug("Saving as hadoop file of type " + valueClass.getSimpleName)
+
+    writerContainer.driverSideSetup()
+    sc.sparkContext.runJob(rdd, writeToFile _)
+    writerContainer.commitJob()
+
+    // Note that this function is executed on executor side
+    def writeToFile(context: TaskContext, iterator: Iterator[InternalRow]): Unit = {
+      val serializer = newSerializer(fileSinkConf.getTableInfo)
+      val standardOI = ObjectInspectorUtils
+        .getStandardObjectInspector(
+          fileSinkConf.getTableInfo.getDeserializer.getObjectInspector,
+          ObjectInspectorCopyOption.JAVA)
+        .asInstanceOf[StructObjectInspector]
+
+      val fieldOIs = standardOI.getAllStructFieldRefs.asScala
+        .map(_.getFieldObjectInspector).toArray
+      val dataTypes: Array[DataType] = child.output.map(_.dataType).toArray
+      val wrappers = fieldOIs.zip(dataTypes).map { case (f, dt) => wrapperFor(f, dt)}
+      val outputData = new Array[Any](fieldOIs.length)
+
+      writerContainer.executorSideSetup(context.stageId, context.partitionId, context.attemptNumber)
+
+      iterator.foreach { row =>
+        var i = 0
+        while (i < fieldOIs.length) {
+          outputData(i) = if (row.isNullAt(i)) null else wrappers(i)(row.get(i, dataTypes(i)))
+          i += 1
+        }
+
+        writerContainer
+          .getLocalFileWriter(row, table.schema)
+          .write(serializer.serialize(outputData, standardOI))
+      }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def children: Seq[LogicalPlan] = query :: Nil
 
@@ -88,6 +244,7 @@ case class InsertIntoHiveTable(
     val hiveQlTable = HiveClientImpl.toHiveTable(table)
     // Have to pass the TableDesc object to RDD.mapPartitions and then instantiate new serializer
     // instances within the closure, since Serializer is not serializable while TableDesc is.
+<<<<<<< HEAD
     val tableDesc = new TableDesc(
       hiveQlTable.getInputFormatClass,
       // The class of table should be org.apache.hadoop.hive.ql.metadata.Table because
@@ -99,6 +256,13 @@ case class InsertIntoHiveTable(
     )
     val tableLocation = hiveQlTable.getDataLocation
     val tmpLocation = getExternalTmpPath(sparkSession, hadoopConf, tableLocation)
+=======
+    val tableDesc = table.tableDesc
+    val tableLocation = table.hiveQlTable.getDataLocation
+    val jobConf = new JobConf(sc.hiveconf)
+    val tmpLocation = getExternalTmpPath(tableLocation, jobConf)
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val fileSinkConf = new FileSinkDesc(tmpLocation.toString, tableDesc, false)
 
     val numDynamicPartitions = partition.values.count(_.isEmpty)
@@ -140,6 +304,7 @@ case class InsertIntoHiveTable(
       }
     }
 
+<<<<<<< HEAD
     table.bucketSpec match {
       case Some(bucketSpec) =>
         // Writes to bucketed hive tables are allowed only if user does not care about maintaining
@@ -159,6 +324,21 @@ case class InsertIntoHiveTable(
             s"$enforceSortingConfig are set to false.")
         }
       case _ => // do nothing since table has no bucketing
+=======
+    val jobConfSer = new SerializableJobConf(jobConf)
+
+    // When speculation is on and output committer class name contains "Direct", we should warn
+    // users that they may loss data if they are using a direct output committer.
+    val speculationEnabled = sqlContext.sparkContext.conf.getBoolean("spark.speculation", false)
+    val outputCommitterClass = jobConf.get("mapred.output.committer.class", "")
+    if (speculationEnabled && outputCommitterClass.contains("Direct")) {
+      val warningMessage =
+        s"$outputCommitterClass may be an output committer that writes data directly to " +
+          "the final location. Because speculation is enabled, this output committer may " +
+          "cause data loss (see the case in SPARK-10063). If possible, please use a output " +
+          "committer that does not have this behavior (e.g. FileOutputCommitter)."
+      logWarning(warningMessage)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     val partitionAttributes = partitionColumnNames.takeRight(numDynamicPartitions).map { name =>
@@ -242,6 +422,7 @@ case class InsertIntoHiveTable(
 
     // Attempt to delete the staging directory and the inclusive files. If failed, the files are
     // expected to be dropped at the normal termination of VM since deleteOnExit is used.
+<<<<<<< HEAD
     deleteExternalTmpPath(hadoopConf)
 
     // un-cache this table.
@@ -249,6 +430,17 @@ case class InsertIntoHiveTable(
     sparkSession.sessionState.catalog.refreshTable(table.identifier)
 
     CommandUtils.updateTableStats(sparkSession, table)
+=======
+    try {
+      createdTempDir.foreach { path => path.getFileSystem(jobConf).delete(path, true) }
+    } catch {
+      case NonFatal(e) =>
+        logWarning(s"Unable to delete staging directory: $stagingDir.\n" + e)
+    }
+
+    // Invalidate the cache.
+    sqlContext.cacheManager.invalidateCache(table)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // It would be nice to just return the childRdd unchanged so insert operations could be chained,
     // however for now we return an empty list to simplify compatibility checks with hive, which

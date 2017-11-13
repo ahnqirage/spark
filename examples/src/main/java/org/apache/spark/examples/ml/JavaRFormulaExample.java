@@ -17,6 +17,7 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession;
 
 // $example on$
@@ -25,6 +26,18 @@ import java.util.List;
 
 import org.apache.spark.ml.feature.RFormula;
 import org.apache.spark.sql.Dataset;
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SQLContext;
+
+// $example on$
+import java.util.Arrays;
+
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.ml.feature.RFormula;
+import org.apache.spark.sql.DataFrame;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.StructField;
@@ -35,10 +48,16 @@ import static org.apache.spark.sql.types.DataTypes.*;
 
 public class JavaRFormulaExample {
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaRFormulaExample")
       .getOrCreate();
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaRFormulaExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext sqlContext = new SQLContext(jsc);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // $example on$
     StructType schema = createStructType(new StructField[]{
@@ -48,6 +67,7 @@ public class JavaRFormulaExample {
       createStructField("clicked", DoubleType, false)
     });
 
+<<<<<<< HEAD
     List<Row> data = Arrays.asList(
       RowFactory.create(7, "US", 18, 1.0),
       RowFactory.create(8, "CA", 12, 0.0),
@@ -55,14 +75,30 @@ public class JavaRFormulaExample {
     );
 
     Dataset<Row> dataset = spark.createDataFrame(data, schema);
+=======
+    JavaRDD<Row> rdd = jsc.parallelize(Arrays.asList(
+      RowFactory.create(7, "US", 18, 1.0),
+      RowFactory.create(8, "CA", 12, 0.0),
+      RowFactory.create(9, "NZ", 15, 0.0)
+    ));
+
+    DataFrame dataset = sqlContext.createDataFrame(rdd, schema);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     RFormula formula = new RFormula()
       .setFormula("clicked ~ country + hour")
       .setFeaturesCol("features")
       .setLabelCol("label");
+<<<<<<< HEAD
     Dataset<Row> output = formula.fit(dataset).transform(dataset);
     output.select("features", "label").show();
     // $example off$
     spark.stop();
+=======
+    DataFrame output = formula.fit(dataset).transform(dataset);
+    output.select("features", "label").show();
+    // $example off$
+    jsc.stop();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

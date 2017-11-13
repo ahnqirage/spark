@@ -586,7 +586,11 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
    */
   def convertFilters(table: Table, filters: Seq[Expression]): String = {
     // hive varchar is treated as catalyst string, but hive varchar can't be pushed down.
+<<<<<<< HEAD
     lazy val varcharKeys = table.getPartitionKeys.asScala
+=======
+    val varcharKeys = table.getPartitionKeys.asScala
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .filter(col => col.getType.startsWith(serdeConstants.VARCHAR_TYPE_NAME) ||
         col.getType.startsWith(serdeConstants.CHAR_TYPE_NAME))
       .map(col => col.getName).toSet

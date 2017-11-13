@@ -83,11 +83,19 @@ setMethod("count",
 #' df2 <- agg(df, <column> = <aggFunction>)
 #' df2 <- agg(df, newColName = aggFunction(column))
 #'
+<<<<<<< HEAD
 #' @rdname summarize
 #' @aliases agg,GroupedData-method
 #' @name agg
 #' @family agg_funcs
 #' @export
+=======
+#' @param x a GroupedData
+#' @return a DataFrame
+#' @rdname summarize
+#' @name agg
+#' @family agg_funcs
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @examples
 #' \dontrun{
 #'  df2 <- agg(df, age = "sum")  # new column name will be created as 'SUM(age#0)'
@@ -122,8 +130,11 @@ setMethod("agg",
 
 #' @rdname summarize
 #' @name summarize
+<<<<<<< HEAD
 #' @aliases summarize,GroupedData-method
 #' @note summarize since 1.4.0
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("summarize",
           signature(x = "GroupedData"),
           function(x, ...) {
@@ -133,6 +144,7 @@ setMethod("summarize",
 # Aggregate Functions by name
 methods <- c("avg", "max", "mean", "min", "sum")
 
+<<<<<<< HEAD
 # These are not exposed on GroupedData: "kurtosis", "skewness", "stddev", "stddev_samp",
 # "stddev_pop", "variance", "var_samp", "var_pop"
 
@@ -179,6 +191,10 @@ setMethod("pivot",
             }
             groupedData(result)
           })
+=======
+# These are not exposed on GroupedData: "kurtosis", "skewness", "stddev", "stddev_samp", "stddev_pop",
+# "variance", "var_samp", "var_pop"
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 createMethod <- function(name) {
   setMethod(name,

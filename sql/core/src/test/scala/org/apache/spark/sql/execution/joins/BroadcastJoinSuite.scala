@@ -46,10 +46,18 @@ class BroadcastJoinSuite extends QueryTest with SQLTestUtils {
    */
   override def beforeAll(): Unit = {
     super.beforeAll()
+<<<<<<< HEAD
     spark = SparkSession.builder()
       .master("local-cluster[2,1,1024]")
       .appName("testing")
       .getOrCreate()
+=======
+    val conf = new SparkConf()
+      .setMaster("local-cluster[2,1,1024]")
+      .setAppName("testing")
+    val sc = new SparkContext(conf)
+    sqlContext = new SQLContext(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def afterAll(): Unit = {

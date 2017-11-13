@@ -32,6 +32,7 @@ import org.apache.spark.annotation.{DeveloperApi, Since}
 import org.apache.spark.ml.linalg.JsonVectorConverter
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.util.Identifiable
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
 
 /**
  * :: DeveloperApi ::
@@ -93,7 +94,11 @@ class Param[T](val parent: String, val name: String, val doc: String, val isVali
       case x: String =>
         compact(render(JString(x)))
       case v: Vector =>
+<<<<<<< HEAD
         JsonVectorConverter.toJson(v)
+=======
+        v.toJson
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case _ =>
         throw new NotImplementedError(
           "The default jsonEncode only supports string and vector. " +
@@ -102,9 +107,27 @@ class Param[T](val parent: String, val name: String, val doc: String, val isVali
   }
 
   /** Decodes a param value from JSON. */
+<<<<<<< HEAD
   def jsonDecode(json: String): T = Param.jsonDecode[T](json)
 
   private[this] val stringRepresentation = s"${parent}__$name"
+=======
+  def jsonDecode(json: String): T = {
+    parse(json) match {
+      case JString(x) =>
+        x.asInstanceOf[T]
+      case JObject(v) =>
+        val keys = v.map(_._1)
+        assert(keys.contains("type") && keys.contains("values"),
+          s"Expect a JSON serialized vector but cannot find fields 'type' and 'values' in $json.")
+        Vectors.fromJson(json).asInstanceOf[T]
+      case _ =>
+        throw new NotImplementedError(
+          "The default jsonDecode only supports string and vector. " +
+            s"${this.getClass.getName} must override jsonDecode to support its value type.")
+    }
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override final def toString: String = stringRepresentation
 

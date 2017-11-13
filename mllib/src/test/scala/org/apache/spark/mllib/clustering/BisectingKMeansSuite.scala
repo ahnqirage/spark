@@ -21,7 +21,10 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.mllib.util.TestingUtils._
+<<<<<<< HEAD
 import org.apache.spark.util.Utils
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 class BisectingKMeansSuite extends SparkFunSuite with MLlibTestSparkContext {
 
@@ -180,6 +183,7 @@ class BisectingKMeansSuite extends SparkFunSuite with MLlibTestSparkContext {
       }
     }
   }
+<<<<<<< HEAD
 
   test("BisectingKMeans model save/load") {
     val tempDir = Utils.createTempDir()
@@ -197,4 +201,6 @@ class BisectingKMeansSuite extends SparkFunSuite with MLlibTestSparkContext {
       Utils.deleteRecursively(tempDir)
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

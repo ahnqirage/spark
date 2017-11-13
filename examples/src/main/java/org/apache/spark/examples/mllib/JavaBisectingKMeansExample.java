@@ -17,9 +17,16 @@
 
 package org.apache.spark.examples.mllib;
 
+<<<<<<< HEAD
 // $example on$
 import java.util.Arrays;
 import java.util.List;
+=======
+import java.util.ArrayList;
+
+// $example on$
+import com.google.common.collect.Lists;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example off$
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -32,7 +39,11 @@ import org.apache.spark.mllib.linalg.Vectors;
 // $example off$
 
 /**
+<<<<<<< HEAD
  * Java example for bisecting k-means clustering.
+=======
+ * Java example for graph clustering using power iteration clustering (PIC).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 public class JavaBisectingKMeansExample {
   public static void main(String[] args) {
@@ -40,7 +51,11 @@ public class JavaBisectingKMeansExample {
     JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
     // $example on$
+<<<<<<< HEAD
     List<Vector> localData = Arrays.asList(
+=======
+    ArrayList<Vector> localData = Lists.newArrayList(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       Vectors.dense(0.1, 0.1),   Vectors.dense(0.3, 0.3),
       Vectors.dense(10.1, 10.1), Vectors.dense(10.3, 10.3),
       Vectors.dense(20.1, 20.1), Vectors.dense(20.3, 20.3),
@@ -53,7 +68,13 @@ public class JavaBisectingKMeansExample {
     BisectingKMeansModel model = bkm.run(data);
 
     System.out.println("Compute Cost: " + model.computeCost(data));
+<<<<<<< HEAD
 
+=======
+    for (Vector center: model.clusterCenters()) {
+      System.out.println("");
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     Vector[] clusterCenters = model.clusterCenters();
     for (int i = 0; i < clusterCenters.length; i++) {
       Vector clusterCenter = clusterCenters[i];

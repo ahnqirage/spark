@@ -29,15 +29,25 @@ import org.apache.spark.{broadcast, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.io.CompressionCodec
 import org.apache.spark.rdd.{RDD, RDDOperationScope}
+<<<<<<< HEAD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.{Predicate => GenPredicate, _}
+=======
+import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
+import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.codegen._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.physical._
 import org.apache.spark.sql.execution.metric.SQLMetric
 import org.apache.spark.sql.types.DataType
+<<<<<<< HEAD
 import org.apache.spark.util.ThreadUtils
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * The base class for physical operators.
@@ -52,12 +62,22 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
    * populated by the query planning infrastructure.
    */
   @transient
+<<<<<<< HEAD
   final val sqlContext = SparkSession.getActiveSession.map(_.sqlContext).orNull
 
   protected def sparkContext = sqlContext.sparkContext
 
   // sqlContext will be null when SparkPlan nodes are created without the active sessions.
   // So far, this only happens in the test cases.
+=======
+  protected[spark] final val sqlContext = SQLContext.getActive().getOrElse(null)
+
+  protected def sparkContext = sqlContext.sparkContext
+
+  // sqlContext will be null when we are being deserialized on the slaves.  In this instance
+  // the value of subexpressionEliminationEnabled will be set by the desserializer after the
+  // constructor has run.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   val subexpressionEliminationEnabled: Boolean = if (sqlContext != null) {
     sqlContext.conf.subexpressionEliminationEnabled
   } else {
@@ -69,17 +89,30 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
 
   /** Overridden make copy also propagates sqlContext to copied plan. */
   override def makeCopy(newArgs: Array[AnyRef]): SparkPlan = {
+<<<<<<< HEAD
     SparkSession.setActiveSession(sqlContext.sparkSession)
+=======
+    SQLContext.setActive(sqlContext)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     super.makeCopy(newArgs)
   }
 
   /**
+<<<<<<< HEAD
    * @return All metrics containing metrics of this SparkPlan.
    */
   def metrics: Map[String, SQLMetric] = Map.empty
 
   /**
    * Resets all the metrics.
+=======
+   * Return all metadata that describes more details of this SparkPlan.
+   */
+  private[sql] def metadata: Map[String, String] = Map.empty
+
+  /**
+   * Return all metrics containing metrics of this SparkPlan.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   def resetMetrics(): Unit = {
     metrics.valuesIterator.foreach(_.reset())
@@ -347,6 +380,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
       partsScanned += p.size
     }
 
+<<<<<<< HEAD
     if (buf.size > n) {
       buf.take(n).toArray
     } else {
@@ -369,24 +403,69 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
       str.substring(0, 256 - 3) + "..."
     } else {
       str
+=======
+  private[this] def isTesting: Boolean = sys.props.contains("spark.testing")
+
+  protected def newMutableProjection(
+      expressions: Seq[Expression], inputSchema: Seq[Attribute]): () => MutableProjection = {
+    log.debug(s"Creating MutableProj: $expressions, inputSchema: $inputSchema")
+    try {
+      GenerateMutableProjection.generate(expressions, inputSchema)
+    } catch {
+      case e: Exception =>
+        if (isTesting) {
+          throw e
+        } else {
+          log.error("Failed to generate mutable projection, fallback to interpreted", e)
+          () => new InterpretedMutableProjection(expressions, inputSchema)
+        }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     logWarning(s"Codegen disabled for this expression:\n $logMessage")
     InterpretedPredicate.create(expression, inputSchema)
   }
 
   protected def newPredicate(
+<<<<<<< HEAD
       expression: Expression, inputSchema: Seq[Attribute]): GenPredicate = {
     try {
       GeneratePredicate.generate(expression, inputSchema)
     } catch {
       case _ @ (_: JaninoRuntimeException | _: CompileException) if codeGenFallBack =>
         genInterpretedPredicate(expression, inputSchema)
+=======
+      expression: Expression, inputSchema: Seq[Attribute]): (InternalRow) => Boolean = {
+    try {
+      GeneratePredicate.generate(expression, inputSchema)
+    } catch {
+      case e: Exception =>
+        if (isTesting) {
+          throw e
+        } else {
+          log.error("Failed to generate predicate, fallback to interpreted", e)
+          InterpretedPredicate.create(expression, inputSchema)
+        }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
   protected def newOrdering(
       order: Seq[SortOrder], inputSchema: Seq[Attribute]): Ordering[InternalRow] = {
+<<<<<<< HEAD
     GenerateOrdering.generate(order, inputSchema)
+=======
+    try {
+      GenerateOrdering.generate(order, inputSchema)
+    } catch {
+      case e: Exception =>
+        if (isTesting) {
+          throw e
+        } else {
+          log.error("Failed to generate ordering, fallback to interpreted", e)
+          new InterpretedOrdering(order, inputSchema)
+        }
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**

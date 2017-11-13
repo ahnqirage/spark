@@ -27,9 +27,12 @@ import org.apache.hadoop.fs.Path
 
 import org.apache.spark._
 import org.apache.spark.broadcast.Broadcast
+<<<<<<< HEAD
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config.CHECKPOINT_COMPRESS
 import org.apache.spark.io.CompressionCodec
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.{SerializableConfiguration, Utils}
 
 /**
@@ -122,7 +125,10 @@ private[spark] object ReliableCheckpointRDD extends Logging {
       originalRDD: RDD[T],
       checkpointDir: String,
       blockSize: Int = -1): ReliableCheckpointRDD[T] = {
+<<<<<<< HEAD
     val checkpointStartTimeNs = System.nanoTime()
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val sc = originalRDD.sparkContext
 
@@ -144,24 +150,36 @@ private[spark] object ReliableCheckpointRDD extends Logging {
       writePartitionerToCheckpointDir(sc, originalRDD.partitioner.get, checkpointDirPath)
     }
 
+<<<<<<< HEAD
     val checkpointDurationMs =
       TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - checkpointStartTimeNs)
     logInfo(s"Checkpointing took $checkpointDurationMs ms.")
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val newRDD = new ReliableCheckpointRDD[T](
       sc, checkpointDirPath.toString, originalRDD.partitioner)
     if (newRDD.partitions.length != originalRDD.partitions.length) {
       throw new SparkException(
+<<<<<<< HEAD
         "Checkpoint RDD has a different number of partitions from original RDD. Original " +
           s"RDD [ID: ${originalRDD.id}, num of partitions: ${originalRDD.partitions.length}]; " +
           s"Checkpoint RDD [ID: ${newRDD.id}, num of partitions: " +
           s"${newRDD.partitions.length}].")
+=======
+        s"Checkpoint RDD $newRDD(${newRDD.partitions.length}) has different " +
+          s"number of partitions from original RDD $originalRDD(${originalRDD.partitions.length})")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     newRDD
   }
 
   /**
+<<<<<<< HEAD
    * Write an RDD partition's data to a checkpoint file.
+=======
+   * Write a RDD partition's data to a checkpoint file.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   def writePartitionToCheckpointFile[T: ClassTag](
       path: String,
@@ -252,15 +270,24 @@ private[spark] object ReliableCheckpointRDD extends Logging {
       val bufferSize = sc.conf.getInt("spark.buffer.size", 65536)
       val partitionerFilePath = new Path(checkpointDirPath, checkpointPartitionerFileName)
       val fs = partitionerFilePath.getFileSystem(sc.hadoopConfiguration)
+<<<<<<< HEAD
       val fileInputStream = fs.open(partitionerFilePath, bufferSize)
       val serializer = SparkEnv.get.serializer.newInstance()
       val partitioner = Utils.tryWithSafeFinally {
         val deserializeStream = serializer.deserializeStream(fileInputStream)
         Utils.tryWithSafeFinally {
+=======
+      if (fs.exists(partitionerFilePath)) {
+        val fileInputStream = fs.open(partitionerFilePath, bufferSize)
+        val serializer = SparkEnv.get.serializer.newInstance()
+        val deserializeStream = serializer.deserializeStream(fileInputStream)
+        val partitioner = Utils.tryWithSafeFinally[Partitioner] {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           deserializeStream.readObject[Partitioner]
         } {
           deserializeStream.close()
         }
+<<<<<<< HEAD
       } {
         fileInputStream.close()
       }
@@ -271,6 +298,15 @@ private[spark] object ReliableCheckpointRDD extends Logging {
       case e: FileNotFoundException =>
         logDebug("No partitioner file", e)
         None
+=======
+        logDebug(s"Read partitioner from $partitionerFilePath")
+        Some(partitioner)
+      } else {
+        logDebug("No partitioner file")
+        None
+      }
+    } catch {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case NonFatal(e) =>
         logWarning(s"Error reading partitioner from $checkpointDirPath, " +
             s"partitioner will not be recovered which may lead to performance loss", e)

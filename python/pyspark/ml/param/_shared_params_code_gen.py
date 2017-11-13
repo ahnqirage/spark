@@ -112,6 +112,7 @@ if __name__ == "__main__":
         ("predictionCol", "prediction column name.", "'prediction'", "TypeConverters.toString"),
         ("probabilityCol", "Column name for predicted class conditional probabilities. " +
          "Note: Not all models output well-calibrated probability estimates! These probabilities " +
+<<<<<<< HEAD
          "should be treated as confidences, not precise probabilities.", "'probability'",
          "TypeConverters.toString"),
         ("rawPredictionCol", "raw prediction (a.k.a. confidence) column name.", "'rawPrediction'",
@@ -128,6 +129,19 @@ if __name__ == "__main__":
          "TypeConverters.toFloat"),
         ("stepSize", "Step size to be used for each iteration of optimization (>= 0).", None,
          "TypeConverters.toFloat"),
+=======
+         "should be treated as confidences, not precise probabilities.", "'probability'"),
+        ("rawPredictionCol", "raw prediction (a.k.a. confidence) column name.", "'rawPrediction'"),
+        ("inputCol", "input column name.", None),
+        ("inputCols", "input column names.", None),
+        ("outputCol", "output column name.", "self.uid + '__output'"),
+        ("numFeatures", "number of features.", None),
+        ("checkpointInterval", "set checkpoint interval (>= 1) or disable checkpoint (-1). " +
+         "E.g. 10 means that the cache will get checkpointed every 10 iterations.", None),
+        ("seed", "random seed.", "hash(type(self).__name__)"),
+        ("tol", "the convergence tolerance for iterative algorithms.", None),
+        ("stepSize", "Step size to be used for each iteration of optimization.", None),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         ("handleInvalid", "how to handle invalid entries. Options are skip (which will filter " +
          "out rows with bad values), or error (which will throw an error). More options may be " +
          "added later.", None, "TypeConverters.toString"),
@@ -178,8 +192,12 @@ if __name__ == "__main__":
         ("cacheNodeIds", "If false, the algorithm will pass trees to executors to match " +
          "instances with nodes. If true, the algorithm will cache node IDs for each instance. " +
          "Caching can speed up training of deeper trees. Users can set how often should the " +
+<<<<<<< HEAD
          "cache be checkpointed or disable it by setting checkpointInterval.",
          "TypeConverters.toBoolean")]
+=======
+         "cache be checkpointed or disable it by setting checkpointInterval.")]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     decisionTreeCode = '''class DecisionTreeParams(Params):
     """

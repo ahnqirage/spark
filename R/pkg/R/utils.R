@@ -160,7 +160,10 @@ wrapInt <- function(value) {
 # TODO: this function does not handle integer overflow well
 mult31AndAdd <- function(val, addVal) {
   vec <- c(bitwShiftL(val, c(4, 3, 2, 1, 0)), addVal)
+<<<<<<< HEAD
   vec[is.na(vec)] <- 0
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   Reduce(function(a, b) {
           wrapInt(as.numeric(a) + as.numeric(b))
          },
@@ -720,13 +723,21 @@ convertNamedListToEnv <- function(namedList) {
 
 # Assign a new environment for attach() and with() methods
 assignNewEnv <- function(data) {
+<<<<<<< HEAD
   stopifnot(class(data) == "SparkDataFrame")
+=======
+  stopifnot(class(data) == "DataFrame")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   cols <- columns(data)
   stopifnot(length(cols) > 0)
 
   env <- new.env()
   for (i in 1:length(cols)) {
+<<<<<<< HEAD
     assign(x = cols[i], value = data[, cols[i], drop = F], envir = env)
+=======
+    assign(x = cols[i], value = data[, cols[i]], envir = env)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
   env
 }
@@ -735,6 +746,7 @@ assignNewEnv <- function(data) {
 splitString <- function(input) {
   Filter(nzchar, unlist(strsplit(input, ",|\\s")))
 }
+<<<<<<< HEAD
 
 convertToJSaveMode <- function(mode) {
  allModes <- c("append", "overwrite", "error", "ignore")
@@ -919,3 +931,5 @@ hadoop_home_set <- function() {
 windows_with_hadoop <- function() {
   !is_windows() || hadoop_home_set()
 }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -20,12 +20,20 @@ Decision Tree Classification Example.
 """
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
+=======
+import sys
+
+# $example on$
+from pyspark import SparkContext, SQLContext
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 from pyspark.ml import Pipeline
 from pyspark.ml.classification import DecisionTreeClassifier
 from pyspark.ml.feature import StringIndexer, VectorIndexer
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 # $example off$
+<<<<<<< HEAD
 from pyspark.sql import SparkSession
 
 if __name__ == "__main__":
@@ -37,6 +45,16 @@ if __name__ == "__main__":
     # $example on$
     # Load the data stored in LIBSVM format as a DataFrame.
     data = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="decision_tree_classification_example")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    # Load the data stored in LIBSVM format as a DataFrame.
+    data = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     # Index labels, adding metadata to the label column.
     # Fit on whole dataset to include all labels in index.
@@ -66,7 +84,11 @@ if __name__ == "__main__":
 
     # Select (prediction, true label) and compute test error
     evaluator = MulticlassClassificationEvaluator(
+<<<<<<< HEAD
         labelCol="indexedLabel", predictionCol="prediction", metricName="accuracy")
+=======
+        labelCol="indexedLabel", predictionCol="prediction", metricName="precision")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     accuracy = evaluator.evaluate(predictions)
     print("Test Error = %g " % (1.0 - accuracy))
 
@@ -74,5 +96,8 @@ if __name__ == "__main__":
     # summary only
     print(treeModel)
     # $example off$
+<<<<<<< HEAD
 
     spark.stop()
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -17,9 +17,15 @@
 
 package org.apache.spark.sql.expressions
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.sql.{AnalysisException, Column}
+=======
+import org.apache.spark.annotation.Experimental
+import org.apache.spark.sql.{Column, catalyst}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 
 /**
  * A window specification that defines the partitioning, ordering, and frame boundaries.
@@ -266,7 +272,62 @@ class WindowSpec private[sql](
    * Converts this [[WindowSpec]] into a [[Column]] with an aggregate expression.
    */
   private[sql] def withAggregate(aggregate: Column): Column = {
+<<<<<<< HEAD
     val spec = WindowSpecDefinition(partitionSpec, orderSpec, frame)
     new Column(WindowExpression(aggregate.expr, spec))
+=======
+    val windowExpr = aggregate.expr match {
+      // First, we check if we get an aggregate function without the DISTINCT keyword.
+      // Right now, we do not support using a DISTINCT aggregate function as a
+      // window function.
+      case AggregateExpression(aggregateFunction, _, isDistinct) if !isDistinct =>
+        aggregateFunction match {
+          case Average(child) => WindowExpression(
+            UnresolvedWindowFunction("avg", child :: Nil),
+            WindowSpecDefinition(partitionSpec, orderSpec, frame))
+          case Sum(child) => WindowExpression(
+            UnresolvedWindowFunction("sum", child :: Nil),
+            WindowSpecDefinition(partitionSpec, orderSpec, frame))
+          case Count(children) => WindowExpression(
+            UnresolvedWindowFunction("count", children),
+            WindowSpecDefinition(partitionSpec, orderSpec, frame))
+          case First(child, ignoreNulls) => WindowExpression(
+            // TODO this is a hack for Hive UDAF first_value
+            UnresolvedWindowFunction(
+              "first_value",
+              child :: ignoreNulls :: Nil),
+            WindowSpecDefinition(partitionSpec, orderSpec, frame))
+          case Last(child, ignoreNulls) => WindowExpression(
+            // TODO this is a hack for Hive UDAF last_value
+            UnresolvedWindowFunction(
+              "last_value",
+              child :: ignoreNulls :: Nil),
+            WindowSpecDefinition(partitionSpec, orderSpec, frame))
+          case Min(child) => WindowExpression(
+            UnresolvedWindowFunction("min", child :: Nil),
+            WindowSpecDefinition(partitionSpec, orderSpec, frame))
+          case Max(child) => WindowExpression(
+            UnresolvedWindowFunction("max", child :: Nil),
+            WindowSpecDefinition(partitionSpec, orderSpec, frame))
+          case x =>
+            throw new UnsupportedOperationException(s"$x is not supported in a window operation.")
+        }
+
+      case AggregateExpression(aggregateFunction, _, isDistinct) if isDistinct =>
+        throw new UnsupportedOperationException(
+          s"Distinct aggregate function ${aggregateFunction} is not supported " +
+            s"in window operation.")
+
+      case wf: WindowFunction =>
+        WindowExpression(
+          wf,
+          WindowSpecDefinition(partitionSpec, orderSpec, frame))
+
+      case x =>
+        throw new UnsupportedOperationException(s"$x is not supported in a window operation.")
+    }
+
+    new Column(windowExpr)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

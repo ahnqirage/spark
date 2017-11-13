@@ -1,7 +1,12 @@
 ---
 layout: global
+<<<<<<< HEAD
 title: Collaborative Filtering - RDD-based API
 displayTitle: Collaborative Filtering - RDD-based API
+=======
+title: Collaborative Filtering - spark.mllib
+displayTitle: Collaborative Filtering - spark.mllib
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents
@@ -37,6 +42,7 @@ for example, users giving ratings to movies.
 
 It is common in many real-world use cases to only have access to *implicit feedback* (e.g. views,
 clicks, purchases, likes, shares etc.). The approach used in `spark.mllib` to deal with such data is taken
+<<<<<<< HEAD
 from [Collaborative Filtering for Implicit Feedback Datasets](http://dx.doi.org/10.1109/ICDM.2008.22).
 Essentially, instead of trying to model the matrix of ratings directly, this approach treats the data
 as numbers representing the *strength* in observations of user actions (such as the number of clicks,
@@ -44,6 +50,15 @@ or the cumulative duration someone spent viewing a movie). Those numbers are the
 confidence in observed user preferences, rather than explicit ratings given to items. The model
 then tries to find latent factors that can be used to predict the expected preference of a user for
 an item.
+=======
+from
+[Collaborative Filtering for Implicit Feedback Datasets](http://dx.doi.org/10.1109/ICDM.2008.22).
+Essentially instead of trying to model the matrix of ratings directly, this approach treats the data
+as a combination of binary preferences and *confidence values*. The ratings are then related to the
+level of confidence in observed user preferences, rather than explicit ratings given to items.  The
+model then tries to find latent factors that can be used to predict the expected preference of a
+user for an item.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 ### Scaling of the regularization parameter
 
@@ -86,7 +101,11 @@ Spark Java API uses a separate `JavaRDD` class. You can convert a Java RDD to a 
 calling `.rdd()` on your `JavaRDD` object. A self-contained application example
 that is equivalent to the provided example in Scala is given below:
 
+<<<<<<< HEAD
 Refer to the [`ALS` Java docs](api/java/org/apache/spark/mllib/recommendation/ALS.html) for more details on the API.
+=======
+Refer to the [`ALS` Java docs](api/java/org/apache/spark/mllib/recommendation/ALS.html) for details on the API.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example java/org/apache/spark/examples/mllib/JavaRecommendationExample.java %}
 </div>
@@ -119,5 +138,10 @@ a dependency.
 
 ## Tutorial
 
+<<<<<<< HEAD
 The [training exercises](https://github.com/databricks/spark-training) from the Spark Summit 2014 include a hands-on tutorial for
 [personalized movie recommendation with `spark.mllib`](https://github.com/databricks/spark-training/blob/master/website/movie-recommendation-with-mllib.md).
+=======
+The [training exercises](https://databricks-training.s3.amazonaws.com/index.html) from the Spark Summit 2014 include a hands-on tutorial for
+[personalized movie recommendation with `spark.mllib`](https://databricks-training.s3.amazonaws.com/movie-recommendation-with-mllib.html).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

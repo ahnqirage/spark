@@ -17,7 +17,15 @@
 
 package org.apache.spark.scheduler
 
+<<<<<<< HEAD
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+=======
+import org.apache.spark.storage.BlockManagerId
+
+import org.apache.spark.{SparkConf, SparkFunSuite}
+import org.apache.spark.serializer.JavaSerializer
+import org.roaringbitmap.RoaringBitmap
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.util.Random
 
@@ -133,6 +141,7 @@ class MapStatusSuite extends SparkFunSuite {
     assert(size1 === size2)
     assert(!success)
   }
+<<<<<<< HEAD
 
   test("Blocks which are bigger than SHUFFLE_ACCURATE_BLOCK_THRESHOLD should not be " +
     "underestimated.") {
@@ -166,4 +175,6 @@ class MapStatusSuite extends SparkFunSuite {
       assert(count === 3000)
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

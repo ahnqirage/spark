@@ -613,7 +613,11 @@ private[spark] class ExternalSorter[K, V, C](
       batchId = batchOffsets.length  // Prevent reading any other batch
       val ds = deserializeStream
       deserializeStream = null
+<<<<<<< HEAD
       fileChannel = null
+=======
+      fileStream = null
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       if (ds != null) {
         ds.close()
       }

@@ -19,9 +19,12 @@ package org.apache.spark.sql.catalyst.expressions
 
 import scala.collection.mutable
 
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.catalyst.expressions.objects.LambdaVariable
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 /**
  * This class is used to compute equality of (sub)expression trees. Expressions can be added
  * to this class and they subsequently query for expression equality. Expression trees are
@@ -36,8 +39,12 @@ class EquivalentExpressions {
       case other: Expr => e.semanticEquals(other.e)
       case _ => false
     }
+<<<<<<< HEAD
 
     override def hashCode: Int = e.semanticHash()
+=======
+    override val hashCode: Int = e.semanticHash()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   // For each expression, the set of equivalent expressions.
@@ -67,6 +74,7 @@ class EquivalentExpressions {
   /**
    * Adds the expression to this data structure recursively. Stops if a matching expression
    * is found. That is, if `expr` has already been added, its children are not added.
+<<<<<<< HEAD
    */
   def addExprTree(expr: Expression): Unit = {
     val skip = expr.isInstanceOf[LeafExpression] ||
@@ -95,6 +103,14 @@ class EquivalentExpressions {
 
     if (!skip && !addExpr(expr)) {
       childrenToRecurse.foreach(addExprTree)
+=======
+   * If ignoreLeaf is true, leaf nodes are ignored.
+   */
+  def addExprTree(root: Expression, ignoreLeaf: Boolean = true): Unit = {
+    val skip = root.isInstanceOf[LeafExpression] && ignoreLeaf
+    if (!skip && !addExpr(root)) {
+      root.children.foreach(addExprTree(_, ignoreLeaf))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -120,11 +136,19 @@ class EquivalentExpressions {
   def debugString(all: Boolean = false): String = {
     val sb: mutable.StringBuilder = new StringBuilder()
     sb.append("Equivalent expressions:\n")
+<<<<<<< HEAD
     equivalenceMap.foreach { case (k, v) =>
       if (all || v.length > 1) {
         sb.append("  " + v.mkString(", ")).append("\n")
       }
     }
+=======
+    equivalenceMap.foreach { case (k, v) => {
+      if (all || v.length > 1) {
+        sb.append("  " + v.mkString(", ")).append("\n")
+      }
+    }}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     sb.toString()
   }
 }

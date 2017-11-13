@@ -1,5 +1,6 @@
 ---
 layout: global
+<<<<<<< HEAD
 title: Advanced topics
 displayTitle: Advanced topics
 ---
@@ -94,3 +95,16 @@ It solves certain optimization problems iteratively through the following proced
 Since it involves solving a weighted least squares (WLS) problem by `WeightedLeastSquares` in each iteration,
 it also requires the number of features to be no more than 4096.
 Currently IRLS is used as the default solver of [GeneralizedLinearRegression](api/scala/index.html#org.apache.spark.ml.regression.GeneralizedLinearRegression).
+=======
+title: Advanced topics - spark.ml
+displayTitle: Advanced topics - spark.ml
+---
+
+# Optimization of linear methods
+
+The optimization algorithm underlying the implementation is called
+[Orthant-Wise Limited-memory
+QuasiNewton](http://research-srv.microsoft.com/en-us/um/people/jfgao/paper/icml07scalable.pdf)
+(OWL-QN). It is an extension of L-BFGS that can effectively handle L1
+regularization and elastic net.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

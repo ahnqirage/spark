@@ -31,11 +31,19 @@ class ExchangeCoordinatorSuite extends SparkFunSuite with BeforeAndAfterAll {
   private var originalInstantiatedSparkSession: Option[SparkSession] = _
 
   override protected def beforeAll(): Unit = {
+<<<<<<< HEAD
     originalActiveSparkSession = SparkSession.getActiveSession
     originalInstantiatedSparkSession = SparkSession.getDefaultSession
 
     SparkSession.clearActiveSession()
     SparkSession.clearDefaultSession()
+=======
+    originalActiveSQLContext = SQLContext.getActive()
+    originalInstantiatedSQLContext = SQLContext.getInstantiatedContextOption()
+
+    SQLContext.clearActive()
+    SQLContext.clearInstantiatedContext()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override protected def afterAll(): Unit = {
@@ -322,7 +330,11 @@ class ExchangeCoordinatorSuite extends SparkFunSuite with BeforeAndAfterAll {
         }
       }
 
+<<<<<<< HEAD
       withSparkSession(test, 2000, minNumPostShufflePartitions)
+=======
+      withSQLContext(test, 1700, minNumPostShufflePartitions)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     test(s"determining the number of reducers: join operator$testNameNote") {

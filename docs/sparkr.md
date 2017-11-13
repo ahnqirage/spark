@@ -169,8 +169,13 @@ df <- read.df(csvPath, "csv", header = "true", inferSchema = "true", na.strings 
 {% endhighlight %}
 </div>
 
+<<<<<<< HEAD
 The data sources API can also be used to save out SparkDataFrames into multiple file formats. For example we can save the SparkDataFrame from the previous example
 to a Parquet file using `write.df`.
+=======
+The data sources API can also be used to save out DataFrames into multiple file formats. For example we can save the DataFrame from the previous example
+to a Parquet file using `write.df` (Until Spark 1.6, the default mode for writes was `append`. It was changed in Spark 1.7 to `error` to match the Scala API)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div data-lang="r"  markdown="1">
 {% highlight r %}
@@ -473,6 +478,7 @@ head(teenagers)
 
 # Machine Learning
 
+<<<<<<< HEAD
 ## Algorithms
 
 SparkR supports the following machine learning algorithms currently:
@@ -597,6 +603,73 @@ The following example shows how to save/load a MLlib model by SparkR.
 # Structured Streaming
 
 SparkR supports the Structured Streaming API (experimental). Structured Streaming is a scalable and fault-tolerant stream processing engine built on the Spark SQL engine. For more information see the R API on the [Structured Streaming Programming Guide](structured-streaming-programming-guide.html)
+=======
+SparkR allows the fitting of generalized linear models over DataFrames using the [glm()](api/R/glm.html) function. Under the hood, SparkR uses MLlib to train a model of the specified family. Currently the gaussian and binomial families are supported. We support a subset of the available R formula operators for model fitting, including '~', '.', ':', '+', and '-'.
+
+The [summary()](api/R/summary.html) function gives the summary of a model produced by [glm()](api/R/glm.html).
+
+* For gaussian GLM model, it returns a list with 'devianceResiduals' and 'coefficients' components. The 'devianceResiduals' gives the min/max deviance residuals of the estimation; the 'coefficients' gives the estimated coefficients and their estimated standard errors, t values and p-values. (It only available when model fitted by normal solver.)
+* For binomial GLM model, it returns a list with 'coefficients' component which gives the estimated coefficients.
+
+The examples below show the use of building gaussian GLM model and binomial GLM model using SparkR.
+
+## Gaussian GLM model
+
+<div data-lang="r"  markdown="1">
+{% highlight r %}
+# Create the DataFrame
+df <- createDataFrame(sqlContext, iris)
+
+# Fit a gaussian GLM model over the dataset.
+model <- glm(Sepal_Length ~ Sepal_Width + Species, data = df, family = "gaussian")
+
+# Model summary are returned in a similar format to R's native glm().
+summary(model)
+##$devianceResiduals
+## Min       Max     
+## -1.307112 1.412532
+##
+##$coefficients
+##                   Estimate  Std. Error t value  Pr(>|t|)    
+##(Intercept)        2.251393  0.3697543  6.08889  9.568102e-09
+##Sepal_Width        0.8035609 0.106339   7.556598 4.187317e-12
+##Species_versicolor 1.458743  0.1121079  13.01195 0           
+##Species_virginica  1.946817  0.100015   19.46525 0           
+
+# Make predictions based on the model.
+predictions <- predict(model, newData = df)
+head(select(predictions, "Sepal_Length", "prediction"))
+##  Sepal_Length prediction
+##1          5.1   5.063856
+##2          4.9   4.662076
+##3          4.7   4.822788
+##4          4.6   4.742432
+##5          5.0   5.144212
+##6          5.4   5.385281
+{% endhighlight %}
+</div>
+
+## Binomial GLM model
+
+<div data-lang="r"  markdown="1">
+{% highlight r %}
+# Create the DataFrame
+df <- createDataFrame(sqlContext, iris)
+training <- filter(df, df$Species != "setosa")
+
+# Fit a binomial GLM model over the dataset.
+model <- glm(Species ~ Sepal_Length + Sepal_Width, data = training, family = "binomial")
+
+# Model coefficients are returned in a similar format to R's native glm().
+summary(model)
+##$coefficients
+##               Estimate
+##(Intercept)  -13.046005
+##Sepal_Length   1.902373
+##Sepal_Width    0.404655
+{% endhighlight %}
+</div>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 # R Function Name Conflicts
 
@@ -621,6 +694,16 @@ The following functions are masked by the SparkR package:
     <td><code>sample</code> in <code>package:base</code></td>
     <td><code>base::sample(x, size, replace = FALSE, prob = NULL)</code></td>
   </tr>
+<<<<<<< HEAD
+=======
+  <tr>
+    <td><code>table</code> in <code>package:base</code></td>
+    <td><code><pre>base::table(...,
+            exclude = if (useNA == "no") c(NA, NaN),
+            useNA = c("no", "ifany", "always"),
+            dnn = list.names(...), deparse.level = 1)</pre></code></td>
+  </tr>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </table>
 
 Since part of SparkR is modeled on the `dplyr` package, certain functions in SparkR share the same names with those in `dplyr`. Depending on the load order of the two packages, some functions from the package loaded first are masked by those in the package loaded after. In such case, prefix such calls with the package name, for instance, `SparkR::cume_dist(x)` or `dplyr::cume_dist(x)`.
@@ -630,6 +713,7 @@ You can inspect the search path in R with [`search()`](https://stat.ethz.ch/R-ma
 
 # Migration Guide
 
+<<<<<<< HEAD
 ## Upgrading From SparkR 1.5.x to 1.6.x
 
  - Before Spark 1.6.0, the default mode for writes was `append`. It was changed in Spark 1.6.0 to `error` to match the Scala API.
@@ -657,3 +741,8 @@ You can inspect the search path in R with [`search()`](https://stat.ethz.ch/R-ma
  - By default, derby.log is now saved to `tempdir()`. This will be created when instantiating the SparkSession with `enableHiveSupport` set to `TRUE`.
  - `spark.lda` was not setting the optimizer correctly. It has been corrected.
  - Several model summary outputs are updated to have `coefficients` as `matrix`. This includes `spark.logit`, `spark.kmeans`, `spark.glm`. Model summary outputs for `spark.gaussianMixture` have added log-likelihood as `loglik`.
+=======
+## Upgrading From SparkR 1.5.x to 1.6
+
+ - Before Spark 1.6, the default mode for writes was `append`. It was changed in Spark 1.6.0 to `error` to match the Scala API.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

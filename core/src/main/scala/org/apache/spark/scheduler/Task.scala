@@ -105,7 +105,11 @@ private[spark] abstract class Task[T](
       Option(attemptNumber)).setCurrentContext()
 
     try {
+<<<<<<< HEAD
       runTask(context)
+=======
+      (runTask(context), context.collectAccumulators())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } catch {
       case e: Throwable =>
         // Catch all errors; run task failure callbacks, and rethrow the exception.
@@ -115,6 +119,7 @@ private[spark] abstract class Task[T](
           case t: Throwable =>
             e.addSuppressed(t)
         }
+<<<<<<< HEAD
         context.markTaskCompleted(Some(e))
         throw e
     } finally {
@@ -122,6 +127,24 @@ private[spark] abstract class Task[T](
         // Call the task completion callbacks. If "markTaskCompleted" is called twice, the second
         // one is no-op.
         context.markTaskCompleted(None)
+=======
+        throw e
+    } finally {
+      // Call the task completion callbacks.
+      context.markTaskCompleted()
+      try {
+        Utils.tryLogNonFatalError {
+          // Release memory used by this thread for unrolling blocks
+          SparkEnv.get.blockManager.memoryStore.releaseUnrollMemoryForThisTask()
+          SparkEnv.get.blockManager.memoryStore.releasePendingUnrollMemoryForThisTask()
+          // Notify any tasks waiting for execution memory to be freed to wake up and try to
+          // acquire memory again. This makes impossible the scenario where a task sleeps forever
+          // because there are no other tasks left to notify it. Since this is safe to do but may
+          // not be strictly necessary, we should revisit whether we can remove this in the future.
+          val memoryManager = SparkEnv.get.memoryManager
+          memoryManager.synchronized { memoryManager.notifyAll() }
+        }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       } finally {
         try {
           Utils.tryLogNonFatalError {

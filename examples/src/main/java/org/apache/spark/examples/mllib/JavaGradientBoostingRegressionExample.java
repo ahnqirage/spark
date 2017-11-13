@@ -24,9 +24,18 @@ import java.util.Map;
 import scala.Tuple2;
 
 import org.apache.spark.SparkConf;
+<<<<<<< HEAD
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+=======
+import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.PairFunction;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.tree.GradientBoostedTrees;
 import org.apache.spark.mllib.tree.configuration.BoostingStrategy;
@@ -54,6 +63,7 @@ public class JavaGradientBoostingRegressionExample {
     boostingStrategy.setNumIterations(3); // Note: Use more iterations in practice.
     boostingStrategy.getTreeStrategy().setMaxDepth(5);
     // Empty categoricalFeaturesInfo indicates all features are continuous.
+<<<<<<< HEAD
     Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<>();
     boostingStrategy.treeStrategy().setCategoricalFeaturesInfo(categoricalFeaturesInfo);
 
@@ -66,6 +76,35 @@ public class JavaGradientBoostingRegressionExample {
       double diff = pl._1() - pl._2();
       return diff * diff;
     }).mean();
+=======
+    Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
+    boostingStrategy.treeStrategy().setCategoricalFeaturesInfo(categoricalFeaturesInfo);
+
+    final GradientBoostedTreesModel model =
+      GradientBoostedTrees.train(trainingData, boostingStrategy);
+
+    // Evaluate model on test instances and compute test error
+    JavaPairRDD<Double, Double> predictionAndLabel =
+      testData.mapToPair(new PairFunction<LabeledPoint, Double, Double>() {
+        @Override
+        public Tuple2<Double, Double> call(LabeledPoint p) {
+          return new Tuple2<Double, Double>(model.predict(p.features()), p.label());
+        }
+      });
+    Double testMSE =
+      predictionAndLabel.map(new Function<Tuple2<Double, Double>, Double>() {
+        @Override
+        public Double call(Tuple2<Double, Double> pl) {
+          Double diff = pl._1() - pl._2();
+          return diff * diff;
+        }
+      }).reduce(new Function2<Double, Double, Double>() {
+        @Override
+        public Double call(Double a, Double b) {
+          return a + b;
+        }
+      }) / data.count();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     System.out.println("Test Mean Squared Error: " + testMSE);
     System.out.println("Learned regression GBT model:\n" + model.toDebugString());
 
@@ -74,7 +113,10 @@ public class JavaGradientBoostingRegressionExample {
     GradientBoostedTreesModel sameModel = GradientBoostedTreesModel.load(jsc.sc(),
       "target/tmp/myGradientBoostingRegressionModel");
     // $example off$
+<<<<<<< HEAD
 
     jsc.stop();
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

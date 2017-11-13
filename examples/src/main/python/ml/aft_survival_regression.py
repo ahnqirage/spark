@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.regression import AFTSurvivalRegression
 from pyspark.ml.linalg import Vectors
@@ -37,6 +38,21 @@ if __name__ == "__main__":
 
     # $example on$
     training = spark.createDataFrame([
+=======
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+# $example on$
+from pyspark.ml.regression import AFTSurvivalRegression
+from pyspark.mllib.linalg import Vectors
+# $example off$
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="AFTSurvivalRegressionExample")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    training = sqlContext.createDataFrame([
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         (1.218, 1.0, Vectors.dense(1.560, -0.605)),
         (2.949, 0.0, Vectors.dense(0.346, 2.158)),
         (3.627, 0.0, Vectors.dense(1.380, 0.231)),
@@ -55,4 +71,8 @@ if __name__ == "__main__":
     model.transform(training).show(truncate=False)
     # $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

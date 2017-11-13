@@ -489,6 +489,7 @@ case class Pmod(left: Expression, right: Expression) extends BinaryArithmetic {
         """
     }
 
+<<<<<<< HEAD
     if (!left.nullable && !right.nullable) {
       ev.copy(code = s"""
         ${eval2.code}
@@ -516,6 +517,43 @@ case class Pmod(left: Expression, right: Expression) extends BinaryArithmetic {
           }
         }""")
     }
+=======
+  override def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String = {
+    nullSafeCodeGen(ctx, ev, (eval1, eval2) => {
+      val remainder = ctx.freshName("remainder")
+      dataType match {
+        case dt: DecimalType =>
+          val decimalAdd = "$plus"
+          s"""
+            ${ctx.javaType(dataType)} $remainder = $eval1.remainder($eval2);
+            if ($remainder.compare(new org.apache.spark.sql.types.Decimal().set(0)) < 0) {
+              ${ev.value} = ($remainder.$decimalAdd($eval2)).remainder($eval2);
+            } else {
+              ${ev.value} = $remainder;
+            }
+          """
+        // byte and short are casted into int when add, minus, times or divide
+        case ByteType | ShortType =>
+          s"""
+            ${ctx.javaType(dataType)} $remainder = (${ctx.javaType(dataType)})($eval1 % $eval2);
+            if ($remainder < 0) {
+              ${ev.value} = (${ctx.javaType(dataType)})(($remainder + $eval2) % $eval2);
+            } else {
+              ${ev.value} = $remainder;
+            }
+          """
+        case _ =>
+          s"""
+            ${ctx.javaType(dataType)} $remainder = $eval1 % $eval2;
+            if ($remainder < 0) {
+              ${ev.value} = ($remainder + $eval2) % $eval2;
+            } else {
+              ${ev.value} = $remainder;
+            }
+          """
+      }
+    })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private def pmod(a: Int, n: Int): Int = {

@@ -19,6 +19,7 @@ package org.apache.spark.ml.classification
 
 import scala.collection.JavaConverters._
 
+<<<<<<< HEAD
 import org.apache.hadoop.fs.Path
 
 import org.apache.spark.annotation.Since
@@ -29,6 +30,17 @@ import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
 import org.apache.spark.sql.Dataset
+=======
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.param.shared.{HasTol, HasMaxIter, HasSeed}
+import org.apache.spark.ml.{PredictorParams, PredictionModel, Predictor}
+import org.apache.spark.ml.param.{IntParam, ParamValidators, IntArrayParam, ParamMap}
+import org.apache.spark.ml.util.Identifiable
+import org.apache.spark.ml.ann.{FeedForwardTrainer, FeedForwardTopology}
+import org.apache.spark.mllib.linalg.{Vectors, Vector}
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.sql.DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /** Params for Multilayer Perceptron. */
 private[classification] trait MultilayerPerceptronParams extends ProbabilisticClassifierParams
@@ -137,18 +149,26 @@ private object LabelConverter {
  * Each layer has sigmoid activation function, output layer has softmax.
  * Number of inputs has to be equal to the size of feature vectors.
  * Number of outputs has to be equal to the total number of labels.
- *
  */
 @Since("1.5.0")
+<<<<<<< HEAD
 class MultilayerPerceptronClassifier @Since("1.5.0") (
     @Since("1.5.0") override val uid: String)
   extends ProbabilisticClassifier[Vector, MultilayerPerceptronClassifier,
     MultilayerPerceptronClassificationModel]
   with MultilayerPerceptronParams with DefaultParamsWritable {
+=======
+@Experimental
+class MultilayerPerceptronClassifier @Since("1.5.0") (
+    @Since("1.5.0") override val uid: String)
+  extends Predictor[Vector, MultilayerPerceptronClassifier, MultilayerPerceptronClassificationModel]
+  with MultilayerPerceptronParams {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.5.0")
   def this() = this(Identifiable.randomUID("mlpc"))
 
+<<<<<<< HEAD
   /**
    * Sets the value of param [[layers]].
    *
@@ -163,6 +183,13 @@ class MultilayerPerceptronClassifier @Since("1.5.0") (
    *
    * @group expertSetParam
    */
+=======
+  /** @group setParam */
+  @Since("1.5.0")
+  def setLayers(value: Array[Int]): this.type = set(layers, value)
+
+  /** @group setParam */
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.5.0")
   def setBlockSize(value: Int): this.type = set(blockSize, value)
 
@@ -202,6 +229,7 @@ class MultilayerPerceptronClassifier @Since("1.5.0") (
   @Since("1.5.0")
   def setSeed(value: Long): this.type = set(seed, value)
 
+<<<<<<< HEAD
   /**
    * Sets the value of param [[initialWeights]].
    *
@@ -219,6 +247,8 @@ class MultilayerPerceptronClassifier @Since("1.5.0") (
   @Since("2.0.0")
   def setStepSize(value: Double): this.type = set(stepSize, value)
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.5.0")
   override def copy(extra: ParamMap): MultilayerPerceptronClassifier = defaultCopy(extra)
 
@@ -297,12 +327,22 @@ object MultilayerPerceptronClassifier
  * @param weights the weights of layers
  */
 @Since("1.5.0")
+<<<<<<< HEAD
 class MultilayerPerceptronClassificationModel private[ml] (
     @Since("1.5.0") override val uid: String,
     @Since("1.5.0") val layers: Array[Int],
     @Since("2.0.0") val weights: Vector)
   extends ProbabilisticClassificationModel[Vector, MultilayerPerceptronClassificationModel]
   with Serializable with MLWritable {
+=======
+@Experimental
+class MultilayerPerceptronClassificationModel private[ml] (
+    @Since("1.5.0") override val uid: String,
+    @Since("1.5.0") val layers: Array[Int],
+    @Since("1.5.0") val weights: Vector)
+  extends PredictionModel[Vector, MultilayerPerceptronClassificationModel]
+  with Serializable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.6.0")
   override val numFeatures: Int = layers.head

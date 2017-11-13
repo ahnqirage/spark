@@ -1,7 +1,12 @@
 ---
 layout: global
+<<<<<<< HEAD
 title: Feature Extraction and Transformation - RDD-based API
 displayTitle: Feature Extraction and Transformation - RDD-based API
+=======
+title: Feature Extraction and Transformation - spark.mllib
+displayTitle: Feature Extraction and Transformation - spark.mllib
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents
@@ -61,7 +66,50 @@ Each record could be an iterable of strings or other types.
 
 Refer to the [`HashingTF` Scala docs](api/scala/index.html#org.apache.spark.mllib.feature.HashingTF) for details on the API.
 
+<<<<<<< HEAD
 {% include_example scala/org/apache/spark/examples/mllib/TFIDFExample.scala %}
+=======
+
+{% highlight scala %}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.feature.HashingTF
+import org.apache.spark.mllib.linalg.Vector
+
+val sc: SparkContext = ...
+
+// Load documents (one per line).
+val documents: RDD[Seq[String]] = sc.textFile("...").map(_.split(" ").toSeq)
+
+val hashingTF = new HashingTF()
+val tf: RDD[Vector] = hashingTF.transform(documents)
+{% endhighlight %}
+
+While applying `HashingTF` only needs a single pass to the data, applying `IDF` needs two passes: 
+first to compute the IDF vector and second to scale the term frequencies by IDF.
+
+{% highlight scala %}
+import org.apache.spark.mllib.feature.IDF
+
+// ... continue from the previous example
+tf.cache()
+val idf = new IDF().fit(tf)
+val tfidf: RDD[Vector] = idf.transform(tf)
+{% endhighlight %}
+
+`spark.mllib`'s IDF implementation provides an option for ignoring terms which occur in less than a
+minimum number of documents.  In such cases, the IDF for these terms is set to 0.  This feature
+can be used by passing the `minDocFreq` value to the IDF constructor.
+
+{% highlight scala %}
+import org.apache.spark.mllib.feature.IDF
+
+// ... continue from the previous example
+tf.cache()
+val idf = new IDF(minDocFreq = 2).fit(tf)
+val tfidf: RDD[Vector] = idf.transform(tf)
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 <div data-lang="python" markdown="1">
 
@@ -73,7 +121,45 @@ Each record could be an iterable of strings or other types.
 
 Refer to the [`HashingTF` Python docs](api/python/pyspark.mllib.html#pyspark.mllib.feature.HashingTF) for details on the API.
 
+<<<<<<< HEAD
 {% include_example python/mllib/tf_idf_example.py %}
+=======
+{% highlight python %}
+from pyspark import SparkContext
+from pyspark.mllib.feature import HashingTF
+
+sc = SparkContext()
+
+# Load documents (one per line).
+documents = sc.textFile("...").map(lambda line: line.split(" "))
+
+hashingTF = HashingTF()
+tf = hashingTF.transform(documents)
+{% endhighlight %}
+
+While applying `HashingTF` only needs a single pass to the data, applying `IDF` needs two passes: 
+first to compute the IDF vector and second to scale the term frequencies by IDF.
+
+{% highlight python %}
+from pyspark.mllib.feature import IDF
+
+# ... continue from the previous example
+tf.cache()
+idf = IDF().fit(tf)
+tfidf = idf.transform(tf)
+{% endhighlight %}
+
+`spark.mllib`'s IDF implementation provides an option for ignoring terms which occur in less than a
+minimum number of documents.  In such cases, the IDF for these terms is set to 0.  This feature
+can be used by passing the `minDocFreq` value to the IDF constructor.
+
+{% highlight python %}
+# ... continue from the previous example
+tf.cache()
+idf = IDF(minDocFreq=2).fit(tf)
+tfidf = idf.transform(tf)
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>
 

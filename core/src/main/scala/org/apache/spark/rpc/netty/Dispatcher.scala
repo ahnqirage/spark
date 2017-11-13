@@ -112,11 +112,16 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
     val iter = endpoints.keySet().iterator()
     while (iter.hasNext) {
       val name = iter.next
+<<<<<<< HEAD
         postMessage(name, message, (e) => { e match {
           case e: RpcEnvStoppedException => logDebug (s"Message $message dropped. ${e.getMessage}")
           case e: Throwable => logWarning(s"Message $message dropped. ${e.getMessage}")
         }}
       )}
+=======
+      postMessage(name, message, (e) => logWarning(s"Message $message dropped.", e))
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /** Posts a message sent by a remote endpoint. */
@@ -152,7 +157,11 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
       endpointName: String,
       message: InboxMessage,
       callbackIfStopped: (Exception) => Unit): Unit = {
+<<<<<<< HEAD
     val error = synchronized {
+=======
+    val shouldCallOnStop = synchronized {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val data = endpoints.get(endpointName)
       if (stopped) {
         Some(new RpcEnvStoppedException())
@@ -164,8 +173,20 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
         None
       }
     }
+<<<<<<< HEAD
     // We don't need to call `onStop` in the `synchronized` block
     error.foreach(callbackIfStopped)
+=======
+    if (shouldCallOnStop) {
+      // We don't need to call `onStop` in the `synchronized` block
+      val error = if (stopped) {
+          new IllegalStateException("RpcEnv already stopped.")
+        } else {
+          new SparkException(s"Could not find $endpointName or it has been stopped.")
+        }
+      callbackIfStopped(error)
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def stop(): Unit = {

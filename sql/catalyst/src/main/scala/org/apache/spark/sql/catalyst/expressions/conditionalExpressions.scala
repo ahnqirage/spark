@@ -20,6 +20,7 @@ package org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.expressions.codegen._
+<<<<<<< HEAD
 import org.apache.spark.sql.types._
 
 // scalastyle:off line.size.limit
@@ -31,6 +32,12 @@ import org.apache.spark.sql.types._
        a
   """)
 // scalastyle:on line.size.limit
+=======
+import org.apache.spark.sql.catalyst.util.TypeUtils
+import org.apache.spark.sql.types._
+
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 case class If(predicate: Expression, trueValue: Expression, falseValue: Expression)
   extends Expression {
 
@@ -166,6 +173,32 @@ abstract class CaseWhenBase(
     // Result is nullable if any of the branch is nullable, or if the else value is nullable
     branches.exists(_._2.nullable) || elseValue.map(_.nullable).getOrElse(true)
   }
+<<<<<<< HEAD
+=======
+
+  /**
+   * Whether should it fallback to interpret mode or not.
+   * @return
+   */
+  protected def shouldFallback: Boolean = {
+    branches.length > 20
+  }
+}
+
+// scalastyle:off
+/**
+ * Case statements of the form "CASE WHEN a THEN b [WHEN c THEN d]* [ELSE e] END".
+ * Refer to this link for the corresponding semantics:
+ * https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF#LanguageManualUDF-ConditionalFunctions
+ */
+// scalastyle:on
+case class CaseWhen(branches: Seq[Expression]) extends CaseWhenLike with CodegenFallback {
+
+  // Use private[this] Array to speed up evaluation.
+  @transient private[this] lazy val branchesArr = branches.toArray
+
+  override def children: Seq[Expression] = branches
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def checkInputDataTypes(): TypeCheckResult = {
     // Make sure all branch conditions are boolean types.
@@ -193,8 +226,48 @@ abstract class CaseWhenBase(
       }
       i += 1
     }
+<<<<<<< HEAD
     if (elseValue.isDefined) {
       return elseValue.get.eval(input)
+=======
+    return res
+  }
+
+  override def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String = {
+    if (shouldFallback) {
+      // Fallback to interpreted mode if there are too many branches, as it may reach the
+      // 64K limit (limit on bytecode size for a single function).
+      return super[CodegenFallback].genCode(ctx, ev)
+    }
+    val len = branchesArr.length
+    val got = ctx.freshName("got")
+
+    val cases = (0 until len/2).map { i =>
+      val cond = branchesArr(i * 2).gen(ctx)
+      val res = branchesArr(i * 2 + 1).gen(ctx)
+      s"""
+        if (!$got) {
+          ${cond.code}
+          if (!${cond.isNull} && ${cond.value}) {
+            $got = true;
+            ${res.code}
+            ${ev.isNull} = ${res.isNull};
+            ${ev.value} = ${res.value};
+          }
+        }
+      """
+    }.mkString("\n")
+
+    val other = if (len % 2 == 1) {
+      val res = branchesArr(len - 1).gen(ctx)
+      s"""
+        if (!$got) {
+          ${res.code}
+          ${ev.isNull} = ${res.isNull};
+          ${ev.value} = ${res.value};
+        }
+      """
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } else {
       return null
     }
@@ -221,6 +294,7 @@ abstract class CaseWhenBase(
  * @param branches seq of (branch condition, branch value)
  * @param elseValue optional value for the else branch
  */
+<<<<<<< HEAD
 // scalastyle:off line.size.limit
 @ExpressionDescription(
   usage = "CASE WHEN expr1 THEN expr2 [WHEN expr3 THEN expr4]* [ELSE expr5] END - When `expr1` = true, returns `expr2`; else when `expr3` = true, returns `expr4`; else returns `expr5`.",
@@ -247,6 +321,32 @@ case class CaseWhen(
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     super[CodegenFallback].doGenCode(ctx, ev)
+=======
+// scalastyle:on
+case class CaseKeyWhen(key: Expression, branches: Seq[Expression])
+  extends CaseWhenLike with CodegenFallback {
+
+  // Use private[this] Array to speed up evaluation.
+  @transient private[this] lazy val branchesArr = branches.toArray
+
+  override def children: Seq[Expression] = key +: branches
+
+  override protected def checkTypesInternal(): TypeCheckResult = {
+    if ((key +: whenList).map(_.dataType).distinct.size > 1) {
+      TypeCheckResult.TypeCheckFailure(
+        "key and WHEN expressions should all be same type or coercible to a common type")
+    } else {
+      TypeCheckResult.TypeCheckSuccess
+    }
+  }
+
+  private def evalElse(input: InternalRow): Any = {
+    if (branchesArr.length % 2 == 0) {
+      null
+    } else {
+      branchesArr(branchesArr.length - 1).eval(input)
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def toCodegen(): CaseWhenCodegen = {
@@ -254,6 +354,7 @@ case class CaseWhen(
   }
 }
 
+<<<<<<< HEAD
 /**
  * CaseWhen expression used when code generation condition is satisfied.
  * OptimizeCodegen optimizer replaces CaseWhen into CaseWhenCodegen.
@@ -288,6 +389,36 @@ case class CaseWhenCodegen(
     val cases = branches.map { case (condExpr, valueExpr) =>
       val cond = condExpr.genCode(ctx)
       val res = valueExpr.genCode(ctx)
+=======
+  override def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String = {
+    if (shouldFallback) {
+      // Fallback to interpreted mode if there are too many branches, as it may reach the
+      // 64K limit (limit on bytecode size for a single function).
+      return super[CodegenFallback].genCode(ctx, ev)
+    }
+    val keyEval = key.gen(ctx)
+    val len = branchesArr.length
+    val got = ctx.freshName("got")
+
+    val cases = (0 until len/2).map { i =>
+      val cond = branchesArr(i * 2).gen(ctx)
+      val res = branchesArr(i * 2 + 1).gen(ctx)
+      s"""
+        if (!$got) {
+          ${cond.code}
+          if (!${cond.isNull} && ${ctx.genEqual(key.dataType, keyEval.value, cond.value)}) {
+            $got = true;
+            ${res.code}
+            ${ev.isNull} = ${res.isNull};
+            ${ev.value} = ${res.value};
+          }
+        }
+      """
+    }.mkString("\n")
+
+    val other = if (len % 2 == 1) {
+      val res = branchesArr(len - 1).gen(ctx)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       s"""
         ${cond.code}
         if (!${cond.isNull} && ${cond.value}) {
@@ -312,10 +443,32 @@ case class CaseWhenCodegen(
 
     generatedCode += "}\n" * cases.size
 
+<<<<<<< HEAD
     ev.copy(code = s"""
       boolean ${ev.isNull} = true;
       ${ctx.javaType(dataType)} ${ev.value} = ${ctx.defaultValue(dataType)};
       $generatedCode""")
+=======
+  override def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String = {
+    val evalChildren = children.map(_.gen(ctx))
+    val first = evalChildren(0)
+    val rest = evalChildren.drop(1)
+    def updateEval(eval: GeneratedExpressionCode): String =
+      s"""
+        ${eval.code}
+        if (!${eval.isNull} && (${ev.isNull} ||
+          ${ctx.genGreater(dataType, ev.value, eval.value)})) {
+          ${ev.isNull} = false;
+          ${ev.value} = ${eval.value};
+        }
+      """
+    s"""
+      ${first.code}
+      boolean ${ev.isNull} = ${first.isNull};
+      ${ctx.javaType(dataType)} ${ev.value} = ${first.value};
+      ${rest.map(updateEval).mkString("\n")}
+    """
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
@@ -341,6 +494,7 @@ object CaseWhen {
   }
 }
 
+<<<<<<< HEAD
 /**
  * Case statements of the form "CASE a WHEN b THEN c [WHEN d THEN e]* [ELSE f] END".
  * When a = b, returns c; when a = d, returns e; else returns f.
@@ -353,5 +507,27 @@ object CaseKeyWhen {
     }.toArray.toSeq  // force materialization to make the seq serializable
     val elseValue = if (branches.size % 2 == 1) Some(branches.last) else None
     CaseWhen(cases, elseValue)
+=======
+  override def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String = {
+    val evalChildren = children.map(_.gen(ctx))
+    val first = evalChildren(0)
+    val rest = evalChildren.drop(1)
+    def updateEval(eval: GeneratedExpressionCode): String =
+      s"""
+        ${eval.code}
+        if (!${eval.isNull} && (${ev.isNull} ||
+          ${ctx.genGreater(dataType, eval.value, ev.value)})) {
+          ${ev.isNull} = false;
+          ${ev.value} = ${eval.value};
+        }
+      """
+    s"""
+      ${first.code}
+      boolean ${ev.isNull} = ${first.isNull};
+      ${ctx.javaType(dataType)} ${ev.value} = ${first.value};
+      ${rest.map(updateEval).mkString("\n")}
+    """
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
+

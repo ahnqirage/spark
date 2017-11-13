@@ -25,6 +25,7 @@ class CodeFormatterSuite extends SparkFunSuite {
   def testCase(name: String)(input: String,
       comment: Map[String, String] = Map.empty, maxLines: Int = -1)(expected: String): Unit = {
     test(name) {
+<<<<<<< HEAD
       val sourceCode = new CodeAndComment(input.trim, comment)
       if (CodeFormatter.format(sourceCode, maxLines).trim !== expected.trim) {
         fail(
@@ -34,6 +35,10 @@ class CodeFormatterSuite extends SparkFunSuite {
                  expected.trim).mkString("\n")}
            """.stripMargin)
       }
+=======
+      val sourceCode = new CodeAndComment(input, Map.empty)
+      assert(CodeFormatter.format(sourceCode).trim === expected.trim)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

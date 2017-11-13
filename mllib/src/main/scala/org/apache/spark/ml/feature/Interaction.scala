@@ -20,14 +20,24 @@ package org.apache.spark.ml.feature
 import scala.collection.mutable.ArrayBuilder
 
 import org.apache.spark.SparkException
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
 import org.apache.spark.ml.Transformer
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.{Vector, Vectors, VectorUDT}
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
+<<<<<<< HEAD
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
+=======
+import org.apache.spark.ml.Transformer
+import org.apache.spark.mllib.linalg.{Vector, VectorUDT, Vectors}
+import org.apache.spark.sql.{DataFrame, Row}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
@@ -42,7 +52,12 @@ import org.apache.spark.sql.types._
  * with four categories, the output would then be `Vector(0, 0, 0, 0, 3, 4, 0, 0)`.
  */
 @Since("1.6.0")
+<<<<<<< HEAD
 class Interaction @Since("1.6.0") (@Since("1.6.0") override val uid: String) extends Transformer
+=======
+@Experimental
+class Interaction @Since("1.6.0") (override val uid: String) extends Transformer
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   with HasInputCols with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.6.0")
@@ -66,9 +81,15 @@ class Interaction @Since("1.6.0") (@Since("1.6.0") override val uid: String) ext
     StructType(schema.fields :+ StructField($(outputCol), new VectorUDT, false))
   }
 
+<<<<<<< HEAD
   @Since("2.0.0")
   override def transform(dataset: Dataset[_]): DataFrame = {
     transformSchema(dataset.schema, logging = true)
+=======
+  @Since("1.6.0")
+  override def transform(dataset: DataFrame): DataFrame = {
+    validateParams()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val inputFeatures = $(inputCols).map(c => dataset.schema(c))
     val featureEncoders = getFeatureEncoders(inputFeatures)
     val featureAttrs = getFeatureAttrs(inputFeatures)
@@ -218,6 +239,23 @@ class Interaction @Since("1.6.0") (@Since("1.6.0") override val uid: String) ext
   @Since("1.6.0")
   override def copy(extra: ParamMap): Interaction = defaultCopy(extra)
 
+<<<<<<< HEAD
+}
+
+@Since("1.6.0")
+object Interaction extends DefaultParamsReadable[Interaction] {
+
+  @Since("1.6.0")
+  override def load(path: String): Interaction = super.load(path)
+=======
+  @Since("1.6.0")
+  override def validateParams(): Unit = {
+    require(get(inputCols).isDefined, "Input cols must be defined first.")
+    require(get(outputCol).isDefined, "Output col must be defined first.")
+    require($(inputCols).length > 0, "Input cols must have non-zero length.")
+    require($(inputCols).distinct.length == $(inputCols).length, "Input cols must be distinct.")
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 @Since("1.6.0")

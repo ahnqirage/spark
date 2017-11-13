@@ -17,15 +17,28 @@
 
 package org.apache.spark.mllib.stat;
 
+<<<<<<< HEAD
+=======
+import java.io.Serializable;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+<<<<<<< HEAD
 import static org.junit.Assert.assertEquals;
 
 import org.apache.spark.SparkConf;
+=======
+
+import static org.apache.spark.streaming.JavaTestUtils.*;
+import static org.junit.Assert.assertEquals;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaRDD;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.api.java.JavaDoubleRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -35,6 +48,7 @@ import org.apache.spark.mllib.stat.test.BinarySample;
 import org.apache.spark.mllib.stat.test.ChiSqTestResult;
 import org.apache.spark.mllib.stat.test.KolmogorovSmirnovTestResult;
 import org.apache.spark.mllib.stat.test.StreamingTest;
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaDStream;
@@ -44,11 +58,20 @@ import static org.apache.spark.streaming.JavaTestUtils.*;
 public class JavaStatisticsSuite {
   private transient SparkSession spark;
   private transient JavaSparkContext jsc;
+=======
+import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaStreamingContext;
+
+public class JavaStatisticsSuite implements Serializable {
+  private transient JavaSparkContext sc;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private transient JavaStreamingContext ssc;
 
   @Before
   public void setUp() {
     SparkConf conf = new SparkConf()
+<<<<<<< HEAD
       .set("spark.streaming.clock", "org.apache.spark.util.ManualClock");
     spark = SparkSession.builder()
       .master("local[2]")
@@ -57,14 +80,27 @@ public class JavaStatisticsSuite {
       .getOrCreate();
     jsc = new JavaSparkContext(spark.sparkContext());
     ssc = new JavaStreamingContext(jsc, new Duration(1000));
+=======
+      .setMaster("local[2]")
+      .setAppName("JavaStatistics")
+      .set("spark.streaming.clock", "org.apache.spark.util.ManualClock");
+    sc = new JavaSparkContext(conf);
+    ssc = new JavaStreamingContext(sc, new Duration(1000));
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     ssc.checkpoint("checkpoint");
   }
 
   @After
   public void tearDown() {
+<<<<<<< HEAD
     spark.stop();
     ssc.stop();
     spark = null;
+=======
+    ssc.stop();
+    ssc = null;
+    sc = null;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   @Test

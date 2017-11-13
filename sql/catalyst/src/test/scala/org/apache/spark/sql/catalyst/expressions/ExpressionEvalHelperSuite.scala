@@ -19,7 +19,11 @@ package org.apache.spark.sql.catalyst.expressions
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.InternalRow
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
+=======
+import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenContext, GeneratedExpressionCode}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types.{DataType, IntegerType}
 
 /**
@@ -43,6 +47,7 @@ class ExpressionEvalHelperSuite extends SparkFunSuite with ExpressionEvalHelper 
 case class BadCodegenExpression() extends LeafExpression {
   override def nullable: Boolean = false
   override def eval(input: InternalRow): Any = 10
+<<<<<<< HEAD
   override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     ev.copy(code =
       s"""
@@ -50,5 +55,15 @@ case class BadCodegenExpression() extends LeafExpression {
         |int ${ev.value} = 10;
       """.stripMargin)
   }
+=======
+
+  override def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String = {
+    s"""
+       |int some_variable = 11;
+       |int ${ev.value} = 10;
+    """.stripMargin
+  }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def dataType: DataType = IntegerType
 }

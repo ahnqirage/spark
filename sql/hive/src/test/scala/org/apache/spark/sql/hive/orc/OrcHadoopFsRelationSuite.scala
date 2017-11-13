@@ -21,9 +21,14 @@ import java.io.File
 
 import org.apache.hadoop.fs.Path
 
+<<<<<<< HEAD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.catalog.CatalogUtils
 import org.apache.spark.sql.internal.SQLConf
+=======
+import org.apache.spark.deploy.SparkHadoopUtil
+import org.apache.spark.sql.{Row, SQLConf}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.sources.HadoopFsRelationTest
 import org.apache.spark.sql.types._
 
@@ -71,15 +76,24 @@ class OrcHadoopFsRelationSuite extends HadoopFsRelationTest {
         (1 to 5).map(i => (i, (i % 2).toString)).toDF("a", "b").write.orc(path)
 
         checkAnswer(
+<<<<<<< HEAD
           spark.read.orc(path).where("not (a = 2) or not(b in ('1'))"),
           (1 to 5).map(i => Row(i, (i % 2).toString)))
 
         checkAnswer(
           spark.read.orc(path).where("not (a = 2 and b in ('1'))"),
+=======
+          sqlContext.read.orc(path).where("not (a = 2) or not(b in ('1'))"),
+          (1 to 5).map(i => Row(i, (i % 2).toString)))
+
+        checkAnswer(
+          sqlContext.read.orc(path).where("not (a = 2 and b in ('1'))"),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           (1 to 5).map(i => Row(i, (i % 2).toString)))
       }
     }
   }
+<<<<<<< HEAD
 
   test("SPARK-13543: Support for specifying compression codec for ORC via option()") {
     withTempPath { dir =>
@@ -115,4 +129,6 @@ class OrcHadoopFsRelationSuite extends HadoopFsRelationTest {
       assert("SNAPPY" === expectedCompressionKind.name())
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

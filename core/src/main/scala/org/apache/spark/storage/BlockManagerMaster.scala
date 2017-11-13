@@ -50,11 +50,15 @@ class BlockManagerMaster(
     logInfo("Removal of executor " + execId + " requested")
   }
 
+<<<<<<< HEAD
   /**
    * Register the BlockManager's id with the driver. The input BlockManagerId does not contain
    * topology information. This information is obtained from the master and we respond with an
    * updated BlockManagerId fleshed out with this information.
    */
+=======
+  /** Register the BlockManager's id with the driver. */
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def registerBlockManager(
       blockManagerId: BlockManagerId,
       maxOnHeapMemSize: Long,
@@ -104,7 +108,11 @@ class BlockManagerMaster(
   }
 
   def getExecutorEndpointRef(executorId: String): Option[RpcEndpointRef] = {
+<<<<<<< HEAD
     driverEndpoint.askSync[Option[RpcEndpointRef]](GetExecutorEndpointRef(executorId))
+=======
+    driverEndpoint.askWithRetry[Option[RpcEndpointRef]](GetExecutorEndpointRef(executorId))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**

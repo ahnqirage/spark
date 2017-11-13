@@ -22,6 +22,7 @@ import scala.beans.{BeanInfo, BeanProperty}
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.dsl.expressions._
 import org.apache.spark.sql.catalyst.dsl.plans._
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Complete, Count, Max}
 import org.apache.spark.sql.catalyst.parser.CatalystSqlParser
@@ -30,6 +31,13 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, GenericArrayData, MapData}
 import org.apache.spark.sql.types._
 
+=======
+import org.apache.spark.sql.catalyst.util.{MapData, ArrayBasedMapData, GenericArrayData, ArrayData}
+import org.apache.spark.sql.types._
+
+import scala.beans.{BeanProperty, BeanInfo}
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 @BeanInfo
 private[sql] case class GroupableData(@BeanProperty data: Int)
 
@@ -37,7 +45,15 @@ private[sql] class GroupableUDT extends UserDefinedType[GroupableData] {
 
   override def sqlType: DataType = IntegerType
 
+<<<<<<< HEAD
   override def serialize(groupableData: GroupableData): Int = groupableData.data
+=======
+  override def serialize(obj: Any): Int = {
+    obj match {
+      case groupableData: GroupableData => groupableData.data
+    }
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def deserialize(datum: Any): GroupableData = {
     datum match {
@@ -57,10 +73,20 @@ private[sql] class UngroupableUDT extends UserDefinedType[UngroupableData] {
 
   override def sqlType: DataType = MapType(IntegerType, IntegerType)
 
+<<<<<<< HEAD
   override def serialize(ungroupableData: UngroupableData): MapData = {
     val keyArray = new GenericArrayData(ungroupableData.data.keys.toSeq)
     val valueArray = new GenericArrayData(ungroupableData.data.values.toSeq)
     new ArrayBasedMapData(keyArray, valueArray)
+=======
+  override def serialize(obj: Any): MapData = {
+    obj match {
+      case groupableData: UngroupableData =>
+        val keyArray = new GenericArrayData(groupableData.data.keys.toSeq)
+        val valueArray = new GenericArrayData(groupableData.data.values.toSeq)
+        new ArrayBasedMapData(keyArray, valueArray)
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def deserialize(datum: Any): UngroupableData = {
@@ -224,11 +250,14 @@ class AnalysisErrorSuite extends AnalysisTest {
     "sorting by unsupported column types",
     mapRelation.orderBy('map.asc),
     "sort" :: "type" :: "map<int,int>" :: Nil)
+<<<<<<< HEAD
 
   errorTest(
     "sorting by attributes are not from grouping expressions",
     testRelation2.groupBy('a, 'c)('a, 'c, count('a).as("a3")).orderBy('b.asc),
     "cannot resolve" :: "'`b`'" :: "given input columns" :: "[a, c, a3]" :: Nil)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   errorTest(
     "non-boolean filters",
@@ -406,7 +435,11 @@ class AnalysisErrorSuite extends AnalysisTest {
 
   test("SPARK-6452 regression test") {
     // CheckAnalysis should throw AnalysisException when Aggregate contains missing attribute(s)
+<<<<<<< HEAD
     // Since we manually construct the logical plan at here and Sum only accept
+=======
+    // Since we manually construct the logical plan at here and Sum only accetp
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // LongType, DoubleType, and DecimalType. We use LongType as the type of a.
     val plan =
       Aggregate(
@@ -439,6 +472,7 @@ class AnalysisErrorSuite extends AnalysisTest {
             AttributeReference("a", dataType)(exprId = ExprId(2)),
             AttributeReference("b", IntegerType)(exprId = ExprId(1))))
 
+<<<<<<< HEAD
       if (shouldSuccess) {
         assertAnalysisSuccess(plan, true)
       } else {
@@ -506,6 +540,58 @@ class AnalysisErrorSuite extends AnalysisTest {
       joinType = Cross,
       condition = Some('b === 'd))
     assertAnalysisError(plan2, "EqualTo does not support ordering on type MapType" :: Nil)
+=======
+      shouldSuccess match {
+        case true =>
+          assertAnalysisSuccess(plan, true)
+        case false =>
+          assertAnalysisError(plan, "expression a cannot be used as a grouping expression" :: Nil)
+      }
+    }
+
+    val supportedDataTypes = Seq(
+      StringType, BinaryType,
+      NullType, BooleanType,
+      ByteType, ShortType, IntegerType, LongType,
+      FloatType, DoubleType, DecimalType(25, 5), DecimalType(6, 5),
+      DateType, TimestampType,
+      ArrayType(IntegerType),
+      new StructType()
+        .add("f1", FloatType, nullable = true)
+        .add("f2", StringType, nullable = true),
+      new StructType()
+        .add("f1", FloatType, nullable = true)
+        .add("f2", ArrayType(BooleanType, containsNull = true), nullable = true),
+      new GroupableUDT())
+    supportedDataTypes.foreach { dataType =>
+      checkDataType(dataType, shouldSuccess = true)
+    }
+
+    val unsupportedDataTypes = Seq(
+      MapType(StringType, LongType),
+      new StructType()
+        .add("f1", FloatType, nullable = true)
+        .add("f2", MapType(StringType, LongType), nullable = true),
+      new UngroupableUDT())
+    unsupportedDataTypes.foreach { dataType =>
+      checkDataType(dataType, shouldSuccess = false)
+    }
+  }
+
+  test("we should fail analysis when we find nested aggregate functions") {
+    val plan =
+      Aggregate(
+        AttributeReference("a", IntegerType)(exprId = ExprId(2)) :: Nil,
+        Alias(sum(sum(AttributeReference("b", IntegerType)(exprId = ExprId(1)))), "c")() :: Nil,
+        LocalRelation(
+          AttributeReference("a", IntegerType)(exprId = ExprId(2)),
+          AttributeReference("b", IntegerType)(exprId = ExprId(1))))
+
+    assertAnalysisError(
+      plan,
+      "It is not allowed to use an aggregate function in the argument of " +
+        "another aggregate function." :: Nil)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("PredicateSubQuery is used outside of a filter") {

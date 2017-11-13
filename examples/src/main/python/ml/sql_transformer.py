@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.feature import SQLTransformer
 # $example off$
@@ -30,6 +31,20 @@ if __name__ == "__main__":
 
     # $example on$
     df = spark.createDataFrame([
+=======
+from pyspark import SparkContext
+# $example on$
+from pyspark.ml.feature import SQLTransformer
+# $example off$
+from pyspark.sql import SQLContext
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="SQLTransformerExample")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    df = sqlContext.createDataFrame([
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         (0, 1.0, 3.0),
         (2, 2.0, 5.0)
     ], ["id", "v1", "v2"])
@@ -38,4 +53,8 @@ if __name__ == "__main__":
     sqlTrans.transform(df).show()
     # $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -17,7 +17,11 @@
 
 package org.apache.spark.ml.feature
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.UnaryTransformer
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.util._
@@ -28,8 +32,13 @@ import org.apache.spark.sql.types.{ArrayType, DataType, StringType}
  *
  * @see [[RegexTokenizer]]
  */
+<<<<<<< HEAD
 @Since("1.2.0")
 class Tokenizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+=======
+@Experimental
+class Tokenizer(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends UnaryTransformer[String, Seq[String], Tokenizer] with DefaultParamsWritable {
 
   @Since("1.2.0")
@@ -62,8 +71,13 @@ object Tokenizer extends DefaultParamsReadable[Tokenizer] {
  * Optional parameters also allow filtering tokens using a minimal length.
  * It returns an array of strings that can be empty.
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 class RegexTokenizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+=======
+@Experimental
+class RegexTokenizer(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends UnaryTransformer[String, Seq[String], RegexTokenizer] with DefaultParamsWritable {
 
   @Since("1.4.0")
@@ -123,16 +137,25 @@ class RegexTokenizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
    * Default: true
    * @group param
    */
+<<<<<<< HEAD
   @Since("1.6.0")
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   final val toLowercase: BooleanParam = new BooleanParam(this, "toLowercase",
     "whether to convert all characters to lowercase before tokenizing.")
 
   /** @group setParam */
+<<<<<<< HEAD
   @Since("1.6.0")
   def setToLowercase(value: Boolean): this.type = set(toLowercase, value)
 
   /** @group getParam */
   @Since("1.6.0")
+=======
+  def setToLowercase(value: Boolean): this.type = set(toLowercase, value)
+
+  /** @group getParam */
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def getToLowercase: Boolean = $(toLowercase)
 
   setDefault(minTokenLength -> 1, gaps -> true, pattern -> "\\s+", toLowercase -> true)

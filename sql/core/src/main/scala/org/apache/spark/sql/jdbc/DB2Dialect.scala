@@ -17,14 +17,20 @@
 
 package org.apache.spark.sql.jdbc
 
+<<<<<<< HEAD
 import java.sql.Types
 
 import org.apache.spark.sql.types._
+=======
+import org.apache.spark.sql.types.{BooleanType, StringType, DataType}
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 private object DB2Dialect extends JdbcDialect {
 
   override def canHandle(url: String): Boolean = url.startsWith("jdbc:db2")
 
+<<<<<<< HEAD
   override def getCatalystType(
       sqlType: Int,
       typeName: String,
@@ -49,4 +55,11 @@ private object DB2Dialect extends JdbcDialect {
   }
 
   override def isCascadingTruncateTable(): Option[Boolean] = Some(false)
+=======
+  override def getJDBCType(dt: DataType): Option[JdbcType] = dt match {
+    case StringType => Option(JdbcType("CLOB", java.sql.Types.CLOB))
+    case BooleanType => Option(JdbcType("CHAR(1)", java.sql.Types.CHAR))
+    case _ => None
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

@@ -87,6 +87,7 @@ objectFile <- function(sc, path, minPartitions = NULL) {
 #' in the list are split into \code{numSlices} slices and distributed to nodes
 #' in the cluster.
 #'
+<<<<<<< HEAD
 #' If size of serialized slices is larger than spark.r.maxAllocationLimit or (200MB), the function
 #' will write it to disk and send the file name to JVM. Also to make sure each slice is not
 #' larger than that limit, number of slices may be increased.
@@ -101,6 +102,8 @@ objectFile <- function(sc, path, minPartitions = NULL) {
 #' Specifically, we are changing to split positions to match the calculation in positions() of
 #' ParallelCollectionRDD in Spark.
 #'
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @param sc SparkContext to use
 #' @param coll collection to parallelize
 #' @param numSlices number of partitions to create in the RDD
@@ -117,8 +120,11 @@ parallelize <- function(sc, coll, numSlices = 1) {
   # TODO: bound/safeguard numSlices
   # TODO: unit tests for if the split works for all primitives
   # TODO: support matrix, data frame, etc
+<<<<<<< HEAD
 
   # Note, for data.frame, createDataFrame turns it into a list before it calls here.
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   # nolint start
   # suppress lintr warning: Place a space before left parenthesis, except in a function call.
   if ((!is.list(coll) && !is.vector(coll)) || is.data.frame(coll)) {
@@ -185,6 +191,7 @@ parallelize <- function(sc, coll, numSlices = 1) {
   RDD(jrdd, "byte")
 }
 
+<<<<<<< HEAD
 getMaxAllocationLimit <- function(sc) {
   conf <- callJMethod(sc, "getConf")
   as.numeric(
@@ -206,6 +213,8 @@ writeToTempFile <- function(serializedSlices) {
   fileName
 }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' Include this specified package on all workers
 #'
 #' This function can be used to include a package on all workers before the
@@ -243,8 +252,14 @@ includePackage <- function(sc, pkg) {
   .sparkREnv$.packages <- packages
 }
 
+<<<<<<< HEAD
 #' Broadcast a variable to all workers
 #'
+=======
+#' @title Broadcast a variable to all workers
+#'
+#' @description
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' Broadcast a read-only variable to the cluster, returning a \code{Broadcast}
 #' object for reading it in distributed functions.
 #'
@@ -258,7 +273,11 @@ includePackage <- function(sc, pkg) {
 #'
 #' # Large Matrix object that we want to broadcast
 #' randomMat <- matrix(nrow=100, ncol=10, data=rnorm(1000))
+<<<<<<< HEAD
 #' randomMatBr <- broadcastRDD(sc, randomMat)
+=======
+#' randomMatBr <- broadcast(sc, randomMat)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' # Use the broadcast variable inside the function
 #' useBroadcast <- function(x) {
@@ -266,7 +285,11 @@ includePackage <- function(sc, pkg) {
 #' }
 #' sumRDD <- lapply(rdd, useBroadcast)
 #'}
+<<<<<<< HEAD
 broadcastRDD <- function(sc, object) {
+=======
+broadcast <- function(sc, object) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   objName <- as.character(substitute(object))
   serializedObj <- serialize(object, connection = NULL)
 
@@ -276,7 +299,11 @@ broadcastRDD <- function(sc, object) {
   Broadcast(id, object, jBroadcast, objName)
 }
 
+<<<<<<< HEAD
 #' Set the checkpoint directory
+=======
+#' @title Set the checkpoint directory
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' Set the directory under which RDDs are going to be checkpointed. The
 #' directory must be a HDFS path if running on a cluster.
@@ -291,7 +318,11 @@ broadcastRDD <- function(sc, object) {
 #' rdd <- parallelize(sc, 1:2, 2L)
 #' checkpoint(rdd)
 #'}
+<<<<<<< HEAD
 setCheckpointDirSC <- function(sc, dirName) {
+=======
+setCheckpointDir <- function(sc, dirName) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   invisible(callJMethod(sc, "setCheckpointDir", suppressWarnings(normalizePath(dirName))))
 }
 

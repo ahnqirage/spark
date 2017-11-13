@@ -23,6 +23,7 @@ NULL
 setOldClass("jobj")
 setOldClass("structType")
 
+<<<<<<< HEAD
 #' S4 class that represents a SparkDataFrame
 #'
 #' SparkDataFrames can be created using functions like \link{createDataFrame},
@@ -30,6 +31,13 @@ setOldClass("structType")
 #'
 #' @family SparkDataFrame functions
 #' @rdname SparkDataFrame
+=======
+#' @title S4 class that represents a DataFrame
+#' @description DataFrames can be created using functions like \link{createDataFrame},
+#'              \link{read.json}, \link{table} etc.
+#' @family DataFrame functions
+#' @rdname DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @docType class
 #'
 #' @slot env An R environment that stores bookkeeping states of the SparkDataFrame
@@ -84,7 +92,11 @@ dataFrame <- function(sdf, isCached = FALSE) {
 #'
 #' @param x A SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname printSchema
 #' @name printSchema
 #' @aliases printSchema,SparkDataFrame-method
@@ -93,7 +105,11 @@ dataFrame <- function(sdf, isCached = FALSE) {
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' printSchema(df)
 #'}
 #' @note printSchema since 1.4.0
@@ -110,7 +126,11 @@ setMethod("printSchema",
 #'
 #' @param x A SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname schema
 #' @name schema
 #' @aliases schema,SparkDataFrame-method
@@ -119,7 +139,11 @@ setMethod("printSchema",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' dfSchema <- schema(df)
 #'}
 #' @note schema since 1.4.0
@@ -133,8 +157,14 @@ setMethod("schema",
 #'
 #' Print the logical and physical Catalyst plans to the console for debugging.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases explain,SparkDataFrame-method
+=======
+#' @param x A SparkSQL DataFrame
+#' @param extended Logical. If extended is False, explain() only prints the physical plan.
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname explain
 #' @name explain
 #' @export
@@ -142,7 +172,11 @@ setMethod("schema",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' explain(df, TRUE)
 #'}
 #' @note explain since 1.4.0
@@ -165,7 +199,11 @@ setMethod("explain",
 #'
 #' @param x A SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname isLocal
 #' @name isLocal
 #' @aliases isLocal,SparkDataFrame-method
@@ -174,7 +212,11 @@ setMethod("explain",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' isLocal(df)
 #'}
 #' @note isLocal since 1.4.0
@@ -186,6 +228,7 @@ setMethod("isLocal",
 
 #' showDF
 #'
+<<<<<<< HEAD
 #' Print the first numRows rows of a SparkDataFrame
 #'
 #' @param x a SparkDataFrame.
@@ -198,6 +241,14 @@ setMethod("isLocal",
 #' @param ... further arguments to be passed to or from other methods.
 #' @family SparkDataFrame functions
 #' @aliases showDF,SparkDataFrame-method
+=======
+#' Print the first numRows rows of a DataFrame
+#'
+#' @param x A SparkSQL DataFrame
+#' @param numRows The number of rows to print. Defaults to 20.
+#'
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname showDF
 #' @name showDF
 #' @export
@@ -205,7 +256,11 @@ setMethod("isLocal",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' showDF(df)
 #'}
 #' @note showDF since 1.4.0
@@ -228,7 +283,11 @@ setMethod("showDF",
 #'
 #' @param object a Spark object. Can be a SparkDataFrame, Column, GroupedData, WindowSpec.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname show
 #' @aliases show,SparkDataFrame-method
 #' @name show
@@ -237,8 +296,13 @@ setMethod("showDF",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
 #' show(df)
+=======
+#' df <- read.json(sqlContext, path)
+#' df
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @note show(SparkDataFrame) since 1.4.0
 setMethod("show", "SparkDataFrame",
@@ -256,7 +320,11 @@ setMethod("show", "SparkDataFrame",
 #'
 #' @param x A SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname dtypes
 #' @name dtypes
 #' @aliases dtypes,SparkDataFrame-method
@@ -265,7 +333,11 @@ setMethod("show", "SparkDataFrame",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' dtypes(df)
 #'}
 #' @note dtypes since 1.4.0
@@ -283,16 +355,27 @@ setMethod("dtypes",
 #'
 #' @param x a SparkDataFrame.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @rdname columns
 #' @name columns
 #' @aliases columns,SparkDataFrame-method
+=======
+#' @family DataFrame functions
+#' @rdname columns
+#' @name columns
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' columns(df)
 #' colnames(df)
 #'}
@@ -473,10 +556,149 @@ setMethod("coltypes<-",
             dataFrame(nx@sdf)
           })
 
+<<<<<<< HEAD
 #' Creates a temporary view using the given name.
 #'
 #' Creates a new temporary view using a SparkDataFrame in the Spark Session. If a
 #' temporary view with the same name already exists, replaces it.
+=======
+#' @rdname columns
+#' @name colnames
+setMethod("colnames",
+          signature(x = "DataFrame"),
+          function(x) {
+            columns(x)
+          })
+
+#' @rdname columns
+#' @name colnames<-
+setMethod("colnames<-",
+          signature(x = "DataFrame"),
+          function(x, value) {
+
+            # Check parameter integrity
+            if (class(value) != "character") {
+              stop("Invalid column names.")
+            }
+
+            if (length(value) != ncol(x)) {
+              stop(
+                "Column names must have the same length as the number of columns in the dataset.")
+            }
+
+            if (any(is.na(value))) {
+              stop("Column names cannot be NA.")
+            }
+
+            # Check if the column names have . in it
+            if (any(regexec(".", value, fixed = TRUE)[[1]][1] != -1)) {
+              stop("Colum names cannot contain the '.' symbol.")
+            }
+
+            sdf <- callJMethod(x@sdf, "toDF", as.list(value))
+            dataFrame(sdf)
+          })
+
+#' coltypes
+#'
+#' Get column types of a DataFrame
+#'
+#' @param x A SparkSQL DataFrame
+#' @return value A character vector with the column types of the given DataFrame
+#' @rdname coltypes
+#' @name coltypes
+#' @family DataFrame functions
+#' @export
+#' @examples
+#'\dontrun{
+#' irisDF <- createDataFrame(sqlContext, iris)
+#' coltypes(irisDF)
+#'}
+setMethod("coltypes",
+          signature(x = "DataFrame"),
+          function(x) {
+            # Get the data types of the DataFrame by invoking dtypes() function
+            types <- sapply(dtypes(x), function(x) {x[[2]]})
+
+            # Map Spark data types into R's data types using DATA_TYPES environment
+            rTypes <- sapply(types, USE.NAMES = F, FUN = function(x) {
+              # Check for primitive types
+              type <- PRIMITIVE_TYPES[[x]]
+
+              if (is.null(type)) {
+                # Check for complex types
+                for (t in names(COMPLEX_TYPES)) {
+                  if (substring(x, 1, nchar(t)) == t) {
+                    type <- COMPLEX_TYPES[[t]]
+                    break
+                  }
+                }
+
+                if (is.null(type)) {
+                  stop(paste("Unsupported data type: ", x))
+                }
+              }
+              type
+            })
+
+            # Find which types don't have mapping to R
+            naIndices <- which(is.na(rTypes))
+
+            # Assign the original scala data types to the unmatched ones
+            rTypes[naIndices] <- types[naIndices]
+
+            rTypes
+          })
+
+#' coltypes
+#'
+#' Set the column types of a DataFrame.
+#'
+#' @param x A SparkSQL DataFrame
+#' @param value A character vector with the target column types for the given
+#'    DataFrame. Column types can be one of integer, numeric/double, character, logical, or NA
+#'    to keep that column as-is.
+#' @rdname coltypes
+#' @name coltypes<-
+#' @export
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.json"
+#' df <- read.json(sqlContext, path)
+#' coltypes(df) <- c("character", "integer")
+#' coltypes(df) <- c(NA, "numeric")
+#'}
+setMethod("coltypes<-",
+          signature(x = "DataFrame", value = "character"),
+          function(x, value) {
+            cols <- columns(x)
+            ncols <- length(cols)
+            if (length(value) == 0) {
+              stop("Cannot set types of an empty DataFrame with no Column")
+            }
+            if (length(value) != ncols) {
+              stop("Length of type vector should match the number of columns for DataFrame")
+            }
+            newCols <- lapply(seq_len(ncols), function(i) {
+              col <- getColumn(x, cols[i])
+              if (!is.na(value[i])) {
+                stype <- rToSQLTypes[[value[i]]]
+                if (is.null(stype)) {
+                  stop("Only atomic type is supported for column types")
+                }
+                cast(col, stype)
+              } else {
+                col
+              }
+            })
+            nx <- select(x, newCols)
+            dataFrame(nx@sdf)
+          })
+
+#' Register Temporary Table
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param x A SparkDataFrame
 #' @param viewName A character vector containing the name of the table
@@ -507,9 +729,14 @@ setMethod("createOrReplaceTempView",
 #' @param x A SparkDataFrame
 #' @param tableName A character vector containing the name of the table
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @seealso \link{createOrReplaceTempView}
 #' @rdname registerTempTable-deprecated
+=======
+#' @family DataFrame functions
+#' @rdname registerTempTable
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @name registerTempTable
 #' @aliases registerTempTable,SparkDataFrame,character-method
 #' @export
@@ -517,7 +744,11 @@ setMethod("createOrReplaceTempView",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' registerTempTable(df, "json_df")
 #' new_df <- sql("SELECT * FROM json_df")
 #'}
@@ -539,7 +770,11 @@ setMethod("registerTempTable",
 #' @param ... further arguments to be passed to or from other methods.
 #' the existing rows in the table.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname insertInto
 #' @name insertInto
 #' @aliases insertInto,SparkDataFrame,character-method
@@ -568,8 +803,12 @@ setMethod("insertInto",
 #'
 #' @param x A SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases cache,SparkDataFrame-method
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname cache
 #' @name cache
 #' @export
@@ -577,7 +816,11 @@ setMethod("insertInto",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' cache(df)
 #'}
 #' @note cache since 1.4.0
@@ -599,7 +842,11 @@ setMethod("cache",
 #' @param newLevel storage level chosen for the persistance. See available options in
 #'        the description.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname persist
 #' @name persist
 #' @aliases persist,SparkDataFrame,character-method
@@ -608,7 +855,11 @@ setMethod("cache",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' persist(df, "MEMORY_AND_DISK")
 #'}
 #' @note persist since 1.4.0
@@ -629,16 +880,25 @@ setMethod("persist",
 #' @param blocking whether to block until all blocks are deleted.
 #' @param ... further arguments to be passed to or from other methods.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @rdname unpersist
 #' @aliases unpersist,SparkDataFrame-method
+=======
+#' @family DataFrame functions
+#' @rdname unpersist-methods
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @name unpersist
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' persist(df, "MEMORY_AND_DISK")
 #' unpersist(df)
 #'}
@@ -731,7 +991,11 @@ setMethod("coalesce",
 #' @param col the column by which the partitioning will be performed.
 #' @param ... additional column(s) to be used in the partitioning.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname repartition
 #' @name repartition
 #' @aliases repartition,SparkDataFrame-method
@@ -741,7 +1005,11 @@ setMethod("coalesce",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' newDF <- repartition(df, 2L)
 #' newDF <- repartition(df, numPartitions = 2L)
 #' newDF <- repartition(df, col = df$"col1", df$"col2")
@@ -774,6 +1042,7 @@ setMethod("repartition",
 
 #' toJSON
 #'
+<<<<<<< HEAD
 #' Converts a SparkDataFrame into a SparkDataFrame of JSON string.
 #'
 #' Each row is turned into a JSON document with columns as different fields.
@@ -794,6 +1063,24 @@ setMethod("repartition",
 #' df_json <- toJSON(df)
 #'}
 #' @note toJSON since 2.2.0
+=======
+#' Convert the rows of a DataFrame into JSON objects and return an RDD where
+#' each element contains a JSON string.
+#'
+#' @param x A SparkSQL DataFrame
+#' @return A StringRRDD of JSON objects
+#' @family DataFrame functions
+#' @rdname tojson
+#' @noRd
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.json"
+#' df <- read.json(sqlContext, path)
+#' newRDD <- toJSON(df)
+#'}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("toJSON",
           signature(x = "SparkDataFrame"),
           function(x) {
@@ -802,17 +1089,52 @@ setMethod("toJSON",
             dataFrame(df)
           })
 
+<<<<<<< HEAD
 #' Save the contents of SparkDataFrame as a JSON file
 #'
 #' Save the contents of a SparkDataFrame as a JSON file (\href{http://jsonlines.org/}{
 #' JSON Lines text format or newline-delimited JSON}). Files written out
 #' with this method can be read back in as a SparkDataFrame using read.json().
+=======
+#' write.json
+#'
+#' Save the contents of a DataFrame as a JSON file (one object per line). Files written out
+#' with this method can be read back in as a DataFrame using read.json().
+#'
+#' @param x A SparkSQL DataFrame
+#' @param path The directory where the file is saved
+#'
+#' @family DataFrame functions
+#' @rdname write.json
+#' @name write.json
+#' @export
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.json"
+#' df <- read.json(sqlContext, path)
+#' write.json(df, "/tmp/sparkr-tmp/")
+#'}
+setMethod("write.json",
+          signature(x = "DataFrame", path = "character"),
+          function(x, path) {
+            write <- callJMethod(x@sdf, "write")
+            invisible(callJMethod(write, "json", path))
+          })
+
+#' write.parquet
+#'
+#' Save the contents of a DataFrame as a Parquet file, preserving the schema. Files written out
+#' with this method can be read back in as a DataFrame using read.parquet().
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param x A SparkDataFrame
 #' @param path The directory where the file is saved
 #' @param mode one of 'append', 'overwrite', 'error', 'ignore' save mode (it is 'error' by default)
 #' @param ... additional argument(s) passed to the method.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @rdname write.json
 #' @name write.json
@@ -879,11 +1201,17 @@ setMethod("write.orc",
 #' @rdname write.parquet
 #' @name write.parquet
 #' @aliases write.parquet,SparkDataFrame,character-method
+=======
+#' @family DataFrame functions
+#' @rdname write.parquet
+#' @name write.parquet
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
 #' write.parquet(df, "/tmp/sparkr-tmp1/")
 #' saveAsParquetFile(df, "/tmp/sparkr-tmp2/")
@@ -895,13 +1223,28 @@ setMethod("write.parquet",
             write <- callJMethod(x@sdf, "write")
             write <- setWriteOptions(write, mode = mode, ...)
             invisible(handledCallJMethod(write, "parquet", path))
+=======
+#' df <- read.json(sqlContext, path)
+#' write.parquet(df, "/tmp/sparkr-tmp1/")
+#' saveAsParquetFile(df, "/tmp/sparkr-tmp2/")
+#'}
+setMethod("write.parquet",
+          signature(x = "DataFrame", path = "character"),
+          function(x, path) {
+            write <- callJMethod(x@sdf, "write")
+            invisible(callJMethod(write, "parquet", path))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           })
 
 #' @rdname write.parquet
 #' @name saveAsParquetFile
+<<<<<<< HEAD
 #' @aliases saveAsParquetFile,SparkDataFrame,character-method
 #' @export
 #' @note saveAsParquetFile since 1.4.0
+=======
+#' @export
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("saveAsParquetFile",
           signature(x = "SparkDataFrame", path = "character"),
           function(x, path) {
@@ -909,6 +1252,7 @@ setMethod("saveAsParquetFile",
             write.parquet(x, path)
           })
 
+<<<<<<< HEAD
 #' Save the content of SparkDataFrame in a text file at the specified path.
 #'
 #' Save the content of the SparkDataFrame in a text file at the specified path.
@@ -922,11 +1266,24 @@ setMethod("saveAsParquetFile",
 #'
 #' @family SparkDataFrame functions
 #' @aliases write.text,SparkDataFrame,character-method
+=======
+#' write.text
+#'
+#' Saves the content of the DataFrame in a text file at the specified path.
+#' The DataFrame must have only one column of string type with the name "value".
+#' Each row becomes a new line in the output file.
+#'
+#' @param x A SparkSQL DataFrame
+#' @param path The directory where the file is saved
+#'
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname write.text
 #' @name write.text
 #' @export
 #' @examples
 #'\dontrun{
+<<<<<<< HEAD
 #' sparkR.session()
 #' path <- "path/to/file.txt"
 #' df <- read.text(path)
@@ -939,6 +1296,19 @@ setMethod("write.text",
             write <- callJMethod(x@sdf, "write")
             write <- setWriteOptions(write, mode = mode, ...)
             invisible(handledCallJMethod(write, "text", path))
+=======
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.txt"
+#' df <- read.text(sqlContext, path)
+#' write.text(df, "/tmp/sparkr-tmp/")
+#'}
+setMethod("write.text",
+          signature(x = "DataFrame", path = "character"),
+          function(x, path) {
+            write <- callJMethod(x@sdf, "write")
+            invisible(callJMethod(write, "text", path))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           })
 
 #' Distinct
@@ -947,8 +1317,12 @@ setMethod("write.text",
 #'
 #' @param x A SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases distinct,SparkDataFrame-method
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname distinct
 #' @name distinct
 #' @export
@@ -956,7 +1330,11 @@ setMethod("write.text",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' distinctDF <- distinct(df)
 #'}
 #' @note distinct since 1.4.0
@@ -969,8 +1347,11 @@ setMethod("distinct",
 
 #' @rdname distinct
 #' @name unique
+<<<<<<< HEAD
 #' @aliases unique,SparkDataFrame-method
 #' @note unique since 1.5.0
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("unique",
           signature(x = "SparkDataFrame"),
           function(x) {
@@ -986,10 +1367,16 @@ setMethod("unique",
 #' @param x A SparkDataFrame
 #' @param withReplacement Sampling with replacement or not
 #' @param fraction The (rough) sample target fraction
+<<<<<<< HEAD
 #' @param seed Randomness seed value. Default is a random seed.
 #'
 #' @family SparkDataFrame functions
 #' @aliases sample,SparkDataFrame-method
+=======
+#' @param seed Randomness seed value
+#'
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname sample
 #' @name sample
 #' @export
@@ -997,13 +1384,18 @@ setMethod("unique",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
 #' collect(sample(df, fraction = 0.5))
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' collect(sample(df, FALSE, 0.5))
 #' collect(sample(df, TRUE, 0.5, seed = 3))
 #'}
 #' @note sample since 1.4.0
 setMethod("sample",
+<<<<<<< HEAD
           signature(x = "SparkDataFrame"),
           function(x, withReplacement = FALSE, fraction, seed) {
             if (!is.numeric(fraction)) {
@@ -1028,6 +1420,18 @@ setMethod("sample",
             } else {
               sdf <- handledCallJMethod(x@sdf, "sample",
                                         as.logical(withReplacement), as.numeric(fraction))
+=======
+          signature(x = "DataFrame", withReplacement = "logical",
+                    fraction = "numeric"),
+          function(x, withReplacement, fraction, seed) {
+            if (fraction < 0.0) stop(cat("Negative fraction value:", fraction))
+            if (!missing(seed)) {
+              # TODO : Figure out how to send integer as java.lang.Long to JVM so
+              # we can send seed as an argument through callJMethod
+              sdf <- callJMethod(x@sdf, "sample", withReplacement, fraction, as.integer(seed))
+            } else {
+              sdf <- callJMethod(x@sdf, "sample", withReplacement, fraction)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             }
             dataFrame(sdf)
           })
@@ -1037,6 +1441,7 @@ setMethod("sample",
 #' @name sample_frac
 #' @note sample_frac since 1.4.0
 setMethod("sample_frac",
+<<<<<<< HEAD
           signature(x = "SparkDataFrame"),
           function(x, withReplacement = FALSE, fraction, seed) {
             sample(x, withReplacement, fraction, seed)
@@ -1049,12 +1454,33 @@ setMethod("sample_frac",
 #' @rdname nrow
 #' @name nrow
 #' @aliases count,SparkDataFrame-method
+=======
+          signature(x = "DataFrame", withReplacement = "logical",
+                    fraction = "numeric"),
+          function(x, withReplacement, fraction, seed) {
+            sample(x, withReplacement, fraction, seed)
+          })
+
+#' nrow
+#'
+#' Returns the number of rows in a DataFrame
+#'
+#' @param x A SparkSQL DataFrame
+#'
+#' @family DataFrame functions
+#' @rdname nrow
+#' @name count
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' count(df)
 #' }
 #' @note count since 1.4.0
@@ -1066,8 +1492,11 @@ setMethod("count",
 
 #' @name nrow
 #' @rdname nrow
+<<<<<<< HEAD
 #' @aliases nrow,SparkDataFrame-method
 #' @note nrow since 1.5.0
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("nrow",
           signature(x = "SparkDataFrame"),
           function(x) {
@@ -1078,7 +1507,11 @@ setMethod("nrow",
 #'
 #' @param x a SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname ncol
 #' @name ncol
 #' @aliases ncol,SparkDataFrame-method
@@ -1087,7 +1520,11 @@ setMethod("nrow",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' ncol(df)
 #' }
 #' @note ncol since 1.5.0
@@ -1102,7 +1539,11 @@ setMethod("ncol",
 #' Returns the dimensions (number of rows and columns) of a SparkDataFrame
 #' @param x a SparkDataFrame
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname dim
 #' @aliases dim,SparkDataFrame-method
 #' @name dim
@@ -1111,7 +1552,11 @@ setMethod("ncol",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' dim(df)
 #' }
 #' @note dim since 1.5.0
@@ -1128,7 +1573,11 @@ setMethod("dim",
 #' should be converted to factors. FALSE by default.
 #' @param ... further arguments to be passed to or from other methods.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname collect
 #' @aliases collect,SparkDataFrame-method
 #' @name collect
@@ -1137,7 +1586,11 @@ setMethod("dim",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' collected <- collect(df)
 #' class(collected)
 #' firstName <- names(collected)[1]
@@ -1179,6 +1632,7 @@ setMethod("collect",
                   df[[colIndex]] <- col
                 } else {
                   colType <- dtypes[[colIndex]][[2]]
+<<<<<<< HEAD
                   if (is.null(PRIMITIVE_TYPES[[colType]])) {
                     specialtype <- specialtypeshandle(colType)
                     if (!is.null(specialtype)) {
@@ -1186,11 +1640,16 @@ setMethod("collect",
                     }
                   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                   # Note that "binary" columns behave like complex types.
                   if (!is.null(PRIMITIVE_TYPES[[colType]]) && colType != "binary") {
                     vec <- do.call(c, col)
                     stopifnot(class(vec) != "list")
+<<<<<<< HEAD
                     class(vec) <- PRIMITIVE_TYPES[[colType]]
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                     df[[colIndex]] <- vec
                   } else {
                     df[[colIndex]] <- col
@@ -1210,7 +1669,11 @@ setMethod("collect",
 #' @param num The number of rows to return
 #' @return A new SparkDataFrame containing the number of rows specified.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname limit
 #' @name limit
 #' @aliases limit,SparkDataFrame,numeric-method
@@ -1219,7 +1682,11 @@ setMethod("collect",
 #' \dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' limitedDF <- limit(df, 10)
 #' }
 #' @note limit since 1.4.0
@@ -1232,9 +1699,13 @@ setMethod("limit",
 
 #' Take the first NUM rows of a SparkDataFrame and return the results as a R data.frame
 #'
+<<<<<<< HEAD
 #' @param x a SparkDataFrame.
 #' @param num number of rows to take.
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname take
 #' @name take
 #' @aliases take,SparkDataFrame,numeric-method
@@ -1243,7 +1714,11 @@ setMethod("limit",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' take(df, 2)
 #' }
 #' @note take since 1.4.0
@@ -1263,8 +1738,12 @@ setMethod("take",
 #' @param num the number of rows to return. Default is 6.
 #' @return A data.frame.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases head,SparkDataFrame-method
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname head
 #' @name head
 #' @export
@@ -1272,7 +1751,11 @@ setMethod("take",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' head(df)
 #' }
 #' @note head since 1.4.0
@@ -1288,8 +1771,12 @@ setMethod("head",
 #' @param x a SparkDataFrame or a column used in aggregation function.
 #' @param ... further arguments to be passed to or from other methods.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases first,SparkDataFrame-method
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname first
 #' @name first
 #' @export
@@ -1297,7 +1784,11 @@ setMethod("head",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' first(df)
 #' }
 #' @note first(SparkDataFrame) since 1.4.0
@@ -1309,16 +1800,29 @@ setMethod("first",
 
 #' toRDD
 #'
+<<<<<<< HEAD
 #' Converts a SparkDataFrame to an RDD while preserving column names.
 #'
 #' @param x A SparkDataFrame
+=======
+#' Converts a Spark DataFrame to an RDD while preserving column names.
+#'
+#' @param x A Spark DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @noRd
 #' @examples
 #'\dontrun{
+<<<<<<< HEAD
 #' sparkR.session()
 #' path <- "path/to/file.json"
 #' df <- read.json(path)
+=======
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' path <- "path/to/file.json"
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' rdd <- toRDD(df)
 #'}
 setMethod("toRDD",
@@ -1337,11 +1841,18 @@ setMethod("toRDD",
 #'
 #' Groups the SparkDataFrame using the specified columns, so we can run aggregation on them.
 #'
+<<<<<<< HEAD
 #' @param x a SparkDataFrame.
 #' @param ... character name(s) or Column(s) to group on.
 #' @return A GroupedData.
 #' @family SparkDataFrame functions
 #' @aliases groupBy,SparkDataFrame-method
+=======
+#' @param x a DataFrame
+#' @return a GroupedData
+#' @seealso GroupedData
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname groupBy
 #' @name groupBy
 #' @export
@@ -1382,9 +1893,15 @@ setMethod("group_by",
 #'
 #' Compute aggregates by specifying a list of columns
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases agg,SparkDataFrame-method
 #' @rdname summarize
+=======
+#' @param x a DataFrame
+#' @family DataFrame functions
+#' @rdname agg
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @name agg
 #' @export
 #' @note agg since 1.4.0
@@ -1394,7 +1911,11 @@ setMethod("agg",
             agg(groupBy(x), ...)
           })
 
+<<<<<<< HEAD
 #' @rdname summarize
+=======
+#' @rdname agg
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @name summarize
 #' @aliases summarize,SparkDataFrame-method
 #' @note summarize since 1.4.0
@@ -1918,6 +2439,7 @@ setMethod("[", signature(x = "SparkDataFrame"),
 
 #' Subset
 #'
+<<<<<<< HEAD
 #' Return subsets of SparkDataFrame according to given conditions
 #' @param x a SparkDataFrame.
 #' @param i,subset (Optional) a logical expression to filter on rows.
@@ -1936,6 +2458,15 @@ setMethod("[", signature(x = "SparkDataFrame"),
 #' @family SparkDataFrame functions
 #' @aliases subset,SparkDataFrame-method
 #' @seealso \link{withColumn}
+=======
+#' Return subsets of DataFrame according to given conditions
+#' @param x A DataFrame
+#' @param subset (Optional) A logical expression to filter on rows
+#' @param select expression for the single Column or a list of columns to select from the DataFrame
+#' @return A new DataFrame containing only the rows that meet the condition with selected columns
+#' @export
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname subset
 #' @name subset
 #' @family subsetting functions
@@ -1953,6 +2484,7 @@ setMethod("[", signature(x = "SparkDataFrame"),
 #'   subset(df, df$age %in% c(19, 30), 1:2)
 #'   subset(df, df$age %in% c(19), select = c(1,2))
 #'   subset(df, select = c(1,2))
+<<<<<<< HEAD
 #'   # Columns can be selected and set
 #'   df[["age"]] <- 23
 #'   df[[1]] <- df$age
@@ -1965,6 +2497,15 @@ setMethod("subset", signature(x = "SparkDataFrame"),
                 x[, select, drop = drop, ...]
             } else {
                 x[subset, select, drop = drop, ...]
+=======
+#' }
+setMethod("subset", signature(x = "DataFrame"),
+          function(x, subset, select, ...) {
+            if (missing(subset)) {
+              x[, select, ...]
+            } else {
+              x[subset, select, ...]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             }
           })
 
@@ -1978,7 +2519,11 @@ setMethod("subset", signature(x = "SparkDataFrame"),
 #'            should be left empty.
 #' @return A new SparkDataFrame with selected columns.
 #' @export
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname select
 #' @aliases select,SparkDataFrame,character-method
 #' @name select
@@ -2008,6 +2553,10 @@ setMethod("select", signature(x = "SparkDataFrame", col = "character"),
             }
           })
 
+<<<<<<< HEAD
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname select
 #' @export
 #' @aliases select,SparkDataFrame,Column-method
@@ -2021,6 +2570,10 @@ setMethod("select", signature(x = "SparkDataFrame", col = "Column"),
             dataFrame(sdf)
           })
 
+<<<<<<< HEAD
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname select
 #' @export
 #' @aliases select,SparkDataFrame,list-method
@@ -2046,9 +2599,14 @@ setMethod("select",
 #' @param x A SparkDataFrame to be selected from.
 #' @param expr A string containing a SQL expression
 #' @param ... Additional expressions
+<<<<<<< HEAD
 #' @return A SparkDataFrame
 #' @family SparkDataFrame functions
 #' @aliases selectExpr,SparkDataFrame,character-method
+=======
+#' @return A DataFrame
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname selectExpr
 #' @name selectExpr
 #' @export
@@ -2056,7 +2614,11 @@ setMethod("select",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' selectExpr(df, "col1", "(col2 * 5) as newCol")
 #' }
 #' @note selectExpr since 1.4.0
@@ -2073,6 +2635,7 @@ setMethod("selectExpr",
 #' Return a new SparkDataFrame by adding a column or replacing the existing column
 #' that has the same name.
 #'
+<<<<<<< HEAD
 #' @param x a SparkDataFrame.
 #' @param colName a column name.
 #' @param col a Column expression, or an atomic vector in the length of 1 as literal value.
@@ -2082,12 +2645,26 @@ setMethod("selectExpr",
 #' @rdname withColumn
 #' @name withColumn
 #' @seealso \link{rename} \link{mutate} \link{subset}
+=======
+#' @param x A DataFrame
+#' @param colName A string containing the name of the new column.
+#' @param col A Column expression.
+#' @return A DataFrame with the new column added.
+#' @family DataFrame functions
+#' @rdname withColumn
+#' @name withColumn
+#' @seealso \link{rename} \link{mutate}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' newDF <- withColumn(df, "newCol", df$col1 * 5)
 #' # Replace an existing column
 #' newDF2 <- withColumn(newDF, "newCol", newDF$col1)
@@ -2108,16 +2685,22 @@ setMethod("withColumn",
             sdf <- callJMethod(x@sdf, "withColumn", colName, col@jc)
             dataFrame(sdf)
           })
-
 #' Mutate
 #'
 #' Return a new SparkDataFrame with the specified columns added or replaced.
 #'
+<<<<<<< HEAD
 #' @param .data a SparkDataFrame.
 #' @param ... additional column argument(s) each in the form name = col.
 #' @return A new SparkDataFrame with the new columns added or replaced.
 #' @family SparkDataFrame functions
 #' @aliases mutate,SparkDataFrame-method
+=======
+#' @param .data A DataFrame
+#' @param col a named argument of the form name = col
+#' @return A new DataFrame with the new columns added.
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname mutate
 #' @name mutate
 #' @seealso \link{rename} \link{withColumn}
@@ -2126,7 +2709,11 @@ setMethod("withColumn",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' newDF <- mutate(df, newCol = df$col1 * 5, newCol2 = df$col1 * 2)
 #' names(newDF) # Will contain newCol, newCol2
 #' newDF2 <- transform(df, newCol = df$col1 / 5, newCol2 = df$col1 * 2)
@@ -2170,6 +2757,7 @@ setMethod("mutate",
             }
             ns <- args
 
+<<<<<<< HEAD
             # The last column of the same name in the specific columns takes effect
             deDupCols <- list()
             for (i in 1:length(cols)) {
@@ -2197,6 +2785,11 @@ setMethod("mutate",
 #' @aliases transform,SparkDataFrame-method
 #' @name transform
 #' @note transform since 1.5.0
+=======
+#' @export
+#' @rdname mutate
+#' @name transform
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("transform",
           signature(`_data` = "SparkDataFrame"),
           function(`_data`, ...) {
@@ -2210,18 +2803,29 @@ setMethod("transform",
 #' @param x A SparkDataFrame
 #' @param existingCol The name of the column you want to change.
 #' @param newCol The new column name.
+<<<<<<< HEAD
 #' @return A SparkDataFrame with the column name changed.
 #' @family SparkDataFrame functions
 #' @rdname rename
 #' @name withColumnRenamed
 #' @aliases withColumnRenamed,SparkDataFrame,character,character-method
+=======
+#' @return A DataFrame with the column name changed.
+#' @family DataFrame functions
+#' @rdname rename
+#' @name withColumnRenamed
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @seealso \link{mutate}
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' newDF <- withColumnRenamed(df, "col1", "newCol1")
 #' }
 #' @note withColumnRenamed since 1.4.0
@@ -2238,16 +2842,26 @@ setMethod("withColumnRenamed",
             select(x, cols)
           })
 
+<<<<<<< HEAD
 #' @param ... A named pair of the form new_column_name = existing_column
 #' @rdname rename
 #' @name rename
 #' @aliases rename,SparkDataFrame-method
+=======
+#' @param newColPair A named pair of the form new_column_name = existing_column
+#' @rdname rename
+#' @name rename
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' newDF <- rename(df, col1 = df$newCol1)
 #' }
 #' @note rename since 1.4.0
@@ -2282,9 +2896,14 @@ setClassUnion("characterOrColumn", c("character", "Column"))
 #' @param ... additional sorting fields
 #' @param decreasing a logical argument indicating sorting order for columns when
 #'                   a character vector is specified for col
+<<<<<<< HEAD
 #' @return A SparkDataFrame where all elements are sorted.
 #' @family SparkDataFrame functions
 #' @aliases arrange,SparkDataFrame,Column-method
+=======
+#' @return A DataFrame where all elements are sorted.
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname arrange
 #' @name arrange
 #' @export
@@ -2292,7 +2911,11 @@ setClassUnion("characterOrColumn", c("character", "Column"))
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' arrange(df, df$col1)
 #' arrange(df, asc(df$col1), desc(abs(df$col2)))
 #' arrange(df, "col1", decreasing = TRUE)
@@ -2312,7 +2935,10 @@ setMethod("arrange",
 
 #' @rdname arrange
 #' @name arrange
+<<<<<<< HEAD
 #' @aliases arrange,SparkDataFrame,character-method
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @note arrange(SparkDataFrame, character) since 1.4.0
 setMethod("arrange",
@@ -2345,9 +2971,14 @@ setMethod("arrange",
           })
 
 #' @rdname arrange
+<<<<<<< HEAD
 #' @aliases orderBy,SparkDataFrame,characterOrColumn-method
 #' @export
 #' @note orderBy(SparkDataFrame, characterOrColumn) since 1.4.0
+=======
+#' @name orderBy
+#' @export
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("orderBy",
           signature(x = "SparkDataFrame", col = "characterOrColumn"),
           function(x, col, ...) {
@@ -2361,9 +2992,14 @@ setMethod("orderBy",
 #' @param x A SparkDataFrame to be sorted.
 #' @param condition The condition to filter on. This may either be a Column expression
 #' or a string containing a SQL statement
+<<<<<<< HEAD
 #' @return A SparkDataFrame containing only the rows that meet the condition.
 #' @family SparkDataFrame functions
 #' @aliases filter,SparkDataFrame,characterOrColumn-method
+=======
+#' @return A DataFrame containing only the rows that meet the condition.
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname filter
 #' @name filter
 #' @family subsetting functions
@@ -2372,7 +3008,11 @@ setMethod("orderBy",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' filter(df, "col1 > 0")
 #' filter(df, df$col2 != "abcdefg")
 #' }
@@ -2387,6 +3027,10 @@ setMethod("filter",
             dataFrame(sdf)
           })
 
+<<<<<<< HEAD
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname filter
 #' @name where
 #' @aliases where,SparkDataFrame,characterOrColumn-method
@@ -2448,6 +3092,7 @@ setMethod("dropDuplicates",
 #' @param x A SparkDataFrame
 #' @param y A SparkDataFrame
 #' @param joinExpr (Optional) The expression used to perform the join. joinExpr must be a
+<<<<<<< HEAD
 #' Column expression. If joinExpr is omitted, the default, inner join is attempted and an error is
 #' thrown if it would be a Cartesian Product. For Cartesian join, use crossJoin instead.
 #' @param joinType The type of join to perform, default 'inner'.
@@ -2465,6 +3110,25 @@ setMethod("dropDuplicates",
 #' sparkR.session()
 #' df1 <- read.json(path)
 #' df2 <- read.json(path2)
+=======
+#' Column expression. If joinExpr is omitted, join() will perform a Cartesian join
+#' @param joinType The type of join to perform. The following join types are available:
+#' 'inner', 'outer', 'full', 'fullouter', leftouter', 'left_outer', 'left',
+#' 'right_outer', 'rightouter', 'right', and 'leftsemi'. The default joinType is "inner".
+#' @return A DataFrame containing the result of the join operation.
+#' @family DataFrame functions
+#' @rdname join
+#' @name join
+#' @seealso \link{merge}
+#' @export
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' df1 <- read.json(sqlContext, path)
+#' df2 <- read.json(sqlContext, path2)
+#' join(df1, df2) # Performs a Cartesian
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' join(df1, df2, df1$col1 == df2$col2) # Performs an inner join based on expression
 #' join(df1, df2, df1$col1 == df2$col2, "right_outer")
 #' join(df1, df2) # Attempts an inner join
@@ -2499,6 +3163,7 @@ setMethod("join",
             dataFrame(sdf)
           })
 
+<<<<<<< HEAD
 #' CrossJoin
 #'
 #' Returns Cartesian Product on two SparkDataFrames.
@@ -2532,6 +3197,12 @@ setMethod("crossJoin",
 #' @name merge
 #' @param x the first data frame to be joined.
 #' @param y the second data frame to be joined.
+=======
+#' @name merge
+#' @title Merges two data frames
+#' @param x the first data frame to be joined
+#' @param y the second data frame to be joined
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @param by a character vector specifying the join columns. If by is not
 #'   specified, the common column names in \code{x} and \code{y} will be used.
 #'   If by or both by.x and by.y are explicitly set to NULL or of length 0, the Cartesian
@@ -2555,6 +3226,7 @@ setMethod("crossJoin",
 #'   be returned. If all.x is set to FALSE and all.y is set to TRUE, a right
 #'   outer join will be returned. If all.x and all.y are set to TRUE, a full
 #'   outer join will be returned.
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases merge,SparkDataFrame,SparkDataFrame-method
 #' @rdname merge
@@ -2566,6 +3238,19 @@ setMethod("crossJoin",
 #' df1 <- read.json(path)
 #' df2 <- read.json(path2)
 #' merge(df1, df2) # Performs an inner join by common columns
+=======
+#' @family DataFrame functions
+#' @rdname merge
+#' @seealso \link{join}
+#' @export
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' df1 <- read.json(sqlContext, path)
+#' df2 <- read.json(sqlContext, path2)
+#' merge(df1, df2) # Performs a Cartesian
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' merge(df1, df2, by = "col1") # Performs an inner join based on expression
 #' merge(df1, df2, by.x = "col1", by.y = "col2", all.y = TRUE)
 #' merge(df1, df2, by.x = "col1", by.y = "col2", all.x = TRUE)
@@ -2579,7 +3264,11 @@ setMethod("merge",
           signature(x = "SparkDataFrame", y = "SparkDataFrame"),
           function(x, y, by = intersect(names(x), names(y)), by.x = by, by.y = by,
                    all = FALSE, all.x = all, all.y = all,
+<<<<<<< HEAD
                    sort = TRUE, suffixes = c("_x", "_y"), ...) {
+=======
+                   sort = TRUE, suffixes = c("_x", "_y"), ... ) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
             if (length(suffixes) != 2) {
               stop("suffixes must have length 2")
@@ -2682,12 +3371,17 @@ genAliasesForIntersectedCols <- function(x, intersectedColNames, suffix) {
   cols
 }
 
+<<<<<<< HEAD
 #' Return a new SparkDataFrame containing the union of rows
+=======
+#' rbind
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' Return a new SparkDataFrame containing the union of rows in this SparkDataFrame
 #' and another SparkDataFrame. This is equivalent to \code{UNION ALL} in SQL.
 #' Input SparkDataFrames can have different schemas (names and data types).
 #'
+<<<<<<< HEAD
 #' Note: This does not remove duplicate rows across the two SparkDataFrames.
 #' Also as standard in SQL, this function resolves columns by position (not by name).
 #'
@@ -2707,6 +3401,22 @@ genAliasesForIntersectedCols <- function(x, intersectedColNames, suffix) {
 #' df2 <- read.json(path2)
 #' unioned <- union(df, df2)
 #' unions <- rbind(df, df2, df3, df4)
+=======
+#' @param x A Spark DataFrame
+#' @param y A Spark DataFrame
+#' @return A DataFrame containing the result of the union.
+#' @family DataFrame functions
+#' @rdname rbind
+#' @name unionAll
+#' @export
+#' @examples
+#'\dontrun{
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' df1 <- read.json(sqlContext, path)
+#' df2 <- read.json(sqlContext, path2)
+#' unioned <- unionAll(df, df2)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' }
 #' @note union since 2.0.0
 setMethod("union",
@@ -2763,6 +3473,7 @@ setMethod("unionByName",
             dataFrame(unioned)
           })
 
+<<<<<<< HEAD
 #' Union two or more SparkDataFrames
 #'
 #' Union two or more SparkDataFrames by row. As in R's \code{rbind}, this method
@@ -2787,6 +3498,14 @@ setMethod("unionByName",
 #' unions <- rbind(df, df2, df3, df4)
 #' }
 #' @note rbind since 1.5.0
+=======
+#' @title Union two or more DataFrames
+#' @description Returns a new DataFrame containing rows of all parameters.
+#'
+#' @rdname rbind
+#' @name rbind
+#' @export
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setMethod("rbind",
           signature(... = "SparkDataFrame"),
           function(x, ..., deparse.level = 1) {
@@ -2806,19 +3525,33 @@ setMethod("rbind",
 #' Return a new SparkDataFrame containing rows only in both this SparkDataFrame
 #' and another SparkDataFrame. This is equivalent to \code{INTERSECT} in SQL.
 #'
+<<<<<<< HEAD
 #' @param x A SparkDataFrame
 #' @param y A SparkDataFrame
 #' @return A SparkDataFrame containing the result of the intersect.
 #' @family SparkDataFrame functions
 #' @aliases intersect,SparkDataFrame,SparkDataFrame-method
+=======
+#' @param x A Spark DataFrame
+#' @param y A Spark DataFrame
+#' @return A DataFrame containing the result of the intersect.
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname intersect
 #' @name intersect
 #' @export
 #' @examples
 #'\dontrun{
+<<<<<<< HEAD
 #' sparkR.session()
 #' df1 <- read.json(path)
 #' df2 <- read.json(path2)
+=======
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' df1 <- read.json(sqlContext, path)
+#' df2 <- read.json(sqlContext, path2)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' intersectDF <- intersect(df, df2)
 #' }
 #' @note intersect since 1.4.0
@@ -2834,19 +3567,33 @@ setMethod("intersect",
 #' Return a new SparkDataFrame containing rows in this SparkDataFrame
 #' but not in another SparkDataFrame. This is equivalent to \code{EXCEPT} in SQL.
 #'
+<<<<<<< HEAD
 #' @param x a SparkDataFrame.
 #' @param y a SparkDataFrame.
 #' @return A SparkDataFrame containing the result of the except operation.
 #' @family SparkDataFrame functions
 #' @aliases except,SparkDataFrame,SparkDataFrame-method
+=======
+#' @param x A Spark DataFrame
+#' @param y A Spark DataFrame
+#' @return A DataFrame containing the result of the except operation.
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname except
 #' @name except
 #' @export
 #' @examples
 #'\dontrun{
+<<<<<<< HEAD
 #' sparkR.session()
 #' df1 <- read.json(path)
 #' df2 <- read.json(path2)
+=======
+#' sc <- sparkR.init()
+#' sqlContext <- sparkRSQL.init(sc)
+#' df1 <- read.json(sqlContext, path)
+#' df2 <- read.json(sqlContext, path2)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' exceptDF <- except(df, df2)
 #' }
 #' @rdname except
@@ -2876,6 +3623,7 @@ setMethod("except",
 #'         and to not change the existing data.
 #' }
 #'
+<<<<<<< HEAD
 #' @param df a SparkDataFrame.
 #' @param path a name for the table.
 #' @param source a name for external data source.
@@ -2884,6 +3632,14 @@ setMethod("except",
 #'
 #' @family SparkDataFrame functions
 #' @aliases write.df,SparkDataFrame-method
+=======
+#' @param df A SparkSQL DataFrame
+#' @param path A name for the table
+#' @param source A name for external data source
+#' @param mode One of 'append', 'overwrite', 'error', 'ignore' save mode (it is 'error' by default)
+#'
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname write.df
 #' @name write.df
 #' @export
@@ -2891,16 +3647,35 @@ setMethod("except",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' write.df(df, "myfile", "parquet", "overwrite")
 #' saveDF(df, parquetPath2, "parquet", mode = "append", mergeSchema = TRUE)
 #' }
 #' @note write.df since 1.4.0
 setMethod("write.df",
+<<<<<<< HEAD
           signature(df = "SparkDataFrame"),
           function(df, path = NULL, source = NULL, mode = "error", ...) {
             if (!is.null(path) && !is.character(path)) {
               stop("path should be character, NULL or omitted.")
+=======
+          signature(df = "DataFrame", path = "character"),
+          function(df, path, source = NULL, mode = "error", ...){
+            if (is.null(source)) {
+              if (exists(".sparkRSQLsc", envir = .sparkREnv)) {
+                sqlContext <- get(".sparkRSQLsc", envir = .sparkREnv)
+              } else if (exists(".sparkRHivesc", envir = .sparkREnv)) {
+                sqlContext <- get(".sparkRHivesc", envir = .sparkREnv)
+              } else {
+                stop("sparkRHive or sparkRSQL context has to be specified")
+              }
+              source <- callJMethod(sqlContext, "getConf", "spark.sql.sources.default",
+                                    "org.apache.spark.sql.parquet")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             }
             if (!is.null(source) && !is.character(source)) {
               stop("source should be character, NULL or omitted. It is the datasource specified ",
@@ -2924,8 +3699,13 @@ setMethod("write.df",
 #' @export
 #' @note saveDF since 1.4.0
 setMethod("saveDF",
+<<<<<<< HEAD
           signature(df = "SparkDataFrame", path = "character"),
           function(df, path, source = NULL, mode = "error", ...) {
+=======
+          signature(df = "DataFrame", path = "character"),
+          function(df, path, source = NULL, mode = "error", ...){
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             write.df(df, path, source, mode, ...)
           })
 
@@ -2944,6 +3724,7 @@ setMethod("saveDF",
 #'  ignore: The save operation is expected to not save the contents of the SparkDataFrame
 #'     and to not change the existing data. \cr
 #'
+<<<<<<< HEAD
 #' @param df a SparkDataFrame.
 #' @param tableName a name for the table.
 #' @param source a name for external data source.
@@ -2952,6 +3733,14 @@ setMethod("saveDF",
 #'
 #' @family SparkDataFrame functions
 #' @aliases saveAsTable,SparkDataFrame,character-method
+=======
+#' @param df A SparkSQL DataFrame
+#' @param tableName A name for the table
+#' @param source A name for external data source
+#' @param mode One of 'append', 'overwrite', 'error', 'ignore' save mode (it is 'error' by default)
+#'
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname saveAsTable
 #' @name saveAsTable
 #' @export
@@ -2959,15 +3748,39 @@ setMethod("saveDF",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' saveAsTable(df, "myfile")
 #' }
 #' @note saveAsTable since 1.4.0
 setMethod("saveAsTable",
+<<<<<<< HEAD
           signature(df = "SparkDataFrame", tableName = "character"),
           function(df, tableName, source = NULL, mode="error", ...) {
             if (is.null(source)) {
               source <- getDefaultSqlSource()
+=======
+          signature(df = "DataFrame", tableName = "character"),
+          function(df, tableName, source = NULL, mode="error", ...){
+            if (is.null(source)) {
+              if (exists(".sparkRSQLsc", envir = .sparkREnv)) {
+                sqlContext <- get(".sparkRSQLsc", envir = .sparkREnv)
+              } else if (exists(".sparkRHivesc", envir = .sparkREnv)) {
+                sqlContext <- get(".sparkRHivesc", envir = .sparkREnv)
+              } else {
+                stop("sparkRHive or sparkRSQL context has to be specified")
+              }
+               source <- callJMethod(sqlContext, "getConf", "spark.sql.sources.default",
+                                     "org.apache.spark.sql.parquet")
+            }
+            allModes <- c("append", "overwrite", "error", "ignore")
+            # nolint start
+            if (!(mode %in% allModes)) {
+              stop('mode should be one of "append", "overwrite", "error", "ignore"')
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             }
             jmode <- convertToJSaveMode(mode)
             options <- varargsToStrEnv(...)
@@ -2979,11 +3792,12 @@ setMethod("saveAsTable",
             invisible(callJMethod(write, "saveAsTable", tableName))
           })
 
-#' describe
+#' summary
 #'
 #' Computes statistics for numeric and string columns.
 #' If no columns are given, this function computes statistics for all numerical or string columns.
 #'
+<<<<<<< HEAD
 #' @param x a SparkDataFrame to be computed.
 #' @param col a string of name.
 #' @param ... additional expressions.
@@ -2991,13 +3805,25 @@ setMethod("saveAsTable",
 #' @family SparkDataFrame functions
 #' @aliases describe,SparkDataFrame,character-method describe,SparkDataFrame,ANY-method
 #' @rdname describe
+=======
+#' @param x A DataFrame to be computed.
+#' @param col A string of name
+#' @param ... Additional expressions
+#' @return A DataFrame
+#' @family DataFrame functions
+#' @rdname summary
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @name describe
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlContext, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' describe(df)
 #' describe(df, "col1")
 #' describe(df, "col1", "col2")
@@ -3012,7 +3838,11 @@ setMethod("describe",
             dataFrame(sdf)
           })
 
+<<<<<<< HEAD
 #' @rdname describe
+=======
+#' @rdname summary
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @name describe
 #' @aliases describe,SparkDataFrame-method
 #' @note describe(SparkDataFrame) since 1.4.0
@@ -3023,6 +3853,7 @@ setMethod("describe",
             dataFrame(sdf)
           })
 
+<<<<<<< HEAD
 #' summary
 #'
 #' Computes specified statistics for numeric and string columns. Available statistics are:
@@ -3045,6 +3876,8 @@ setMethod("describe",
 #' @param ... (optional) statistics to be computed for all columns.
 #' @return A SparkDataFrame.
 #' @family SparkDataFrame functions
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname summary
 #' @name summary
 #' @aliases summary,SparkDataFrame-method
@@ -3063,11 +3896,17 @@ setMethod("describe",
 #'       previous defaults.
 #' @seealso \link{describe}
 setMethod("summary",
+<<<<<<< HEAD
           signature(object = "SparkDataFrame"),
           function(object, ...) {
             statisticsList <- list(...)
             sdf <- callJMethod(object@sdf, "summary", statisticsList)
             dataFrame(sdf)
+=======
+          signature(object = "DataFrame"),
+          function(object, ...) {
+            describe(object)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           })
 
 
@@ -3090,7 +3929,11 @@ setMethod("summary",
 #'             column is simply ignored.
 #' @return A SparkDataFrame.
 #'
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname nafunctions
 #' @aliases dropna,SparkDataFrame-method
 #' @name dropna
@@ -3099,7 +3942,11 @@ setMethod("summary",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlCtx, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' dropna(df)
 #' }
 #' @note dropna since 1.4.0
@@ -3120,8 +3967,11 @@ setMethod("dropna",
             dataFrame(sdf)
           })
 
+<<<<<<< HEAD
 #' @param object a SparkDataFrame.
 #' @param ... further arguments to be passed to or from other methods.
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname nafunctions
 #' @name na.omit
 #' @aliases na.omit,SparkDataFrame-method
@@ -3141,6 +3991,14 @@ setMethod("na.omit",
 #'              value must be a mapping from column name (character) to
 #'              replacement value. The replacement value must be an
 #'              integer, numeric or character.
+<<<<<<< HEAD
+=======
+#' @param cols optional list of column names to consider.
+#'             Columns specified in cols that do not have matching data
+#'             type are ignored. For example, if value is a character, and
+#'             subset contains a non-character column, then the non-character
+#'             column is simply ignored.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @rdname nafunctions
 #' @name fillna
@@ -3150,7 +4008,11 @@ setMethod("na.omit",
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
+<<<<<<< HEAD
 #' df <- read.json(path)
+=======
+#' df <- read.json(sqlCtx, path)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' fillna(df, 1)
 #' fillna(df, list("age" = 20, "name" = "unknown"))
 #' }
@@ -3205,6 +4067,7 @@ setMethod("fillna",
 #' Since data.frames are held in memory, ensure that you have enough memory
 #' in your system to accommodate the contents.
 #'
+<<<<<<< HEAD
 #' @param x a SparkDataFrame.
 #' @param row.names \code{NULL} or a character vector giving the row names for the data frame.
 #' @param optional If \code{TRUE}, converting column names is optional.
@@ -3212,6 +4075,12 @@ setMethod("fillna",
 #' @return A data.frame.
 #' @family SparkDataFrame functions
 #' @aliases as.data.frame,SparkDataFrame-method
+=======
+#' @title Download data from a DataFrame into a data.frame
+#' @param x a DataFrame
+#' @return a data.frame
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname as.data.frame
 #' @examples
 #' \dontrun{
@@ -3220,18 +4089,32 @@ setMethod("fillna",
 #' }
 #' @note as.data.frame since 1.6.0
 setMethod("as.data.frame",
+<<<<<<< HEAD
           signature(x = "SparkDataFrame"),
           function(x, row.names = NULL, optional = FALSE, ...) {
             as.data.frame(collect(x), row.names, optional, ...)
+=======
+          signature(x = "DataFrame"),
+          function(x, ...) {
+            # Check if additional parameters have been passed
+            if (length(list(...)) > 0) {
+              stop(paste("Unused argument(s): ", paste(list(...), collapse = ", ")))
+            }
+            collect(x)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           })
 
 #' Attach SparkDataFrame to R search path
 #'
+<<<<<<< HEAD
 #' The specified SparkDataFrame is attached to the R search path. This means that
 #' the SparkDataFrame is searched by R when evaluating a variable, so columns in
 #' the SparkDataFrame can be accessed by simply giving their names.
 #'
 #' @family SparkDataFrame functions
+=======
+#' @family DataFrame functions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname attach
 #' @aliases attach,SparkDataFrame-method
 #' @param what (SparkDataFrame) The SparkDataFrame to attach
@@ -3254,18 +4137,29 @@ setMethod("attach",
             attach(newEnv, pos = pos, name = name, warn.conflicts = warn.conflicts)
           })
 
+<<<<<<< HEAD
 #' Evaluate a R expression in an environment constructed from a SparkDataFrame
 #'
 #' Evaluate a R expression in an environment constructed from a SparkDataFrame
 #' with() allows access to columns of a SparkDataFrame by simply referring to
 #' their name. It appends every column of a SparkDataFrame into a new
+=======
+#' Evaluate a R expression in an environment constructed from a DataFrame
+#' with() allows access to columns of a DataFrame by simply referring to
+#' their name. It appends every column of a DataFrame into a new
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' environment. Then, the given expression is evaluated in this new
 #' environment.
 #'
 #' @rdname with
+<<<<<<< HEAD
 #' @family SparkDataFrame functions
 #' @aliases with,SparkDataFrame-method
 #' @param data (SparkDataFrame) SparkDataFrame to use for constructing an environment.
+=======
+#' @title Evaluate a R expression in an environment constructed from a DataFrame
+#' @param data (DataFrame) DataFrame to use for constructing an environment.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @param expr (expression) Expression to evaluate.
 #' @param ... arguments to be passed to future methods.
 #' @examples
@@ -3273,14 +4167,20 @@ setMethod("attach",
 #' with(irisDf, nrow(Sepal_Width))
 #' }
 #' @seealso \link{attach}
+<<<<<<< HEAD
 #' @note with since 1.6.0
 setMethod("with",
           signature(data = "SparkDataFrame"),
+=======
+setMethod("with",
+          signature(data = "DataFrame"),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           function(data, expr, ...) {
             newEnv <- assignNewEnv(data)
             eval(substitute(expr), envir = newEnv, enclos = newEnv)
           })
 
+<<<<<<< HEAD
 #' Compactly display the structure of a dataset
 #'
 #' Display the structure of a SparkDataFrame, including column names, column types, as well as a
@@ -3302,6 +4202,24 @@ setMethod("with",
 #' @note str since 1.6.1
 setMethod("str",
           signature(object = "SparkDataFrame"),
+=======
+#' Display the structure of a DataFrame, including column names, column types, as well as a
+#' a small sample of rows.
+#' @name str
+#' @title Compactly display the structure of a dataset
+#' @rdname str
+#' @family DataFrame functions
+#' @param object a DataFrame
+#' @examples \dontrun{
+#' # Create a DataFrame from the Iris dataset
+#' irisDF <- createDataFrame(sqlContext, iris)
+#' 
+#' # Show the structure of the DataFrame
+#' str(irisDF)
+#' }
+setMethod("str",
+          signature(object = "DataFrame"),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           function(object) {
 
             # TODO: These could be made global parameters, though in R it's not the case
@@ -3358,6 +4276,7 @@ setMethod("str",
               }
             }
           })
+<<<<<<< HEAD
 
 #' drop
 #'
@@ -3915,3 +4834,5 @@ setMethod("broadcast",
             sdf <- callJStatic("org.apache.spark.sql.functions", "broadcast", x@sdf)
             dataFrame(sdf)
           })
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

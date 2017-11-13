@@ -95,8 +95,13 @@ object GenerateMutableProjection extends CodeGenerator[Seq[Expression], MutableP
     val allUpdates = ctx.splitExpressions(ctx.INPUT_ROW, updates)
 
     val codeBody = s"""
+<<<<<<< HEAD
       public java.lang.Object generate(Object[] references) {
         return new SpecificMutableProjection(references);
+=======
+      public java.lang.Object generate($exprType[] expr) {
+        return new SpecificMutableProjection(expr);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
 
       class SpecificMutableProjection extends ${classOf[BaseMutableProjection].getName} {
@@ -138,8 +143,12 @@ object GenerateMutableProjection extends CodeGenerator[Seq[Expression], MutableP
       }
     """
 
+<<<<<<< HEAD
     val code = CodeFormatter.stripOverlappingComments(
       new CodeAndComment(codeBody, ctx.getPlaceHolderToComments()))
+=======
+    val code = new CodeAndComment(codeBody, ctx.getPlaceHolderToComments())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     logDebug(s"code for ${expressions.mkString(",")}:\n${CodeFormatter.format(code)}")
 
     val (clazz, _) = CodeGenerator.compile(code)

@@ -499,6 +499,7 @@ private[spark] object UIUtils extends Logging {
       new RuleTransformer(rule).transform(xml)
     } catch {
       case NonFatal(e) =>
+<<<<<<< HEAD
         if (plainText) Text(desc) else <span class="description-input">{desc}</span>
     }
   }
@@ -547,6 +548,24 @@ private[spark] object UIUtils extends Logging {
       // Remove new lines and single quotes, followed by escaping HTML version 4.0
       StringEscapeUtils.escapeHtml4(
         NEWLINE_AND_SINGLE_QUOTE_REGEX.replaceAllIn(requestParameter, ""))
+=======
+        <span class="description-input">{desc}</span>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
+  }
+
+  /**
+   * Decode URLParameter if URL is encoded by YARN-WebAppProxyServlet.
+   * Due to YARN-2844: WebAppProxyServlet cannot handle urls which contain encoded characters
+   * Therefore we need to decode it until we get the real URLParameter.
+   */
+  def decodeURLParameter(urlParam: String): String = {
+    var param = urlParam
+    var decodedParam = URLDecoder.decode(param, "UTF-8")
+    while (param != decodedParam) {
+      param = decodedParam
+      decodedParam = URLDecoder.decode(param, "UTF-8")
+    }
+    param
   }
 }

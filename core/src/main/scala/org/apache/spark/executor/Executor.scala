@@ -37,7 +37,11 @@ import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
 import org.apache.spark.memory.TaskMemoryManager
 import org.apache.spark.rpc.RpcTimeout
+<<<<<<< HEAD
 import org.apache.spark.scheduler.{DirectTaskResult, IndirectTaskResult, Task, TaskDescription}
+=======
+import org.apache.spark.scheduler.{DirectTaskResult, IndirectTaskResult, Task}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.storage.{StorageLevel, TaskResultBlockId}
 import org.apache.spark.util._
@@ -162,7 +166,11 @@ private[spark] class Executor(
   private val HEARTBEAT_MAX_FAILURES = conf.getInt("spark.executor.heartbeat.maxFailures", 60)
 
   /**
+<<<<<<< HEAD
    * Count the failure times of heartbeat. It should only be accessed in the heartbeat thread. Each
+=======
+   * Count the failure times of heartbeat. It should only be acessed in the heartbeat thread. Each
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * successful heartbeat will reset it to 0.
    */
   private var heartbeatFailures = 0
@@ -371,6 +379,17 @@ private[spark] class Executor(
               logInfo(errMsg)
             }
           }
+
+          if (releasedLocks.nonEmpty) {
+            val errMsg =
+              s"${releasedLocks.size} block locks were not released by TID = $taskId:\n" +
+              releasedLocks.mkString("[", ", ", "]")
+            if (conf.getBoolean("spark.storage.exceptionOnPinLeak", false) && !threwException) {
+              throw new SparkException(errMsg)
+            } else {
+              logError(errMsg)
+            }
+          }
         }
         task.context.fetchFailed.foreach { fetchFailure =>
           // uh-oh.  it appears the user code has caught the fetch-failure without throwing any
@@ -458,6 +477,7 @@ private[spark] class Executor(
           setTaskFinishedAndClearInterruptStatus()
           execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(TaskKilled(t.reason)))
 
+<<<<<<< HEAD
         case _: InterruptedException | NonFatal(_) if
             task != null && task.reasonIfKilled.isDefined =>
           val killReason = task.reasonIfKilled.getOrElse("unknown reason")
@@ -470,6 +490,11 @@ private[spark] class Executor(
           val reason = cDE.toTaskCommitDeniedReason
           setTaskFinishedAndClearInterruptStatus()
           execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(reason))
+=======
+        case CausedBy(cDE: CommitDeniedException) =>
+          val reason = cDE.toTaskEndReason
+          execBackend.statusUpdate(taskId, TaskState.FAILED, ser.serialize(reason))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         case t: Throwable =>
           // Attempt to exit cleanly by informing the driver of our failure.
@@ -734,15 +759,41 @@ private[spark] class Executor(
 
     for (taskRunner <- runningTasks.values().asScala) {
       if (taskRunner.task != null) {
+<<<<<<< HEAD
         taskRunner.task.metrics.mergeShuffleReadMetrics()
         taskRunner.task.metrics.setJvmGCTime(curGCTime - taskRunner.startGCTime)
         accumUpdates += ((taskRunner.taskId, taskRunner.task.metrics.accumulators()))
+=======
+        taskRunner.task.metrics.foreach { metrics =>
+          metrics.updateShuffleReadMetrics()
+          metrics.updateInputMetrics()
+          metrics.setJvmGCTime(curGCTime - taskRunner.startGCTime)
+          metrics.updateAccumulators()
+
+          if (isLocal) {
+            // JobProgressListener will hold an reference of it during
+            // onExecutorMetricsUpdate(), then JobProgressListener can not see
+            // the changes of metrics any more, so make a deep copy of it
+            val copiedMetrics = Utils.deserialize[TaskMetrics](
+              Utils.serialize(metrics),
+              Utils.getContextOrSparkClassLoader)
+            tasksMetrics += ((taskRunner.taskId, copiedMetrics))
+          } else {
+            // It will be copied by serialization
+            tasksMetrics += ((taskRunner.taskId, metrics))
+          }
+        }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
 
     val message = Heartbeat(executorId, accumUpdates.toArray, env.blockManager.blockManagerId)
     try {
+<<<<<<< HEAD
       val response = heartbeatReceiverRef.askSync[HeartbeatResponse](
+=======
+      val response = heartbeatReceiverRef.askWithRetry[HeartbeatResponse](
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           message, RpcTimeout(conf, "spark.executor.heartbeatInterval", "10s"))
       if (response.reregisterBlockManager) {
         logInfo("Told to re-register on heartbeat")

@@ -20,17 +20,25 @@ package org.apache.spark.ml.feature
 import org.scalatest.exceptions.TestFailedException
 
 import org.apache.spark.SparkFunSuite
+<<<<<<< HEAD
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.ml.util.TestingUtils._
+=======
+import org.apache.spark.ml.util.DefaultReadWriteTest
+import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.Row
 
 class PolynomialExpansionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new PolynomialExpansion)
@@ -95,6 +103,7 @@ class PolynomialExpansionSuite
     }
   }
 
+<<<<<<< HEAD
   test("Polynomial expansion with degree 1 is identity on vectors") {
     val df = data.zip(data).toSeq.toDF("features", "expected")
 
@@ -111,6 +120,8 @@ class PolynomialExpansionSuite
     }
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("read/write") {
     val t = new PolynomialExpansion()
       .setInputCol("myInputCol")
@@ -118,6 +129,7 @@ class PolynomialExpansionSuite
       .setDegree(3)
     testDefaultReadWrite(t)
   }
+<<<<<<< HEAD
 
   test("SPARK-17027. Integer overflow in PolynomialExpansion.getPolySize") {
     val data: Array[(Vector, Int, Int)] = Array(
@@ -141,5 +153,7 @@ class PolynomialExpansionSuite
       assert(transformed.collect.forall(identity))
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 

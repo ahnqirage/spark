@@ -17,6 +17,7 @@
 
 package org.apache.spark.mllib.clustering
 
+<<<<<<< HEAD
 import org.json4s._
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
@@ -30,6 +31,13 @@ import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.mllib.util.{Loader, Saveable}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
+=======
+import org.apache.spark.Logging
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.api.java.JavaRDD
+import org.apache.spark.mllib.linalg.Vector
+import org.apache.spark.rdd.RDD
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Clustering model produced by [[BisectingKMeans]].
@@ -39,9 +47,16 @@ import org.apache.spark.sql.{Row, SparkSession}
  * @param root the root node of the clustering tree
  */
 @Since("1.6.0")
+<<<<<<< HEAD
 class BisectingKMeansModel private[clustering] (
     private[clustering] val root: ClusteringTreeNode
   ) extends Serializable with Saveable with Logging {
+=======
+@Experimental
+class BisectingKMeansModel private[clustering] (
+    private[clustering] val root: ClusteringTreeNode
+  ) extends Serializable with Logging {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Leaf cluster centers.
@@ -71,7 +86,11 @@ class BisectingKMeansModel private[clustering] (
   }
 
   /**
+<<<<<<< HEAD
    * Java-friendly version of `predict()`.
+=======
+   * Java-friendly version of [[predict()]].
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   @Since("1.6.0")
   def predict(points: JavaRDD[Vector]): JavaRDD[java.lang.Integer] =
@@ -95,6 +114,7 @@ class BisectingKMeansModel private[clustering] (
   }
 
   /**
+<<<<<<< HEAD
    * Java-friendly version of `computeCost()`.
    */
   @Since("1.6.0")
@@ -185,4 +205,10 @@ object BisectingKMeansModel extends Loader[BisectingKMeansModel] {
       }
     }
   }
+=======
+   * Java-friendly version of [[computeCost()]].
+   */
+  @Since("1.6.0")
+  def computeCost(data: JavaRDD[Vector]): Double = this.computeCost(data.rdd)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

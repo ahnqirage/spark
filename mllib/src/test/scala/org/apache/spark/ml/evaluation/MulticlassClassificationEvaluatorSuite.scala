@@ -19,7 +19,11 @@ package org.apache.spark.ml.evaluation
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.param.ParamsSuite
+<<<<<<< HEAD
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+=======
+import org.apache.spark.ml.util.DefaultReadWriteTest
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 
 class MulticlassClassificationEvaluatorSuite
@@ -33,6 +37,7 @@ class MulticlassClassificationEvaluatorSuite
     val evaluator = new MulticlassClassificationEvaluator()
       .setPredictionCol("myPrediction")
       .setLabelCol("myLabel")
+<<<<<<< HEAD
       .setMetricName("accuracy")
     testDefaultReadWrite(evaluator)
   }
@@ -40,4 +45,9 @@ class MulticlassClassificationEvaluatorSuite
   test("should support all NumericType labels and not support other types") {
     MLTestingUtils.checkNumericTypes(new MulticlassClassificationEvaluator, spark)
   }
+=======
+      .setMetricName("recall")
+    testDefaultReadWrite(evaluator)
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

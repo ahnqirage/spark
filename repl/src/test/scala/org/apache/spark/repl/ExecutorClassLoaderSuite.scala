@@ -18,6 +18,7 @@
 package org.apache.spark.repl
 
 import java.io.File
+<<<<<<< HEAD
 import java.net.{URI, URL, URLClassLoader}
 import java.nio.channels.{FileChannel, ReadableByteChannel}
 import java.nio.charset.StandardCharsets
@@ -26,6 +27,15 @@ import java.util
 import java.util.Collections
 import javax.tools.{JavaFileObject, SimpleJavaFileObject, ToolProvider}
 
+=======
+import java.net.{URL, URLClassLoader}
+import java.nio.charset.StandardCharsets
+import java.util
+
+import com.google.common.io.Files
+
+import scala.concurrent.duration._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.io.Source
 import scala.language.implicitConversions
 
@@ -157,6 +167,7 @@ class ExecutorClassLoaderSuite
 
   test("resource from parent") {
     val parentLoader = new URLClassLoader(urls2, null)
+<<<<<<< HEAD
     val classLoader = new ExecutorClassLoader(new SparkConf(), null, url1, parentLoader, true)
     val resourceName: String = parentResourceNames.head
     val is = classLoader.getResourceAsStream(resourceName)
@@ -169,10 +180,19 @@ class ExecutorClassLoaderSuite
     } {
       bufferedSource.close()
     }
+=======
+    val classLoader = new ExecutorClassLoader(new SparkConf(), url1, parentLoader, true)
+    val resourceName: String = parentResourceNames.head
+    val is = classLoader.getResourceAsStream(resourceName)
+    assert(is != null, s"Resource $resourceName not found")
+    val content = Source.fromInputStream(is, "UTF-8").getLines().next()
+    assert(content.contains("resource"), "File doesn't contain 'resource'")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("resources from parent") {
     val parentLoader = new URLClassLoader(urls2, null)
+<<<<<<< HEAD
     val classLoader = new ExecutorClassLoader(new SparkConf(), null, url1, parentLoader, true)
     val resourceName: String = parentResourceNames.head
     val resources: util.Enumeration[URL] = classLoader.getResources(resourceName)
@@ -202,6 +222,33 @@ class ExecutorClassLoaderSuite
     val classLoader = new ExecutorClassLoader(new SparkConf(), env, "spark://localhost:1234",
       getClass().getClassLoader(), false)
 
+=======
+    val classLoader = new ExecutorClassLoader(new SparkConf(), url1, parentLoader, true)
+    val resourceName: String = parentResourceNames.head
+    val resources: util.Enumeration[URL] = classLoader.getResources(resourceName)
+    assert(resources.hasMoreElements, s"Resource $resourceName not found")
+    val fileReader = Source.fromInputStream(resources.nextElement().openStream()).bufferedReader()
+    assert(fileReader.readLine().contains("resource"), "File doesn't contain 'resource'")
+  }
+
+  test("failing to fetch classes from HTTP server should not leak resources (SPARK-6209)") {
+    // This is a regression test for SPARK-6209, a bug where each failed attempt to load a class
+    // from the driver's class server would leak a HTTP connection, causing the class server's
+    // thread / connection pool to be exhausted.
+    val conf = new SparkConf()
+    val securityManager = new SecurityManager(conf)
+    classServer = new HttpServer(conf, tempDir1, securityManager)
+    classServer.start()
+    // ExecutorClassLoader uses SparkEnv's SecurityManager, so we need to mock this
+    val mockEnv = mock[SparkEnv]
+    when(mockEnv.securityManager).thenReturn(securityManager)
+    SparkEnv.set(mockEnv)
+    // Create an ExecutorClassLoader that's configured to load classes from the HTTP server
+    val parentLoader = new URLClassLoader(Array.empty, null)
+    val classLoader = new ExecutorClassLoader(conf, classServer.uri, parentLoader, false)
+    classLoader.httpUrlConnectionTimeoutMillis = 500
+    // Check that this class loader can actually load classes that exist
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val fakeClass = classLoader.loadClass("ReplFakeClass2").newInstance()
     val fakeClassVersion = fakeClass.toString
     assert(fakeClassVersion === "1")

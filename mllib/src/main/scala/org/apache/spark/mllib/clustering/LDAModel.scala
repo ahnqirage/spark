@@ -368,6 +368,28 @@ class LocalLDAModel private[spark] (
     }
   }
 
+  /** Get a method usable as a UDF for [[topicDistributions()]] */
+  private[spark] def getTopicDistributionMethod(sc: SparkContext): Vector => Vector = {
+    val expElogbeta = exp(LDAUtils.dirichletExpectation(topicsMatrix.toBreeze.toDenseMatrix.t).t)
+    val expElogbetaBc = sc.broadcast(expElogbeta)
+    val docConcentrationBrz = this.docConcentration.toBreeze
+    val gammaShape = this.gammaShape
+    val k = this.k
+
+    (termCounts: Vector) =>
+      if (termCounts.numNonzeros == 0) {
+        Vectors.zeros(k)
+      } else {
+        val (gamma, _) = OnlineLDAOptimizer.variationalTopicInference(
+          termCounts,
+          expElogbetaBc.value,
+          docConcentrationBrz,
+          gammaShape,
+          k)
+        Vectors.dense(normalize(gamma, 1.0).toArray)
+      }
+  }
+
   /**
    * Get a method usable as a UDF for `topicDistributions()`
    */

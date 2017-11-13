@@ -407,6 +407,7 @@ class BasicOperationTests(PySparkStreamingTestCase):
         expected = [[('k', v)] for v in expected]
         self._test_func(input, func, expected)
 
+<<<<<<< HEAD
     def test_update_state_by_key_initial_rdd(self):
 
         def updater(vs, s):
@@ -427,6 +428,8 @@ class BasicOperationTests(PySparkStreamingTestCase):
         expected = [[('k', v)] for v in expected]
         self._test_func(input, func, expected)
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def test_failed_func(self):
         # Test failure in
         # TransformFunction.apply(rdd: Option[RDD[_]], time: Time)
@@ -1174,6 +1177,10 @@ class KafkaStreamTests(PySparkStreamingTestCase):
         self.assertNotEqual(topic_and_partition_a, topic_and_partition_c)
         self.assertNotEqual(topic_and_partition_a, topic_and_partition_d)
 
+<<<<<<< HEAD
+=======
+    @unittest.skipIf(sys.version >= "3", "long type not support")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def test_kafka_direct_stream_transform_with_checkpoint(self):
         """Test the Python direct Kafka stream transform with checkpoint correctly recovered."""
         topic = self._randomTopic()
@@ -1222,6 +1229,10 @@ class KafkaStreamTests(PySparkStreamingTestCase):
         finally:
             shutil.rmtree(tmpdir)
 
+<<<<<<< HEAD
+=======
+    @unittest.skipIf(sys.version >= "3", "long type not support")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def test_kafka_rdd_message_handler(self):
         """Test Python direct Kafka RDD MessageHandler."""
         topic = self._randomTopic()
@@ -1238,6 +1249,10 @@ class KafkaStreamTests(PySparkStreamingTestCase):
                                    messageHandler=getKeyAndDoubleMessage)
         self._validateRddResult({"aa": 1, "bb": 1, "cc": 2}, rdd)
 
+<<<<<<< HEAD
+=======
+    @unittest.skipIf(sys.version >= "3", "long type not support")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def test_kafka_direct_stream_message_handler(self):
         """Test the Python direct Kafka stream MessageHandler."""
         topic = self._randomTopic()
@@ -1541,6 +1556,7 @@ if __name__ == "__main__":
 
     os.environ["PYSPARK_SUBMIT_ARGS"] = "--jars %s pyspark-shell" % jars
     testcases = [BasicOperationTests, WindowFunctionTests, StreamingContextTests, CheckpointTests,
+<<<<<<< HEAD
                  StreamingListenerTests]
 
     if are_flume_tests_enabled:
@@ -1557,6 +1573,10 @@ if __name__ == "__main__":
         sys.stderr.write(
             "Skipped test_kafka_stream (enable by setting environment variable %s=1"
             % kafka_test_environ_var)
+=======
+                 KafkaStreamTests, FlumeStreamTests, FlumePollingStreamTests, MQTTStreamTests,
+                 StreamingListenerTests]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     if kinesis_jar_present is True:
         testcases.append(KinesisStreamTests)

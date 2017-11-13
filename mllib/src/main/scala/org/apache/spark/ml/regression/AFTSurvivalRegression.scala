@@ -23,6 +23,7 @@ import breeze.linalg.{DenseVector => BDV}
 import breeze.optimize.{CachedDiffFunction, DiffFunction, LBFGS => BreezeLBFGS}
 import org.apache.hadoop.fs.Path
 
+<<<<<<< HEAD
 import org.apache.spark.SparkException
 import org.apache.spark.annotation.{Experimental, Since}
 import org.apache.spark.broadcast.Broadcast
@@ -37,9 +38,20 @@ import org.apache.spark.mllib.stat.MultivariateOnlineSummarizer
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
+=======
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.param._
+import org.apache.spark.ml.param.shared._
+import org.apache.spark.ml.util._
+import org.apache.spark.ml.{Estimator, Model}
+import org.apache.spark.mllib.linalg.{BLAS, Vector, VectorUDT, Vectors}
+import org.apache.spark.rdd.RDD
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{DoubleType, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.storage.StorageLevel
+import org.apache.spark.{Logging, SparkException}
 
 /**
  * Params for accelerated failure time (AFT) regression.
@@ -403,7 +415,11 @@ object AFTSurvivalRegressionModel extends MLReadable[AFTSurvivalRegressionModel]
       // Save model data: coefficients, intercept, scale
       val data = Data(instance.coefficients, instance.intercept, instance.scale)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+=======
+      sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -416,11 +432,19 @@ object AFTSurvivalRegressionModel extends MLReadable[AFTSurvivalRegressionModel]
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
 
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       val data = sparkSession.read.parquet(dataPath)
       val Row(coefficients: Vector, intercept: Double, scale: Double) =
         MLUtils.convertVectorColumnsToML(data, "coefficients")
           .select("coefficients", "intercept", "scale")
           .head()
+=======
+      val data = sqlContext.read.parquet(dataPath)
+        .select("coefficients", "intercept", "scale").head()
+      val coefficients = data.getAs[Vector](0)
+      val intercept = data.getDouble(1)
+      val scale = data.getDouble(2)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val model = new AFTSurvivalRegressionModel(metadata.uid, coefficients, intercept, scale)
 
       DefaultParamsReader.getAndSetParams(model, metadata)

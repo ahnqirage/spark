@@ -78,7 +78,11 @@ public class UnsafeInMemorySorterSuite {
     final TaskMemoryManager memoryManager = new TaskMemoryManager(
       new TestMemoryManager(new SparkConf().set("spark.memory.offHeap.enabled", "false")), 0);
     final TestMemoryConsumer consumer = new TestMemoryConsumer(memoryManager);
+<<<<<<< HEAD
     final MemoryBlock dataPage = memoryManager.allocatePage(2048, consumer);
+=======
+    final MemoryBlock dataPage = memoryManager.allocatePage(2048, null);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     final Object baseObject = dataPage.getBaseObject();
     // Write the records into the data page:
     long position = dataPage.getBaseOffset();
@@ -105,15 +109,30 @@ public class UnsafeInMemorySorterSuite {
     // Compute key prefixes based on the records' partition ids
     final HashPartitioner hashPartitioner = new HashPartitioner(4);
     // Use integer comparison for comparing prefixes (which are partition ids, in this case)
+<<<<<<< HEAD
     final PrefixComparator prefixComparator = PrefixComparators.LONG;
     UnsafeInMemorySorter sorter = new UnsafeInMemorySorter(consumer, memoryManager,
       recordComparator, prefixComparator, dataToSort.length, shouldUseRadixSort());
+=======
+    final PrefixComparator prefixComparator = new PrefixComparator() {
+      @Override
+      public int compare(long prefix1, long prefix2) {
+        return (int) prefix1 - (int) prefix2;
+      }
+    };
+    UnsafeInMemorySorter sorter = new UnsafeInMemorySorter(consumer, memoryManager, recordComparator,
+      prefixComparator, dataToSort.length);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // Given a page of records, insert those records into the sorter one-by-one:
     position = dataPage.getBaseOffset();
     for (int i = 0; i < dataToSort.length; i++) {
       if (!sorter.hasSpaceForAnotherRecord()) {
+<<<<<<< HEAD
         sorter.expandPointerArray(
           consumer.allocateArray(sorter.getMemoryUsage() / 8 * 2));
+=======
+        sorter.expandPointerArray(consumer.allocateArray(sorter.numRecords() * 2 * 2));
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       // position now points to the start of a record (which holds its length).
       final int recordLength = Platform.getInt(baseObject, position);

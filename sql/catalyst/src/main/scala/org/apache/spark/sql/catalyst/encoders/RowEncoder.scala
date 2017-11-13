@@ -25,8 +25,13 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions._
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.objects._
 import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, ArrayData, DateTimeUtils, GenericArrayData}
+=======
+import org.apache.spark.sql.catalyst.util.{GenericArrayData, ArrayBasedMapData, DateTimeUtils}
+import org.apache.spark.sql.catalyst.ScalaReflection
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -58,8 +63,14 @@ object RowEncoder {
   def apply(schema: StructType): ExpressionEncoder[Row] = {
     val cls = classOf[Row]
     val inputObject = BoundReference(0, ObjectType(cls), nullable = true)
+<<<<<<< HEAD
     val serializer = serializerFor(AssertNotNull(inputObject, Seq("top level row object")), schema)
     val deserializer = deserializerFor(schema)
+=======
+    // We use an If expression to wrap extractorsFor result of StructType
+    val extractExpressions = extractorsFor(inputObject, schema).asInstanceOf[If].falseValue
+    val constructExpression = constructorFor(schema)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     new ExpressionEncoder[Row](
       schema,
       flat = false,
@@ -71,6 +82,7 @@ object RowEncoder {
   private def serializerFor(
       inputObject: Expression,
       inputType: DataType): Expression = inputType match {
+<<<<<<< HEAD
     case dt if ScalaReflection.isNativeType(dt) => inputObject
 
     case p: PythonUserDefinedType => serializerFor(inputObject, p.sqlType)
@@ -90,6 +102,17 @@ object RowEncoder {
         Nil,
         dataType = ObjectType(udtClass), false)
       Invoke(obj, "serialize", udt, inputObject :: Nil, returnNullable = false)
+=======
+    case NullType | BooleanType | ByteType | ShortType | IntegerType | LongType |
+         FloatType | DoubleType | BinaryType => inputObject
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+
+    case udt: UserDefinedType[_] =>
+      val obj = NewInstance(
+        udt.userClass.getAnnotation(classOf[SQLUserDefinedType]).udt(),
+        Nil,
+        dataType = ObjectType(udt.userClass.getAnnotation(classOf[SQLUserDefinedType]).udt()))
+      Invoke(obj, "serialize", udt.sqlType, inputObject :: Nil)
 
     case TimestampType =>
       StaticInvoke(
@@ -110,10 +133,16 @@ object RowEncoder {
     case d: DecimalType =>
       StaticInvoke(
         Decimal.getClass,
+<<<<<<< HEAD
         d,
         "fromDecimal",
         inputObject :: Nil,
         returnNullable = false)
+=======
+        DecimalType.SYSTEM_DEFAULT,
+        "apply",
+        inputObject :: Nil)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     case StringType =>
       StaticInvoke(
@@ -178,6 +207,7 @@ object RowEncoder {
       }
 
     case StructType(fields) =>
+<<<<<<< HEAD
       val nonNullOutput = CreateNamedStruct(fields.zipWithIndex.flatMap { case (field, index) =>
         val fieldValue = serializerFor(
           ValidateExternalType(
@@ -223,6 +253,27 @@ object RowEncoder {
   }
 
   def externalDataTypeFor(dt: DataType): DataType = dt match {
+=======
+      val convertedFields = fields.zipWithIndex.map { case (f, i) =>
+        val method = if (f.dataType.isInstanceOf[StructType]) {
+          "getStruct"
+        } else {
+          "get"
+        }
+        If(
+          Invoke(inputObject, "isNullAt", BooleanType, Literal(i) :: Nil),
+          Literal.create(null, f.dataType),
+          extractorsFor(
+            Invoke(inputObject, method, externalDataTypeFor(f.dataType), Literal(i) :: Nil),
+            f.dataType))
+      }
+      If(IsNull(inputObject),
+        Literal.create(null, inputType),
+        CreateStruct(convertedFields))
+  }
+
+  private def externalDataTypeFor(dt: DataType): DataType = dt match {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     case _ if ScalaReflection.isNativeType(dt) => dt
     case TimestampType => ObjectType(classOf[java.sql.Timestamp])
     case DateType => ObjectType(classOf[java.sql.Date])
@@ -231,17 +282,31 @@ object RowEncoder {
     case _: ArrayType => ObjectType(classOf[scala.collection.Seq[_]])
     case _: MapType => ObjectType(classOf[scala.collection.Map[_, _]])
     case _: StructType => ObjectType(classOf[Row])
+<<<<<<< HEAD
     case p: PythonUserDefinedType => externalDataTypeFor(p.sqlType)
     case udt: UserDefinedType[_] => ObjectType(udt.userClass)
+=======
+    case udt: UserDefinedType[_] => ObjectType(udt.userClass)
+    case _: NullType => ObjectType(classOf[java.lang.Object])
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private def deserializerFor(schema: StructType): Expression = {
     val fields = schema.zipWithIndex.map { case (f, i) =>
+<<<<<<< HEAD
       val dt = f.dataType match {
         case p: PythonUserDefinedType => p.sqlType
         case other => other
       }
       deserializerFor(GetColumnByOrdinal(i, dt))
+=======
+      val field = BoundReference(i, f.dataType, f.nullable)
+      If(
+        IsNull(field),
+        Literal.create(null, externalDataTypeFor(f.dataType)),
+        constructorFor(BoundReference(i, f.dataType, f.nullable))
+      )
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     CreateExternalRow(fields, schema)
   }
@@ -250,6 +315,7 @@ object RowEncoder {
     deserializerFor(input, input.dataType)
   }
 
+<<<<<<< HEAD
   private def deserializerFor(input: Expression, dataType: DataType): Expression = dataType match {
     case dt if ScalaReflection.isNativeType(dt) => input
 
@@ -269,6 +335,18 @@ object RowEncoder {
         udtClass,
         Nil,
         dataType = ObjectType(udtClass))
+      Invoke(obj, "deserialize", ObjectType(udt.userClass), input :: Nil)
+=======
+  private def constructorFor(input: Expression): Expression = input.dataType match {
+    case NullType | BooleanType | ByteType | ShortType | IntegerType | LongType |
+         FloatType | DoubleType | BinaryType => input
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+
+    case udt: UserDefinedType[_] =>
+      val obj = NewInstance(
+        udt.userClass.getAnnotation(classOf[SQLUserDefinedType]).udt(),
+        Nil,
+        dataType = ObjectType(udt.userClass.getAnnotation(classOf[SQLUserDefinedType]).udt()))
       Invoke(obj, "deserialize", ObjectType(udt.userClass), input :: Nil)
 
     case TimestampType =>
@@ -297,7 +375,11 @@ object RowEncoder {
     case ArrayType(et, nullable) =>
       val arrayData =
         Invoke(
+<<<<<<< HEAD
           MapObjects(deserializerFor(_), input, et),
+=======
+          MapObjects(constructorFor(_), input, et),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           "array",
           ObjectType(classOf[Array[_]]), returnNullable = false)
       StaticInvoke(
@@ -309,10 +391,17 @@ object RowEncoder {
 
     case MapType(kt, vt, valueNullable) =>
       val keyArrayType = ArrayType(kt, false)
+<<<<<<< HEAD
       val keyData = deserializerFor(Invoke(input, "keyArray", keyArrayType))
 
       val valueArrayType = ArrayType(vt, valueNullable)
       val valueData = deserializerFor(Invoke(input, "valueArray", valueArrayType))
+=======
+      val keyData = constructorFor(Invoke(input, "keyArray", keyArrayType))
+
+      val valueArrayType = ArrayType(vt, valueNullable)
+      val valueData = constructorFor(Invoke(input, "valueArray", valueArrayType))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       StaticInvoke(
         ArrayBasedMapData.getClass,
@@ -326,10 +415,18 @@ object RowEncoder {
         If(
           Invoke(input, "isNullAt", BooleanType, Literal(i) :: Nil),
           Literal.create(null, externalDataTypeFor(f.dataType)),
+<<<<<<< HEAD
           deserializerFor(GetStructField(input, i)))
       }
       If(IsNull(input),
         Literal.create(null, externalDataTypeFor(input.dataType)),
         CreateExternalRow(convertedFields, schema))
+=======
+          constructorFor(GetStructField(input, i)))
+      }
+      If(IsNull(input),
+        Literal.create(null, externalDataTypeFor(input.dataType)),
+        CreateExternalRow(convertedFields))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

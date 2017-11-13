@@ -17,8 +17,12 @@
 
 package org.apache.spark.mllib.api.python
 
+<<<<<<< HEAD
 import java.util.{List => JList, Map => JMap}
 
+=======
+import java.util.{ArrayList => JArrayList, List => JList, Map => JMap}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.collection.JavaConverters._
 
 import org.apache.spark.SparkContext
@@ -27,8 +31,13 @@ import org.apache.spark.mllib.feature.Word2VecModel
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 
 /**
+<<<<<<< HEAD
  * Wrapper around Word2VecModel to provide helper methods in Python
  */
+=======
+  * Wrapper around Word2VecModel to provide helper methods in Python
+  */
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 private[python] class Word2VecModelWrapper(model: Word2VecModel) {
   def transform(word: String): Vector = {
     model.transform(word)
@@ -43,6 +52,7 @@ private[python] class Word2VecModelWrapper(model: Word2VecModel) {
     rdd.rdd.map(model.transform)
   }
 
+<<<<<<< HEAD
   /**
    * Finds synonyms of a word; do not include the word itself in results.
    * @param word a word
@@ -65,16 +75,30 @@ private[python] class Word2VecModelWrapper(model: Word2VecModel) {
   }
 
   private def prepareResult(result: Array[(String, Double)]) = {
+=======
+  def findSynonyms(word: String, num: Int): JList[Object] = {
+    val vec = transform(word)
+    findSynonyms(vec, num)
+  }
+
+  def findSynonyms(vector: Vector, num: Int): JList[Object] = {
+    val result = model.findSynonyms(vector, num)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val similarity = Vectors.dense(result.map(_._2))
     val words = result.map(_._1)
     List(words, similarity).map(_.asInstanceOf[Object]).asJava
   }
 
+<<<<<<< HEAD
 
   def getVectors: JMap[String, JList[Float]] = {
     model.getVectors.map { case (k, v) =>
       (k, v.toList.asJava)
     }.asJava
+=======
+  def getVectors: JMap[String, JList[Float]] = {
+    model.getVectors.map({case (k, v) => (k, v.toList.asJava)}).asJava
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def save(sc: SparkContext, path: String): Unit = model.save(sc, path)

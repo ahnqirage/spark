@@ -17,19 +17,30 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession;
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SQLContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 // $example on$
 import java.util.Map;
 
 import org.apache.spark.ml.feature.VectorIndexer;
 import org.apache.spark.ml.feature.VectorIndexerModel;
+<<<<<<< HEAD
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+=======
+import org.apache.spark.sql.DataFrame;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example off$
 
 public class JavaVectorIndexerExample {
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaVectorIndexerExample")
@@ -37,6 +48,14 @@ public class JavaVectorIndexerExample {
 
     // $example on$
     Dataset<Row> data = spark.read().format("libsvm").load("data/mllib/sample_libsvm_data.txt");
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaVectorIndexerExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext jsql = new SQLContext(jsc);
+
+    // $example on$
+    DataFrame data = jsql.read().format("libsvm").load("data/mllib/sample_libsvm_data.txt");
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     VectorIndexer indexer = new VectorIndexer()
       .setInputCol("features")
@@ -53,9 +72,18 @@ public class JavaVectorIndexerExample {
     System.out.println();
 
     // Create new column "indexed" with categorical values transformed to indices
+<<<<<<< HEAD
     Dataset<Row> indexedData = indexerModel.transform(data);
     indexedData.show();
     // $example off$
     spark.stop();
   }
 }
+=======
+    DataFrame indexedData = indexerModel.transform(data);
+    indexedData.show();
+    // $example off$
+    jsc.stop();
+  }
+}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

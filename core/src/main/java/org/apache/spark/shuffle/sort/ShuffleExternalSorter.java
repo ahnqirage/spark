@@ -125,8 +125,12 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     this.numElementsForSpillThreshold =
       conf.getLong("spark.shuffle.spill.numElementsForceSpillThreshold", 1024 * 1024 * 1024);
     this.writeMetrics = writeMetrics;
+<<<<<<< HEAD
     this.inMemSorter = new ShuffleInMemorySorter(
       this, initialSize, conf.getBoolean("spark.shuffle.sort.useRadixSort", true));
+=======
+    this.inMemSorter = new ShuffleInMemorySorter(this, initialSize);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     this.peakMemoryUsedBytes = getMemoryUsage();
     this.diskWriteBufferSize =
         (int) (long) conf.get(package$.MODULE$.SHUFFLE_DISK_WRITE_BUFFER_SIZE());
@@ -262,8 +266,13 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     final long spillSize = freeMemory();
     inMemSorter.reset();
     // Reset the in-memory sorter's pointer array only after freeing up the memory pages holding the
+<<<<<<< HEAD
     // records. Otherwise, if the task is over allocated memory, then without freeing the memory
     // pages, we might not be able to get memory for the pointer array.
+=======
+    // records. Otherwise, if the task is over allocated memory, then without freeing the memory pages,
+    // we might not be able to get memory for the pointer array.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     taskContext.taskMetrics().incMemoryBytesSpilled(spillSize);
     return spillSize;
   }
@@ -406,12 +415,27 @@ final class ShuffleExternalSorter extends MemoryConsumer {
    * @throws IOException
    */
   public SpillInfo[] closeAndGetSpills() throws IOException {
+<<<<<<< HEAD
     if (inMemSorter != null) {
       // Do not count the final file towards the spill count.
       writeSortedFile(true);
       freeMemory();
       inMemSorter.free();
       inMemSorter = null;
+=======
+    try {
+      if (inMemSorter != null) {
+        // Do not count the final file towards the spill count.
+        writeSortedFile(true);
+        freeMemory();
+        inMemSorter.free();
+        inMemSorter = null;
+      }
+      return spills.toArray(new SpillInfo[spills.size()]);
+    } catch (IOException e) {
+      cleanupResources();
+      throw e;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     return spills.toArray(new SpillInfo[spills.size()]);
   }

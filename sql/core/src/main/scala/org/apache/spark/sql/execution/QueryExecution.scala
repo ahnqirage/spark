@@ -40,6 +40,7 @@ import org.apache.spark.util.Utils
  * While this is not a public class, we should avoid changing the function names for the sake of
  * changing them, because a lot of developers use the feature for debugging.
  */
+<<<<<<< HEAD
 class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   // TODO: Move the planner an optimizer into here from SessionState.
@@ -83,11 +84,33 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     // TODO: We use next(), i.e. take the first plan returned by the planner, here for now,
     //       but we will implement to choose the best plan.
     planner.plan(ReturnAnswer(optimizedPlan)).next()
+=======
+class QueryExecution(val sqlContext: SQLContext, val logical: LogicalPlan) {
+
+  def assertAnalyzed(): Unit = sqlContext.analyzer.checkAnalysis(analyzed)
+
+  lazy val analyzed: LogicalPlan = sqlContext.analyzer.execute(logical)
+
+  lazy val withCachedData: LogicalPlan = {
+    assertAnalyzed()
+    sqlContext.cacheManager.useCachedData(analyzed)
+  }
+
+  lazy val optimizedPlan: LogicalPlan = sqlContext.optimizer.execute(withCachedData)
+
+  lazy val sparkPlan: SparkPlan = {
+    SQLContext.setActive(sqlContext)
+    sqlContext.planner.plan(optimizedPlan).next()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   // executedPlan should not be used to initialize any SparkPlan. It should be
   // only used for execution.
+<<<<<<< HEAD
   lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)
+=======
+  lazy val executedPlan: SparkPlan = sqlContext.prepareForExecution.execute(sparkPlan)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /** Internal version of the RDD. Avoids copies and has no schema */
   lazy val toRdd: RDD[InternalRow] = executedPlan.execute()
@@ -140,6 +163,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
       result.map(_.zip(types).map(toHiveString)).map(_.mkString("\t"))
   }
 
+<<<<<<< HEAD
   /** Formats a datum (based on the given data type) and returns the string representation. */
   private def toHiveString(a: (Any, DataType)): String = {
     val primitiveTypes = Seq(StringType, IntegerType, LongType, DoubleType, FloatType,
@@ -196,6 +220,8 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     }
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def simpleString: String = {
     s"""== Physical Plan ==
        |${stringOrError(executedPlan.treeString(verbose = false))}
@@ -217,7 +243,11 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
        |== Optimized Logical Plan ==
        |${stringOrError(optimizedPlan.treeString(verbose = true))}
        |== Physical Plan ==
+<<<<<<< HEAD
        |${stringOrError(executedPlan.treeString(verbose = true))}
+=======
+       |${stringOrError(executedPlan)}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     """.stripMargin.trim
   }
 

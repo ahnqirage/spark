@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql
 
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.aggregate.PivotFirst
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.internal.SQLConf
@@ -27,6 +28,15 @@ class DataFramePivotSuite extends QueryTest with SharedSQLContext {
   import testImplicits._
 
   test("pivot courses") {
+=======
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.test.SharedSQLContext
+
+class DataFramePivotSuite extends QueryTest with SharedSQLContext{
+  import testImplicits._
+
+  test("pivot courses with literals") {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       courseSales.groupBy("year").pivot("course", Seq("dotNET", "Java"))
         .agg(sum($"earnings")),
@@ -34,14 +44,22 @@ class DataFramePivotSuite extends QueryTest with SharedSQLContext {
     )
   }
 
+<<<<<<< HEAD
   test("pivot year") {
+=======
+  test("pivot year with literals") {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       courseSales.groupBy("course").pivot("year", Seq(2012, 2013)).agg(sum($"earnings")),
       Row("dotNET", 15000.0, 48000.0) :: Row("Java", 20000.0, 30000.0) :: Nil
     )
   }
 
+<<<<<<< HEAD
   test("pivot courses with multiple aggregations") {
+=======
+  test("pivot courses with literals and multiple aggregations") {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       courseSales.groupBy($"year")
         .pivot("course", Seq("dotNET", "Java"))
@@ -81,11 +99,19 @@ class DataFramePivotSuite extends QueryTest with SharedSQLContext {
   }
 
   test("pivot max values enforced") {
+<<<<<<< HEAD
     spark.conf.set(SQLConf.DATAFRAME_PIVOT_MAX_VALUES.key, 1)
     intercept[AnalysisException](
       courseSales.groupBy("year").pivot("course")
     )
     spark.conf.set(SQLConf.DATAFRAME_PIVOT_MAX_VALUES.key,
+=======
+    sqlContext.conf.setConf(SQLConf.DATAFRAME_PIVOT_MAX_VALUES, 1)
+    intercept[AnalysisException](
+      courseSales.groupBy("year").pivot("course")
+    )
+    sqlContext.conf.setConf(SQLConf.DATAFRAME_PIVOT_MAX_VALUES,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       SQLConf.DATAFRAME_PIVOT_MAX_VALUES.defaultValue.get)
   }
 
@@ -96,6 +122,7 @@ class DataFramePivotSuite extends QueryTest with SharedSQLContext {
       Row(2012, 15000.0, 20000.0) :: Row(2013, 48000.0, 30000.0) :: Nil
     )
   }
+<<<<<<< HEAD
 
   // Tests for optimized pivot (with PivotFirst) below
 
@@ -246,4 +273,6 @@ class DataFramePivotSuite extends QueryTest with SharedSQLContext {
       checkAnswer(df.select($"a".cast(StringType)), Row(tsWithZone))
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

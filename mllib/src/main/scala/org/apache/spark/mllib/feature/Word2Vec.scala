@@ -151,8 +151,11 @@ class Word2Vec extends Serializable with Logging {
    */
   @Since("1.6.0")
   def setWindowSize(window: Int): this.type = {
+<<<<<<< HEAD
     require(window > 0,
       s"Window of words must be positive but got ${window}")
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     this.window = window
     this
   }
@@ -180,9 +183,12 @@ class Word2Vec extends Serializable with Logging {
   private var vocabSize = 0
   @transient private var vocab: Array[VocabWord] = null
   @transient private var vocabHash = mutable.HashMap.empty[String, Int]
+<<<<<<< HEAD
 
   private def learnVocab[S <: Iterable[String]](dataset: RDD[S]): Unit = {
     val words = dataset.flatMap(x => x)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     vocab = words.map(w => (w, 1))
       .reduceByKey(_ + _)
@@ -365,7 +371,11 @@ class Word2Vec extends Serializable with Logging {
         val random = new XORShiftRandom(seed ^ ((idx + 1) << 16) ^ ((-k - 1) << 8))
         val syn0Modify = new Array[Int](vocabSize)
         val syn1Modify = new Array[Int](vocabSize)
+<<<<<<< HEAD
         val model = iter.foldLeft((bcSyn0Global.value, bcSyn1Global.value, 0L, 0L)) {
+=======
+        val model = iter.foldLeft((syn0Global, syn1Global, 0L, 0L)) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           case ((syn0, syn1, lastWordCount, wordCount), sentence) =>
             var lwc = lastWordCount
             var wc = wordCount
@@ -454,6 +464,9 @@ class Word2Vec extends Serializable with Logging {
       bcSyn1Global.destroy(false)
     }
     newSentences.unpersist()
+    expTable.destroy()
+    bcVocab.destroy()
+    bcVocabHash.destroy()
 
     val wordArray = vocab.map(_.word)
     new Word2VecModel(wordArray.zipWithIndex.toMap, syn0Global)
@@ -585,6 +598,7 @@ class Word2VecModel private[spark] (
     blas.sgemv(
       "T", vectorSize, numWords, alpha, wordVectors, vectorSize, fVector, 1, beta, cosineVec, 1)
 
+<<<<<<< HEAD
     var i = 0
     while (i < numWords) {
       val norm = wordVecNorms(i)
@@ -602,6 +616,19 @@ class Word2VecModel private[spark] (
     while (j < numWords) {
       pq += Tuple2(wordList(j), cosineVec(j))
       j += 1
+=======
+    // Need not divide with the norm of the given vector since it is constant.
+    val cosVec = cosineVec.map(_.toDouble)
+    var ind = 0
+    while (ind < numWords) {
+      val norm = wordVecNorms(ind)
+      if (norm == 0.0) {
+        cosVec(ind) = 0.0
+      } else {
+        cosVec(ind) /= norm
+      }
+      ind += 1
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     val scored = pq.toSeq.sortBy(-_._2)
@@ -658,8 +685,14 @@ object Word2VecModel extends Loader[Word2VecModel] {
     case class Data(word: String, vector: Array[Float])
 
     def load(sc: SparkContext, path: String): Word2VecModel = {
+<<<<<<< HEAD
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
       val dataFrame = spark.read.parquet(Loader.dataPath(path))
+=======
+      val dataPath = Loader.dataPath(path)
+      val sqlContext = SQLContext.getOrCreate(sc)
+      val dataFrame = sqlContext.read.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // Check schema explicitly since erasure makes it hard to use match-case for checking.
       Loader.checkSchema[Data](dataFrame.schema)
 
@@ -671,7 +704,14 @@ object Word2VecModel extends Loader[Word2VecModel] {
     def save(sc: SparkContext, path: String, model: Map[String, Array[Float]]): Unit = {
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
 
+<<<<<<< HEAD
       val vectorSize = model.values.head.length
+=======
+      val sqlContext = SQLContext.getOrCreate(sc)
+      import sqlContext.implicits._
+
+      val vectorSize = model.values.head.size
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val numWords = model.size
       val metadata = compact(render(
         ("class" -> classNameV1_0) ~ ("version" -> formatVersionV1_0) ~

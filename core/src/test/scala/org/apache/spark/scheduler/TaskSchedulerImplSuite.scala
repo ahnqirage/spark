@@ -19,6 +19,7 @@ package org.apache.spark.scheduler
 
 import java.nio.ByteBuffer
 
+<<<<<<< HEAD
 import scala.collection.mutable.HashMap
 
 import org.mockito.Matchers.{anyInt, anyObject, anyString, eq => meq}
@@ -26,6 +27,8 @@ import org.mockito.Mockito.{atLeast, atMost, never, spy, times, verify, when}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.mockito.MockitoSugar
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark._
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config
@@ -428,6 +431,7 @@ class TaskSchedulerImplSuite extends SparkFunSuite with LocalSparkContext with B
       failuresByExec = anyObject())
   }
 
+<<<<<<< HEAD
   test("scheduled tasks obey node and executor blacklists") {
     taskScheduler = setupSchedulerWithMockTaskSetBlacklist()
     (0 to 2).foreach { stageId =>
@@ -758,6 +762,8 @@ class TaskSchedulerImplSuite extends SparkFunSuite with LocalSparkContext with B
     verify(blacklist).applyBlacklistTimeout()
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("if an executor is lost then the state for its running tasks is cleaned up (SPARK-18553)") {
     sc = new SparkContext("local", "TaskSchedulerImplSuite")
     val taskScheduler = new TaskSchedulerImpl(sc)
@@ -768,7 +774,11 @@ class TaskSchedulerImplSuite extends SparkFunSuite with LocalSparkContext with B
       override def executorAdded(execId: String, host: String) {}
     }
 
+<<<<<<< HEAD
     val e0Offers = IndexedSeq(WorkerOffer("executor0", "host0", 1))
+=======
+    val e0Offers = Seq(WorkerOffer("executor0", "host0", 1))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val attempt1 = FakeTask.createTaskSet(1)
 
     // submit attempt 1, offer resources, task gets scheduled
@@ -786,7 +796,10 @@ class TaskSchedulerImplSuite extends SparkFunSuite with LocalSparkContext with B
     // Check that state associated with the lost task attempt is cleaned up:
     assert(taskScheduler.taskIdToExecutorId.isEmpty)
     assert(taskScheduler.taskIdToTaskSetManager.isEmpty)
+<<<<<<< HEAD
     assert(taskScheduler.runningTasksByExecutors.get("executor0").isEmpty)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("if a task finishes with TaskState.LOST its executor is marked as dead") {
@@ -799,7 +812,11 @@ class TaskSchedulerImplSuite extends SparkFunSuite with LocalSparkContext with B
       override def executorAdded(execId: String, host: String) {}
     }
 
+<<<<<<< HEAD
     val e0Offers = IndexedSeq(WorkerOffer("executor0", "host0", 1))
+=======
+    val e0Offers = Seq(WorkerOffer("executor0", "host0", 1))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val attempt1 = FakeTask.createTaskSet(1)
 
     // submit attempt 1, offer resources, task gets scheduled
@@ -817,13 +834,17 @@ class TaskSchedulerImplSuite extends SparkFunSuite with LocalSparkContext with B
     // Check that state associated with the lost task attempt is cleaned up:
     assert(taskScheduler.taskIdToExecutorId.isEmpty)
     assert(taskScheduler.taskIdToTaskSetManager.isEmpty)
+<<<<<<< HEAD
     assert(taskScheduler.runningTasksByExecutors.get("executor0").isEmpty)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Check that the executor has been marked as dead
     assert(!taskScheduler.isExecutorAlive("executor0"))
     assert(!taskScheduler.hasExecutorsAliveOnHost("host0"))
     assert(taskScheduler.getExecutorsAliveOnHost("host0").isEmpty)
   }
+<<<<<<< HEAD
 
   test("Locality should be used for bulk offers even with delay scheduling off") {
     val conf = new SparkConf()
@@ -917,4 +938,6 @@ class TaskSchedulerImplSuite extends SparkFunSuite with LocalSparkContext with B
       taskScheduler.initialize(new FakeSchedulerBackend)
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

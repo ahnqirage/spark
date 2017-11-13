@@ -21,6 +21,10 @@ package org.apache.spark.examples.mllib;
 import scala.Tuple2;
 
 import org.apache.spark.api.java.*;
+<<<<<<< HEAD
+=======
+import org.apache.spark.api.java.function.Function;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.regression.LinearRegressionModel;
@@ -37,6 +41,7 @@ public class JavaRegressionMetricsExample {
     // Load and parse the data
     String path = "data/mllib/sample_linear_regression_data.txt";
     JavaRDD<String> data = sc.textFile(path);
+<<<<<<< HEAD
     JavaRDD<LabeledPoint> parsedData = data.map(line -> {
       String[] parts = line.split(" ");
       double[] v = new double[parts.length - 1];
@@ -45,16 +50,44 @@ public class JavaRegressionMetricsExample {
       }
       return new LabeledPoint(Double.parseDouble(parts[0]), Vectors.dense(v));
     });
+=======
+    JavaRDD<LabeledPoint> parsedData = data.map(
+      new Function<String, LabeledPoint>() {
+        public LabeledPoint call(String line) {
+          String[] parts = line.split(" ");
+          double[] v = new double[parts.length - 1];
+          for (int i = 1; i < parts.length - 1; i++)
+            v[i - 1] = Double.parseDouble(parts[i].split(":")[1]);
+          return new LabeledPoint(Double.parseDouble(parts[0]), Vectors.dense(v));
+        }
+      }
+    );
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     parsedData.cache();
 
     // Building the model
     int numIterations = 100;
+<<<<<<< HEAD
     LinearRegressionModel model = LinearRegressionWithSGD.train(JavaRDD.toRDD(parsedData),
       numIterations);
 
     // Evaluate model on training examples and compute training error
     JavaPairRDD<Object, Object> valuesAndPreds = parsedData.mapToPair(point ->
       new Tuple2<>(model.predict(point.features()), point.label()));
+=======
+    final LinearRegressionModel model = LinearRegressionWithSGD.train(JavaRDD.toRDD(parsedData),
+      numIterations);
+
+    // Evaluate model on training examples and compute training error
+    JavaRDD<Tuple2<Object, Object>> valuesAndPreds = parsedData.map(
+      new Function<LabeledPoint, Tuple2<Object, Object>>() {
+        public Tuple2<Object, Object> call(LabeledPoint point) {
+          double prediction = model.predict(point.features());
+          return new Tuple2<Object, Object>(prediction, point.label());
+        }
+      }
+    );
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Instantiate metrics object
     RegressionMetrics metrics = new RegressionMetrics(valuesAndPreds.rdd());
@@ -77,7 +110,10 @@ public class JavaRegressionMetricsExample {
     LinearRegressionModel sameModel = LinearRegressionModel.load(sc.sc(),
       "target/tmp/LogisticRegressionModel");
     // $example off$
+<<<<<<< HEAD
 
     sc.stop();
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

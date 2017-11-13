@@ -85,7 +85,10 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
   // Executors we have requested the cluster manager to kill that have not died yet; maps
   // the executor ID to whether it was explicitly killed by the driver (and thus shouldn't
   // be considered an app-related failure).
+<<<<<<< HEAD
   @GuardedBy("CoarseGrainedSchedulerBackend.this")
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private val executorsPendingToRemove = new HashMap[String, Boolean]
 
   // A map to store hostname with its possible task number running on it
@@ -471,6 +474,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
    */
   protected def removeExecutor(executorId: String, reason: ExecutorLossReason): Unit = {
     // Only log the failure since we don't care about the result.
+<<<<<<< HEAD
     driverEndpoint.ask[Boolean](RemoveExecutor(executorId, reason)).failed.foreach(t =>
       logError(t.getMessage, t))(ThreadUtils.sameThread)
   }
@@ -478,6 +482,11 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
   protected def removeWorker(workerId: String, host: String, message: String): Unit = {
     driverEndpoint.ask[Boolean](RemoveWorker(workerId, host, message)).failed.foreach(t =>
       logError(t.getMessage, t))(ThreadUtils.sameThread)
+=======
+    driverEndpoint.ask[Boolean](RemoveExecutor(executorId, reason)).onFailure { case t =>
+      logError(t.getMessage, t)
+    }(ThreadUtils.sameThread)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def sufficientResourcesRegistered(): Boolean = true
@@ -589,8 +598,20 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
    *
    * @return a future whose evaluation indicates whether the request is acknowledged.
    */
+<<<<<<< HEAD
   protected def doRequestTotalExecutors(requestedTotal: Int): Future[Boolean] =
     Future.successful(false)
+=======
+  protected def doRequestTotalExecutors(requestedTotal: Int): Boolean = false
+
+  /**
+   * Request that the cluster manager kill the specified executors.
+   * @return whether the kill request is acknowledged.
+   */
+  final override def killExecutors(executorIds: Seq[String]): Boolean = synchronized {
+    killExecutors(executorIds, replace = false, force = false)
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Request that the cluster manager kill the specified executors.
@@ -600,6 +621,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
    * replacement is being requested, then the tasks will not count towards the limit.
    *
    * @param executorIds identifiers of executors to kill
+<<<<<<< HEAD
    * @param replace whether to replace the killed executors with new ones, default false
    * @param force whether to force kill busy executors, default false
    * @return the ids of the executors acknowledged by the cluster manager to be removed.
@@ -608,13 +630,32 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
       executorIds: Seq[String],
       replace: Boolean,
       force: Boolean): Seq[String] = {
+=======
+   * @param replace whether to replace the killed executors with new ones
+   * @param force whether to force kill busy executors
+   * @return whether the kill request is acknowledged.
+   */
+  final def killExecutors(
+      executorIds: Seq[String],
+      replace: Boolean,
+      force: Boolean): Boolean = synchronized {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     logInfo(s"Requesting to kill executor(s) ${executorIds.mkString(", ")}")
 
+<<<<<<< HEAD
     val response = synchronized {
       val (knownExecutors, unknownExecutors) = executorIds.partition(executorDataMap.contains)
       unknownExecutors.foreach { id =>
         logWarning(s"Executor to kill $id does not exist!")
       }
+=======
+    // If an executor is already pending to be removed, do not kill it again (SPARK-9795)
+    // If this executor is busy, do not kill it unless we are told to force kill it (SPARK-9552)
+    val executorsToKill = knownExecutors
+      .filter { id => !executorsPendingToRemove.contains(id) }
+      .filter { id => force || !scheduler.isExecutorBusy(id) }
+    executorsToKill.foreach { id => executorsPendingToRemove(id) = !replace }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // If an executor is already pending to be removed, do not kill it again (SPARK-9795)
       // If this executor is busy, do not kill it unless we are told to force kill it (SPARK-9552)

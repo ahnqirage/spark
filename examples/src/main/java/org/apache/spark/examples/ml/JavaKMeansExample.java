@@ -17,21 +17,43 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
+=======
+import java.util.regex.Pattern;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.catalyst.expressions.GenericRow;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.ml.clustering.KMeansModel;
 import org.apache.spark.ml.clustering.KMeans;
 import org.apache.spark.ml.linalg.Vector;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+<<<<<<< HEAD
 // $example off$
 import org.apache.spark.sql.SparkSession;
+=======
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+// $example off$
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 
 /**
  * An example demonstrating k-means clustering.
  * Run with
  * <pre>
+<<<<<<< HEAD
  * bin/run-example ml.JavaKMeansExample
+=======
+ * bin/run-example ml.JavaKMeansExample <file> <k>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * </pre>
  */
 public class JavaKMeansExample {
@@ -47,8 +69,21 @@ public class JavaKMeansExample {
     // Loads data.
     Dataset<Row> dataset = spark.read().format("libsvm").load("data/mllib/sample_kmeans_data.txt");
 
+<<<<<<< HEAD
     // Trains a k-means model.
     KMeans kmeans = new KMeans().setK(2).setSeed(1L);
+=======
+    // $example on$
+    // Loads data
+    JavaRDD<Row> points = jsc.textFile(inputFile).map(new ParsePoint());
+    StructField[] fields = {new StructField("features", new VectorUDT(), false, Metadata.empty())};
+    StructType schema = new StructType(fields);
+    DataFrame dataset = sqlContext.createDataFrame(points, schema);
+
+    // Trains a k-means model
+    KMeans kmeans = new KMeans()
+      .setK(k);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     KMeansModel model = kmeans.fit(dataset);
 
     // Evaluate clustering by computing Within Set Sum of Squared Errors.

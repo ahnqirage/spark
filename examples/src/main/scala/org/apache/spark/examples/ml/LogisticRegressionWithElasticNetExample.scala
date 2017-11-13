@@ -21,11 +21,17 @@ package org.apache.spark.examples.ml
 // $example on$
 import org.apache.spark.ml.classification.LogisticRegression
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 object LogisticRegressionWithElasticNetExample {
 
   def main(args: Array[String]): Unit = {
+<<<<<<< HEAD
     val spark = SparkSession
       .builder
       .appName("LogisticRegressionWithElasticNetExample")
@@ -34,6 +40,15 @@ object LogisticRegressionWithElasticNetExample {
     // $example on$
     // Load training data
     val training = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+    val conf = new SparkConf().setAppName("LogisticRegressionWithElasticNetExample")
+    val sc = new SparkContext(conf)
+    val sqlCtx = new SQLContext(sc)
+
+    // $example on$
+    // Load training data
+    val training = sqlCtx.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val lr = new LogisticRegression()
       .setMaxIter(10)
@@ -45,6 +60,7 @@ object LogisticRegressionWithElasticNetExample {
 
     // Print the coefficients and intercept for logistic regression
     println(s"Coefficients: ${lrModel.coefficients} Intercept: ${lrModel.intercept}")
+<<<<<<< HEAD
 
     // We can also use the multinomial family for binary classification
     val mlr = new LogisticRegression()
@@ -61,6 +77,11 @@ object LogisticRegressionWithElasticNetExample {
     // $example off$
 
     spark.stop()
+=======
+    // $example off$
+
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

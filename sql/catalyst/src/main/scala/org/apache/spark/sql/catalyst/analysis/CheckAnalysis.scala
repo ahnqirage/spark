@@ -19,10 +19,14 @@ package org.apache.spark.sql.catalyst.analysis
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.expressions._
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.SubExprUtils._
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.optimizer.BooleanSimplification
 import org.apache.spark.sql.catalyst.plans._
+=======
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateFunction, AggregateExpression}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.types._
 
@@ -86,8 +90,13 @@ trait CheckAnalysis extends PredicateHelper {
       case operator: LogicalPlan =>
         operator transformExpressionsUp {
           case a: Attribute if !a.resolved =>
+<<<<<<< HEAD
             val from = operator.inputSet.map(_.qualifiedName).mkString(", ")
             a.failAnalysis(s"cannot resolve '${a.sql}' given input columns: [$from]")
+=======
+            val from = operator.inputSet.map(_.name).mkString(", ")
+            a.failAnalysis(s"cannot resolve '${a.prettyString}' given input columns: [$from]")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
           case e: Expression if e.checkInputDataTypes().isFailure =>
             e.checkInputDataTypes() match {
@@ -169,6 +178,7 @@ trait CheckAnalysis extends PredicateHelper {
 
                   if (!child.deterministic) {
                     failAnalysis(
+<<<<<<< HEAD
                       s"nondeterministic expression ${expr.sql} should not " +
                         s"appear in the arguments of an aggregate function.")
                   }
@@ -185,6 +195,12 @@ trait CheckAnalysis extends PredicateHelper {
                     s"function(s) or wrap '${e.sql}' in first() (or first_value) " +
                     s"if you don't care which value you get."
                 )
+=======
+                      s"nondeterministic expression ${expr.prettyString} should not " +
+                        s"appear in the arguments of an aggregate function.")
+                  }
+                }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               case e: Attribute if !groupingExprs.exists(_.semanticEquals(e)) =>
                 failAnalysis(
                   s"expression '${e.sql}' is neither present in the group by, " +
@@ -196,6 +212,7 @@ trait CheckAnalysis extends PredicateHelper {
             }
 
             def checkValidGroupingExprs(expr: Expression): Unit = {
+<<<<<<< HEAD
               if (expr.find(_.isInstanceOf[AggregateExpression]).isDefined) {
                 failAnalysis(
                   "aggregate functions are not allowed in GROUP BY, but found " + expr.sql)
@@ -206,6 +223,13 @@ trait CheckAnalysis extends PredicateHelper {
                 failAnalysis(
                   s"expression ${expr.sql} cannot be used as a grouping expression " +
                     s"because its data type ${expr.dataType.simpleString} is not an orderable " +
+=======
+              // Check if the data type of expr is orderable.
+              if (!RowOrdering.isOrderable(expr.dataType)) {
+                failAnalysis(
+                  s"expression ${expr.prettyString} cannot be used as a grouping expression " +
+                    s"because its data type ${expr.dataType.simpleString} is not a orderable " +
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                     s"data type.")
               }
 
@@ -213,7 +237,11 @@ trait CheckAnalysis extends PredicateHelper {
                 // This is just a sanity check, our analysis rule PullOutNondeterministic should
                 // already pull out those nondeterministic expressions and evaluate them in
                 // a Project node.
+<<<<<<< HEAD
                 failAnalysis(s"nondeterministic expression ${expr.sql} should not " +
+=======
+                failAnalysis(s"nondeterministic expression ${expr.prettyString} should not " +
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                   s"appear in grouping expression.")
               }
             }
@@ -318,8 +346,12 @@ trait CheckAnalysis extends PredicateHelper {
               "is " + mapCol.dataType.simpleString)
 
           case o if o.expressions.exists(!_.deterministic) &&
+<<<<<<< HEAD
             !o.isInstanceOf[Project] && !o.isInstanceOf[Filter] &&
             !o.isInstanceOf[Aggregate] && !o.isInstanceOf[Window] =>
+=======
+            !o.isInstanceOf[Project] && !o.isInstanceOf[Filter] & !o.isInstanceOf[Aggregate] =>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             // The rule above is used to check Aggregate operator.
             failAnalysis(
               s"""nondeterministic expressions are only allowed in

@@ -19,8 +19,13 @@ package org.apache.spark.mllib.stat.test
 
 import scala.beans.BeanInfo
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
 import org.apache.spark.internal.Logging
+=======
+import org.apache.spark.Logging
+import org.apache.spark.annotation.{Experimental, Since}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.streaming.api.java.JavaDStream
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.util.StatCounter
@@ -42,6 +47,10 @@ case class BinarySample @Since("1.6.0") (
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * :: Experimental ::
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * Performs online 2-sample significance testing for a stream of (Boolean, Double) pairs. The
  * Boolean identifies which sample each observation comes from, and the Double is the numeric value
  * of the observation.
@@ -114,7 +123,11 @@ class StreamingTest @Since("1.6.0") () extends Logging with Serializable {
   }
 
   /**
+<<<<<<< HEAD
    * Register a `JavaDStream` of values for significance testing.
+=======
+   * Register a [[JavaDStream]] of values for significance testing.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @param data stream of BinarySample(isExperiment,value) pairs where the isExperiment denotes
    *             group (true = experiment, false = control) and the value is the numerical metric

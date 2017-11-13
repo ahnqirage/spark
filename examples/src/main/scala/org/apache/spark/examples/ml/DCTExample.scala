@@ -20,6 +20,7 @@ package org.apache.spark.examples.ml
 
 // $example on$
 import org.apache.spark.ml.feature.DCT
+<<<<<<< HEAD
 import org.apache.spark.ml.linalg.Vectors
 // $example off$
 import org.apache.spark.sql.SparkSession
@@ -30,6 +31,18 @@ object DCTExample {
       .builder
       .appName("DCTExample")
       .getOrCreate()
+=======
+import org.apache.spark.mllib.linalg.Vectors
+// $example off$
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object DCTExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("DCTExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // $example on$
     val data = Seq(
@@ -37,7 +50,11 @@ object DCTExample {
       Vectors.dense(-1.0, 2.0, 4.0, -7.0),
       Vectors.dense(14.0, -2.0, -5.0, 1.0))
 
+<<<<<<< HEAD
     val df = spark.createDataFrame(data.map(Tuple1.apply)).toDF("features")
+=======
+    val df = sqlContext.createDataFrame(data.map(Tuple1.apply)).toDF("features")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val dct = new DCT()
       .setInputCol("features")
@@ -45,10 +62,16 @@ object DCTExample {
       .setInverse(false)
 
     val dctDf = dct.transform(df)
+<<<<<<< HEAD
     dctDf.select("featuresDCT").show(false)
     // $example off$
 
     spark.stop()
+=======
+    dctDf.select("featuresDCT").show(3)
+    // $example off$
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

@@ -25,7 +25,11 @@ import breeze.stats.distributions.{Gamma, RandBasis}
 
 import org.apache.spark.annotation.{DeveloperApi, Since}
 import org.apache.spark.graphx._
+<<<<<<< HEAD
 import org.apache.spark.graphx.util.PeriodicGraphCheckpointer
+=======
+import org.apache.spark.mllib.impl.PeriodicGraphCheckpointer
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.linalg.{DenseVector, Matrices, SparseVector, Vector, Vectors}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
@@ -475,6 +479,7 @@ final class OnlineLDAOptimizer extends LDAOptimizer {
         gammaPart = gammad :: gammaPart
       }
       Iterator((stat, gammaPart))
+<<<<<<< HEAD
     }.persist(StorageLevel.MEMORY_AND_DISK)
     val statsSum: BDM[Double] = stats.map(_._1).treeAggregate(BDM.zeros[Double](k, vocabSize))(
       _ += _, _ += _)
@@ -483,6 +488,15 @@ final class OnlineLDAOptimizer extends LDAOptimizer {
     stats.unpersist()
     expElogbetaBc.destroy(false)
     val batchResult = statsSum *:* expElogbeta.t
+=======
+    }
+    val statsSum: BDM[Double] = stats.map(_._1).treeAggregate(BDM.zeros[Double](k, vocabSize))(
+      _ += _, _ += _)
+    expElogbetaBc.unpersist()
+    val gammat: BDM[Double] = breeze.linalg.DenseMatrix.vertcat(
+      stats.map(_._2).flatMap(list => list).collect().map(_.toDenseMatrix): _*)
+    val batchResult = statsSum :* expElogbeta.t
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Note that this is an optimization to avoid batch.count
     updateLambda(batchResult, (miniBatchFraction * corpusSize).ceil.toInt)

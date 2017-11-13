@@ -2248,6 +2248,7 @@ class ConfTests(unittest.TestCase):
             sc.stop()
 
 
+<<<<<<< HEAD
 class KeywordOnlyTests(unittest.TestCase):
     class Wrapped(object):
         @keyword_only
@@ -2286,6 +2287,8 @@ class KeywordOnlyTests(unittest.TestCase):
         self.assertEqual(b._x, 2)
 
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 @unittest.skipIf(not _have_scipy, "SciPy not installed")
 class SciPyTests(PySparkTestCase):
 

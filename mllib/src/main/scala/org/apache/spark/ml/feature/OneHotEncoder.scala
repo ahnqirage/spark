@@ -17,14 +17,23 @@
 
 package org.apache.spark.ml.feature
 
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.Transformer
 import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
 import org.apache.spark.ml.util._
+<<<<<<< HEAD
 import org.apache.spark.sql.{DataFrame, Dataset}
+=======
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.sql.DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.{DoubleType, NumericType, StructType}
 
@@ -42,8 +51,13 @@ import org.apache.spark.sql.types.{DoubleType, NumericType, StructType}
  *
  * @see `StringIndexer` for converting categorical values into category indices
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 class OneHotEncoder @Since("1.4.0") (@Since("1.4.0") override val uid: String) extends Transformer
+=======
+@Experimental
+class OneHotEncoder(override val uid: String) extends Transformer
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   with HasInputCol with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.4.0")

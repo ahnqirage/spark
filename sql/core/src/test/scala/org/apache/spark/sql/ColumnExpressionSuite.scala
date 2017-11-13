@@ -22,7 +22,11 @@ import org.apache.hadoop.mapreduce.lib.input.{TextInputFormat => NewTextInputFor
 import org.scalatest.Matchers._
 
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
+<<<<<<< HEAD
 import org.apache.spark.sql.execution.ProjectExec
+=======
+import org.apache.spark.sql.execution.Project
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types._
@@ -298,7 +302,11 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
       nullData.filter($"a" <=> $"b"),
       Row(1, 1) :: Row(null, null) :: Nil)
 
+<<<<<<< HEAD
     val nullData2 = spark.createDataFrame(sparkContext.parallelize(
+=======
+    val nullData2 = sqlContext.createDataFrame(sparkContext.parallelize(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Row("abc") ::
         Row(null)  ::
         Row("xyz") :: Nil),
@@ -307,6 +315,7 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
     checkAnswer(
       nullData2.filter($"a" <=> null),
       Row(null) :: Nil)
+<<<<<<< HEAD
   }
 
   test("=!=") {
@@ -319,6 +328,9 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
     checkAnswer(
       nullData.filter($"a" =!= $"b"),
       Row(1, 2) :: Nil)
+=======
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test(">") {
@@ -517,6 +529,10 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
         Row((1L << 33) + 0L, (1L << 33) + 0L) ::
         Row((1L << 33) + 1L, (1L << 33) + 1L) :: Nil
     )
+    checkAnswer(
+      df.select(expr("monotonically_increasing_id()")),
+      Row(0L) :: Row(1L) :: Row((1L << 33) + 0L) :: Row((1L << 33) + 1L) :: Nil
+    )
   }
 
   test("spark_partition_id") {
@@ -530,6 +546,7 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
     )
   }
 
+<<<<<<< HEAD
   test("input_file_name, input_file_block_start, input_file_block_length - more than one source") {
     withTempView("tempView1") {
       withTable("tab1", "tab2") {
@@ -639,11 +656,43 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
       val data = sparkContext.parallelize((0 to 10).map(_.toString)).toDF()
       data.write.text(dir.getCanonicalPath)
       val rdd = spark.sparkContext.newAPIHadoopFile(
+=======
+  test("InputFileName - SqlNewHadoopRDD") {
+    withTempPath { dir =>
+      val data = sparkContext.parallelize(0 to 10).toDF("id")
+      data.write.parquet(dir.getCanonicalPath)
+      val answer = sqlContext.read.parquet(dir.getCanonicalPath).select(input_file_name())
+        .head.getString(0)
+      assert(answer.contains(dir.getCanonicalPath))
+
+      checkAnswer(data.select(input_file_name()).limit(1), Row(""))
+    }
+  }
+
+  test("input_file_name - HadoopRDD") {
+    withTempPath { dir =>
+      val data = sparkContext.parallelize((0 to 10).map(_.toString)).toDF()
+      data.write.text(dir.getCanonicalPath)
+      val df = sparkContext.textFile(dir.getCanonicalPath).toDF()
+      val answer = df.select(input_file_name()).head.getString(0)
+      assert(answer.contains(dir.getCanonicalPath))
+
+      checkAnswer(data.select(input_file_name()).limit(1), Row(""))
+    }
+  }
+
+  test("input_file_name - NewHadoopRDD") {
+    withTempPath { dir =>
+      val data = sparkContext.parallelize((0 to 10).map(_.toString)).toDF()
+      data.write.text(dir.getCanonicalPath)
+      val rdd = sparkContext.newAPIHadoopFile(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         dir.getCanonicalPath,
         classOf[NewTextInputFormat],
         classOf[LongWritable],
         classOf[Text])
       val df = rdd.map(pair => pair._2.toString).toDF()
+<<<<<<< HEAD
 
       // Test the 3 expressions when reading from files
       val q = df.select(
@@ -660,6 +709,12 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
           input_file_name(), expr("input_file_block_start()"), expr("input_file_block_length()")
         ).limit(1),
         Row("", -1L, -1L))
+=======
+      val answer = df.select(input_file_name()).head.getString(0)
+      assert(answer.contains(dir.getCanonicalPath))
+
+      checkAnswer(data.select(input_file_name()).limit(1), Row(""))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -689,8 +744,13 @@ class ColumnExpressionSuite extends QueryTest with SharedSQLContext {
     }
 
     def checkNumProjects(df: DataFrame, expectedNumProjects: Int): Unit = {
+<<<<<<< HEAD
       val projects = df.queryExecution.sparkPlan.collect {
         case tungstenProject: ProjectExec => tungstenProject
+=======
+      val projects = df.queryExecution.executedPlan.collect {
+        case tungstenProject: Project => tungstenProject
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       assert(projects.size === expectedNumProjects)
     }

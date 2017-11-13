@@ -21,10 +21,15 @@ import java.io.File
 
 import scala.reflect.ClassTag
 
+<<<<<<< HEAD
 import com.google.common.io.ByteStreams
 import org.apache.hadoop.fs.Path
 
 import org.apache.spark.io.CompressionCodec
+=======
+import org.apache.hadoop.fs.Path
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.rdd._
 import org.apache.spark.storage.{BlockId, StorageLevel, TestBlockId}
 import org.apache.spark.util.Utils
@@ -114,7 +119,11 @@ trait RDDCheckpointTester { self: SparkFunSuite =>
    * RDDs partitions. So even if the parent RDD is checkpointed and its partitions changed,
    * the generated RDD will remember the partitions and therefore potentially the whole lineage.
    * This function should be called only those RDD whose partitions refer to parent RDD's
+<<<<<<< HEAD
    * partitions (i.e., do not call it on simple RDDs).
+=======
+   * partitions (i.e., do not call it on simple RDD like MappedRDD).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @param op an operation to run on the RDD
    * @param reliableCheckpoint if true, use reliable checkpoints, otherwise use local checkpoints
@@ -514,6 +523,7 @@ class CheckpointSuite extends SparkFunSuite with RDDCheckpointTester with LocalS
     assert(rdd.isCheckpointedAndMaterialized === true)
     assert(rdd.partitions.size === 0)
   }
+<<<<<<< HEAD
 
   runTest("checkpointAllMarkedAncestors") { reliableCheckpoint: Boolean =>
     testCheckpointAllMarkedAncestors(reliableCheckpoint, checkpointAllMarkedAncestors = true)
@@ -535,6 +545,8 @@ class CheckpointSuite extends SparkFunSuite with RDDCheckpointTester with LocalS
       sc.setLocalProperty(RDD.CHECKPOINT_ALL_MARKED_ANCESTORS, null)
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /** RDD partition that has large serialized size. */
@@ -581,6 +593,7 @@ object CheckpointSuite {
       part
     ).asInstanceOf[RDD[(K, Array[Iterable[V]])]]
   }
+<<<<<<< HEAD
 }
 
 class CheckpointCompressionSuite extends SparkFunSuite with LocalSparkContext {
@@ -620,4 +633,6 @@ class CheckpointCompressionSuite extends SparkFunSuite with LocalSparkContext {
       Utils.deleteRecursively(checkpointDir)
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

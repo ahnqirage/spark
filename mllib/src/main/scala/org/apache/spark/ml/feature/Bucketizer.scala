@@ -20,11 +20,19 @@ package org.apache.spark.ml.feature
 import java.{util => ju}
 
 import org.apache.spark.SparkException
+<<<<<<< HEAD
 import org.apache.spark.annotation.Since
 import org.apache.spark.ml.Model
 import org.apache.spark.ml.attribute.NominalAttribute
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared.{HasHandleInvalid, HasInputCol, HasOutputCol}
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+import org.apache.spark.ml.Model
+import org.apache.spark.ml.attribute.NominalAttribute
+import org.apache.spark.ml.param._
+import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.util._
 import org.apache.spark.sql._
 import org.apache.spark.sql.expressions.UserDefinedFunction
@@ -34,10 +42,16 @@ import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
 /**
  * `Bucketizer` maps a column of continuous features to a column of feature buckets.
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 final class Bucketizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
   extends Model[Bucketizer] with HasHandleInvalid with HasInputCol with HasOutputCol
     with DefaultParamsWritable {
+=======
+@Experimental
+final class Bucketizer(override val uid: String)
+  extends Model[Bucketizer] with HasInputCol with HasOutputCol with DefaultParamsWritable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("bucketizer"))
@@ -136,6 +150,7 @@ final class Bucketizer @Since("1.4.0") (@Since("1.4.0") override val uid: String
   }
 }
 
+<<<<<<< HEAD
 @Since("1.6.0")
 object Bucketizer extends DefaultParamsReadable[Bucketizer] {
 
@@ -149,6 +164,11 @@ object Bucketizer extends DefaultParamsReadable[Bucketizer] {
    * We require splits to be of length >= 3 and to be in strictly increasing order.
    * No NaN split should be accepted.
    */
+=======
+object Bucketizer extends DefaultParamsReadable[Bucketizer] {
+
+  /** We require splits to be of length >= 3 and to be in strictly increasing order. */
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private[feature] def checkSplits(splits: Array[Double]): Boolean = {
     if (splits.length < 3) {
       false
@@ -173,6 +193,7 @@ object Bucketizer extends DefaultParamsReadable[Bucketizer] {
    * @return bucket for each data point
    * @throws SparkException if a feature is < splits.head or > splits.last
    */
+<<<<<<< HEAD
 
   private[feature] def binarySearchForBuckets(
       splits: Array[Double],
@@ -186,6 +207,10 @@ object Bucketizer extends DefaultParamsReadable[Bucketizer] {
           " try setting Bucketizer.handleInvalid.")
       }
     } else if (feature == splits.last) {
+=======
+  private[feature] def binarySearchForBuckets(splits: Array[Double], feature: Double): Double = {
+    if (feature == splits.last) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       splits.length - 2
     } else {
       val idx = ju.Arrays.binarySearch(splits, feature)

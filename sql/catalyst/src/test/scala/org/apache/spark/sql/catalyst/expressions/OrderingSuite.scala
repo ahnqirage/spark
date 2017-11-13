@@ -19,12 +19,20 @@ package org.apache.spark.sql.catalyst.expressions
 
 import scala.math._
 
+<<<<<<< HEAD
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.sql.{RandomDataGenerator, Row}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.catalyst.dsl.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.{GenerateOrdering, LazilyGeneratedOrdering}
+=======
+import org.apache.spark.SparkFunSuite
+import org.apache.spark.sql.{Row, RandomDataGenerator}
+import org.apache.spark.sql.catalyst.{InternalRow, CatalystTypeConverters}
+import org.apache.spark.sql.catalyst.dsl.expressions._
+import org.apache.spark.sql.catalyst.expressions.codegen.GenerateOrdering
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 
 class OrderingSuite extends SparkFunSuite with ExpressionEvalHelper {
@@ -45,6 +53,7 @@ class OrderingSuite extends SparkFunSuite with ExpressionEvalHelper {
           case Ascending => signum(expected)
           case Descending => -1 * signum(expected)
         }
+<<<<<<< HEAD
 
         val kryo = new KryoSerializer(new SparkConf).newInstance()
         val intOrdering = new InterpretedOrdering(sortOrder :: Nil)
@@ -53,6 +62,11 @@ class OrderingSuite extends SparkFunSuite with ExpressionEvalHelper {
         val kryoGenOrdering = kryo.deserialize[LazilyGeneratedOrdering](kryo.serialize(genOrdering))
 
         Seq(intOrdering, genOrdering, kryoIntOrdering, kryoGenOrdering).foreach { ordering =>
+=======
+        val intOrdering = new InterpretedOrdering(sortOrder :: Nil)
+        val genOrdering = GenerateOrdering.generate(sortOrder :: Nil)
+        Seq(intOrdering, genOrdering).foreach { ordering =>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           assert(ordering.compare(rowA, rowA) === 0)
           assert(ordering.compare(rowB, rowB) === 0)
           assert(signum(ordering.compare(rowA, rowB)) === expectedCompareResult)
@@ -137,6 +151,7 @@ class OrderingSuite extends SparkFunSuite with ExpressionEvalHelper {
     // verify that we can support up to 5000 ordering comparisons, which should be sufficient
     GenerateOrdering.generate(Array.fill(5000)(sortOrder))
   }
+<<<<<<< HEAD
 
   test("SPARK-21344: BinaryType comparison does signed byte array comparison") {
     val data = Seq(
@@ -156,4 +171,6 @@ class OrderingSuite extends SparkFunSuite with ExpressionEvalHelper {
       assert(genOrdering.compare(rowB1, rowB2) < 0)
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

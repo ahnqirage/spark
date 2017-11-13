@@ -187,18 +187,32 @@ private[json] trait TestJsonData {
       """{"a":1, b:2}""" ::
       """{"a":{, b:3}""" ::
       """{"b":"str_b_4", "a":"str_a_4", "c":"str_c_4"}""" ::
+<<<<<<< HEAD
       """]""" :: Nil))(Encoders.STRING)
 
   def additionalCorruptRecords: Dataset[String] =
     spark.createDataset(spark.sparkContext.parallelize(
+=======
+      """]""" :: Nil)
+
+  def additionalCorruptRecords: RDD[String] =
+    sqlContext.sparkContext.parallelize(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       """{"dummy":"test"}""" ::
       """[1,2,3]""" ::
       """":"test", "a":1}""" ::
       """42""" ::
+<<<<<<< HEAD
       """     ","ian":"test"}""" :: Nil))(Encoders.STRING)
 
   def emptyRecords: Dataset[String] =
     spark.createDataset(spark.sparkContext.parallelize(
+=======
+      """     ","ian":"test"}""" :: Nil)
+
+  def emptyRecords: RDD[String] =
+    sqlContext.sparkContext.parallelize(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       """{""" ::
         """""" ::
         """{"a": {}}""" ::
@@ -223,6 +237,7 @@ private[json] trait TestJsonData {
     spark.createDataset(spark.sparkContext.parallelize(
       s"""{"a": 1${"0" * 38}, "b": 92233720368547758070}""" :: Nil))(Encoders.STRING)
 
+<<<<<<< HEAD
   def datesRecords: Dataset[String] =
     spark.createDataset(spark.sparkContext.parallelize(
       """{"date": "26/08/2015 18:00"}""" ::
@@ -231,6 +246,9 @@ private[json] trait TestJsonData {
 
   lazy val singleRow: Dataset[String] =
     spark.createDataset(spark.sparkContext.parallelize("""{"a":123}""" :: Nil))(Encoders.STRING)
+=======
+  lazy val singleRow: RDD[String] = sqlContext.sparkContext.parallelize("""{"a":123}""" :: Nil)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   def empty: Dataset[String] = spark.emptyDataset(Encoders.STRING)
 }

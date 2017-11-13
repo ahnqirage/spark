@@ -78,6 +78,7 @@ class PartitionedWriteSuite extends QueryTest with SharedSQLContext {
     withTempPath { f =>
       val path = f.getAbsolutePath
       Seq(1 -> "a").toDF("i", "j").write.partitionBy("i").parquet(path)
+<<<<<<< HEAD
       assert(spark.read.parquet(path).schema.map(_.name) == Seq("j", "i"))
     }
   }
@@ -153,6 +154,9 @@ class PartitionedWriteSuite extends QueryTest with SharedSQLContext {
         // if there isn't timeZone option, then use session local timezone.
         checkPartitionValues(files.head, "2016-12-01 08:00:00")
       }
+=======
+      assert(sqlContext.read.parquet(path).schema.map(_.name) == Seq("j", "i"))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 }

@@ -65,6 +65,10 @@ class SparkEnv (
     val broadcastManager: BroadcastManager,
     val blockManager: BlockManager,
     val securityManager: SecurityManager,
+<<<<<<< HEAD
+=======
+    val sparkFilesDir: String,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val metricsSystem: MetricsSystem,
     val memoryManager: MemoryManager,
     val outputCommitCoordinator: OutputCommitCoordinator,
@@ -233,11 +237,38 @@ object SparkEnv extends Logging {
       assert(listenerBus != null, "Attempted to create driver SparkEnv with null listener bus!")
     }
 
+<<<<<<< HEAD
     val securityManager = new SecurityManager(conf, ioEncryptionKey)
     ioEncryptionKey.foreach { _ =>
       if (!securityManager.isEncryptionEnabled()) {
         logWarning("I/O encryption enabled without RPC encryption: keys will be visible on the " +
           "wire.")
+=======
+    val securityManager = new SecurityManager(conf)
+
+    // Create the ActorSystem for Akka and get the port it binds to.
+    val actorSystemName = if (isDriver) driverActorSystemName else executorActorSystemName
+    val rpcEnv = RpcEnv.create(actorSystemName, hostname, port, conf, securityManager,
+      clientMode = !isDriver)
+    val actorSystem: ActorSystem =
+      if (rpcEnv.isInstanceOf[AkkaRpcEnv]) {
+        rpcEnv.asInstanceOf[AkkaRpcEnv].actorSystem
+      } else {
+        val actorSystemPort =
+          if (port == 0 || rpcEnv.address == null) {
+            port
+          } else {
+            rpcEnv.address.port + 1
+          }
+        // Create a ActorSystem for legacy codes
+        AkkaUtils.createActorSystem(
+          actorSystemName + "ActorSystem",
+          hostname,
+          actorSystemPort,
+          conf,
+          securityManager
+        )._1
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
 
@@ -346,6 +377,13 @@ object SparkEnv extends Logging {
       serializerManager, conf, memoryManager, mapOutputTracker, shuffleManager,
       blockTransferService, securityManager, numUsableCores)
 
+<<<<<<< HEAD
+=======
+    val broadcastManager = new BroadcastManager(isDriver, conf, securityManager)
+
+    val cacheManager = new CacheManager(blockManager)
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val metricsSystem = if (isDriver) {
       // Don't start metrics system right now for Driver.
       // We need to wait for the task scheduler to give us an app ID.
@@ -379,6 +417,10 @@ object SparkEnv extends Logging {
       broadcastManager,
       blockManager,
       securityManager,
+<<<<<<< HEAD
+=======
+      sparkFilesDir,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       metricsSystem,
       memoryManager,
       outputCommitCoordinator,

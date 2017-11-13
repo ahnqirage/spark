@@ -76,9 +76,13 @@ public abstract class AbstractBytesToBytesMapSuite {
       new TestMemoryManager(
         new SparkConf()
           .set("spark.memory.offHeap.enabled", "" + useOffHeapMemoryAllocator())
+<<<<<<< HEAD
           .set("spark.memory.offHeap.size", "256mb")
           .set("spark.shuffle.spill.compress", "false")
           .set("spark.shuffle.compress", "false"));
+=======
+          .set("spark.memory.offHeap.size", "256mb"));
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     taskMemoryManager = new TaskMemoryManager(memoryManager, 0);
 
     tempDir = Utils.createTempDir(System.getProperty("java.io.tmpdir"), "unsafe-test");

@@ -21,7 +21,12 @@ import scala.collection.JavaConverters._
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.Text
+<<<<<<< HEAD
 import org.apache.hadoop.mapreduce.{InputSplit, JobContext, RecordReader, TaskAttemptContext}
+=======
+import org.apache.hadoop.mapreduce.InputSplit
+import org.apache.hadoop.mapreduce.JobContext
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.hadoop.mapreduce.lib.input.CombineFileInputFormat
 
 /**

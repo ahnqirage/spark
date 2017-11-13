@@ -350,7 +350,11 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
         "SELECT  sum('a'), avg('a'), count(null) FROM testData",
         Row(null, null, 0) :: Nil)
     } finally {
+<<<<<<< HEAD
       spark.catalog.dropTempView("testData3x")
+=======
+      sqlContext.dropTempTable("testData3x")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -465,6 +469,52 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
     )
   }
 
+<<<<<<< HEAD
+=======
+  test("index into array of arrays") {
+    checkAnswer(
+      sql(
+        "SELECT nestedData, nestedData[0][0], nestedData[0][0] + nestedData[0][1] FROM arrayData"),
+      arrayData.map(d =>
+        Row(d.nestedData,
+         d.nestedData(0)(0),
+         d.nestedData(0)(0) + d.nestedData(0)(1))).collect().toSeq)
+  }
+
+  test("agg") {
+    checkAnswer(
+      sql("SELECT a, SUM(b) FROM testData2 GROUP BY a"),
+      Seq(Row(1, 3), Row(2, 3), Row(3, 3)))
+  }
+
+  test("literal in agg grouping expressions") {
+    checkAnswer(
+      sql("SELECT a, count(1) FROM testData2 GROUP BY a, 1"),
+      Seq(Row(1, 2), Row(2, 2), Row(3, 2)))
+    checkAnswer(
+      sql("SELECT a, count(2) FROM testData2 GROUP BY a, 2"),
+      Seq(Row(1, 2), Row(2, 2), Row(3, 2)))
+
+    checkAnswer(
+      sql("SELECT a, 1, sum(b) FROM testData2 GROUP BY a, 1"),
+      sql("SELECT a, 1, sum(b) FROM testData2 GROUP BY a"))
+    checkAnswer(
+      sql("SELECT a, 1, sum(b) FROM testData2 GROUP BY a, 1 + 2"),
+      sql("SELECT a, 1, sum(b) FROM testData2 GROUP BY a"))
+    checkAnswer(
+      sql("SELECT 1, 2, sum(b) FROM testData2 GROUP BY 1, 2"),
+      sql("SELECT 1, 2, sum(b) FROM testData2"))
+  }
+
+  test("aggregates with nulls") {
+    checkAnswer(
+      sql("SELECT SKEWNESS(a), KURTOSIS(a), MIN(a), MAX(a)," +
+        "AVG(a), VARIANCE(a), STDDEV(a), SUM(a), COUNT(a) FROM nullInts"),
+      Row(0, -1.5, 1, 3, 2, 1.0, 1, 6, 3)
+    )
+  }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("select *") {
     checkAnswer(
       sql("SELECT * FROM testData"),
@@ -523,6 +573,23 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
     sortTest()
   }
 
+<<<<<<< HEAD
+=======
+  test("limit") {
+    checkAnswer(
+      sql("SELECT * FROM testData LIMIT 10"),
+      testData.take(10).toSeq)
+
+    checkAnswer(
+      sql("SELECT * FROM arrayData LIMIT 1"),
+      arrayData.collect().take(1).map(Row.fromTuple).toSeq)
+
+    checkAnswer(
+      sql("SELECT * FROM mapData LIMIT 1"),
+      mapData.collect().take(1).map(Row.fromTuple).toSeq)
+  }
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("CTE feature") {
     checkAnswer(
       sql("with q1 as (select * from testData limit 10) select * from q1"),
@@ -1658,6 +1725,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
     e = intercept[AnalysisException] {
       sql("select * from json.invalid_file")
     }
+<<<<<<< HEAD
     assert(e.message.contains("Path does not exist"))
 
     e = intercept[AnalysisException] {
@@ -1697,6 +1765,11 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
     }
     assert(e.message.contains("Unsupported data source type for direct query on files: " +
       "org.apache.spark.sql.execution.datasources.jdbc"))
+=======
+    assert(
+      e3.message.contains("invalid_file does not exist") ||
+      e3.message.contains("No input paths specified in job"))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("SortMergeJoin returns wrong results when using UnsafeRows") {
@@ -1883,6 +1956,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
     }
   }
 
+<<<<<<< HEAD
   test("Star Expansion - group by") {
     withSQLConf("spark.sql.retainGroupColumns" -> "false") {
       checkAnswer(
@@ -1896,6 +1970,13 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
       val rddNoCols = sparkContext.parallelize(1 to 10).map(_ => Row.empty)
       val dfNoCols = spark.createDataFrame(rddNoCols, StructType(Seq.empty))
       dfNoCols.createTempView("temp_table_no_cols")
+=======
+  test("Star Expansion - table with zero column") {
+    withTempTable("temp_table_no_cols") {
+      val rddNoCols = sparkContext.parallelize(1 to 10).map(_ => Row.empty)
+      val dfNoCols = sqlContext.createDataFrame(rddNoCols, StructType(Seq.empty))
+      dfNoCols.registerTempTable("temp_table_no_cols")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // ResolvedStar
       checkAnswer(
@@ -1923,6 +2004,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
   }
 
   test("Common subexpression elimination") {
+<<<<<<< HEAD
     // TODO: support subexpression elimination in whole stage codegen
     withSQLConf("spark.sql.codegen.wholeStage" -> "false") {
       // select from a table to prevent constant folding.
@@ -1978,6 +2060,53 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
       spark.conf.set("spark.sql.subexpressionElimination.enabled", "true")
       verifyCallCount(df.selectExpr("testUdf(a)", "testUdf(a)"), Row(1, 1), 1)
     }
+=======
+    // select from a table to prevent constant folding.
+    val df = sql("SELECT a, b from testData2 limit 1")
+    checkAnswer(df, Row(1, 1))
+
+    checkAnswer(df.selectExpr("a + 1", "a + 1"), Row(2, 2))
+    checkAnswer(df.selectExpr("a + 1", "a + 1 + 1"), Row(2, 3))
+
+    // This does not work because the expressions get grouped like (a + a) + 1
+    checkAnswer(df.selectExpr("a + 1", "a + a + 1"), Row(2, 3))
+    checkAnswer(df.selectExpr("a + 1", "a + (a + 1)"), Row(2, 3))
+
+    // Identity udf that tracks the number of times it is called.
+    val countAcc = sparkContext.accumulator(0, "CallCount")
+    sqlContext.udf.register("testUdf", (x: Int) => {
+      countAcc.++=(1)
+      x
+    })
+
+    // Evaluates df, verifying it is equal to the expectedResult and the accumulator's value
+    // is correct.
+    def verifyCallCount(df: DataFrame, expectedResult: Row, expectedCount: Int): Unit = {
+      countAcc.setValue(0)
+      checkAnswer(df, expectedResult)
+      assert(countAcc.value == expectedCount)
+    }
+
+    verifyCallCount(df.selectExpr("testUdf(a)"), Row(1), 1)
+    verifyCallCount(df.selectExpr("testUdf(a)", "testUdf(a)"), Row(1, 1), 1)
+    verifyCallCount(df.selectExpr("testUdf(a + 1)", "testUdf(a + 1)"), Row(2, 2), 1)
+    verifyCallCount(df.selectExpr("testUdf(a + 1)", "testUdf(a)"), Row(2, 1), 2)
+    verifyCallCount(
+      df.selectExpr("testUdf(a + 1) + testUdf(a + 1)", "testUdf(a + 1)"), Row(4, 2), 1)
+
+    verifyCallCount(
+      df.selectExpr("testUdf(a + 1) + testUdf(1 + b)", "testUdf(a + 1)"), Row(4, 2), 2)
+
+    // Would be nice if semantic equals for `+` understood commutative
+    verifyCallCount(
+      df.selectExpr("testUdf(a + 1) + testUdf(1 + a)", "testUdf(a + 1)"), Row(4, 2), 2)
+
+    // Try disabling it via configuration.
+    sqlContext.setConf("spark.sql.subexpressionElimination.enabled", "false")
+    verifyCallCount(df.selectExpr("testUdf(a)", "testUdf(a)"), Row(1, 1), 2)
+    sqlContext.setConf("spark.sql.subexpressionElimination.enabled", "true")
+    verifyCallCount(df.selectExpr("testUdf(a)", "testUdf(a)"), Row(1, 1), 1)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("SPARK-10707: nullability should be correctly propagated through set operations (1)") {
@@ -2010,6 +2139,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
       Row(false) :: Row(true) :: Nil)
   }
 
+<<<<<<< HEAD
   test("filter on a grouping column that is not presented in SELECT") {
     checkAnswer(
       sql("select count(1) from (select 1 as a) t group by a having a > 0"),
@@ -2020,12 +2150,19 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
     val df = Seq(1 -> Map("abc" -> "somestring", "cba" -> null)).toDF("key", "value")
     withTempView("maptest") {
       df.createOrReplaceTempView("maptest")
+=======
+  test("SPARK-13056: Null in map value causes NPE") {
+    val df = Seq(1 -> Map("abc" -> "somestring", "cba" -> null)).toDF("key", "value")
+    withTempTable("maptest") {
+      df.registerTempTable("maptest")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // local optimization will by pass codegen code, so we should keep the filter `key=1`
       checkAnswer(sql("SELECT value['abc'] FROM maptest where key = 1"), Row("somestring"))
       checkAnswer(sql("SELECT value['cba'] FROM maptest where key = 1"), Row(null))
     }
   }
 
+<<<<<<< HEAD
   test("hash function") {
     val df = Seq(1 -> "a", 2 -> "b").toDF("i", "j")
     withTempView("tbl") {
@@ -2147,6 +2284,8 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
     }
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("check code injection is prevented") {
     // The end of comment (*/) should be escaped.
     var literal =
@@ -2156,7 +2295,11 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     var expected =
       """|*/
          |{
@@ -2164,7 +2307,11 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2178,6 +2325,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       s"""|${"\\u002A/"}
@@ -2187,6 +2335,17 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
           |  }.f();
           |}
           |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\u002A/
+         |{
+         |  new Object() {
+         |    void f() { throw new RuntimeException("This exception is injected."); }
+         |  }.f();
+         |}
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2198,15 +2357,25 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       """|\\u002A/
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\\\u002A/
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
          |{
          |  new Object() {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2218,6 +2387,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       s"""|${"\\u002a/"}
@@ -2227,6 +2397,17 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
           |  }.f();
           |}
           |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\u002a/
+         |{
+         |  new Object() {
+         |    void f() { throw new RuntimeException("This exception is injected."); }
+         |  }.f();
+         |}
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2238,15 +2419,25 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       """|\\u002a/
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\\\u002a/
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
          |{
          |  new Object() {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2258,6 +2449,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       s"""|${"*\\u002F"}
@@ -2267,6 +2459,17 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
           |  }.f();
           |}
           |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|*\\u002F
+         |{
+         |  new Object() {
+         |    void f() { throw new RuntimeException("This exception is injected."); }
+         |  }.f();
+         |}
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2278,15 +2481,25 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       """|*\\u002F
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|*\\\\u002F
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
          |{
          |  new Object() {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2298,6 +2511,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       s"""|${"*\\u002f"}
@@ -2307,6 +2521,17 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
           |  }.f();
           |}
           |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|*\\u002f
+         |{
+         |  new Object() {
+         |    void f() { throw new RuntimeException("This exception is injected."); }
+         |  }.f();
+         |}
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2318,15 +2543,25 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       """|*\\u002f
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|*\\\\u002f
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
          |{
          |  new Object() {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2338,6 +2573,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       s"""|${"\\u002A\\u002F"}
@@ -2347,6 +2583,17 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
           |  }.f();
           |}
           |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\u002A\\u002F
+         |{
+         |  new Object() {
+         |    void f() { throw new RuntimeException("This exception is injected."); }
+         |  }.f();
+         |}
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2358,6 +2605,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       s"""|${"\\\\u002A\\u002F"}
@@ -2367,6 +2615,17 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
           |  }.f();
           |}
           |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\\\u002A\\u002F
+         |{
+         |  new Object() {
+         |    void f() { throw new RuntimeException("This exception is injected."); }
+         |  }.f();
+         |}
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2378,6 +2637,7 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       s"""|${"\\u002A\\\\u002F"}
@@ -2387,6 +2647,17 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
           |  }.f();
           |}
           |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\u002A\\\\u002F
+         |{
+         |  new Object() {
+         |    void f() { throw new RuntimeException("This exception is injected."); }
+         |  }.f();
+         |}
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
@@ -2398,19 +2669,30 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
     expected =
       """|\\u002A\\u002F
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+    expected =
+      """|\\\\u002A\\\\u002F
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
          |{
          |  new Object() {
          |    void f() { throw new RuntimeException("This exception is injected."); }
          |  }.f();
          |}
+<<<<<<< HEAD
          |/*""".stripMargin
+=======
+         |/*""".stripMargin.replaceAll("\n", "")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkAnswer(
       sql(s"SELECT '$literal' AS DUMMY"),
       Row(s"$expected") :: Nil)
   }
+<<<<<<< HEAD
 
   test("SPARK-15752 optimize metadata only query for datasource table") {
     withSQLConf(SQLConf.OPTIMIZER_METADATA_ONLY.key -> "true") {
@@ -2677,4 +2959,6 @@ class SQLQuerySuite extends QueryTest with SharedSQLContext {
       checkAnswer(df, Row(1, 1, 1))
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

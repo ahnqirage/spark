@@ -27,6 +27,11 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+<<<<<<< HEAD
+=======
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.PairFunction;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.tree.GradientBoostedTrees;
 import org.apache.spark.mllib.tree.configuration.BoostingStrategy;
@@ -56,6 +61,7 @@ public class JavaGradientBoostingClassificationExample {
     boostingStrategy.getTreeStrategy().setNumClasses(2);
     boostingStrategy.getTreeStrategy().setMaxDepth(5);
     // Empty categoricalFeaturesInfo indicates all features are continuous.
+<<<<<<< HEAD
     Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<>();
     boostingStrategy.treeStrategy().setCategoricalFeaturesInfo(categoricalFeaturesInfo);
 
@@ -66,6 +72,29 @@ public class JavaGradientBoostingClassificationExample {
       testData.mapToPair(p -> new Tuple2<>(model.predict(p.features()), p.label()));
     double testErr =
       predictionAndLabel.filter(pl -> !pl._1().equals(pl._2())).count() / (double) testData.count();
+=======
+    Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
+    boostingStrategy.treeStrategy().setCategoricalFeaturesInfo(categoricalFeaturesInfo);
+
+    final GradientBoostedTreesModel model =
+      GradientBoostedTrees.train(trainingData, boostingStrategy);
+
+    // Evaluate model on test instances and compute test error
+    JavaPairRDD<Double, Double> predictionAndLabel =
+      testData.mapToPair(new PairFunction<LabeledPoint, Double, Double>() {
+        @Override
+        public Tuple2<Double, Double> call(LabeledPoint p) {
+          return new Tuple2<Double, Double>(model.predict(p.features()), p.label());
+        }
+      });
+    Double testErr =
+      1.0 * predictionAndLabel.filter(new Function<Tuple2<Double, Double>, Boolean>() {
+        @Override
+        public Boolean call(Tuple2<Double, Double> pl) {
+          return !pl._1().equals(pl._2());
+        }
+      }).count() / testData.count();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     System.out.println("Test Error: " + testErr);
     System.out.println("Learned classification GBT model:\n" + model.toDebugString());
 
@@ -74,8 +103,11 @@ public class JavaGradientBoostingClassificationExample {
     GradientBoostedTreesModel sameModel = GradientBoostedTreesModel.load(jsc.sc(),
       "target/tmp/myGradientBoostingClassificationModel");
     // $example off$
+<<<<<<< HEAD
 
     jsc.stop();
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
 }

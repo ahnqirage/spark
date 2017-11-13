@@ -225,7 +225,11 @@ case class AttributeReference(
   override def equals(other: Any): Boolean = other match {
     case ar: AttributeReference =>
       name == ar.name && dataType == ar.dataType && nullable == ar.nullable &&
+<<<<<<< HEAD
         metadata == ar.metadata && exprId == ar.exprId && qualifier == ar.qualifier
+=======
+        metadata == ar.metadata && exprId == ar.exprId && qualifiers == ar.qualifiers
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     case _ => false
   }
 
@@ -246,7 +250,11 @@ case class AttributeReference(
     h = h * 37 + nullable.hashCode()
     h = h * 37 + metadata.hashCode()
     h = h * 37 + exprId.hashCode()
+<<<<<<< HEAD
     h = h * 37 + qualifier.hashCode()
+=======
+    h = h * 37 + qualifiers.hashCode()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     h
   }
 
@@ -291,6 +299,7 @@ case class AttributeReference(
     }
   }
 
+<<<<<<< HEAD
   override def withMetadata(newMetadata: Metadata): Attribute = {
     AttributeReference(name, dataType, nullable, newMetadata)(exprId, qualifier)
   }
@@ -307,21 +316,32 @@ case class AttributeReference(
   }
 
   override def toString: String = s"$name#${exprId.id}$typeSuffix$delaySuffix"
+=======
+  override protected final def otherCopyArgs: Seq[AnyRef] = {
+    exprId :: qualifiers :: Nil
+  }
+
+  override def toString: String = s"$name#${exprId.id}$typeSuffix"
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   // Since the expression id is not in the first constructor it is missing from the default
   // tree string.
   override def simpleString: String = s"$name#${exprId.id}: ${dataType.simpleString}"
+<<<<<<< HEAD
 
   override def sql: String = {
     val qualifierPrefix = qualifier.map(_ + ".").getOrElse("")
     s"$qualifierPrefix${quoteIdentifier(name)}"
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
  * A place holder used when printing expressions without debugging information such as the
  * expression id or the unresolved indicator.
  */
+<<<<<<< HEAD
 case class PrettyAttribute(
     name: String,
     dataType: DataType = NullType)
@@ -332,6 +352,10 @@ case class PrettyAttribute(
     case a: PrettyAttribute => a.dataType
     case _ => NullType
   })
+=======
+case class PrettyAttribute(name: String, dataType: DataType = NullType)
+  extends Attribute with Unevaluable {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def toString: String = name
   override def sql: String = toString
@@ -346,6 +370,7 @@ case class PrettyAttribute(
     throw new UnsupportedOperationException
   override def qualifier: Option[String] = throw new UnsupportedOperationException
   override def exprId: ExprId = throw new UnsupportedOperationException
+<<<<<<< HEAD
   override def nullable: Boolean = true
 }
 
@@ -364,6 +389,9 @@ case class OuterReference(e: NamedExpression)
   override def exprId: ExprId = e.exprId
   override def toAttribute: Attribute = e.toAttribute
   override def newInstance(): NamedExpression = OuterReference(e.newInstance())
+=======
+  override def nullable: Boolean = throw new UnsupportedOperationException
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 object VirtualColumn {

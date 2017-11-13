@@ -494,6 +494,7 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
     })
   }
 
+<<<<<<< HEAD
   private[this] def cast(from: DataType, to: DataType): Any => Any = {
     // If the cast does not change the structure, then we don't really need to cast anything.
     // We can return what the children return. Same thing should happen in the codegen path.
@@ -526,6 +527,31 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
           throw new SparkException(s"Cannot cast $from to $to.")
       }
     }
+=======
+  private[this] def cast(from: DataType, to: DataType): Any => Any = to match {
+    case dt if dt == child.dataType => identity[Any]
+    case StringType => castToString(from)
+    case BinaryType => castToBinary(from)
+    case DateType => castToDate(from)
+    case decimal: DecimalType => castToDecimal(from, decimal)
+    case TimestampType => castToTimestamp(from)
+    case CalendarIntervalType => castToInterval(from)
+    case BooleanType => castToBoolean(from)
+    case ByteType => castToByte(from)
+    case ShortType => castToShort(from)
+    case IntegerType => castToInt(from)
+    case FloatType => castToFloat(from)
+    case LongType => castToLong(from)
+    case DoubleType => castToDouble(from)
+    case array: ArrayType => castArray(from.asInstanceOf[ArrayType].elementType, array.elementType)
+    case map: MapType => castMap(from.asInstanceOf[MapType], map)
+    case struct: StructType => castStruct(from.asInstanceOf[StructType], struct)
+    case udt: UserDefinedType[_]
+      if udt.userClass == from.asInstanceOf[UserDefinedType[_]].userClass =>
+      identity[Any]
+    case _: UserDefinedType[_] =>
+      throw new SparkException(s"Cannot cast $from to $to.")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private[this] lazy val cast: Any => Any = cast(child.dataType, dataType)
@@ -1058,6 +1084,15 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
     case _: ArrayType | _: MapType | _: StructType => child.sql
     case _ => s"CAST(${child.sql} AS ${dataType.sql})"
   }
+}
+
+/**
+ * Cast the child expression to the target data type, but will throw error if the cast might
+ * truncate, e.g. long -> int, timestamp -> data.
+ */
+case class UpCast(child: Expression, dataType: DataType, walkedTypePath: Seq[String])
+  extends UnaryExpression with Unevaluable {
+  override lazy val resolved = false
 }
 
 /**

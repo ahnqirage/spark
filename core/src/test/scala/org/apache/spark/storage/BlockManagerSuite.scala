@@ -17,8 +17,14 @@
 
 package org.apache.spark.storage
 
+<<<<<<< HEAD
 import java.io.File
 import java.nio.ByteBuffer
+=======
+import java.nio.{ByteBuffer, MappedByteBuffer}
+import java.util.Arrays
+import java.util.concurrent.CountDownLatch
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -472,6 +478,43 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
     }
   }
 
+  test("deadlock between dropFromMemory and removeBlock") {
+    store = makeBlockManager(2000)
+    val a1 = new Array[Byte](400)
+    store.putSingle("a1", a1, StorageLevel.MEMORY_ONLY)
+    val lock1 = new CountDownLatch(1)
+    val lock2 = new CountDownLatch(1)
+
+    val t2 = new Thread {
+      override def run() = {
+        val info = store.getBlockInfo("a1")
+        info.synchronized {
+          store.pendingToRemove.put("a1", 1L)
+          lock1.countDown()
+          lock2.await()
+          store.pendingToRemove.remove("a1")
+        }
+      }
+    }
+
+    val t1 = new Thread {
+      override def run() = {
+        store.memoryManager.synchronized {
+          t2.start()
+          lock1.await()
+          val status = store.dropFromMemory("a1", null: Either[Array[Any], ByteBuffer])
+          assert(status == None, "this thread can not get block a1")
+          lock2.countDown()
+        }
+      }
+    }
+
+    t1.start()
+    t1.join()
+    t2.join()
+    store.removeBlock("a1", tellMaster = false)
+  }
+
   test("correct BlockResult returned from get() calls") {
     store = makeBlockManager(12000)
     val list1 = List(new Array[Byte](2000), new Array[Byte](2000))
@@ -543,6 +586,7 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
   }
 
   test("SPARK-9591: getRemoteBytes from another location when Exception throw") {
+<<<<<<< HEAD
     conf.set("spark.shuffle.io.maxRetries", "0")
     store = makeBlockManager(8000, "executor1")
     store2 = makeBlockManager(8000, "executor2")
@@ -573,6 +617,36 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
       StorageLevel.MEMORY_ONLY,
       ClassTag.Any,
       () => throw new AssertionError("attempted to compute locally")).isLeft)
+=======
+    val origTimeoutOpt = conf.getOption("spark.network.timeout")
+    try {
+      conf.set("spark.network.timeout", "2s")
+      store = makeBlockManager(8000, "executor1")
+      store2 = makeBlockManager(8000, "executor2")
+      store3 = makeBlockManager(8000, "executor3")
+      val list1 = List(new Array[Byte](4000))
+      store2.putIterator("list1", list1.iterator, StorageLevel.MEMORY_ONLY, tellMaster = true)
+      store3.putIterator("list1", list1.iterator, StorageLevel.MEMORY_ONLY, tellMaster = true)
+      var list1Get = store.getRemoteBytes("list1")
+      assert(list1Get.isDefined, "list1Get expected to be fetched")
+      // block manager exit
+      store2.stop()
+      store2 = null
+      list1Get = store.getRemoteBytes("list1")
+      // get `list1` block
+      assert(list1Get.isDefined, "list1Get expected to be fetched")
+      store3.stop()
+      store3 = null
+      // Fetch should fail because there are no locations, but no exception should be thrown
+      list1Get = store.getRemoteBytes("list1")
+      assert(list1Get.isEmpty, "list1Get expected to fail")
+    } finally {
+      origTimeoutOpt match {
+        case Some(t) => conf.set("spark.network.timeout", t)
+        case None => conf.remove("spark.network.timeout")
+      }
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("in-memory LRU storage") {
@@ -899,10 +973,19 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
 
   test("block store put failure") {
     // Use Java serializer so we can create an unserializable error.
+<<<<<<< HEAD
     conf.set("spark.testing.memory", "1200")
     val transfer = new NettyBlockTransferService(conf, securityMgr, "localhost", "localhost", 0, 1)
     val memoryManager = UnifiedMemoryManager(conf, numCores = 1)
     val serializerManager = new SerializerManager(new JavaSerializer(conf), conf)
+=======
+    val transfer = new NettyBlockTransferService(conf, securityMgr, numCores = 1)
+    val memoryManager = new StaticMemoryManager(
+      conf,
+      maxOnHeapExecutionMemory = Long.MaxValue,
+      maxStorageMemory = 1200,
+      numCores = 1)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     store = new BlockManager(SparkContext.DRIVER_IDENTIFIER, rpcEnv, master,
       serializerManager, conf, memoryManager, mapOutputTracker,
       shuffleManager, transfer, securityMgr, 0)
@@ -966,7 +1049,11 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
       } finally {
         TaskContext.unset()
       }
+<<<<<<< HEAD
       context.taskMetrics.updatedBlockStatuses
+=======
+      context.taskMetrics.updatedBlocks.getOrElse(Seq[(BlockId, BlockStatus)]())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     // 1 updated block (i.e. list1)
@@ -1415,6 +1502,47 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
       super.fetchBlockSync(host, port, execId, blockId)
     }
   }
+
+  private def testReadWithLossOfOnDiskFiles(
+      storageLevel: StorageLevel,
+      readMethod: BlockManager => Option[_]): Unit = {
+    store = makeBlockManager(12000)
+    assert(store.putSingle("blockId", new Array[Byte](4000), storageLevel).nonEmpty)
+    assert(store.getStatus("blockId").isDefined)
+    // Directly delete all files from the disk store, triggering failures when reading blocks:
+    store.diskBlockManager.getAllFiles().foreach(_.delete())
+    // The BlockManager still thinks that these blocks exist:
+    assert(store.getStatus("blockId").isDefined)
+    // Because the BlockManager's metadata claims that the block exists (i.e. that it's present
+    // in at least one store), the read attempts to read it and fails when the on-disk file is
+    // missing.
+    intercept[BlockException] {
+      readMethod(store)
+    }
+    // Subsequent read attempts will succeed; the block isn't present but we return an expected
+    // "block not found" response rather than a fatal error:
+    assert(readMethod(store).isEmpty)
+    // The reason why this second read succeeded is because the metadata entry for the missing
+    // block was removed as a result of the read failure:
+    assert(store.getStatus("blockId").isEmpty)
+  }
+
+  test("remove cached block if a read fails due to missing on-disk files") {
+    val storageLevels = Seq(
+      StorageLevel(useDisk = true, useMemory = false, deserialized = false),
+      StorageLevel(useDisk = true, useMemory = false, deserialized = true))
+    val readMethods = Map[String, BlockManager => Option[_]](
+      "getLocalBytes" -> ((m: BlockManager) => m.getLocalBytes("blockId")),
+      "getLocal" -> ((m: BlockManager) => m.getLocal("blockId"))
+    )
+    testReadWithLossOfOnDiskFiles(StorageLevel.DISK_ONLY, _.getLocalBytes("blockId"))
+    for ((readMethodName, readMethod) <- readMethods; storageLevel <- storageLevels) {
+      withClue(s"$readMethodName $storageLevel") {
+        testReadWithLossOfOnDiskFiles(storageLevel, readMethod)
+      }
+    }
+  }
+
 }
 
 private object BlockManagerSuite {

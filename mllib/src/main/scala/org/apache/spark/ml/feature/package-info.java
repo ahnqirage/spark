@@ -22,7 +22,11 @@
  * The `ml.feature` package provides common feature transformers that help convert raw data or
  * features into more suitable forms for model fitting.
  * Most feature transformers are implemented as {@link org.apache.spark.ml.Transformer}s, which
+<<<<<<< HEAD
  * transforms one {@link org.apache.spark.sql.Dataset} into another, e.g.,
+=======
+ * transforms one {@link org.apache.spark.sql.DataFrame} into another, e.g.,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * {@link org.apache.spark.ml.feature.HashingTF}.
  * Some feature transformers are implemented as {@link org.apache.spark.ml.Estimator}}s, because the
  * transformation requires some aggregated information of the dataset, e.g., document

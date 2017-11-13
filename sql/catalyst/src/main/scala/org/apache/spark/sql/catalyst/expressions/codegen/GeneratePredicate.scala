@@ -46,11 +46,18 @@ object GeneratePredicate extends CodeGenerator[Expression, Predicate] {
 
   protected def create(predicate: Expression): Predicate = {
     val ctx = newCodeGenContext()
+<<<<<<< HEAD
     val eval = predicate.genCode(ctx)
 
     val codeBody = s"""
       public SpecificPredicate generate(Object[] references) {
         return new SpecificPredicate(references);
+=======
+    val eval = predicate.gen(ctx)
+    val codeBody = s"""
+      public SpecificPredicate generate($exprType[] expr) {
+        return new SpecificPredicate(expr);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
 
       class SpecificPredicate extends ${classOf[Predicate].getName} {
@@ -74,8 +81,12 @@ object GeneratePredicate extends CodeGenerator[Expression, Predicate] {
         ${ctx.declareAddedFunctions()}
       }"""
 
+<<<<<<< HEAD
     val code = CodeFormatter.stripOverlappingComments(
       new CodeAndComment(codeBody, ctx.getPlaceHolderToComments()))
+=======
+    val code = new CodeAndComment(codeBody, ctx.getPlaceHolderToComments())
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     logDebug(s"Generated predicate '$predicate':\n${CodeFormatter.format(code)}")
 
     val (clazz, _) = CodeGenerator.compile(code)

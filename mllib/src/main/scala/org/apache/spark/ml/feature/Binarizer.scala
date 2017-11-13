@@ -17,9 +17,13 @@
 
 package org.apache.spark.ml.feature
 
+<<<<<<< HEAD
 import scala.collection.mutable.ArrayBuilder
 
 import org.apache.spark.annotation.Since
+=======
+import org.apache.spark.annotation.{Since, Experimental}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.Transformer
 import org.apache.spark.ml.attribute.BinaryAttribute
 import org.apache.spark.ml.linalg._
@@ -33,8 +37,13 @@ import org.apache.spark.sql.types._
 /**
  * Binarize a column of continuous features given a threshold.
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 final class Binarizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+=======
+@Experimental
+final class Binarizer(override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Transformer with HasInputCol with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.4.0")

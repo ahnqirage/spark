@@ -195,6 +195,7 @@ class DateTimeUtilsSuite extends SparkFunSuite {
   }
 
   test("string to timestamp") {
+<<<<<<< HEAD
     for (tz <- DateTimeTestUtils.ALL_TIMEZONES) {
       def checkStringToTimestamp(str: String, expected: Option[Long]): Unit = {
         assert(stringToTimestamp(UTF8String.fromString(str), tz) === expected)
@@ -345,6 +346,116 @@ class DateTimeUtilsSuite extends SparkFunSuite {
         "2015-03-18T12:03:17.123456789+0:00", Option(c.getTimeInMillis * 1000 + 123456))
     }
   }
+=======
+    var c = Calendar.getInstance()
+    c.set(1969, 11, 31, 16, 0, 0)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(UTF8String.fromString("1969-12-31 16:00:00")).get ===
+      c.getTimeInMillis * 1000)
+    c.set(1, 0, 1, 0, 0, 0)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(UTF8String.fromString("0001")).get ===
+      c.getTimeInMillis * 1000)
+    c = Calendar.getInstance()
+    c.set(2015, 2, 1, 0, 0, 0)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03")).get ===
+      c.getTimeInMillis * 1000)
+    c = Calendar.getInstance()
+    c.set(2015, 2, 18, 0, 0, 0)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18")).get ===
+      c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18 ")).get ===
+      c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18T")).get ===
+      c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance()
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18 12:03:17")).get ===
+      c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18T12:03:17")).get ===
+      c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT-13:53"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17-13:53")).get === c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18T12:03:17Z")).get ===
+      c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18 12:03:17Z")).get ===
+      c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT-01:00"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18T12:03:17-1:0")).get ===
+      c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17-01:00")).get === c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:30"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17+07:30")).get === c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:03"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17+07:03")).get === c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance()
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 123)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18 12:03:17.123")).get === c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.123")).get === c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 456)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.456Z")).get  === c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18 12:03:17.456Z")).get  === c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT-01:00"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 123)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.123-1:0")).get  === c.getTimeInMillis * 1000)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.123-01:00")).get ===  c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:30"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 123)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.123+07:30")).get ===  c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:30"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 123)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.123+07:30")).get === c.getTimeInMillis * 1000)
+
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT+07:30"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 123)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.123121+7:30")).get ===
+        c.getTimeInMillis * 1000 + 121)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("SPARK-15379: special invalid date string") {
     // Test stringToDate
@@ -356,13 +467,47 @@ class DateTimeUtilsSuite extends SparkFunSuite {
     assert(stringToDate(UTF8String.fromString("2015-04-31")).isEmpty)
 
 
+<<<<<<< HEAD
     // Test stringToTimestamp
+=======
+    c = Calendar.getInstance()
+    c.set(2011, 4, 6, 7, 8, 9)
+    c.set(Calendar.MILLISECOND, 100)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2011-05-06 07:08:09.1000")).get === c.getTimeInMillis * 1000)
+
+    assert(stringToTimestamp(UTF8String.fromString("238")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("00238")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18 123142")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18T123123")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("2015-03-18X")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("2015/03/18")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("2015.03.18")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("20150318")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("2015-031-8")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("02015-01-18")).isEmpty)
+    assert(stringToTimestamp(UTF8String.fromString("015-01-18")).isEmpty)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03.17-20:0")).isEmpty)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(stringToTimestamp(
       UTF8String.fromString("2015-02-29 00:00:00")).isEmpty)
     assert(stringToTimestamp(
+<<<<<<< HEAD
       UTF8String.fromString("2015-04-31 00:00:00")).isEmpty)
     assert(stringToTimestamp(UTF8String.fromString("2015-02-29")).isEmpty)
     assert(stringToTimestamp(UTF8String.fromString("2015-04-31")).isEmpty)
+=======
+      UTF8String.fromString("2015-03-18T12:03.17-1:0:0")).isEmpty)
+
+    // Truncating the fractional seconds
+    c = Calendar.getInstance(TimeZone.getTimeZone("GMT+00:00"))
+    c.set(2015, 2, 18, 12, 3, 17)
+    c.set(Calendar.MILLISECOND, 0)
+    assert(stringToTimestamp(
+      UTF8String.fromString("2015-03-18T12:03:17.123456789+0:00")).get ===
+        c.getTimeInMillis * 1000 + 123456)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("hours") {
@@ -404,6 +549,19 @@ class DateTimeUtilsSuite extends SparkFunSuite {
       Timestamp.valueOf("1700-02-28 12:14:50.123456")).foreach { t =>
       val us = fromJavaTimestamp(t)
       assert(toJavaTimestamp(us) === t)
+    }
+  }
+
+  test("hours / minutes / seconds") {
+    Seq(Timestamp.valueOf("2015-06-11 10:12:35.789"),
+      Timestamp.valueOf("2015-06-11 20:13:40.789"),
+      Timestamp.valueOf("1900-06-11 12:14:50.789"),
+      Timestamp.valueOf("1700-02-28 12:14:50.123456")).foreach { t =>
+      val us = fromJavaTimestamp(t)
+      assert(toJavaTimestamp(us) === t)
+      assert(getHours(us) === t.getHours)
+      assert(getMinutes(us) === t.getMinutes)
+      assert(getSeconds(us) === t.getSeconds)
     }
   }
 
@@ -564,6 +722,7 @@ class DateTimeUtilsSuite extends SparkFunSuite {
   }
 
   test("daysToMillis and millisToDays") {
+<<<<<<< HEAD
     val c = Calendar.getInstance(TimeZonePST)
 
     c.set(2015, 11, 31, 16, 0, 0)
@@ -579,6 +738,8 @@ class DateTimeUtilsSuite extends SparkFunSuite {
     c.set(Calendar.MILLISECOND, 0)
     assert(daysToMillis(16800, TimeZoneGMT) === c.getTimeInMillis)
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // There are some days are skipped entirely in some timezone, skip them here.
     val skipped_days = Map[String, Int](
       "Kwajalein" -> 8632,
@@ -589,11 +750,20 @@ class DateTimeUtilsSuite extends SparkFunSuite {
       "Pacific/Kwajalein" -> 8632,
       "MIT" -> 15338)
     for (tz <- DateTimeTestUtils.ALL_TIMEZONES) {
+<<<<<<< HEAD
       val skipped = skipped_days.getOrElse(tz.getID, Int.MinValue)
       (-20000 to 20000).foreach { d =>
         if (d != skipped) {
           assert(millisToDays(daysToMillis(d, tz), tz) === d,
             s"Round trip of ${d} did not work in tz ${tz}")
+=======
+      DateTimeTestUtils.withDefaultTimeZone(tz) {
+        val skipped = skipped_days.getOrElse(tz.getID, Int.MinValue)
+        (-20000 to 20000).foreach { d =>
+          if (d != skipped) {
+            assert(millisToDays(daysToMillis(d)) === d)
+          }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       }
     }

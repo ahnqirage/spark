@@ -19,7 +19,11 @@ package org.apache.spark.mllib.linalg
 
 import scala.util.Random
 
+<<<<<<< HEAD
 import breeze.linalg.{squaredDistance => breezeSquaredDistance, DenseMatrix => BDM}
+=======
+import breeze.linalg.{DenseMatrix => BDM, squaredDistance => breezeSquaredDistance}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.json4s.jackson.JsonMethods.{parse => parseJson}
 
 import org.apache.spark.{SparkException, SparkFunSuite}
@@ -410,6 +414,7 @@ class VectorsSuite extends SparkFunSuite with Logging {
       assert(u === v, "toJson/fromJson should preserve vector values.")
     }
   }
+<<<<<<< HEAD
 
   test("conversions between new local linalg and mllib linalg") {
     val dv: DenseVector = new DenseVector(Array(1.0, 2.0, 3.5))
@@ -478,4 +483,6 @@ class VectorsSuite extends SparkFunSuite with Logging {
     assert(mlDenseVectorToArray(dv) === mlDenseVectorToArray(newDV))
     assert(mlSparseVectorToArray(sv) === mlSparseVectorToArray(newSV))
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

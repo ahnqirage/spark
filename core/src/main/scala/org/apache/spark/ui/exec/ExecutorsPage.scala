@@ -51,6 +51,56 @@ private[ui] class ExecutorsPage(
   extends WebUIPage("") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
+<<<<<<< HEAD
+=======
+    val (storageStatusList, execInfo) = listener.synchronized {
+      // The follow codes should be protected by `listener` to make sure no executors will be
+      // removed before we query their status. See SPARK-12784.
+      val _storageStatusList = listener.storageStatusList
+      val _execInfo = {
+        for (statusId <- 0 until _storageStatusList.size)
+          yield ExecutorsPage.getExecInfo(listener, statusId)
+      }
+      (_storageStatusList, _execInfo)
+    }
+    val maxMem = storageStatusList.map(_.maxMem).sum
+    val memUsed = storageStatusList.map(_.memUsed).sum
+    val diskUsed = storageStatusList.map(_.diskUsed).sum
+    val execInfoSorted = execInfo.sortBy(_.id)
+    val logsExist = execInfo.filter(_.executorLogs.nonEmpty).nonEmpty
+
+    val execTable =
+      <table class={UIUtils.TABLE_CLASS_STRIPED_SORTABLE}>
+        <thead>
+          <th>Executor ID</th>
+          <th>Address</th>
+          <th>RDD Blocks</th>
+          <th><span data-toggle="tooltip" title={ToolTips.STORAGE_MEMORY}>Storage Memory</span></th>
+          <th>Disk Used</th>
+          <th>Active Tasks</th>
+          <th>Failed Tasks</th>
+          <th>Complete Tasks</th>
+          <th>Total Tasks</th>
+          <th>Task Time</th>
+          <th><span data-toggle="tooltip" title={ToolTips.INPUT}>Input</span></th>
+          <th><span data-toggle="tooltip" title={ToolTips.SHUFFLE_READ}>Shuffle Read</span></th>
+          <th>
+            <!-- Place the shuffle write tooltip on the left (rather than the default position
+              of on top) because the shuffle write column is the last column on the right side and
+              the tooltip is wider than the column, so it doesn't fit on top. -->
+            <span data-toggle="tooltip" data-placement="left" title={ToolTips.SHUFFLE_WRITE}>
+              Shuffle Write
+            </span>
+          </th>
+          {if (logsExist) <th class="sorttable_nosort">Logs</th> else Seq.empty}
+          {if (threadDumpEnabled) <th class="sorttable_nosort">Thread Dump</th> else Seq.empty}
+        </thead>
+        <tbody>
+          {execInfoSorted.map(execRow(_, logsExist))}
+        </tbody>
+      </table>
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val content =
       <div>
         {

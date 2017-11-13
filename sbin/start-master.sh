@@ -26,6 +26,8 @@ fi
 # NOTE: This exact class name is matched downstream by SparkSubmit.
 # Any changes need to be reflected there.
 CLASS="org.apache.spark.deploy.master.Master"
+<<<<<<< HEAD
+=======
 
 if [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then
   echo "Usage: ./sbin/start-master.sh [options]"
@@ -38,6 +40,34 @@ if [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then
 fi
 
 ORIGINAL_ARGS="$@"
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+
+if [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then
+  echo "Usage: ./sbin/start-master.sh [options]"
+  pattern="Usage:"
+  pattern+="\|Using Spark's default log4j profile:"
+  pattern+="\|Registered signal handlers for"
+
+<<<<<<< HEAD
+  "${SPARK_HOME}"/bin/spark-class $CLASS --help 2>&1 | grep -v "$pattern" 1>&2
+  exit 1
+fi
+
+ORIGINAL_ARGS="$@"
+=======
+while (( "$#" )); do
+case $1 in
+    --with-tachyon)
+      if [ ! -e "${SPARK_HOME}"/tachyon/bin/tachyon ]; then
+        echo "Error: --with-tachyon specified, but tachyon not found."
+        exit -1
+      fi
+      START_TACHYON=true
+      ;;
+  esac
+shift
+done
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 . "${SPARK_HOME}/sbin/spark-config.sh"
 
@@ -63,5 +93,16 @@ if [ "$SPARK_MASTER_WEBUI_PORT" = "" ]; then
 fi
 
 "${SPARK_HOME}/sbin"/spark-daemon.sh start $CLASS 1 \
+<<<<<<< HEAD
   --host $SPARK_MASTER_HOST --port $SPARK_MASTER_PORT --webui-port $SPARK_MASTER_WEBUI_PORT \
   $ORIGINAL_ARGS
+=======
+  --ip $SPARK_MASTER_IP --port $SPARK_MASTER_PORT --webui-port $SPARK_MASTER_WEBUI_PORT \
+  $ORIGINAL_ARGS
+
+if [ "$START_TACHYON" == "true" ]; then
+  "${SPARK_HOME}"/tachyon/bin/tachyon bootstrap-conf $SPARK_MASTER_IP
+  "${SPARK_HOME}"/tachyon/bin/tachyon format -s
+  "${SPARK_HOME}"/tachyon/bin/tachyon-start.sh master
+fi
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

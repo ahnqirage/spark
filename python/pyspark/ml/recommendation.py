@@ -82,6 +82,7 @@ class ALS(JavaEstimator, HasCheckpointInterval, HasMaxIter, HasPredictionCol, Ha
     Row(user=1, item=0, prediction=2.6258413791656494)
     >>> predictions[2]
     Row(user=2, item=0, prediction=-1.5018409490585327)
+<<<<<<< HEAD
     >>> user_recs = model.recommendForAllUsers(3)
     >>> user_recs.where(user_recs.user == 0)\
         .select("recommendations.item", "recommendations.rating").collect()
@@ -112,6 +113,8 @@ class ALS(JavaEstimator, HasCheckpointInterval, HasMaxIter, HasPredictionCol, Ha
     True
     >>> sorted(model.itemFactors.collect()) == sorted(model2.itemFactors.collect())
     True
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.4.0
     """

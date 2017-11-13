@@ -144,6 +144,81 @@ private[r] object RRDD {
   }
 
   /**
+<<<<<<< HEAD
+=======
+   * Start a thread to print the process's stderr to ours
+   */
+  private def startStdoutThread(proc: Process): BufferedStreamThread = {
+    val BUFFER_SIZE = 100
+    val thread = new BufferedStreamThread(proc.getInputStream, "stdout reader for R", BUFFER_SIZE)
+    thread.setDaemon(true)
+    thread.start()
+    thread
+  }
+
+  private def createRProcess(port: Int, script: String): BufferedStreamThread = {
+    // "spark.sparkr.r.command" is deprecated and replaced by "spark.r.command",
+    // but kept here for backward compatibility.
+    val sparkConf = SparkEnv.get.conf
+    var rCommand = sparkConf.get("spark.sparkr.r.command", "Rscript")
+    rCommand = sparkConf.get("spark.r.command", rCommand)
+
+    val rOptions = "--vanilla"
+    val rLibDir = RUtils.sparkRPackagePath(isDriver = false)
+    val rExecScript = rLibDir(0) + "/SparkR/worker/" + script
+    val pb = new ProcessBuilder(Arrays.asList(rCommand, rOptions, rExecScript))
+    // Unset the R_TESTS environment variable for workers.
+    // This is set by R CMD check as startup.Rs
+    // (http://svn.r-project.org/R/trunk/src/library/tools/R/testing.R)
+    // and confuses worker script which tries to load a non-existent file
+    pb.environment().put("R_TESTS", "")
+    pb.environment().put("SPARKR_RLIBDIR", rLibDir.mkString(","))
+    pb.environment().put("SPARKR_WORKER_PORT", port.toString)
+    pb.redirectErrorStream(true)  // redirect stderr into stdout
+    val proc = pb.start()
+    val errThread = startStdoutThread(proc)
+    errThread
+  }
+
+  /**
+   * ProcessBuilder used to launch worker R processes.
+   */
+  def createRWorker(port: Int): BufferedStreamThread = {
+    val useDaemon = SparkEnv.get.conf.getBoolean("spark.sparkr.use.daemon", true)
+    if (!Utils.isWindows && useDaemon) {
+      synchronized {
+        if (daemonChannel == null) {
+          // we expect one connections
+          val serverSocket = new ServerSocket(0, 1, InetAddress.getByName("localhost"))
+          val daemonPort = serverSocket.getLocalPort
+          errThread = createRProcess(daemonPort, "daemon.R")
+          // the socket used to send out the input of task
+          serverSocket.setSoTimeout(10000)
+          val sock = serverSocket.accept()
+          daemonChannel = new DataOutputStream(new BufferedOutputStream(sock.getOutputStream))
+          serverSocket.close()
+        }
+        try {
+          daemonChannel.writeInt(port)
+          daemonChannel.flush()
+        } catch {
+          case e: IOException =>
+            // daemon process died
+            daemonChannel.close()
+            daemonChannel = null
+            errThread = null
+            // fail the current task, retry by scheduler
+            throw e
+        }
+        errThread
+      }
+    } else {
+      createRProcess(port, "worker.R")
+    }
+  }
+
+  /**
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * Create an RRDD given a sequence of byte arrays. Used to create RRDD when `parallelize` is
    * called from R.
    */

@@ -86,7 +86,11 @@ class RowTest extends FunSpec with Matchers {
       }
     }
 
+<<<<<<< HEAD
     it("getAs() on type extending AnyVal does not throw exception when value is null") {
+=======
+    it("getAs() on type extending AnyVal does not throw exception when value is null"){
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       sampleRowWithoutCol3.getAs[String](sampleRowWithoutCol3.fieldIndex("col1")) shouldBe null
     }
   }

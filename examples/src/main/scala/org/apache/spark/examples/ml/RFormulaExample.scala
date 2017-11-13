@@ -21,6 +21,7 @@ package org.apache.spark.examples.ml
 // $example on$
 import org.apache.spark.ml.feature.RFormula
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 
 object RFormulaExample {
@@ -32,21 +33,44 @@ object RFormulaExample {
 
     // $example on$
     val dataset = spark.createDataFrame(Seq(
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object RFormulaExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("RFormulaExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    val dataset = sqlContext.createDataFrame(Seq(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       (7, "US", 18, 1.0),
       (8, "CA", 12, 0.0),
       (9, "NZ", 15, 0.0)
     )).toDF("id", "country", "hour", "clicked")
+<<<<<<< HEAD
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val formula = new RFormula()
       .setFormula("clicked ~ country + hour")
       .setFeaturesCol("features")
       .setLabelCol("label")
+<<<<<<< HEAD
 
     val output = formula.fit(dataset).transform(dataset)
     output.select("features", "label").show()
     // $example off$
 
     spark.stop()
+=======
+    val output = formula.fit(dataset).transform(dataset)
+    output.select("features", "label").show()
+    // $example off$
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

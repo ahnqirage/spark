@@ -21,11 +21,17 @@ package org.apache.spark.examples.ml
 // $example on$
 import org.apache.spark.ml.regression.LinearRegression
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 object LinearRegressionWithElasticNetExample {
 
   def main(args: Array[String]): Unit = {
+<<<<<<< HEAD
     val spark = SparkSession
       .builder
       .appName("LinearRegressionWithElasticNetExample")
@@ -34,6 +40,15 @@ object LinearRegressionWithElasticNetExample {
     // $example on$
     // Load training data
     val training = spark.read.format("libsvm")
+=======
+    val conf = new SparkConf().setAppName("LinearRegressionWithElasticNetExample")
+    val sc = new SparkContext(conf)
+    val sqlCtx = new SQLContext(sc)
+
+    // $example on$
+    // Load training data
+    val training = sqlCtx.read.format("libsvm")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .load("data/mllib/sample_linear_regression_data.txt")
 
     val lr = new LinearRegression()
@@ -50,13 +65,21 @@ object LinearRegressionWithElasticNetExample {
     // Summarize the model over the training set and print out some metrics
     val trainingSummary = lrModel.summary
     println(s"numIterations: ${trainingSummary.totalIterations}")
+<<<<<<< HEAD
     println(s"objectiveHistory: [${trainingSummary.objectiveHistory.mkString(",")}]")
+=======
+    println(s"objectiveHistory: ${trainingSummary.objectiveHistory.toList}")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     trainingSummary.residuals.show()
     println(s"RMSE: ${trainingSummary.rootMeanSquaredError}")
     println(s"r2: ${trainingSummary.r2}")
     // $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

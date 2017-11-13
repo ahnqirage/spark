@@ -23,6 +23,12 @@ import java.util.regex.Pattern;
 
 import scala.Tuple2;
 
+<<<<<<< HEAD
+=======
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.*;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -31,6 +37,10 @@ import org.apache.spark.api.java.StorageLevels;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.State;
 import org.apache.spark.streaming.StateSpec;
+<<<<<<< HEAD
+=======
+import org.apache.spark.streaming.Time;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.streaming.api.java.*;
 
 /**
@@ -84,6 +94,22 @@ public class JavaStatefulNetworkWordCount {
           return output;
         };
 
+<<<<<<< HEAD
+=======
+    // Update the cumulative count function
+    final Function3<String, Optional<Integer>, State<Integer>, Tuple2<String, Integer>> mappingFunc =
+        new Function3<String, Optional<Integer>, State<Integer>, Tuple2<String, Integer>>() {
+
+          @Override
+          public Tuple2<String, Integer> call(String word, Optional<Integer> one, State<Integer> state) {
+            int sum = one.or(0) + (state.exists() ? state.get() : 0);
+            Tuple2<String, Integer> output = new Tuple2<String, Integer>(word, sum);
+            state.update(sum);
+            return output;
+          }
+        };
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // DStream made of get cumulative counts that get updated in every batch
     JavaMapWithStateDStream<String, Integer, Integer, Tuple2<String, Integer>> stateDstream =
         wordsDstream.mapWithState(StateSpec.function(mappingFunc).initialState(initialRDD));

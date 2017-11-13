@@ -288,6 +288,7 @@ class KMeans private (
           counts(bestCenter) += 1
         }
 
+<<<<<<< HEAD
         counts.indices.filter(counts(_) > 0).map(j => (j, (sums(j), counts(j)))).iterator
       }.reduceByKey { case ((sum1, count1), (sum2, count2)) =>
         axpy(1.0, sum2, sum1)
@@ -304,6 +305,35 @@ class KMeans private (
       newCenters.foreach { case (j, newCenter) =>
         if (converged && KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
           converged = false
+=======
+        val contribs = for (i <- 0 until runs; j <- 0 until k) yield {
+          ((i, j), (sums(i)(j), counts(i)(j)))
+        }
+        contribs.iterator
+      }.reduceByKey(mergeContribs).collectAsMap()
+
+      bcActiveCenters.unpersist(blocking = false)
+
+      // Update the cluster centers and costs for each active run
+      for ((run, i) <- activeRuns.zipWithIndex) {
+        var changed = false
+        var j = 0
+        while (j < k) {
+          val (sum, count) = totalContribs((i, j))
+          if (count != 0) {
+            scal(1.0 / count, sum)
+            val newCenter = new VectorWithNorm(sum)
+            if (KMeans.fastSquaredDistance(newCenter, centers(run)(j)) > epsilon * epsilon) {
+              changed = true
+            }
+            centers(run)(j) = newCenter
+          }
+          j += 1
+        }
+        if (!changed) {
+          active(run) = false
+          logInfo("Run " + run + " finished in " + (iteration + 1) + " iterations")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
         centers(j) = newCenter
       }
@@ -369,14 +399,46 @@ class KMeans private (
       bcNewCentersList += bcNewCenters
       val preCosts = costs
       costs = data.zip(preCosts).map { case (point, cost) =>
+<<<<<<< HEAD
         math.min(KMeans.pointCost(bcNewCenters.value, point), cost)
       }.persist(StorageLevel.MEMORY_AND_DISK)
       val sumCosts = costs.sum()
+=======
+          Array.tabulate(runs) { r =>
+            math.min(KMeans.pointCost(bcNewCenters.value(r), point), cost(r))
+          }
+        }.persist(StorageLevel.MEMORY_AND_DISK)
+      val sumCosts = costs
+        .aggregate(new Array[Double](runs))(
+          seqOp = (s, v) => {
+            // s += v
+            var r = 0
+            while (r < runs) {
+              s(r) += v(r)
+              r += 1
+            }
+            s
+          },
+          combOp = (s0, s1) => {
+            // s0 += s1
+            var r = 0
+            while (r < runs) {
+              s0(r) += s1(r)
+              r += 1
+            }
+            s0
+          }
+        )
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       bcNewCenters.unpersist(blocking = false)
       preCosts.unpersist(blocking = false)
 
+<<<<<<< HEAD
       val chosen = data.zip(costs).mapPartitionsWithIndex { (index, pointCosts) =>
+=======
+      val chosen = data.zip(costs).mapPartitionsWithIndex { (index, pointsWithCosts) =>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         val rand = new XORShiftRandom(seed ^ (step << 16) ^ index)
         pointCosts.filter { case (_, c) => rand.nextDouble() < 2.0 * c * k / sumCosts }.map(_._1)
       }.collect()
@@ -388,6 +450,7 @@ class KMeans private (
     costs.unpersist(blocking = false)
     bcNewCentersList.foreach(_.destroy(false))
 
+<<<<<<< HEAD
     val distinctCenters = centers.map(_.vector).distinct.map(new VectorWithNorm(_))
 
     if (distinctCenters.size <= k) {
@@ -400,6 +463,25 @@ class KMeans private (
       val countMap = data.map(KMeans.findClosest(bcCenters.value, _)._1).countByValue()
 
       bcCenters.destroy(blocking = false)
+=======
+    // Finally, we might have a set of more than k candidate centers for each run; weigh each
+    // candidate by the number of points in the dataset mapping to it and run a local k-means++
+    // on the weighted centers to pick just k of them
+    val bcCenters = data.context.broadcast(centers)
+    val weightMap = data.flatMap { p =>
+      Iterator.tabulate(runs) { r =>
+        ((r, KMeans.findClosest(bcCenters.value(r), p)._1), 1.0)
+      }
+    }.reduceByKey(_ + _).collectAsMap()
+
+    bcCenters.unpersist(blocking = false)
+
+    val finalCenters = (0 until runs).par.map { r =>
+      val myCenters = centers(r).toArray
+      val myWeights = (0 until myCenters.length).map(i => weightMap.getOrElse((r, i), 0.0)).toArray
+      LocalKMeans.kMeansPlusPlus(r, myCenters, myWeights, k, 30)
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       val myWeights = distinctCenters.indices.map(countMap.getOrElse(_, 0L).toDouble).toArray
       LocalKMeans.kMeansPlusPlus(0, distinctCenters.toArray, myWeights, k, 30)

@@ -17,8 +17,11 @@
 
 package org.apache.spark.sql.catalyst.expressions
 
+<<<<<<< HEAD
 import java.sql.Timestamp
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.metrics.source.CodegenMetrics
 import org.apache.spark.sql.Row
@@ -49,6 +52,7 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
       }
     }
 
+<<<<<<< HEAD
     futures.foreach(ThreadUtils.awaitResult(_, 10.seconds))
   }
 
@@ -62,6 +66,9 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
     assert(CodegenMetrics.METRIC_SOURCE_CODE_SIZE.getCount() == startCount2 + 1)
     assert(CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE.getCount() > startCount3)
     assert(CodegenMetrics.METRIC_GENERATED_METHOD_BYTECODE_SIZE.getCount() > startCount4)
+=======
+    futures.foreach(Await.result(_, 10.seconds))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("SPARK-8443: split wide projections into blocks due to JVM code size limit") {
@@ -201,6 +208,28 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
     }
   }
 
+  test("SPARK-13242: case-when expression with large number of branches (or cases)") {
+    val cases = 50
+    val clauses = 20
+
+    // Generate an individual case
+    def generateCase(n: Int): Seq[Expression] = {
+      val condition = (1 to clauses)
+        .map(c => EqualTo(BoundReference(0, StringType, false), Literal(s"$c:$n")))
+        .reduceLeft[Expression]((l, r) => Or(l, r))
+      Seq(condition, Literal(n))
+    }
+
+    val expression = CaseWhen((1 to cases).flatMap(generateCase(_)))
+
+    val plan = GenerateMutableProjection.generate(Seq(expression))()
+    val input = new GenericMutableRow(Array[Any](UTF8String.fromString(s"${clauses}:${cases}")))
+    val actual = plan(input).toSeq(Seq(expression.dataType))
+
+    assert(actual(0) == cases)
+  }
+
+
   test("test generated safe and unsafe projection") {
     val schema = new StructType(Array(
       StructField("a", StringType, true),
@@ -300,6 +329,7 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
       Literal.create("\\u001/Compilation error occurs", StringType) :: Nil)
     GenerateUnsafeProjection.generate(
       Literal.create("\\\\u001/Compilation error occurs", StringType) :: Nil)
+<<<<<<< HEAD
 
   }
 
@@ -323,5 +353,7 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
       Seq(expr), subexpressionEliminationEnabled = true)
     // should not throw exception
     projection(row)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

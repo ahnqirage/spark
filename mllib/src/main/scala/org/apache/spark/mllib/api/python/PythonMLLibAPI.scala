@@ -1143,7 +1143,7 @@ private[python] class PythonMLLibAPI extends Serializable {
    * Wrapper around RowMatrix constructor.
    */
   def createRowMatrix(rows: JavaRDD[Vector], numRows: Long, numCols: Int): RowMatrix = {
-    new RowMatrix(rows.rdd, numRows, numCols)
+    new RowMatrix(rows.rdd.retag(classOf[Vector]), numRows, numCols)
   }
 
   /**
@@ -1191,9 +1191,14 @@ private[python] class PythonMLLibAPI extends Serializable {
   def getIndexedRows(indexedRowMatrix: IndexedRowMatrix): DataFrame = {
     // We use DataFrames for serialization of IndexedRows to Python,
     // so return a DataFrame.
+<<<<<<< HEAD
     val sc = indexedRowMatrix.rows.sparkContext
     val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
     spark.createDataFrame(indexedRowMatrix.rows)
+=======
+    val sqlContext = SQLContext.getOrCreate(indexedRowMatrix.rows.sparkContext)
+    sqlContext.createDataFrame(indexedRowMatrix.rows)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -1202,9 +1207,14 @@ private[python] class PythonMLLibAPI extends Serializable {
   def getMatrixEntries(coordinateMatrix: CoordinateMatrix): DataFrame = {
     // We use DataFrames for serialization of MatrixEntry entries to
     // Python, so return a DataFrame.
+<<<<<<< HEAD
     val sc = coordinateMatrix.entries.sparkContext
     val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
     spark.createDataFrame(coordinateMatrix.entries)
+=======
+    val sqlContext = SQLContext.getOrCreate(coordinateMatrix.entries.sparkContext)
+    sqlContext.createDataFrame(coordinateMatrix.entries)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -1213,6 +1223,7 @@ private[python] class PythonMLLibAPI extends Serializable {
   def getMatrixBlocks(blockMatrix: BlockMatrix): DataFrame = {
     // We use DataFrames for serialization of sub-matrix blocks to
     // Python, so return a DataFrame.
+<<<<<<< HEAD
     val sc = blockMatrix.blocks.sparkContext
     val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
     spark.createDataFrame(blockMatrix.blocks)
@@ -1244,6 +1255,10 @@ private[python] class PythonMLLibAPI extends Serializable {
    */
   def convertMatrixColumnsFromML(dataset: DataFrame, cols: JArrayList[String]): DataFrame = {
     MLUtils.convertMatrixColumnsFromML(dataset, cols.asScala: _*)
+=======
+    val sqlContext = SQLContext.getOrCreate(blockMatrix.blocks.sparkContext)
+    sqlContext.createDataFrame(blockMatrix.blocks)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
@@ -1599,4 +1614,61 @@ private[spark] object SerDe extends SerDeBase with Serializable {
   }
   // will not called in Executor automatically
   initialize()
+<<<<<<< HEAD
+=======
+
+  def dumps(obj: AnyRef): Array[Byte] = {
+    obj match {
+      // Pickler in Python side cannot deserialize Scala Array normally. See SPARK-12834.
+      case array: Array[_] => new Pickler().dumps(array.toSeq.asJava)
+      case _ => new Pickler().dumps(obj)
+    }
+  }
+
+  def loads(bytes: Array[Byte]): AnyRef = {
+    new Unpickler().loads(bytes)
+  }
+
+  /* convert object into Tuple */
+  def asTupleRDD(rdd: RDD[Array[Any]]): RDD[(Int, Int)] = {
+    rdd.map(x => (x(0).asInstanceOf[Int], x(1).asInstanceOf[Int]))
+  }
+
+  /* convert RDD[Tuple2[,]] to RDD[Array[Any]] */
+  def fromTuple2RDD(rdd: RDD[(Any, Any)]): RDD[Array[Any]] = {
+    rdd.map(x => Array(x._1, x._2))
+  }
+
+  /**
+   * Convert an RDD of Java objects to an RDD of serialized Python objects, that is usable by
+   * PySpark.
+   */
+  def javaToPython(jRDD: JavaRDD[Any]): JavaRDD[Array[Byte]] = {
+    jRDD.rdd.mapPartitions { iter =>
+      initialize()  // let it called in executor
+      new SerDeUtil.AutoBatchedPickler(iter)
+    }
+  }
+
+  /**
+   * Convert an RDD of serialized Python objects to RDD of objects, that is usable by PySpark.
+   */
+  def pythonToJava(pyRDD: JavaRDD[Array[Byte]], batched: Boolean): JavaRDD[Any] = {
+    pyRDD.rdd.mapPartitions { iter =>
+      initialize()  // let it called in executor
+      val unpickle = new Unpickler
+      iter.flatMap { row =>
+        val obj = unpickle.loads(row)
+        if (batched) {
+          obj match {
+            case list: JArrayList[_] => list.asScala
+            case arr: Array[_] => arr
+          }
+        } else {
+          Seq(obj)
+        }
+      }
+    }.toJavaRDD()
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

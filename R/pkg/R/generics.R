@@ -138,7 +138,15 @@ setGeneric("sumRDD", function(x) { standardGeneric("sumRDD") })
 # @export
 setGeneric("name", function(x) { standardGeneric("name") })
 
+<<<<<<< HEAD
 # @rdname getNumPartitionsRDD
+=======
+# @rdname getNumPartitions
+# @export
+setGeneric("getNumPartitions", function(x) { standardGeneric("getNumPartitions") })
+
+# @rdname getNumPartitions
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 # @export
 setGeneric("getNumPartitionsRDD", function(x) { standardGeneric("getNumPartitionsRDD") })
 
@@ -378,12 +386,18 @@ setGeneric("subtractByKey",
 setGeneric("value", function(bcast) { standardGeneric("value") })
 
 
+<<<<<<< HEAD
 ####################  SparkDataFrame Methods ########################
 
 #' @param x a SparkDataFrame or GroupedData.
 #' @param ... further arguments to be passed to or from other methods.
 #' @return A SparkDataFrame.
 #' @rdname summarize
+=======
+####################  DataFrame Methods ########################
+
+#' @rdname agg
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 setGeneric("agg", function(x, ...) { standardGeneric("agg") })
 
@@ -404,15 +418,20 @@ setGeneric("arrange", function(x, col, ...) { standardGeneric("arrange") })
 
 #' @rdname as.data.frame
 #' @export
+<<<<<<< HEAD
 setGeneric("as.data.frame",
            function(x, row.names = NULL, optional = FALSE, ...) {
              standardGeneric("as.data.frame")
            })
+=======
+setGeneric("as.data.frame")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname attach
 #' @export
 setGeneric("attach")
 
+<<<<<<< HEAD
 #' @rdname cache
 #' @export
 setGeneric("cache", function(x) { standardGeneric("cache") })
@@ -433,6 +452,8 @@ setGeneric("collect", function(x, ...) { standardGeneric("collect") })
 
 #' @param do.NULL currently not used.
 #' @param prefix currently not used.
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname columns
 #' @export
 setGeneric("colnames", function(x, do.NULL = TRUE, prefix = "col") { standardGeneric("colnames") })
@@ -449,7 +470,11 @@ setGeneric("coltypes", function(x) { standardGeneric("coltypes") })
 #' @export
 setGeneric("coltypes<-", function(x, value) { standardGeneric("coltypes<-") })
 
+<<<<<<< HEAD
 #' @rdname columns
+=======
+#' @rdname schema
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 setGeneric("columns", function(x) {standardGeneric("columns") })
 
@@ -509,6 +534,7 @@ setGeneric("dapplyCollect", function(x, func) { standardGeneric("dapplyCollect")
 #' @param ... additional argument(s) passed to the method.
 #' @rdname gapply
 #' @export
+<<<<<<< HEAD
 setGeneric("gapply", function(x, ...) { standardGeneric("gapply") })
 
 #' @param x a SparkDataFrame or GroupedData.
@@ -520,8 +546,11 @@ setGeneric("gapplyCollect", function(x, ...) { standardGeneric("gapplyCollect") 
 # @rdname getNumPartitions
 # @export
 setGeneric("getNumPartitions", function(x) { standardGeneric("getNumPartitions") })
+=======
+setGeneric("corr", function(x, ...) {standardGeneric("corr") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
-#' @rdname describe
+#' @rdname summary
 #' @export
 setGeneric("describe", function(x, col, ...) { standardGeneric("describe") })
 
@@ -630,10 +659,13 @@ setGeneric("persist", function(x, newLevel) { standardGeneric("persist") })
 #' @export
 setGeneric("printSchema", function(x) { standardGeneric("printSchema") })
 
+<<<<<<< HEAD
 #' @rdname registerTempTable-deprecated
 #' @export
 setGeneric("registerTempTable", function(x, tableName) { standardGeneric("registerTempTable") })
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname rename
 #' @export
 setGeneric("rename", function(x, ...) { standardGeneric("rename") })
@@ -671,17 +703,24 @@ setGeneric("saveAsTable", function(df, tableName, source = NULL, mode = "error",
 #' @export
 setGeneric("str")
 
+<<<<<<< HEAD
 #' @rdname take
 #' @export
 setGeneric("take", function(x, num) { standardGeneric("take") })
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname mutate
 #' @export
 setGeneric("transform", function(`_data`, ...) {standardGeneric("transform") })
 
 #' @rdname write.df
 #' @export
+<<<<<<< HEAD
 setGeneric("write.df", function(df, path = NULL, source = NULL, mode = "error", ...) {
+=======
+setGeneric("write.df", function(df, path, source = NULL, mode = "error", ...) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   standardGeneric("write.df")
 })
 
@@ -691,6 +730,7 @@ setGeneric("saveDF", function(df, path, source = NULL, mode = "error", ...) {
   standardGeneric("saveDF")
 })
 
+<<<<<<< HEAD
 #' @rdname write.jdbc
 #' @export
 setGeneric("write.jdbc", function(x, url, tableName, mode = "error", ...) {
@@ -710,11 +750,21 @@ setGeneric("write.orc", function(x, path, ...) { standardGeneric("write.orc") })
 setGeneric("write.parquet", function(x, path, ...) {
   standardGeneric("write.parquet")
 })
+=======
+#' @rdname write.json
+#' @export
+setGeneric("write.json", function(x, path) { standardGeneric("write.json") })
+
+#' @rdname write.parquet
+#' @export
+setGeneric("write.parquet", function(x, path) { standardGeneric("write.parquet") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname write.parquet
 #' @export
 setGeneric("saveAsParquetFile", function(x, path) { standardGeneric("saveAsParquetFile") })
 
+<<<<<<< HEAD
 #' @rdname write.stream
 #' @export
 setGeneric("write.stream", function(df, source = NULL, outputMode = NULL, ...) {
@@ -724,6 +774,11 @@ setGeneric("write.stream", function(df, source = NULL, outputMode = NULL, ...) {
 #' @rdname write.text
 #' @export
 setGeneric("write.text", function(x, path, ...) { standardGeneric("write.text") })
+=======
+#' @rdname write.text
+#' @export
+setGeneric("write.text", function(x, path) { standardGeneric("write.text") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname schema
 #' @export
@@ -743,14 +798,21 @@ setGeneric("showDF", function(x, ...) { standardGeneric("showDF") })
 
 # @rdname storageLevel
 # @export
+<<<<<<< HEAD
 setGeneric("storageLevel", function(x) { standardGeneric("storageLevel") })
+=======
+setGeneric("subset", function(x, ...) { standardGeneric("subset") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname subset
 #' @export
+<<<<<<< HEAD
 setGeneric("subset", function(x, ...) { standardGeneric("subset") })
 
 #' @rdname summarize
 #' @export
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setGeneric("summarize", function(x, ...) { standardGeneric("summarize") })
 
 #' @rdname summary
@@ -761,11 +823,15 @@ setGeneric("toJSON", function(x) { standardGeneric("toJSON") })
 
 setGeneric("toRDD", function(x) { standardGeneric("toRDD") })
 
+<<<<<<< HEAD
 #' @rdname union
 #' @export
 setGeneric("union", function(x, y) { standardGeneric("union") })
 
 #' @rdname union
+=======
+#' @rdname rbind
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 setGeneric("unionAll", function(x, y) { standardGeneric("unionAll") })
 
@@ -796,6 +862,7 @@ setGeneric("withColumnRenamed",
 
 #' @rdname write.df
 #' @export
+<<<<<<< HEAD
 setGeneric("write.df", function(df, path = NULL, ...) { standardGeneric("write.df") })
 
 #' @rdname randomSplit
@@ -805,6 +872,9 @@ setGeneric("randomSplit", function(x, weights, seed) { standardGeneric("randomSp
 #' @rdname broadcast
 #' @export
 setGeneric("broadcast", function(x) { standardGeneric("broadcast") })
+=======
+setGeneric("write.df", function(df, path, ...) { standardGeneric("write.df") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 ###################### Column Methods ##########################
 
@@ -847,6 +917,10 @@ setGeneric("getItem", function(x, ...) { standardGeneric("getItem") })
 setGeneric("isNaN", function(x) { standardGeneric("isNaN") })
 
 #' @rdname columnfunctions
+#' @export
+setGeneric("isNaN", function(x) { standardGeneric("isNaN") })
+
+#' @rdname column
 #' @export
 setGeneric("isNull", function(x) { standardGeneric("isNull") })
 
@@ -917,7 +991,15 @@ setGeneric("add_months", function(y, x) { standardGeneric("add_months") })
 #' @name NULL
 setGeneric("approxCountDistinct", function(x, ...) { standardGeneric("approxCountDistinct") })
 
+<<<<<<< HEAD
 #' @rdname column_collection_functions
+=======
+#' @rdname array_contains
+#' @export
+setGeneric("array_contains", function(x, value) { standardGeneric("array_contains") })
+
+#' @rdname ascii
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @name NULL
 setGeneric("array_contains", function(x, value) { standardGeneric("array_contains") })
@@ -1002,6 +1084,7 @@ setGeneric("countDistinct", function(x, ...) { standardGeneric("countDistinct") 
 #' @name NULL
 setGeneric("crc32", function(x) { standardGeneric("crc32") })
 
+<<<<<<< HEAD
 #' @rdname column_nonaggregate_functions
 #' @export
 #' @name NULL
@@ -1021,6 +1104,11 @@ setGeneric("hash", function(x, ...) { standardGeneric("hash") })
 #' @export
 #' @name NULL
 setGeneric("cume_dist", function(x = "missing") { standardGeneric("cume_dist") })
+=======
+#' @rdname cume_dist
+#' @export
+setGeneric("cume_dist", function(x) { standardGeneric("cume_dist") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname column_datetime_diff_functions
 #' @export
@@ -1052,10 +1140,24 @@ setGeneric("dayofmonth", function(x) { standardGeneric("dayofmonth") })
 #' @name NULL
 setGeneric("dayofyear", function(x) { standardGeneric("dayofyear") })
 
+<<<<<<< HEAD
 #' @rdname column_string_functions
 #' @export
 #' @name NULL
 setGeneric("decode", function(x, charset) { standardGeneric("decode") })
+=======
+#' @rdname decode
+#' @export
+setGeneric("decode", function(x, charset) { standardGeneric("decode") })
+
+#' @rdname dense_rank
+#' @export
+setGeneric("dense_rank", function(x) { standardGeneric("dense_rank") })
+
+#' @rdname encode
+#' @export
+setGeneric("encode", function(x, charset) { standardGeneric("encode") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname column_window_functions
 #' @export
@@ -1153,6 +1255,7 @@ setGeneric("input_file_name",
 #' @name NULL
 setGeneric("instr", function(y, x) { standardGeneric("instr") })
 
+<<<<<<< HEAD
 #' @rdname column_nonaggregate_functions
 #' @export
 #' @name NULL
@@ -1161,11 +1264,22 @@ setGeneric("isnan", function(x) { standardGeneric("isnan") })
 #' @rdname column_aggregate_functions
 #' @export
 #' @name NULL
+=======
+#' @rdname is.nan
+#' @export
+setGeneric("isnan", function(x) { standardGeneric("isnan") })
+
+#' @rdname kurtosis
+#' @export
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setGeneric("kurtosis", function(x) { standardGeneric("kurtosis") })
 
 #' @rdname column_window_functions
 #' @export
+<<<<<<< HEAD
 #' @name NULL
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 setGeneric("lag", function(x, ...) { standardGeneric("lag") })
 
 #' @rdname last
@@ -1286,10 +1400,16 @@ setGeneric("ntile", function(x) { standardGeneric("ntile") })
 #' @name NULL
 setGeneric("n_distinct", function(x, ...) { standardGeneric("n_distinct") })
 
+<<<<<<< HEAD
 #' @rdname column_window_functions
 #' @export
 #' @name NULL
 setGeneric("percent_rank", function(x = "missing") { standardGeneric("percent_rank") })
+=======
+#' @rdname percent_rank
+#' @export
+setGeneric("percent_rank", function(x) { standardGeneric("percent_rank") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname column_math_functions
 #' @export
@@ -1352,10 +1472,16 @@ setGeneric("reverse", function(x) { standardGeneric("reverse") })
 #' @name NULL
 setGeneric("rint", function(x) { standardGeneric("rint") })
 
+<<<<<<< HEAD
 #' @rdname column_window_functions
 #' @export
 #' @name NULL
 setGeneric("row_number", function(x = "missing") { standardGeneric("row_number") })
+=======
+#' @rdname row_number
+#' @export
+setGeneric("row_number", function(x) { standardGeneric("row_number") })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 #' @rdname column_string_functions
 #' @export
@@ -1367,7 +1493,15 @@ setGeneric("rpad", function(x, len, pad) { standardGeneric("rpad") })
 #' @name NULL
 setGeneric("rtrim", function(x) { standardGeneric("rtrim") })
 
+<<<<<<< HEAD
 #' @rdname column_aggregate_functions
+=======
+#' @rdname sd
+#' @export
+setGeneric("sd", function(x, na.rm = FALSE) { standardGeneric("sd") })
+
+#' @rdname second
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @name NULL
 setGeneric("sd", function(x, na.rm = FALSE) { standardGeneric("sd") })
@@ -1412,6 +1546,7 @@ setGeneric("signum", function(x) { standardGeneric("signum") })
 #' @name NULL
 setGeneric("size", function(x) { standardGeneric("size") })
 
+<<<<<<< HEAD
 #' @rdname column_aggregate_functions
 #' @export
 #' @name NULL
@@ -1423,6 +1558,17 @@ setGeneric("skewness", function(x) { standardGeneric("skewness") })
 setGeneric("sort_array", function(x, asc = TRUE) { standardGeneric("sort_array") })
 
 #' @rdname column_string_functions
+=======
+#' @rdname skewness
+#' @export
+setGeneric("skewness", function(x) { standardGeneric("skewness") })
+
+#' @rdname sort_array
+#' @export
+setGeneric("sort_array", function(x, asc = TRUE) { standardGeneric("sort_array") })
+
+#' @rdname soundex
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @name NULL
 setGeneric("split_string", function(x, pattern) { standardGeneric("split_string") })
@@ -1432,7 +1578,27 @@ setGeneric("split_string", function(x, pattern) { standardGeneric("split_string"
 #' @name NULL
 setGeneric("soundex", function(x) { standardGeneric("soundex") })
 
+<<<<<<< HEAD
 #' @rdname column_nonaggregate_functions
+=======
+#' @rdname sd
+#' @export
+setGeneric("stddev", function(x) { standardGeneric("stddev") })
+
+#' @rdname stddev_pop
+#' @export
+setGeneric("stddev_pop", function(x) { standardGeneric("stddev_pop") })
+
+#' @rdname stddev_samp
+#' @export
+setGeneric("stddev_samp", function(x) { standardGeneric("stddev_samp") })
+
+#' @rdname struct
+#' @export
+setGeneric("struct", function(x, ...) { standardGeneric("struct") })
+
+#' @rdname substring_index
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @name NULL
 setGeneric("spark_partition_id", function(x = "missing") { standardGeneric("spark_partition_id") })
@@ -1527,7 +1693,27 @@ setGeneric("unix_timestamp", function(x, format) { standardGeneric("unix_timesta
 #' @name NULL
 setGeneric("upper", function(x) { standardGeneric("upper") })
 
+<<<<<<< HEAD
 #' @rdname column_aggregate_functions
+=======
+#' @rdname var
+#' @export
+setGeneric("var", function(x, y = NULL, na.rm = FALSE, use) { standardGeneric("var") })
+
+#' @rdname var
+#' @export
+setGeneric("variance", function(x) { standardGeneric("variance") })
+
+#' @rdname var_pop
+#' @export
+setGeneric("var_pop", function(x) { standardGeneric("var_pop") })
+
+#' @rdname var_samp
+#' @export
+setGeneric("var_samp", function(x) { standardGeneric("var_samp") })
+
+#' @rdname weekofyear
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @name NULL
 setGeneric("var", function(x, y = NULL, na.rm = FALSE, use) { standardGeneric("var") })
@@ -1562,6 +1748,7 @@ setGeneric("window", function(x, ...) { standardGeneric("window") })
 #' @name NULL
 setGeneric("year", function(x) { standardGeneric("year") })
 
+<<<<<<< HEAD
 
 ###################### Spark.ML Methods ##########################
 
@@ -1573,10 +1760,13 @@ setGeneric("fitted")
 #'          and model matrix used in the fitting process should be returned as
 #'          components of the returned value.
 #' @inheritParams stats::glm
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @rdname glm
 #' @export
 setGeneric("glm")
 
+<<<<<<< HEAD
 #' @param object a fitted ML model object.
 #' @param ... additional argument(s) passed to the method.
 #' @rdname predict
@@ -1708,3 +1898,12 @@ setGeneric("status", function(x) { standardGeneric("status") })
 #' @rdname stopQuery
 #' @export
 setGeneric("stopQuery", function(x) { standardGeneric("stopQuery") })
+=======
+#' @rdname predict
+#' @export
+setGeneric("predict", function(object, ...) { standardGeneric("predict") })
+
+#' @rdname rbind
+#' @export
+setGeneric("rbind", signature = "...")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

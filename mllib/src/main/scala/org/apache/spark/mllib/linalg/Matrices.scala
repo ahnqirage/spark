@@ -991,7 +991,16 @@ object Matrices {
       case dm: BDM[Double] =>
         new DenseMatrix(dm.rows, dm.cols, dm.data, dm.isTranspose)
       case sm: BSM[Double] =>
+        // Spark-11507. work around breeze issue 479.
+        val mat = if (sm.colPtrs.last != sm.data.length) {
+          val matCopy = sm.copy
+          matCopy.compact()
+          matCopy
+        } else {
+          sm
+        }
         // There is no isTranspose flag for sparse matrices in Breeze
+<<<<<<< HEAD
         val nsm = if (sm.rowIndices.length > sm.activeSize) {
           // This sparse matrix has trailing zeros.
           // Remove them by compacting the matrix.
@@ -1002,6 +1011,9 @@ object Matrices {
           sm
         }
         new SparseMatrix(nsm.rows, nsm.cols, nsm.colPtrs, nsm.rowIndices, nsm.data)
+=======
+        new SparseMatrix(mat.rows, mat.cols, mat.colPtrs, mat.rowIndices, mat.data)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case _ =>
         throw new UnsupportedOperationException(
           s"Do not support conversion from type ${breeze.getClass.getName}.")

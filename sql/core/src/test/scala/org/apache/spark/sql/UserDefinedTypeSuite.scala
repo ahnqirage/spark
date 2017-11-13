@@ -20,13 +20,21 @@ package org.apache.spark.sql
 import scala.beans.{BeanInfo, BeanProperty}
 
 import org.apache.spark.rdd.RDD
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+=======
+import org.apache.spark.sql.catalyst.CatalystTypeConverters
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.execution.datasources.parquet.ParquetTest
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types._
+<<<<<<< HEAD
+=======
+import org.apache.spark.util.collection.OpenHashSet
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 @BeanInfo
 private[sql] case class MyLabeledPoint(
@@ -124,6 +132,7 @@ private[spark] class ExampleSubTypeUDT extends UserDefinedType[IExampleSubType] 
       StructField("intfield", IntegerType, nullable = false)))
   }
 
+<<<<<<< HEAD
   override def serialize(obj: IExampleSubType): InternalRow = {
     val row = new GenericInternalRow(1)
     row.setInt(0, obj.field)
@@ -141,6 +150,14 @@ private[spark] class ExampleSubTypeUDT extends UserDefinedType[IExampleSubType] 
   }
 
   override def userClass: Class[IExampleSubType] = classOf[IExampleSubType]
+=======
+  private[spark] override def asNullable: MyDenseVectorUDT = this
+
+  override def equals(other: Any): Boolean = other match {
+    case _: MyDenseVectorUDT => true
+    case _ => false
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetTest {
@@ -203,12 +220,20 @@ class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetT
 
   // Tests to make sure that all operators correctly convert types on the way out.
   test("Local UDTs") {
+<<<<<<< HEAD
     val vec = new UDT.MyDenseVector(Array(0.1, 1.0))
     val df = Seq((1, vec)).toDF("int", "vec")
     assert(vec === df.collect()(0).getAs[UDT.MyDenseVector](1))
     assert(vec === df.take(1)(0).getAs[UDT.MyDenseVector](1))
     checkAnswer(df.limit(1).groupBy('int).agg(first('vec)), Row(1, vec))
     checkAnswer(df.orderBy('int).limit(1).groupBy('int).agg(first('vec)), Row(1, vec))
+=======
+    val df = Seq((1, new MyDenseVector(Array(0.1, 1.0)))).toDF("int", "vec")
+    df.collect()(0).getAs[MyDenseVector](1)
+    df.take(1)(0).getAs[MyDenseVector](1)
+    df.limit(1).groupBy('int).agg(first('vec)).collect()(0).getAs[MyDenseVector](0)
+    df.orderBy('int).limit(1).groupBy('int).agg(first('vec)).collect()(0).getAs[MyDenseVector](0)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("UDTs with JSON") {
@@ -252,7 +277,11 @@ class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetT
 
   test("SPARK-10472 UserDefinedType.typeName") {
     assert(IntegerType.typeName === "integer")
+<<<<<<< HEAD
     assert(new UDT.MyDenseVectorUDT().typeName === "mydensevector")
+=======
+    assert(new MyDenseVectorUDT().typeName === "mydensevector")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("Catalyst type converter null handling for UDTs") {

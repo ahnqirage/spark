@@ -61,6 +61,7 @@ private[ui] class AllExecutionsPage(parent: SQLTab) extends WebUIPage("") with L
           details.parentNode.querySelector('.stage-details').classList.toggle('collapsed')
         }}
       </script>
+<<<<<<< HEAD
     val summary: NodeSeq =
       <div>
         <ul class="unstyled">
@@ -91,6 +92,9 @@ private[ui] class AllExecutionsPage(parent: SQLTab) extends WebUIPage("") with L
         </ul>
       </div>
     UIUtils.headerSparkPage("SQL", summary ++ content, parent, Some(5000))
+=======
+    UIUtils.headerSparkPage("SQL", content, parent, Some(5000))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
@@ -212,7 +216,11 @@ private[ui] class RunningExecutionTable(
     showFailedJobs = true) {
 
   override protected def header: Seq[String] =
+<<<<<<< HEAD
     baseHeader ++ Seq("Running Job IDs", "Succeeded Job IDs", "Failed Job IDs")
+=======
+    baseHeader ++ Seq("Running Jobs", "Succeeded Jobs", "Failed Jobs")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 private[ui] class CompletedExecutionTable(
@@ -230,7 +238,11 @@ private[ui] class CompletedExecutionTable(
     showSucceededJobs = true,
     showFailedJobs = false) {
 
+<<<<<<< HEAD
   override protected def header: Seq[String] = baseHeader ++ Seq("Job IDs")
+=======
+  override protected def header: Seq[String] = baseHeader ++ Seq("Jobs")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 private[ui] class FailedExecutionTable(
@@ -249,5 +261,9 @@ private[ui] class FailedExecutionTable(
     showFailedJobs = true) {
 
   override protected def header: Seq[String] =
+<<<<<<< HEAD
     baseHeader ++ Seq("Succeeded Job IDs", "Failed Job IDs")
+=======
+    baseHeader ++ Seq("Succeeded Jobs", "Failed Jobs")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

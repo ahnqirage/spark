@@ -20,6 +20,7 @@ package org.apache.spark.examples.ml
 
 // $example on$
 import org.apache.spark.ml.feature.VectorAssembler
+<<<<<<< HEAD
 import org.apache.spark.ml.linalg.Vectors
 // $example off$
 import org.apache.spark.sql.SparkSession
@@ -33,6 +34,21 @@ object VectorAssemblerExample {
 
     // $example on$
     val dataset = spark.createDataFrame(
+=======
+import org.apache.spark.mllib.linalg.Vectors
+// $example off$
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object VectorAssemblerExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("VectorAssemblerExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    val dataset = sqlContext.createDataFrame(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       Seq((0, 18, 1.0, Vectors.dense(0.0, 10.0, 0.5), 1.0))
     ).toDF("id", "hour", "mobile", "userFeatures", "clicked")
 
@@ -41,11 +57,17 @@ object VectorAssemblerExample {
       .setOutputCol("features")
 
     val output = assembler.transform(dataset)
+<<<<<<< HEAD
     println("Assembled columns 'hour', 'mobile', 'userFeatures' to vector column 'features'")
     output.select("features", "clicked").show(false)
     // $example off$
 
     spark.stop()
+=======
+    println(output.select("features", "clicked").first())
+    // $example off$
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

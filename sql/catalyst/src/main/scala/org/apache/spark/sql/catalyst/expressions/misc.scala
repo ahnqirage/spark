@@ -123,6 +123,7 @@ case class Uuid() extends LeafExpression {
 
   override def nullable: Boolean = false
 
+<<<<<<< HEAD
   override def dataType: DataType = StringType
 
   override def eval(input: InternalRow): Any = UTF8String.fromString(UUID.randomUUID().toString)
@@ -130,5 +131,17 @@ case class Uuid() extends LeafExpression {
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     ev.copy(code = s"final UTF8String ${ev.value} = " +
       s"UTF8String.fromString(java.util.UUID.randomUUID().toString());", isNull = "false")
+=======
+  override def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String = {
+    val CRC32 = "java.util.zip.CRC32"
+    val checksum = ctx.freshName("checksum")
+    nullSafeCodeGen(ctx, ev, value => {
+      s"""
+        $CRC32 $checksum = new $CRC32();
+        $checksum.update($value, 0, $value.length);
+        ${ev.value} = $checksum.getValue();
+      """
+    })
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

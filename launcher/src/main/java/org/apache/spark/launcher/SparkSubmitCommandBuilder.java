@@ -89,8 +89,12 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
   }
 
   final List<String> sparkArgs;
+<<<<<<< HEAD
   private final boolean isAppResourceReq;
   private final boolean isExample;
+=======
+  private final boolean printInfo;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Controls whether mixing spark-submit arguments with app arguments is allowed. This is needed
@@ -100,9 +104,14 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
   private boolean allowsMixedArguments;
 
   SparkSubmitCommandBuilder() {
+<<<<<<< HEAD
     this.sparkArgs = new ArrayList<>();
     this.isAppResourceReq = true;
     this.isExample = false;
+=======
+    this.sparkArgs = new ArrayList<String>();
+    this.printInfo = false;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   SparkSubmitCommandBuilder(List<String> args) {
@@ -111,6 +120,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
     boolean isExample = false;
     List<String> submitArgs = args;
 
+<<<<<<< HEAD
     if (args.size() > 0) {
       switch (args.get(0)) {
         case PYSPARK_SHELL:
@@ -146,6 +156,18 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
     if (PYSPARK_SHELL.equals(appResource) && isAppResourceReq) {
       return buildPySparkShellCommand(env);
     } else if (SPARKR_SHELL.equals(appResource) && isAppResourceReq) {
+=======
+    OptionParser parser = new OptionParser();
+    parser.parse(submitArgs);
+    this.printInfo = parser.infoRequested;
+  }
+
+  @Override
+  public List<String> buildCommand(Map<String, String> env) throws IOException {
+    if (PYSPARK_SHELL_RESOURCE.equals(appResource) && !printInfo) {
+      return buildPySparkShellCommand(env);
+    } else if (SPARKR_SHELL_RESOURCE.equals(appResource) && !printInfo) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       return buildSparkRCommand(env);
     } else {
       return buildSparkSubmitCommand(env);
@@ -399,6 +421,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
   private class OptionParser extends SparkSubmitOptionParser {
 
+<<<<<<< HEAD
     boolean isAppResourceReq = true;
 
     @Override
@@ -445,6 +468,49 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
         case STATUS:
           isAppResourceReq = false;
           sparkArgs.add(opt);
+=======
+    boolean infoRequested = false;
+
+    @Override
+    protected boolean handle(String opt, String value) {
+      if (opt.equals(MASTER)) {
+        master = value;
+      } else if (opt.equals(DEPLOY_MODE)) {
+        deployMode = value;
+      } else if (opt.equals(PROPERTIES_FILE)) {
+        propertiesFile = value;
+      } else if (opt.equals(DRIVER_MEMORY)) {
+        conf.put(SparkLauncher.DRIVER_MEMORY, value);
+      } else if (opt.equals(DRIVER_JAVA_OPTIONS)) {
+        conf.put(SparkLauncher.DRIVER_EXTRA_JAVA_OPTIONS, value);
+      } else if (opt.equals(DRIVER_LIBRARY_PATH)) {
+        conf.put(SparkLauncher.DRIVER_EXTRA_LIBRARY_PATH, value);
+      } else if (opt.equals(DRIVER_CLASS_PATH)) {
+        conf.put(SparkLauncher.DRIVER_EXTRA_CLASSPATH, value);
+      } else if (opt.equals(CONF)) {
+        String[] setConf = value.split("=", 2);
+        checkArgument(setConf.length == 2, "Invalid argument to %s: %s", CONF, value);
+        conf.put(setConf[0], setConf[1]);
+      } else if (opt.equals(CLASS)) {
+        // The special classes require some special command line handling, since they allow
+        // mixing spark-submit arguments with arguments that should be propagated to the shell
+        // itself. Note that for this to work, the "--class" argument must come before any
+        // non-spark-submit arguments.
+        mainClass = value;
+        if (specialClasses.containsKey(value)) {
+          allowsMixedArguments = true;
+          appResource = specialClasses.get(value);
+        }
+      } else if (opt.equals(HELP) || opt.equals(USAGE_ERROR)) {
+        infoRequested = true;
+        sparkArgs.add(opt);
+      } else if (opt.equals(VERSION)) {
+        infoRequested = true;
+        sparkArgs.add(opt);
+      } else {
+        sparkArgs.add(opt);
+        if (value != null) {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           sparkArgs.add(value);
           break;
         case HELP:

@@ -74,6 +74,7 @@ trait HashJoin {
   }
 
 
+<<<<<<< HEAD
 
   protected def buildSideKeyGenerator(): Projection =
     UnsafeProjection.create(buildKeys)
@@ -145,9 +146,21 @@ trait HashJoin {
       }.toScala
     }
   }
+=======
+  override def outputsUnsafeRows: Boolean = true
+  override def canProcessUnsafeRows: Boolean = true
+  override def canProcessSafeRows: Boolean = false
+
+  protected def buildSideKeyGenerator: Projection =
+    UnsafeProjection.create(buildKeys, buildPlan.output)
+
+  protected def streamSideKeyGenerator: Projection =
+    UnsafeProjection.create(streamedKeys, streamedPlan.output)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private def semiJoin(
       streamIter: Iterator[InternalRow],
+<<<<<<< HEAD
       hashedRelation: HashedRelation): Iterator[InternalRow] = {
     val joinKeys = streamSideKeyGenerator()
     val joinedRow = new JoinedRow
@@ -159,6 +172,21 @@ trait HashJoin {
       })
     }
   }
+=======
+      numStreamRows: LongSQLMetric,
+      hashedRelation: HashedRelation,
+      numOutputRows: LongSQLMetric): Iterator[InternalRow] =
+  {
+    new Iterator[InternalRow] {
+      private[this] var currentStreamedRow: InternalRow = _
+      private[this] var currentHashMatches: Seq[InternalRow] = _
+      private[this] var currentMatchPosition: Int = -1
+
+      // Mutable per row objects.
+      private[this] val joinRow = new JoinedRow
+      private[this] val resultProjection: (InternalRow) => InternalRow =
+        UnsafeProjection.create(self.schema)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private def existenceJoin(
       streamIter: Iterator[InternalRow],

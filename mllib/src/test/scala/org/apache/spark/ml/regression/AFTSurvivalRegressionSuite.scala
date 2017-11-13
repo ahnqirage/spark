@@ -23,6 +23,7 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+<<<<<<< HEAD
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.random.{ExponentialGenerator, WeibullGenerator}
 import org.apache.spark.mllib.util.MLlibTestSparkContext
@@ -34,6 +35,16 @@ class AFTSurvivalRegressionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
 
   import testImplicits._
+=======
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+import org.apache.spark.mllib.random.{ExponentialGenerator, WeibullGenerator}
+import org.apache.spark.mllib.util.MLlibTestSparkContext
+import org.apache.spark.mllib.util.TestingUtils._
+import org.apache.spark.sql.{DataFrame, Row}
+
+class AFTSurvivalRegressionSuite
+  extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @transient var datasetUnivariate: DataFrame = _
   @transient var datasetMultivariate: DataFrame = _
@@ -353,6 +364,7 @@ class AFTSurvivalRegressionSuite
     }
   }
 
+<<<<<<< HEAD
   test("should support all NumericType labels, and not support other types") {
     val aft = new AFTSurvivalRegression().setMaxIter(1)
     MLTestingUtils.checkNumericTypes[AFTSurvivalRegressionModel, AFTSurvivalRegression](
@@ -407,6 +419,8 @@ class AFTSurvivalRegressionSuite
     assert(model1.scale ~== model2.scale absTol 0.01)
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("read/write") {
     def checkModelData(
         model: AFTSurvivalRegressionModel,
@@ -417,6 +431,7 @@ class AFTSurvivalRegressionSuite
     }
     val aft = new AFTSurvivalRegression()
     testEstimatorAndModelReadWrite(aft, datasetMultivariate,
+<<<<<<< HEAD
       AFTSurvivalRegressionSuite.allParamSettings, AFTSurvivalRegressionSuite.allParamSettings,
       checkModelData)
   }
@@ -430,6 +445,26 @@ class AFTSurvivalRegressionSuite
       1, Array(5.5), Array(0.8), 2, 42, 1.0, 2.0, 2.0), numSlices = 3).toDF()
     val trainer = new AFTSurvivalRegression()
     trainer.fit(dataset)
+=======
+      AFTSurvivalRegressionSuite.allParamSettings, checkModelData)
+  }
+
+  test("SPARK-15892: Incorrectly merged AFTAggregator with zero total count") {
+    // This `dataset` will contain an empty partition because it has five rows but
+    // the parallelism is bigger than that. Because the issue was about `AFTAggregator`s
+    // being merged incorrectly when it has an empty partition, the trained model has
+    // 1.0 scale from Euler's number for 0.
+    val points = sc.parallelize(Seq(
+      AFTPoint(Vectors.dense(1.560, -0.605), 1.218, 1.0),
+      AFTPoint(Vectors.dense(0.346, 2.158), 2.949, 0.0),
+      AFTPoint(Vectors.dense(1.380, 0.231), 3.627, 0.0),
+      AFTPoint(Vectors.dense(0.520, 1.151), 0.273, 1.0),
+      AFTPoint(Vectors.dense(0.795, -0.226), 4.199, 0.0)), numSlices = 6)
+    val dataset = sqlContext.createDataFrame(points)
+    val trainer = new AFTSurvivalRegression()
+    val model = trainer.fit(dataset)
+    assert(model.scale != 1)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

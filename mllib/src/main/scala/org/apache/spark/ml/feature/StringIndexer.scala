@@ -17,6 +17,7 @@
 
 package org.apache.spark.ml.feature
 
+<<<<<<< HEAD
 import scala.language.existentials
 
 import org.apache.hadoop.fs.Path
@@ -29,6 +30,18 @@ import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared.{HasHandleInvalid, HasInputCol, HasOutputCol}
 import org.apache.spark.ml.util._
 import org.apache.spark.sql.{DataFrame, Dataset}
+=======
+import org.apache.hadoop.fs.Path
+
+import org.apache.spark.SparkException
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.{Estimator, Model, Transformer}
+import org.apache.spark.ml.attribute.{Attribute, NominalAttribute}
+import org.apache.spark.ml.param._
+import org.apache.spark.ml.param.shared._
+import org.apache.spark.ml.util._
+import org.apache.spark.sql.DataFrame
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.util.collection.OpenHashMap
@@ -105,9 +118,14 @@ private[feature] trait StringIndexerBase extends Params with HasHandleInvalid wi
  *
  * @see `IndexToString` for the inverse transformation
  */
+<<<<<<< HEAD
 @Since("1.4.0")
 class StringIndexer @Since("1.4.0") (
     @Since("1.4.0") override val uid: String) extends Estimator[StringIndexerModel]
+=======
+@Experimental
+class StringIndexer(override val uid: String) extends Estimator[StringIndexerModel]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   with StringIndexerBase with DefaultParamsWritable {
 
   @Since("1.4.0")
@@ -158,6 +176,7 @@ class StringIndexer @Since("1.4.0") (
 
 @Since("1.6.0")
 object StringIndexer extends DefaultParamsReadable[StringIndexer] {
+<<<<<<< HEAD
   private[feature] val SKIP_INVALID: String = "skip"
   private[feature] val ERROR_INVALID: String = "error"
   private[feature] val KEEP_INVALID: String = "keep"
@@ -169,6 +188,8 @@ object StringIndexer extends DefaultParamsReadable[StringIndexer] {
   private[feature] val alphabetAsc: String = "alphabetAsc"
   private[feature] val supportedStringOrderType: Array[String] =
     Array(frequencyDesc, frequencyAsc, alphabetDesc, alphabetAsc)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.6.0")
   override def load(path: String): StringIndexer = super.load(path)
@@ -185,9 +206,17 @@ object StringIndexer extends DefaultParamsReadable[StringIndexer] {
  */
 @Since("1.4.0")
 class StringIndexerModel (
+<<<<<<< HEAD
     @Since("1.4.0") override val uid: String,
     @Since("1.5.0") val labels: Array[String])
   extends Model[StringIndexerModel] with StringIndexerBase with MLWritable {
+=======
+    override val uid: String,
+    val labels: Array[String])
+  extends Model[StringIndexerModel] with StringIndexerBase with MLWritable {
+
+  import StringIndexerModel._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   import StringIndexerModel._
 
@@ -224,7 +253,11 @@ class StringIndexerModel (
         "Skip StringIndexerModel.")
       return dataset.toDF
     }
+<<<<<<< HEAD
     transformSchema(dataset.schema, logging = true)
+=======
+    validateAndTransformSchema(dataset.schema)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val filteredLabels = getHandleInvalid match {
       case StringIndexer.KEEP_INVALID => labels :+ "__unknown"
@@ -232,6 +265,7 @@ class StringIndexerModel (
     }
 
     val metadata = NominalAttribute.defaultAttr
+<<<<<<< HEAD
       .withName($(outputCol)).withValues(filteredLabels).toMetadata()
     // If we are skipping invalid records, filter them out.
     val (filteredDataset, keepInvalid) = getHandleInvalid match {
@@ -261,6 +295,17 @@ class StringIndexerModel (
             s"set Param handleInvalid to ${StringIndexer.KEEP_INVALID}.")
         }
       }
+=======
+      .withName($(outputCol)).withValues(labels).toMetadata()
+    // If we are skipping invalid records, filter them out.
+    val filteredDataset = getHandleInvalid match {
+      case "skip" =>
+        val filterer = udf { label: String =>
+          labelToIndex.contains(label)
+        }
+        dataset.where(filterer(dataset($(inputCol))))
+      case _ => dataset
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     filteredDataset.select(col("*"),
@@ -299,7 +344,11 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = Data(instance.labels)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+=======
+      sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -310,7 +359,11 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
     override def load(path: String): StringIndexerModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
+<<<<<<< HEAD
       val data = sparkSession.read.parquet(dataPath)
+=======
+      val data = sqlContext.read.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .select("labels")
         .head()
       val labels = data.getAs[Seq[String]](0).toArray
@@ -335,8 +388,13 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
  *
  * @see `StringIndexer` for converting strings into indices
  */
+<<<<<<< HEAD
 @Since("1.5.0")
 class IndexToString @Since("2.2.0") (@Since("1.5.0") override val uid: String)
+=======
+@Experimental
+class IndexToString private[ml] (override val uid: String)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Transformer with HasInputCol with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.5.0")

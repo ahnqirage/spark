@@ -20,6 +20,7 @@ package org.apache.spark.ml.classification
 import scala.collection.JavaConverters._
 import scala.language.existentials
 import scala.util.Random
+<<<<<<< HEAD
 import scala.util.control.Breaks._
 
 import org.apache.spark.{SparkException, SparkFunSuite}
@@ -31,6 +32,16 @@ import org.apache.spark.ml.optim.aggregator.LogisticAggregator
 import org.apache.spark.ml.param.{ParamMap, ParamsSuite}
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
+=======
+
+import org.apache.spark.SparkFunSuite
+import org.apache.spark.ml.feature.Instance
+import org.apache.spark.ml.param.ParamsSuite
+import org.apache.spark.ml.util.{Identifiable, DefaultReadWriteTest, MLTestingUtils}
+import org.apache.spark.mllib.classification.LogisticRegressionSuite._
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
+import org.apache.spark.mllib.regression.LabeledPoint
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{Dataset, Row}
 import org.apache.spark.sql.functions.{col, lit, rand}
@@ -39,7 +50,12 @@ import org.apache.spark.sql.types.LongType
 class LogisticRegressionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
 
+<<<<<<< HEAD
   import testImplicits._
+=======
+class LogisticRegressionSuite
+  extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private val seed = 42
   @transient var smallBinaryDataset: Dataset[_] = _
@@ -2923,6 +2939,7 @@ object LogisticRegressionSuite {
       y
     }
 
+<<<<<<< HEAD
     val testData = (0 until nPoints).map(i => LabeledPoint(y(i), x(i)))
     testData
   }
@@ -2940,5 +2957,50 @@ object LogisticRegressionSuite {
         case Seq(v1, v2) => assert(v1 ~= v2 absTol 1E-3)
       }
     }
+=======
+    val trainer1a = (new LogisticRegression).setFitIntercept(true)
+      .setRegParam(0.0).setStandardization(true)
+    val trainer1b = (new LogisticRegression).setFitIntercept(true).setWeightCol("weight")
+      .setRegParam(0.0).setStandardization(true)
+    val model1a0 = trainer1a.fit(dataset)
+    val model1a1 = trainer1a.fit(weightedDataset)
+    val model1b = trainer1b.fit(weightedDataset)
+    assert(model1a0.coefficients !~= model1a1.coefficients absTol 1E-3)
+    assert(model1a0.intercept !~= model1a1.intercept absTol 1E-3)
+    assert(model1a0.coefficients ~== model1b.coefficients absTol 1E-3)
+    assert(model1a0.intercept ~== model1b.intercept absTol 1E-3)
   }
+
+  test("read/write") {
+    def checkModelData(model: LogisticRegressionModel, model2: LogisticRegressionModel): Unit = {
+      assert(model.intercept === model2.intercept)
+      assert(model.coefficients.toArray === model2.coefficients.toArray)
+      assert(model.numClasses === model2.numClasses)
+      assert(model.numFeatures === model2.numFeatures)
+    }
+    val lr = new LogisticRegression()
+    testEstimatorAndModelReadWrite(lr, dataset, LogisticRegressionSuite.allParamSettings,
+      checkModelData)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+  }
+}
+
+object LogisticRegressionSuite {
+
+  /**
+   * Mapping from all Params to valid settings which differ from the defaults.
+   * This is useful for tests which need to exercise all Params, such as save/load.
+   * This excludes input columns to simplify some tests.
+   */
+  val allParamSettings: Map[String, Any] = ProbabilisticClassifierSuite.allParamSettings ++ Map(
+    "probabilityCol" -> "myProbability",
+    "thresholds" -> Array(0.4, 0.6),
+    "regParam" -> 0.01,
+    "elasticNetParam" -> 0.1,
+    "maxIter" -> 2,  // intentionally small
+    "fitIntercept" -> true,
+    "tol" -> 0.8,
+    "standardization" -> false,
+    "threshold" -> 0.6
+  )
 }

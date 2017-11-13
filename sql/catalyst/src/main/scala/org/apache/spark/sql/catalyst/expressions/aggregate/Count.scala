@@ -21,6 +21,7 @@ import org.apache.spark.sql.catalyst.dsl.expressions._
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.types._
 
+<<<<<<< HEAD
 // scalastyle:off line.size.limit
 @ExpressionDescription(
   usage = """
@@ -31,6 +32,8 @@ import org.apache.spark.sql.types._
     _FUNC_(DISTINCT expr[, expr...]) - Returns the number of rows for which the supplied expression(s) are unique and non-null.
   """)
 // scalastyle:on line.size.limit
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 case class Count(children: Seq[Expression]) extends DeclarativeAggregate {
 
   override def nullable: Boolean = false
@@ -38,14 +41,25 @@ case class Count(children: Seq[Expression]) extends DeclarativeAggregate {
   // Return data type.
   override def dataType: DataType = LongType
 
+<<<<<<< HEAD
   private lazy val count = AttributeReference("count", LongType, nullable = false)()
 
   override lazy val aggBufferAttributes = count :: Nil
 
+=======
+  // Expected input data type.
+  override def inputTypes: Seq[AbstractDataType] = Seq.fill(children.size)(AnyDataType)
+
+  private lazy val count = AttributeReference("count", LongType)()
+
+  override lazy val aggBufferAttributes = count :: Nil
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override lazy val initialValues = Seq(
     /* count = */ Literal(0L)
   )
 
+<<<<<<< HEAD
   override lazy val updateExpressions = {
     val nullableChildren = children.filter(_.nullable)
     if (nullableChildren.isEmpty) {
@@ -58,12 +72,21 @@ case class Count(children: Seq[Expression]) extends DeclarativeAggregate {
       )
     }
   }
+=======
+  override lazy val updateExpressions = Seq(
+    /* count = */ If(children.map(IsNull).reduce(Or), count, count + 1L)
+  )
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override lazy val mergeExpressions = Seq(
     /* count = */ count.left + count.right
   )
 
+<<<<<<< HEAD
   override lazy val evaluateExpression = count
+=======
+  override lazy val evaluateExpression = Cast(count, LongType)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def defaultResult: Option[Literal] = Option(Literal(0L))
 }

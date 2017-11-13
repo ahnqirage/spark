@@ -20,8 +20,12 @@ package org.apache.spark.sql.catalyst
 import java.sql.{Date, Timestamp}
 
 import org.apache.spark.SparkFunSuite
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, Literal, SpecificInternalRow}
 import org.apache.spark.sql.catalyst.expressions.objects.NewInstance
+=======
+import org.apache.spark.sql.catalyst.expressions.{BoundReference, Literal, NewInstance}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -227,10 +231,13 @@ class ScalaReflectionSuite extends SparkFunSuite {
       nullable = true))
   }
 
+<<<<<<< HEAD
   test("type-aliased data") {
     assert(schemaFor[GenericData[Int]] == schemaFor[GenericData.IntData])
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("convert PrimitiveData to catalyst") {
     val data = PrimitiveData(1, 1, 1, 1, 1, 1, true)
     val convertedData = InternalRow(1, 1.toLong, 1.toDouble, 1.toFloat, 1.toShort, 1.toByte, true)
@@ -277,13 +284,18 @@ class ScalaReflectionSuite extends SparkFunSuite {
 
   test("SPARK-15062: Get correct serializer for List[_]") {
     val list = List(1, 2, 3)
+<<<<<<< HEAD
     val serializer = serializerFor[List[Int]](BoundReference(
+=======
+    val serializer = extractorsFor[List[Int]](BoundReference(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       0, ObjectType(list.getClass), nullable = false))
     assert(serializer.children.size == 2)
     assert(serializer.children.head.isInstanceOf[Literal])
     assert(serializer.children.head.asInstanceOf[Literal].value === UTF8String.fromString("value"))
     assert(serializer.children.last.isInstanceOf[NewInstance])
     assert(serializer.children.last.asInstanceOf[NewInstance]
+<<<<<<< HEAD
       .cls.isAssignableFrom(classOf[org.apache.spark.sql.catalyst.util.GenericArrayData]))
   }
 
@@ -335,4 +347,8 @@ class ScalaReflectionSuite extends SparkFunSuite {
     assert(linkedHashMapDeserializer.dataType == ObjectType(classOf[LHMap[_, _]]))
   }
 
+=======
+      .cls.isInstanceOf[Class[org.apache.spark.sql.catalyst.util.GenericArrayData]])
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

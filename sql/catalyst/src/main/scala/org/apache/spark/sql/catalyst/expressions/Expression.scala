@@ -95,6 +95,7 @@ abstract class Expression extends TreeNode[Expression] {
    * @param ctx a [[CodegenContext]]
    * @return [[ExprCode]]
    */
+<<<<<<< HEAD
   def genCode(ctx: CodegenContext): ExprCode = {
     ctx.subExprEliminationExprs.get(this).map { subExprState =>
       // This expression is repeated which means that the code to evaluate it has already been added
@@ -110,6 +111,23 @@ abstract class Expression extends TreeNode[Expression] {
       } else {
         ve
       }
+=======
+  def gen(ctx: CodeGenContext): GeneratedExpressionCode = {
+    ctx.subExprEliminationExprs.get(this).map { subExprState =>
+      // This expression is repeated meaning the code to evaluated has already been added
+      // as a function and called in advance. Just use it.
+      GeneratedExpressionCode(
+        ctx.registerComment(this.toString),
+        subExprState.isNull,
+        subExprState.value)
+    }.getOrElse {
+      val isNull = ctx.freshName("isNull")
+      val primitive = ctx.freshName("primitive")
+      val ve = GeneratedExpressionCode("", isNull, primitive)
+      ve.code = genCode(ctx, ve)
+      // Add `this` in the comment.
+      ve.copy(code = s"${ctx.registerComment(this.toString)}\n" + ve.code.trim)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -164,6 +182,7 @@ abstract class Expression extends TreeNode[Expression] {
    *
    * See [[Canonicalize]] for more details.
    */
+<<<<<<< HEAD
   def semanticEquals(other: Expression): Boolean =
     deterministic && other.deterministic && canonicalized == other.canonicalized
 
@@ -174,6 +193,47 @@ abstract class Expression extends TreeNode[Expression] {
    * See [[Canonicalize]] for more details.
    */
   def semanticHash(): Int = canonicalized.hashCode()
+=======
+  def semanticEquals(other: Expression): Boolean = this.getClass == other.getClass && {
+    def checkSemantic(elements1: Seq[Any], elements2: Seq[Any]): Boolean = {
+      elements1.length == elements2.length && elements1.zip(elements2).forall {
+        case (e1: Expression, e2: Expression) => e1 semanticEquals e2
+        case (Some(e1: Expression), Some(e2: Expression)) => e1 semanticEquals e2
+        case (t1: Traversable[_], t2: Traversable[_]) => checkSemantic(t1.toSeq, t2.toSeq)
+        case (i1, i2) => i1 == i2
+      }
+    }
+    // Non-deterministic expressions cannot be semantic equal
+    if (!deterministic || !other.deterministic) return false
+    val elements1 = this.productIterator.toSeq
+    val elements2 = other.asInstanceOf[Product].productIterator.toSeq
+    checkSemantic(elements1, elements2)
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+
+  /**
+   * Returns the hash for this expression. Expressions that compute the same result, even if
+   * they differ cosmetically should return the same hash.
+   */
+  def semanticHash() : Int = {
+    def computeHash(e: Seq[Any]): Int = {
+      // See http://stackoverflow.com/questions/113511/hash-code-implementation
+      var hash: Int = 17
+      e.foreach(i => {
+        val h: Int = i match {
+          case e: Expression => e.semanticHash()
+          case Some(e: Expression) => e.semanticHash()
+          case t: Traversable[_] => computeHash(t.toSeq)
+          case null => 0
+          case other => other.hashCode()
+        }
+        hash = hash * 37 + h
+      })
+      hash
+    }
+
+    computeHash(this.productIterator.toSeq)
+  }
 
   /**
    * Checks the input data types, returns `TypeCheckResult.success` if it's valid,
@@ -188,11 +248,27 @@ abstract class Expression extends TreeNode[Expression] {
    */
   def prettyName: String = nodeName.toLowerCase(Locale.ROOT)
 
+<<<<<<< HEAD
   protected def flatArguments: Iterator[Any] = productIterator.flatMap {
+=======
+  /**
+   * Returns a user-facing string representation of this expression, i.e. does not have developer
+   * centric debugging information like the expression id.
+   */
+  def prettyString: String = {
+    transform {
+      case a: AttributeReference => PrettyAttribute(a.name, a.dataType)
+      case u: UnresolvedAttribute => PrettyAttribute(u.name)
+    }.toString
+  }
+
+  private def flatArguments = productIterator.flatMap {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     case t: Traversable[_] => t
     case single => single :: Nil
   }
 
+<<<<<<< HEAD
   // Marks this as final, Expression.verboseString should never be called, and thus shouldn't be
   // overridden by concrete classes.
   final override def verboseString: String = simpleString
@@ -210,6 +286,11 @@ abstract class Expression extends TreeNode[Expression] {
     val childrenSQL = children.map(_.sql).mkString(", ")
     s"$prettyName($childrenSQL)"
   }
+=======
+  override def simpleString: String = toString
+
+  override def toString: String = prettyName + flatArguments.mkString("(", ",", ")")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 

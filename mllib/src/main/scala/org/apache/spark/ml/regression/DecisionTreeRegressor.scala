@@ -95,11 +95,17 @@ class DecisionTreeRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: S
   @Since("1.6.0")
   override def setSeed(value: Long): this.type = set(seed, value)
 
+<<<<<<< HEAD
   /** @group setParam */
   @Since("2.0.0")
   def setVarianceCol(value: String): this.type = set(varianceCol, value)
 
   override protected def train(dataset: Dataset[_]): DecisionTreeRegressionModel = {
+=======
+  override def setSeed(value: Long): this.type = super.setSeed(value)
+
+  override protected def train(dataset: DataFrame): DecisionTreeRegressionModel = {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val categoricalFeatures: Map[Int, Int] =
       MetadataUtils.getCategoricalFeatures(dataset.schema($(featuresCol)))
     val oldDataset: RDD[LabeledPoint] = extractLabeledPoints(dataset)
@@ -109,6 +115,7 @@ class DecisionTreeRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: S
     instr.logParams(params: _*)
 
     val trees = RandomForest.run(oldDataset, strategy, numTrees = 1, featureSubsetStrategy = "all",
+<<<<<<< HEAD
       seed = $(seed), instr = Some(instr), parentUID = Some(uid))
 
     val m = trees.head.asInstanceOf[DecisionTreeRegressionModel]
@@ -128,6 +135,10 @@ class DecisionTreeRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: S
     val m = trees.head.asInstanceOf[DecisionTreeRegressionModel]
     instr.logSuccess(m)
     m
+=======
+      seed = $(seed), parentUID = Some(uid))
+    trees.head.asInstanceOf[DecisionTreeRegressionModel]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /** (private[ml]) Create a Strategy instance to use with the old API. */

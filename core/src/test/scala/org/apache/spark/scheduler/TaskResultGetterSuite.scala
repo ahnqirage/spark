@@ -17,7 +17,11 @@
 
 package org.apache.spark.scheduler
 
+<<<<<<< HEAD
 import java.io.{File, ObjectInputStream}
+=======
+import java.io.File
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.net.URL
 import java.nio.ByteBuffer
 
@@ -34,10 +38,16 @@ import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.Eventually._
 
 import org.apache.spark._
+<<<<<<< HEAD
 import org.apache.spark.TestUtils.JavaSourceFromString
 import org.apache.spark.storage.TaskResultBlockId
 import org.apache.spark.util.{MutableURLClassLoader, RpcUtils, Utils}
 
+=======
+import org.apache.spark.storage.TaskResultBlockId
+import org.apache.spark.TestUtils.JavaSourceFromString
+import org.apache.spark.util.{MutableURLClassLoader, Utils}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Removes the TaskResult from the BlockManager before delegating to a normal TaskResultGetter.
@@ -171,7 +181,11 @@ class TaskResultGetterSuite extends SparkFunSuite with BeforeAndAfter with Local
     val tempDir = Utils.createTempDir()
     val srcDir = new File(tempDir, "repro/")
     srcDir.mkdirs()
+<<<<<<< HEAD
     val excSource = new JavaSourceFromString(new File(srcDir, "MyException").toURI.getPath,
+=======
+    val excSource = new JavaSourceFromString(new File(srcDir, "MyException").getAbsolutePath,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       """package repro;
         |
         |public class MyException extends Exception {
@@ -183,9 +197,15 @@ class TaskResultGetterSuite extends SparkFunSuite with BeforeAndAfter with Local
 
     // ensure we reset the classloader after the test completes
     val originalClassLoader = Thread.currentThread.getContextClassLoader
+<<<<<<< HEAD
     val loader = new MutableURLClassLoader(new Array[URL](0), originalClassLoader)
     Utils.tryWithSafeFinally {
       // load the exception from the jar
+=======
+    try {
+      // load the exception from the jar
+      val loader = new MutableURLClassLoader(new Array[URL](0), originalClassLoader)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       loader.addURL(jarFile.toURI.toURL)
       Thread.currentThread().setContextClassLoader(loader)
       val excClass: Class[_] = Utils.classForName("repro.MyException")
@@ -209,6 +229,7 @@ class TaskResultGetterSuite extends SparkFunSuite with BeforeAndAfter with Local
 
       assert(expectedFailure.findFirstMatchIn(exceptionMessage).isDefined)
       assert(unknownFailure.findFirstMatchIn(exceptionMessage).isEmpty)
+<<<<<<< HEAD
     } {
       Thread.currentThread.setContextClassLoader(originalClassLoader)
       loader.close()
@@ -267,5 +288,11 @@ private class UndeserializableException extends Exception {
   private def readObject(in: ObjectInputStream): Unit = {
     throw new NoClassDefFoundError()
   }
+=======
+    } finally {
+      Thread.currentThread.setContextClassLoader(originalClassLoader)
+    }
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 

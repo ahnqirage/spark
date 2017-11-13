@@ -942,6 +942,22 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
     }
   }
 
+  test("unionAll should union DataFrames with UDTs (SPARK-13410)") {
+    val rowRDD1 = sparkContext.parallelize(Seq(Row(1, new ExamplePoint(1.0, 2.0))))
+    val schema1 = StructType(Array(StructField("label", IntegerType, false),
+      StructField("point", new ExamplePointUDT(), false)))
+    val rowRDD2 = sparkContext.parallelize(Seq(Row(2, new ExamplePoint(3.0, 4.0))))
+    val schema2 = StructType(Array(StructField("label", IntegerType, false),
+      StructField("point", new ExamplePointUDT(), false)))
+    val df1 = sqlContext.createDataFrame(rowRDD1, schema1)
+    val df2 = sqlContext.createDataFrame(rowRDD2, schema2)
+
+    checkAnswer(
+      df1.unionAll(df2).orderBy("label"),
+      Seq(Row(1, new ExamplePoint(1.0, 2.0)), Row(2, new ExamplePoint(3.0, 4.0)))
+    )
+  }
+
   ignore("show") {
     // This test case is intended ignored, but to make sure it compiles correctly
     testData.select($"*").show()
@@ -1077,6 +1093,7 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
     assert(df.showString(10) === expectedAnswer)
   }
 
+<<<<<<< HEAD
   test("showString: array, vertical = true") {
     val df = Seq(
       (Array(1, 2, 3), Array(1, 2, 3)),
@@ -1095,6 +1112,12 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
     val df = Seq(
       ("12".getBytes(StandardCharsets.UTF_8), "ABC.".getBytes(StandardCharsets.UTF_8)),
       ("34".getBytes(StandardCharsets.UTF_8), "12346".getBytes(StandardCharsets.UTF_8))
+=======
+  test("showString: binary") {
+    val df = Seq(
+      ("12".getBytes, "ABC.".getBytes),
+      ("34".getBytes, "12346".getBytes)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     ).toDF()
     val expectedAnswer = """+-------+----------------+
                            ||     _1|              _2|
@@ -1106,6 +1129,7 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
     assert(df.showString(10) === expectedAnswer)
   }
 
+<<<<<<< HEAD
   test("showString: binary, vertical = true") {
     val df = Seq(
       ("12".getBytes(StandardCharsets.UTF_8), "ABC.".getBytes(StandardCharsets.UTF_8)),
@@ -1120,6 +1144,8 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
     assert(df.showString(10, vertical = true) === expectedAnswer)
   }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("showString: minimum column width") {
     val df = Seq(
       (1, 1),
@@ -1231,7 +1257,11 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
   }
 
   test("SPARK-6899: type should match when using codegen") {
+<<<<<<< HEAD
     checkAnswer(decimalData.agg(avg('a)), Row(new java.math.BigDecimal(2)))
+=======
+    checkAnswer(decimalData.agg(avg('a)), Row(new java.math.BigDecimal(2.0)))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("SPARK-7133: Implement struct, array, and map field accessor") {
@@ -1468,7 +1498,11 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
       val dir2 = new File(dir, "dir2").getCanonicalPath
       df2.write.format("json").save(dir2)
 
+<<<<<<< HEAD
       checkAnswer(spark.read.format("json").load(dir1, dir2),
+=======
+      checkAnswer(sqlContext.read.format("json").load(dir1, dir2),
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Row(1, 22) :: Row(2, 23) :: Nil)
 
       checkAnswer(spark.read.format("json").load(dir1),
@@ -1560,8 +1594,14 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
   test("SPARK-11301: fix case sensitivity for filter on partitioned columns") {
     withSQLConf(SQLConf.CASE_SENSITIVE.key -> "false") {
       withTempPath { path =>
+<<<<<<< HEAD
         Seq(2012 -> "a").toDF("year", "val").write.partitionBy("year").parquet(path.getAbsolutePath)
         val df = spark.read.parquet(path.getAbsolutePath)
+=======
+        Seq(2012 -> "a", 1999 -> "b").toDF("year", "val").write.partitionBy("year")
+          .parquet(path.getAbsolutePath)
+        val df = sqlContext.read.parquet(path.getAbsolutePath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         checkAnswer(df.filter($"yEAr" > 2000).select($"val"), Row("a"))
       }
     }
@@ -2102,5 +2142,58 @@ class DataFrameSuite extends QueryTest with SharedSQLContext {
     checkAnswer(
       testData2.select(lit(7), 'a, 'b).orderBy(lit(1), lit(2), lit(3)),
       Seq(Row(7, 1, 1), Row(7, 1, 2), Row(7, 2, 1), Row(7, 2, 2), Row(7, 3, 1), Row(7, 3, 2)))
+  }
+
+  // This test case is to verify a bug when making a new instance of LogicalRDD.
+  test("SPARK-11633: LogicalRDD throws TreeNode Exception: Failed to Copy Node") {
+    withSQLConf(SQLConf.CASE_SENSITIVE.key -> "false") {
+      val rdd = sparkContext.makeRDD(Seq(Row(1, 3), Row(2, 1)))
+      val df = sqlContext.createDataFrame(
+        rdd,
+        new StructType().add("f1", IntegerType).add("f2", IntegerType),
+        needsConversion = false).select($"F1", $"f2".as("f2"))
+      val df1 = df.as("a")
+      val df2 = df.as("b")
+      checkAnswer(df1.join(df2, $"a.f2" === $"b.f2"), Row(1, 3, 1, 3) :: Row(2, 1, 2, 1) :: Nil)
+    }
+  }
+
+  test("SPARK-10656: completely support special chars") {
+    val df = Seq(1 -> "a").toDF("i_$.a", "d^'a.")
+    checkAnswer(df.select(df("*")), Row(1, "a"))
+    checkAnswer(df.withColumnRenamed("d^'a.", "a"), Row(1, "a"))
+  }
+
+  test("SPARK-11725: correctly handle null inputs for ScalaUDF") {
+    val df = sparkContext.parallelize(Seq(
+      new java.lang.Integer(22) -> "John",
+      null.asInstanceOf[java.lang.Integer] -> "Lucy")).toDF("age", "name")
+
+    // passing null into the UDF that could handle it
+    val boxedUDF = udf[java.lang.Integer, java.lang.Integer] {
+      (i: java.lang.Integer) => if (i == null) -10 else null
+    }
+    checkAnswer(df.select(boxedUDF($"age")), Row(null) :: Row(-10) :: Nil)
+
+    sqlContext.udf.register("boxedUDF",
+      (i: java.lang.Integer) => (if (i == null) -10 else null): java.lang.Integer)
+    checkAnswer(sql("select boxedUDF(null), boxedUDF(-1)"), Row(-10, null) :: Nil)
+
+    val primitiveUDF = udf((i: Int) => i * 2)
+    checkAnswer(df.select(primitiveUDF($"age")), Row(44) :: Row(null) :: Nil)
+  }
+
+  test("SPARK-12841: cast in filter") {
+    checkAnswer(
+      Seq(1 -> "a").toDF("i", "j").filter($"i".cast(StringType) === "1"),
+      Row(1, "a"))
+  }
+
+  test("SPARK-16664: persist with more than 200 columns") {
+    val size = 201L
+    val rdd = sparkContext.makeRDD(Seq(Row.fromSeq(0L to size)))
+    val schema = (0L to size).map(i => StructField("name" + i, LongType, true))
+    val df = sqlContext.createDataFrame(rdd, StructType(schema))
+    assert(df.persist.take(1).apply(0).toSeq(100).asInstanceOf[Long] == 100)
   }
 }

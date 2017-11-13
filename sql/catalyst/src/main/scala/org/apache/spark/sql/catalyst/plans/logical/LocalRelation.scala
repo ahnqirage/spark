@@ -18,9 +18,15 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import org.apache.spark.sql.Row
+<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.catalyst.analysis
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Literal}
+=======
+import org.apache.spark.sql.catalyst.analysis.EliminateSubQueries
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow, analysis}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types.{StructField, StructType}
 
 object LocalRelation {
@@ -61,11 +67,21 @@ case class LocalRelation(output: Seq[Attribute],
     LocalRelation(output.map(_.newInstance()), data, isStreaming).asInstanceOf[this.type]
   }
 
+<<<<<<< HEAD
   override protected def stringArgs: Iterator[Any] = {
     if (data.isEmpty) {
       Iterator("<empty>", output)
     } else {
       Iterator(output)
+=======
+  override protected def stringArgs = Iterator(output)
+
+  override def sameResult(plan: LogicalPlan): Boolean = {
+    EliminateSubQueries(plan) match {
+      case LocalRelation(otherOutput, otherData) =>
+        otherOutput.map(_.dataType) == output.map(_.dataType) && otherData == data
+      case _ => false
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

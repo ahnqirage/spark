@@ -23,15 +23,22 @@ import org.apache.spark.{SparkException, SparkFunSuite}
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+<<<<<<< HEAD
 import org.apache.spark.ml.util.TestingUtils._
+=======
+import org.apache.spark.mllib.linalg.Vectors
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 class BucketizerSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new Bucketizer)
@@ -164,6 +171,7 @@ class BucketizerSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
       .setSplits(Array(0.1, 0.8, 0.9))
     testDefaultReadWrite(t)
   }
+<<<<<<< HEAD
 
   test("Bucket numeric features") {
     val splits = Array(-3.0, 0.0, 3.0)
@@ -187,6 +195,8 @@ class BucketizerSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
       }
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 private object BucketizerSuite extends SparkFunSuite {

@@ -330,7 +330,11 @@ class Params(Identifiable):
         Tests whether this instance contains a param with a given
         (string) name.
         """
+<<<<<<< HEAD
         if isinstance(paramName, basestring):
+=======
+        if isinstance(paramName, str):
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             p = getattr(self, paramName, None)
             return isinstance(p, Param)
         else:

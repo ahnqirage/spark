@@ -1,7 +1,12 @@
 ---
 layout: global
+<<<<<<< HEAD
 title: Extracting, transforming and selecting features
 displayTitle: Extracting, transforming and selecting features
+=======
+title: Extracting, transforming and selecting features - spark.ml
+displayTitle: Extracting, transforming and selecting features - spark.ml
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 This section covers algorithms for working with features, roughly divided into these groups:
@@ -109,7 +114,11 @@ the [IDF Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.IDF) for mor
 `Word2Vec` is an `Estimator` which takes sequences of words representing documents and trains a
 `Word2VecModel`. The model maps each word to a unique fixed-size vector. The `Word2VecModel`
 transforms each document into a vector using the average of all words in the document; this vector
+<<<<<<< HEAD
 can then be used as features for prediction, document similarity calculations, etc.
+=======
+can then be used for as features for prediction, document similarity calculations, etc.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 Please refer to the [MLlib user guide on Word2Vec](mllib-feature-extraction.html#word2vec) for more
 details.
 
@@ -571,6 +580,7 @@ Refer to the [DCT Java docs](api/java/org/apache/spark/ml/feature/DCT.html)
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaDCTExample.java %}
+<<<<<<< HEAD
 </div>
 
 <div data-lang="python" markdown="1">
@@ -579,14 +589,21 @@ Refer to the [DCT Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.DCT
 for more details on the API.
 
 {% include_example python/ml/dct_example.py %}
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>
 
 ## StringIndexer
 
 `StringIndexer` encodes a string column of labels to a column of label indices.
+<<<<<<< HEAD
 The indices are in `[0, numLabels)`, ordered by label frequencies, so the most frequent label gets index `0`.
 The unseen labels will be put at index numLabels if user chooses to keep them.
+=======
+The indices are in `[0, numLabels)`, ordered by label frequencies.
+So the most frequent label gets index `0`.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 If the input column is numeric, we cast it to string and index the string
 values. When downstream pipeline components such as `Estimator` or
 `Transformer` make use of this string-indexed label, you must set the input
@@ -626,13 +643,20 @@ column, we should get the following:
 "a" gets index `0` because it is the most frequent, followed by "c" with index `1` and "b" with
 index `2`.
 
+<<<<<<< HEAD
 Additionally, there are three strategies regarding how `StringIndexer` will handle
+=======
+Additionaly, there are two strategies regarding how `StringIndexer` will handle
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 unseen labels when you have fit a `StringIndexer` on one dataset and then use it
 to transform another:
 
 - throw an exception (which is the default)
 - skip the row containing the unseen label entirely
+<<<<<<< HEAD
 - put unseen labels in a special additional bucket, at index numLabels
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 **Examples**
 
@@ -646,7 +670,10 @@ Let's go back to our previous example but this time reuse our previously defined
  1  | b
  2  | c
  3  | d
+<<<<<<< HEAD
  4  | e
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ~~~~
 
 If you've not set how `StringIndexer` handles unseen labels or set it to
@@ -662,6 +689,7 @@ will be generated:
  2  | c        | 1.0
 ~~~~
 
+<<<<<<< HEAD
 Notice that the rows containing "d" or "e" do not appear.
 
 If you call `setHandleInvalid("keep")`, the following dataset
@@ -678,6 +706,9 @@ will be generated:
 ~~~~
 
 Notice that the rows containing "d" or "e" are mapped to index "3.0"
+=======
+Notice that the row containing "d" does not appear.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div class="codetabs">
 
@@ -710,7 +741,11 @@ for more details on the API.
 ## IndexToString
 
 Symmetrically to `StringIndexer`, `IndexToString` maps a column of label indices
+<<<<<<< HEAD
 back to a column containing the original labels as strings. A common use case
+=======
+back to a column containing the original labels as strings. The common use case
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 is to produce indices from labels with `StringIndexer`, train a model with those
 indices and retrieve the original labels from the column of predicted indices
 with `IndexToString`. However, you are free to supply your own labels.
@@ -753,6 +788,7 @@ Refer to the [IndexToString Scala docs](api/scala/index.html#org.apache.spark.ml
 for more details on the API.
 
 {% include_example scala/org/apache/spark/examples/ml/IndexToStringExample.scala %}
+<<<<<<< HEAD
 
 </div>
 
@@ -787,6 +823,40 @@ for more details on the API.
 Refer to the [OneHotEncoder Scala docs](api/scala/index.html#org.apache.spark.ml.feature.OneHotEncoder)
 for more details on the API.
 
+=======
+
+</div>
+
+<div data-lang="java" markdown="1">
+
+Refer to the [IndexToString Java docs](api/java/org/apache/spark/ml/feature/IndexToString.html)
+for more details on the API.
+
+{% include_example java/org/apache/spark/examples/ml/JavaIndexToStringExample.java %}
+
+</div>
+
+<div data-lang="python" markdown="1">
+
+Refer to the [IndexToString Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.IndexToString)
+for more details on the API.
+
+{% include_example python/ml/index_to_string_example.py %}
+
+</div>
+</div>
+
+## OneHotEncoder
+
+[One-hot encoding](http://en.wikipedia.org/wiki/One-hot) maps a column of label indices to a column of binary vectors, with at most a single one-value. This encoding allows algorithms which expect continuous features, such as Logistic Regression, to use categorical features
+
+<div class="codetabs">
+<div data-lang="scala" markdown="1">
+
+Refer to the [OneHotEncoder Scala docs](api/scala/index.html#org.apache.spark.ml.feature.OneHotEncoder)
+for more details on the API.
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 {% include_example scala/org/apache/spark/examples/ml/OneHotEncoderExample.scala %}
 </div>
 
@@ -890,6 +960,7 @@ then `interactedCol` as the output column contains:
 Refer to the [Interaction Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Interaction)
 for more details on the API.
 
+<<<<<<< HEAD
 {% include_example scala/org/apache/spark/examples/ml/InteractionExample.scala %}
 </div>
 
@@ -903,9 +974,16 @@ for more details on the API.
 </div>
 
 ## Normalizer
+=======
+{% include_example scala/org/apache/spark/examples/ml/NormalizerExample.scala %}
+</div>
+
+<div data-lang="java" markdown="1">
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 `Normalizer` is a `Transformer` which transforms a dataset of `Vector` rows, normalizing each `Vector` to have unit norm.  It takes parameter `p`, which specifies the [p-norm](http://en.wikipedia.org/wiki/Norm_%28mathematics%29#p-norm) used for normalization.  ($p = 2$ by default.)  This normalization can help standardize your input data and improve the behavior of learning algorithms.
 
+<<<<<<< HEAD
 **Examples**
 
 The following example demonstrates how to load a dataset in libsvm format and then normalize each row to have unit $L^1$ norm and unit $L^\infty$ norm.
@@ -920,10 +998,17 @@ for more details on the API.
 </div>
 
 <div data-lang="java" markdown="1">
+=======
+{% include_example java/org/apache/spark/examples/ml/JavaNormalizerExample.java %}
+</div>
+
+<div data-lang="python" markdown="1">
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Refer to the [Normalizer Java docs](api/java/org/apache/spark/ml/feature/Normalizer.html)
 for more details on the API.
 
+<<<<<<< HEAD
 {% include_example java/org/apache/spark/examples/ml/JavaNormalizerExample.java %}
 </div>
 
@@ -932,6 +1017,8 @@ for more details on the API.
 Refer to the [Normalizer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.Normalizer)
 for more details on the API.
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 {% include_example python/ml/normalizer_example.py %}
 </div>
 </div>
@@ -1016,6 +1103,7 @@ and the [MinMaxScalerModel Java docs](api/java/org/apache/spark/ml/feature/MinMa
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaMinMaxScalerExample.java %}
+<<<<<<< HEAD
 </div>
 
 <div data-lang="python" markdown="1">
@@ -1025,6 +1113,8 @@ and the [MinMaxScalerModel Python docs](api/python/pyspark.ml.html#pyspark.ml.fe
 for more details on the API.
 
 {% include_example python/ml/min_max_scaler_example.py %}
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>
 
@@ -1049,6 +1139,7 @@ Refer to the [MaxAbsScaler Scala docs](api/scala/index.html#org.apache.spark.ml.
 and the [MaxAbsScalerModel Scala docs](api/scala/index.html#org.apache.spark.ml.feature.MaxAbsScalerModel)
 for more details on the API.
 
+<<<<<<< HEAD
 {% include_example scala/org/apache/spark/examples/ml/MaxAbsScalerExample.scala %}
 </div>
 
@@ -1062,11 +1153,18 @@ for more details on the API.
 </div>
 
 <div data-lang="python" markdown="1">
+=======
+{% include_example scala/org/apache/spark/examples/ml/BucketizerExample.scala %}
+</div>
+
+<div data-lang="java" markdown="1">
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Refer to the [MaxAbsScaler Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.MaxAbsScaler)
 and the [MaxAbsScalerModel Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.MaxAbsScalerModel)
 for more details on the API.
 
+<<<<<<< HEAD
 {% include_example python/ml/max_abs_scaler_example.py %}
 </div>
 </div>
@@ -1084,6 +1182,12 @@ Note also that the splits that you provided have to be in strictly increasing or
 More details can be found in the API docs for [Bucketizer](api/scala/index.html#org.apache.spark.ml.feature.Bucketizer).
 
 **Examples**
+=======
+{% include_example java/org/apache/spark/examples/ml/JavaBucketizerExample.java %}
+</div>
+
+<div data-lang="python" markdown="1">
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 The following example demonstrates how to bucketize a column of `Double`s into another index-wised column.
 
@@ -1093,6 +1197,7 @@ The following example demonstrates how to bucketize a column of `Double`s into a
 Refer to the [Bucketizer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Bucketizer)
 for more details on the API.
 
+<<<<<<< HEAD
 {% include_example scala/org/apache/spark/examples/ml/BucketizerExample.scala %}
 </div>
 
@@ -1109,6 +1214,8 @@ for more details on the API.
 Refer to the [Bucketizer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.Bucketizer)
 for more details on the API.
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 {% include_example python/ml/bucketizer_example.py %}
 </div>
 </div>
@@ -1162,6 +1269,7 @@ for more details on the API.
 {% include_example python/ml/elementwise_product_example.py %}
 </div>
 </div>
+<<<<<<< HEAD
 
 ## SQLTransformer
 
@@ -1197,6 +1305,43 @@ This is the output of the `SQLTransformer` with statement `"SELECT *, (v1 + v2) 
  2  | 2.0 | 5.0 | 7.0 |10.0
 ~~~~
 
+=======
+
+## SQLTransformer
+
+`SQLTransformer` implements the transformations which are defined by SQL statement.
+Currently we only support SQL syntax like `"SELECT ... FROM __THIS__ ..."`
+where `"__THIS__"` represents the underlying table of the input dataset.
+The select clause specifies the fields, constants, and expressions to display in
+the output, it can be any select clause that Spark SQL supports. Users can also
+use Spark SQL built-in function and UDFs to operate on these selected columns.
+For example, `SQLTransformer` supports statements like:
+
+* `SELECT a, a + b AS a_b FROM __THIS__`
+* `SELECT a, SQRT(b) AS b_sqrt FROM __THIS__ where a > 5`
+* `SELECT a, b, SUM(c) AS c_sum FROM __THIS__ GROUP BY a, b`
+
+**Examples**
+
+Assume that we have the following DataFrame with columns `id`, `v1` and `v2`:
+
+~~~~
+ id |  v1 |  v2
+----|-----|-----
+ 0  | 1.0 | 3.0  
+ 2  | 2.0 | 5.0
+~~~~
+
+This is the output of the `SQLTransformer` with statement `"SELECT *, (v1 + v2) AS v3, (v1 * v2) AS v4 FROM __THIS__"`:
+
+~~~~
+ id |  v1 |  v2 |  v3 |  v4
+----|-----|-----|-----|-----
+ 0  | 1.0 | 3.0 | 4.0 | 3.0
+ 2  | 2.0 | 5.0 | 7.0 |10.0
+~~~~
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 <div class="codetabs">
 <div data-lang="scala" markdown="1">
 
@@ -1204,6 +1349,7 @@ Refer to the [SQLTransformer Scala docs](api/scala/index.html#org.apache.spark.m
 for more details on the API.
 
 {% include_example scala/org/apache/spark/examples/ml/SQLTransformerExample.scala %}
+<<<<<<< HEAD
 </div>
 
 <div data-lang="java" markdown="1">
@@ -1214,6 +1360,18 @@ for more details on the API.
 {% include_example java/org/apache/spark/examples/ml/JavaSQLTransformerExample.java %}
 </div>
 
+=======
+</div>
+
+<div data-lang="java" markdown="1">
+
+Refer to the [SQLTransformer Java docs](api/java/org/apache/spark/ml/feature/SQLTransformer.html)
+for more details on the API.
+
+{% include_example java/org/apache/spark/examples/ml/JavaSQLTransformerExample.java %}
+</div>
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 <div data-lang="python" markdown="1">
 
 Refer to the [SQLTransformer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.SQLTransformer) for more details on the API.
@@ -1273,6 +1431,7 @@ for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaVectorAssemblerExample.java %}
 </div>
+<<<<<<< HEAD
 
 <div data-lang="python" markdown="1">
 
@@ -1355,10 +1514,21 @@ Refer to the [QuantileDiscretizer Java docs](api/java/org/apache/spark/ml/featur
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaQuantileDiscretizerExample.java %}
-</div>
+=======
 
 <div data-lang="python" markdown="1">
 
+Refer to the [VectorAssembler Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.VectorAssembler)
+for more details on the API.
+
+{% include_example python/ml/vector_assembler_example.py %}
+</div>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+</div>
+
+## QuantileDiscretizer
+
+<<<<<<< HEAD
 Refer to the [QuantileDiscretizer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.QuantileDiscretizer)
 for more details on the API.
 
@@ -1405,11 +1575,57 @@ the relevant column.
  Double.NaN |     3.0    |  3.0  |  3.0 
      4.0    |     4.0    |  4.0  |  4.0
      5.0    |     5.0    |  5.0  |  5.0 
+=======
+`QuantileDiscretizer` takes a column with continuous features and outputs a column with binned
+categorical features.
+The bin ranges are chosen by taking a sample of the data and dividing it into roughly equal parts.
+The lower and upper bin bounds will be `-Infinity` and `+Infinity`, covering all real values.
+This attempts to find `numBuckets` partitions based on a sample of the given input data, but it may
+find fewer depending on the data sample values.
+
+Note that the result may be different every time you run it, since the sample strategy behind it is
+non-deterministic.
+
+**Examples**
+
+Assume that we have a DataFrame with the columns `id`, `hour`:
+
+~~~
+ id | hour
+----|------
+ 0  | 18.0
+----|------
+ 1  | 19.0
+----|------
+ 2  | 8.0
+----|------
+ 3  | 5.0
+----|------
+ 4  | 2.2
+~~~
+
+`hour` is a continuous feature with `Double` type. We want to turn the continuous feature into
+categorical one. Given `numBuckets = 3`, we should get the following DataFrame:
+
+~~~
+ id | hour | result
+----|------|------
+ 0  | 18.0 | 2.0
+----|------|------
+ 1  | 19.0 | 2.0
+----|------|------
+ 2  | 8.0  | 1.0
+----|------|------
+ 3  | 5.0  | 1.0
+----|------|------
+ 4  | 2.2  | 0.0
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ~~~
 
 <div class="codetabs">
 <div data-lang="scala" markdown="1">
 
+<<<<<<< HEAD
 Refer to the [Imputer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Imputer)
 for more details on the API.
 
@@ -1430,6 +1646,20 @@ Refer to the [Imputer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature
 for more details on the API.
 
 {% include_example python/ml/imputer_example.py %}
+=======
+Refer to the [QuantileDiscretizer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.QuantileDiscretizer)
+for more details on the API.
+
+{% include_example scala/org/apache/spark/examples/ml/QuantileDiscretizerExample.scala %}
+</div>
+
+<div data-lang="java" markdown="1">
+
+Refer to the [QuantileDiscretizer Java docs](api/java/org/apache/spark/ml/feature/QuantileDiscretizer.html)
+for more details on the API.
+
+{% include_example java/org/apache/spark/examples/ml/JavaQuantileDiscretizerExample.java %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>
 
@@ -1440,12 +1670,20 @@ for more details on the API.
 `VectorSlicer` is a transformer that takes a feature vector and outputs a new feature vector with a
 sub-array of the original features. It is useful for extracting features from a vector column.
 
+<<<<<<< HEAD
 `VectorSlicer` accepts a vector column with specified indices, then outputs a new vector column
+=======
+`VectorSlicer` accepts a vector column with a specified indices, then outputs a new vector column
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 whose values are selected via those indices. There are two types of indices,
 
  1. Integer indices that represent the indices into the vector, `setIndices()`.
 
+<<<<<<< HEAD
  2. String indices that represent the names of features into the vector, `setNames()`.
+=======
+ 2. String indices that represents the names of features into the vector, `setNames()`.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  *This requires the vector column to have an `AttributeGroup` since the implementation matches on
  the name field of an `Attribute`.*
 
@@ -1478,7 +1716,11 @@ column named `features`:
  [0.0, 10.0, 0.5] | [10.0, 0.5]
 ~~~
 
+<<<<<<< HEAD
 Suppose also that we have potential input attributes for the `userFeatures`, i.e.
+=======
+Suppose also that we have a potential input attributes for the `userFeatures`, i.e.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 `["f1", "f2", "f3"]`, then we can use `setNames("f2", "f3")` to select them.
 
 ~~~
@@ -1504,6 +1746,7 @@ for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaVectorSlicerExample.java %}
 </div>
+<<<<<<< HEAD
 
 <div data-lang="python" markdown="1">
 
@@ -1527,6 +1770,9 @@ The basic operators are:
 * `.` all columns except target
 
 Suppose `a` and `b` are double columns, we use the following simple examples to illustrate the effect of `RFormula`:
+=======
+</div>
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 * `y ~ a + b` means model `y ~ w0 + w1 * a + w2 * b` where `w0` is the intercept and `w1, w2` are coefficients.
 * `y ~ a + b + a:b - 1` means model `y ~ w1 * a + w2 * b + w3 * a * b` where `w1, w2, w3` are coefficients.
@@ -1588,6 +1834,7 @@ for more details on the API.
 ## ChiSqSelector
 
 `ChiSqSelector` stands for Chi-Squared feature selection. It operates on labeled data with
+<<<<<<< HEAD
 categorical features. ChiSqSelector uses the
 [Chi-Squared test of independence](https://en.wikipedia.org/wiki/Chi-squared_test) to decide which
 features to choose. It supports five selection methods: `numTopFeatures`, `percentile`, `fpr`, `fdr`, `fwe`:
@@ -1598,6 +1845,12 @@ features to choose. It supports five selection methods: `numTopFeatures`, `perce
 * `fwe` chooses all features whose p-values are below a threshold. The threshold is scaled by 1/numFeatures, thus controlling the family-wise error rate of selection.
 By default, the selection method is `numTopFeatures`, with the default number of top features set to 50.
 The user can choose a selection method using `setSelectorType`.
+=======
+categorical features. ChiSqSelector orders features based on a
+[Chi-Squared test of independence](https://en.wikipedia.org/wiki/Chi-squared_test)
+from the class, and then filters (selects) the top features which the class label depends on the
+most. This is akin to yielding the features with the most predictive power.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 **Examples**
 
@@ -1612,8 +1865,13 @@ id | features              | clicked
  9 | [1.0, 0.0, 15.0, 0.1] | 0.0
 ~~~
 
+<<<<<<< HEAD
 If we use `ChiSqSelector` with `numTopFeatures = 1`, then according to our label `clicked` the
 last column in our `features` is chosen as the most useful feature:
+=======
+If we use `ChiSqSelector` with a `numTopFeatures = 1`, then according to our label `clicked` the
+last column in our `features` chosen as the most useful feature:
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 ~~~
 id | features              | clicked | selectedFeatures
@@ -1638,6 +1896,7 @@ Refer to the [ChiSqSelector Java docs](api/java/org/apache/spark/ml/feature/ChiS
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaChiSqSelectorExample.java %}
+<<<<<<< HEAD
 </div>
 
 <div data-lang="python" markdown="1">
@@ -1773,5 +2032,7 @@ Refer to the [MinHashLSH Python docs](api/python/pyspark.ml.html#pyspark.ml.feat
 for more details on the API.
 
 {% include_example python/ml/min_hash_lsh_example.py %}
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>

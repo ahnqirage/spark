@@ -154,6 +154,7 @@ can find the results of the driver from the Mesos Web UI.
 To use cluster mode, you must start the `MesosClusterDispatcher` in your cluster via the `sbin/start-mesos-dispatcher.sh` script,
 passing in the Mesos master URL (e.g: mesos://host:5050). This starts the `MesosClusterDispatcher` as a daemon running on the host.
 
+<<<<<<< HEAD
 By setting the Mesos proxy config property (requires mesos version >= 1.4), `--conf spark.mesos.proxy.baseURL=http://localhost:5050` when launching the dispacther, the mesos sandbox URI for each driver is added to the mesos dispatcher UI.
 
 If you like to run the `MesosClusterDispatcher` with Marathon, you need to run the `MesosClusterDispatcher` in the foreground (i.e: `bin/spark-class org.apache.spark.deploy.mesos.MesosClusterDispatcher`). Note that the `MesosClusterDispatcher` not yet supports multiple instances for HA.
@@ -250,14 +251,71 @@ terminate when they're idle.
 
 To run in fine-grained mode, set the `spark.mesos.coarse` property to false in your
 [SparkConf](configuration.html#spark-properties):
+=======
+If you like to run the `MesosClusterDispatcher` with Marathon, you need to run the `MesosClusterDispatcher` in the foreground (i.e: `bin/spark-class org.apache.spark.deploy.mesos.MesosClusterDispatcher`).
+
+From the client, you can submit a job to Mesos cluster by running `spark-submit` and specifying the master URL
+to the URL of the `MesosClusterDispatcher` (e.g: mesos://dispatcher:7077). You can view driver statuses on the
+Spark cluster Web UI.
+
+For example:
+{% highlight bash %}
+./bin/spark-submit \
+  --class org.apache.spark.examples.SparkPi \
+  --master mesos://207.184.161.138:7077 \
+  --deploy-mode cluster
+  --supervise
+  --executor-memory 20G \
+  --total-executor-cores 100 \
+  http://path/to/examples.jar \
+  1000
+{% endhighlight %}
+
+
+Note that jars or python files that are passed to spark-submit should be URIs reachable by Mesos slaves, as the Spark driver doesn't automatically upload local jars.
+
+# Mesos Run Modes
+
+Spark can run over Mesos in two modes: "coarse-grained" (default) and "fine-grained".
+
+The "coarse-grained" mode will launch only *one* long-running Spark task on each Mesos
+machine, and dynamically schedule its own "mini-tasks" within it. The benefit is much lower startup
+overhead, but at the cost of reserving the Mesos resources for the complete duration of the
+application.
+
+Coarse-grained is the default mode. You can also set `spark.mesos.coarse` property to true
+to turn it on explictly in [SparkConf](configuration.html#spark-properties):
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% highlight scala %}
 conf.set("spark.mesos.coarse", "false")
 {% endhighlight %}
 
+<<<<<<< HEAD
 You may also make use of `spark.mesos.constraints` to set
 attribute-based constraints on Mesos resource offers. By default, all
 resource offers will be accepted.
+=======
+In addition, for coarse-grained mode, you can control the maximum number of resources Spark will
+acquire. By default, it will acquire *all* cores in the cluster (that get offered by Mesos), which
+only makes sense if you run just one application at a time. You can cap the maximum number of cores
+using `conf.set("spark.cores.max", "10")` (for example).
+
+In "fine-grained" mode, each Spark task runs as a separate Mesos task. This allows
+multiple instances of Spark (and other frameworks) to share machines at a very fine granularity,
+where each application gets more or fewer machines as it ramps up and down, but it comes with an
+additional overhead in launching each task. This mode may be inappropriate for low-latency
+requirements like interactive queries or serving web requests.
+
+To run in fine-grained mode, set the `spark.mesos.coarse` property to false in your
+[SparkConf](configuration.html#spark-properties):
+
+{% highlight scala %}
+conf.set("spark.mesos.coarse", "false")
+{% endhighlight %}
+
+You may also make use of `spark.mesos.constraints` to set attribute based constraints on mesos resource offers. By default, all resource offers will be accepted.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% highlight scala %}
 conf.set("spark.mesos.constraints", "os:centos7;us-east-1:false")
@@ -351,6 +409,7 @@ See the [configuration page](configuration.html) for information on Spark config
     image must have Spark installed, as well as a compatible version of the Mesos library.
     The installed path of Spark in the image can be specified with <code>spark.mesos.executor.home</code>;
     the installed path of the Mesos library can be specified with <code>spark.executorEnv.MESOS_NATIVE_JAVA_LIBRARY</code>.
+<<<<<<< HEAD
   </td>
 </tr>
 <tr>
@@ -369,6 +428,8 @@ See the [configuration page](configuration.html) for information on Spark config
     key/value pairs. Example:
 
     <pre>key1=val1,key2=val2,key3=val3</pre>
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   </td>
 </tr>
 <tr>

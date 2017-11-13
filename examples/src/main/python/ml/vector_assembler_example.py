@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.feature import VectorAssembler
@@ -44,3 +45,28 @@ if __name__ == "__main__":
     # $example off$
 
     spark.stop()
+=======
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+# $example on$
+from pyspark.mllib.linalg import Vectors
+from pyspark.ml.feature import VectorAssembler
+# $example off$
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="VectorAssemblerExample")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    dataset = sqlContext.createDataFrame(
+        [(0, 18, 1.0, Vectors.dense([0.0, 10.0, 0.5]), 1.0)],
+        ["id", "hour", "mobile", "userFeatures", "clicked"])
+    assembler = VectorAssembler(
+        inputCols=["hour", "mobile", "userFeatures"],
+        outputCol="features")
+    output = assembler.transform(dataset)
+    print(output.select("features", "clicked").first())
+    # $example off$
+
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

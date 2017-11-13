@@ -32,7 +32,11 @@ if __name__ == "__main__":
     data = MLUtils.loadLibSVMFile(sc, "data/mllib/sample_multiclass_classification_data.txt")
 
     # Split data into training (60%) and test (40%)
+<<<<<<< HEAD
     training, test = data.randomSplit([0.6, 0.4], seed=11)
+=======
+    training, test = data.randomSplit([0.6, 0.4], seed=11L)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     training.cache()
 
     # Run training algorithm to build the model

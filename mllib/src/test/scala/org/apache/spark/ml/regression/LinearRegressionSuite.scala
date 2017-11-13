@@ -21,18 +21,28 @@ import scala.util.Random
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.feature.Instance
+<<<<<<< HEAD
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.ml.param.{ParamMap, ParamsSuite}
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
+=======
+import org.apache.spark.ml.param.ParamsSuite
+import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.linalg.{Vector, DenseVector, Vectors}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.{LinearDataGenerator, MLlibTestSparkContext}
 import org.apache.spark.sql.{DataFrame, Row}
 
 class LinearRegressionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private val seed: Int = 42
   @transient var datasetWithDenseFeature: DataFrame = _
@@ -985,6 +995,7 @@ class LinearRegressionSuite
     }
     val lr = new LinearRegression()
     testEstimatorAndModelReadWrite(lr, datasetWithWeight, LinearRegressionSuite.allParamSettings,
+<<<<<<< HEAD
       LinearRegressionSuite.allParamSettings, checkModelData)
   }
 
@@ -997,6 +1008,9 @@ class LinearRegressionSuite
         assert(expected.coefficients === actual.coefficients)
       }
     }
+=======
+      checkModelData)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

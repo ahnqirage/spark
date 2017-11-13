@@ -17,7 +17,6 @@
 
 package org.apache.spark.ml.recommendation
 
-import java.io.File
 import java.util.Random
 
 import scala.collection.JavaConverters._
@@ -31,6 +30,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.TrueFileFilter
 import org.scalatest.BeforeAndAfterEach
 
+<<<<<<< HEAD
 import org.apache.spark._
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.linalg.Vectors
@@ -39,8 +39,16 @@ import org.apache.spark.ml.recommendation.ALS.Rating
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
 import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.mllib.recommendation.MatrixFactorizationModelSuite
+=======
+import org.apache.spark.util.Utils
+import org.apache.spark.{Logging, SparkException, SparkFunSuite}
+import org.apache.spark.ml.recommendation.ALS._
+import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+import org.apache.spark.mllib.linalg.Vectors
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.rdd.RDD
+<<<<<<< HEAD
 import org.apache.spark.scheduler.{SparkListener, SparkListenerStageCompleted}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions.lit
@@ -48,6 +56,11 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.Utils
 
+=======
+import org.apache.spark.sql.{DataFrame, Row}
+
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class ALSSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest with Logging {
 
@@ -564,6 +577,7 @@ class ALSSuite
   }
 
   test("read/write") {
+<<<<<<< HEAD
     val spark = this.spark
     import spark.implicits._
     import ALSSuite._
@@ -1022,6 +1036,43 @@ private class IntermediateRDDStorageListener extends SparkListener {
 }
 
 object ALSSuite extends Logging {
+=======
+    import ALSSuite._
+    val (ratings, _) = genExplicitTestData(numUsers = 4, numItems = 4, rank = 1)
+    val als = new ALS()
+    allEstimatorParamSettings.foreach { case (p, v) =>
+      als.set(als.getParam(p), v)
+    }
+    val sqlContext = this.sqlContext
+    import sqlContext.implicits._
+    val model = als.fit(ratings.toDF())
+
+    // Test Estimator save/load
+    val als2 = testDefaultReadWrite(als)
+    allEstimatorParamSettings.foreach { case (p, v) =>
+      val param = als.getParam(p)
+      assert(als.get(param).get === als2.get(param).get)
+    }
+
+    // Test Model save/load
+    val model2 = testDefaultReadWrite(model)
+    allModelParamSettings.foreach { case (p, v) =>
+      val param = model.getParam(p)
+      assert(model.get(param).get === model2.get(param).get)
+    }
+    assert(model.rank === model2.rank)
+    def getFactors(df: DataFrame): Set[(Int, Array[Float])] = {
+      df.select("id", "features").collect().map { case r =>
+        (r.getInt(0), r.getAs[Array[Float]](1))
+      }.toSet
+    }
+    assert(getFactors(model.userFactors) === getFactors(model2.userFactors))
+    assert(getFactors(model.itemFactors) === getFactors(model2.itemFactors))
+  }
+}
+
+object ALSSuite {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Mapping from all Params to valid settings which differ from the defaults.
@@ -1046,6 +1097,7 @@ object ALSSuite extends Logging {
     "implicitPrefs" -> true,
     "alpha" -> 0.9,
     "nonnegative" -> true,
+<<<<<<< HEAD
     "checkpointInterval" -> 20,
     "intermediateStorageLevel" -> "MEMORY_ONLY",
     "finalStorageLevel" -> "MEMORY_AND_DISK_SER"
@@ -1128,4 +1180,8 @@ object ALSSuite extends Logging {
       s"and ${test.size} for test.")
     (sc.parallelize(training, 2), sc.parallelize(test, 2))
   }
+=======
+    "checkpointInterval" -> 20
+  )
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

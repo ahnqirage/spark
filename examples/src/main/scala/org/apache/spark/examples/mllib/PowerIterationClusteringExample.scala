@@ -91,7 +91,10 @@ object PowerIterationClusteringExample {
 
     Logger.getRootLogger.setLevel(Level.WARN)
 
+<<<<<<< HEAD
     // $example on$
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val circlesRdd = generateCirclesRdd(sc, params.k, params.numPoints)
     val model = new PowerIterationClustering()
       .setK(params.k)
@@ -103,8 +106,13 @@ object PowerIterationClusteringExample {
     val assignments = clusters.toList.sortBy { case (k, v) => v.length }
     val assignmentsStr = assignments
       .map { case (k, v) =>
+<<<<<<< HEAD
         s"$k -> ${v.sorted.mkString("[", ",", "]")}"
       }.mkString(", ")
+=======
+      s"$k -> ${v.sorted.mkString("[", ",", "]")}"
+    }.mkString(", ")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val sizesStr = assignments.map {
       _._2.length
     }.sorted.mkString("(", ",", ")")

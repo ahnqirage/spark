@@ -143,8 +143,13 @@ class DatasetPrimitiveSuite extends QueryTest with SharedSQLContext {
 
   test("foreach") {
     val ds = Seq(1, 2, 3).toDS()
+<<<<<<< HEAD
     val acc = sparkContext.longAccumulator
     ds.foreach(acc.add(_))
+=======
+    val acc = sparkContext.accumulator(0)
+    ds.foreach(acc += _)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(acc.value == 6)
   }
 
@@ -183,15 +188,23 @@ class DatasetPrimitiveSuite extends QueryTest with SharedSQLContext {
 
   test("groupBy function, flatMap") {
     val ds = Seq("a", "b", "c", "xyz", "hello").toDS()
+<<<<<<< HEAD
     val grouped = ds.groupByKey(_.length)
     val agged = grouped.flatMapGroups { case (g, iter) => Iterator(g.toString, iter.mkString) }
 
     checkDatasetUnorderly(
+=======
+    val grouped = ds.groupBy(_.length)
+    val agged = grouped.flatMapGroups { case (g, iter) => Iterator(g.toString, iter.mkString) }
+
+    checkAnswer(
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       agged,
       "1", "abc", "3", "xyz", "5", "hello")
   }
 
   test("Arrays and Lists") {
+<<<<<<< HEAD
     checkDataset(Seq(Seq(1)).toDS(), Seq(1))
     checkDataset(Seq(Seq(1.toLong)).toDS(), Seq(1.toLong))
     checkDataset(Seq(Seq(1.toDouble)).toDS(), Seq(1.toDouble))
@@ -392,5 +405,26 @@ class DatasetPrimitiveSuite extends QueryTest with SharedSQLContext {
     val data = Seq.tabulate(10)(i => NestedData(1, Map("key" -> InnerData("name", i + 100))))
     val ds = spark.createDataset(data)
     checkDataset(ds, data: _*)
+=======
+    checkAnswer(Seq(Seq(1)).toDS(), Seq(1))
+    checkAnswer(Seq(Seq(1.toLong)).toDS(), Seq(1.toLong))
+    checkAnswer(Seq(Seq(1.toDouble)).toDS(), Seq(1.toDouble))
+    checkAnswer(Seq(Seq(1.toFloat)).toDS(), Seq(1.toFloat))
+    checkAnswer(Seq(Seq(1.toByte)).toDS(), Seq(1.toByte))
+    checkAnswer(Seq(Seq(1.toShort)).toDS(), Seq(1.toShort))
+    checkAnswer(Seq(Seq(true)).toDS(), Seq(true))
+    checkAnswer(Seq(Seq("test")).toDS(), Seq("test"))
+    checkAnswer(Seq(Seq(Tuple1(1))).toDS(), Seq(Tuple1(1)))
+
+    checkAnswer(Seq(Array(1)).toDS(), Array(1))
+    checkAnswer(Seq(Array(1.toLong)).toDS(), Array(1.toLong))
+    checkAnswer(Seq(Array(1.toDouble)).toDS(), Array(1.toDouble))
+    checkAnswer(Seq(Array(1.toFloat)).toDS(), Array(1.toFloat))
+    checkAnswer(Seq(Array(1.toByte)).toDS(), Array(1.toByte))
+    checkAnswer(Seq(Array(1.toShort)).toDS(), Array(1.toShort))
+    checkAnswer(Seq(Array(true)).toDS(), Array(true))
+    checkAnswer(Seq(Array("test")).toDS(), Array("test"))
+    checkAnswer(Seq(Array(Tuple1(1))).toDS(), Array(Tuple1(1)))
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

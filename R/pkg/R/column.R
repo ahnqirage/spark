@@ -70,7 +70,11 @@ operators <- list(
   "&" = "and", "|" = "or", "^" = "pow"
 )
 column_functions1 <- c("asc", "desc", "isNaN", "isNull", "isNotNull")
+<<<<<<< HEAD
 column_functions2 <- c("like", "rlike", "getField", "getItem", "contains")
+=======
+column_functions2 <- c("like", "rlike", "startsWith", "endsWith", "getField", "getItem", "contains")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 createOperator <- function(op) {
   setMethod(op,
@@ -287,7 +291,11 @@ setMethod("%in%",
 #' otherwise
 #'
 #' If values in the specified column are null, returns the value.
+<<<<<<< HEAD
 #' Can be used in conjunction with \code{when} to specify a default value for expressions.
+=======
+#' Can be used in conjunction with `when` to specify a default value for expressions.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param x a Column.
 #' @param value value to replace when the corresponding entry in \code{x} is NA.

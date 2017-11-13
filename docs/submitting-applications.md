@@ -58,8 +58,12 @@ for applications that involve the REPL (e.g. Spark shell).
 
 Alternatively, if your application is submitted from a machine far from the worker machines (e.g.
 locally on your laptop), it is common to use `cluster` mode to minimize network latency between
+<<<<<<< HEAD
 the drivers and the executors. Currently, standalone mode does not support cluster mode for Python
 applications.
+=======
+the drivers and the executors. Currently only YARN supports cluster mode for Python applications.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 For Python applications, simply pass a `.py` file in the place of `<application-jar>` instead of a JAR,
 and add Python `.zip`, `.egg` or `.py` files to the search path with `--py-files`.

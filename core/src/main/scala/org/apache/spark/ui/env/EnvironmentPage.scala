@@ -27,12 +27,21 @@ import org.apache.spark.util.Utils
 private[ui] class EnvironmentPage(parent: EnvironmentTab) extends WebUIPage("") {
   private val listener = parent.listener
 
+  private def removePass(kv: (String, String)): (String, String) = {
+    if (kv._1.toLowerCase.contains("password")) (kv._1, "******") else kv
+  }
+
   def render(request: HttpServletRequest): Seq[Node] = {
     val runtimeInformationTable = UIUtils.listingTable(
       propertyHeader, jvmRow, listener.jvmInformation, fixedWidth = true)
+<<<<<<< HEAD
     val sparkPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
       Utils.redact(parent.conf, listener.sparkProperties), fixedWidth = true)
 
+=======
+    val sparkPropertiesTable = UIUtils.listingTable(
+      propertyHeader, propertyRow, listener.sparkProperties.map(removePass), fixedWidth = true)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val systemPropertiesTable = UIUtils.listingTable(
       propertyHeader, propertyRow, listener.systemProperties, fixedWidth = true)
     val classpathEntriesTable = UIUtils.listingTable(

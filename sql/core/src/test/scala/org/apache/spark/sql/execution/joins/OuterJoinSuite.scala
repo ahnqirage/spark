@@ -76,6 +76,7 @@ class OuterJoinSuite extends SparkPlanTest with SharedSQLContext {
       ExtractEquiJoinKeys.unapply(join)
     }
 
+<<<<<<< HEAD
     if (joinType != FullOuter) {
       test(s"$testName using ShuffledHashJoin") {
         extractJoinParts().foreach { case (_, leftKeys, rightKeys, boundCondition, _, _) =>
@@ -92,6 +93,8 @@ class OuterJoinSuite extends SparkPlanTest with SharedSQLContext {
       }
     }
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     if (joinType != FullOuter) {
       test(s"$testName using BroadcastHashJoin") {
         val buildSide = joinType match {

@@ -17,6 +17,10 @@
 
 package org.apache.spark.streaming.ui
 
+import scala.xml.Node
+
+import org.apache.commons.lang3.StringEscapeUtils
+
 import java.text.SimpleDateFormat
 import java.util.{Locale, TimeZone}
 import java.util.concurrent.TimeUnit
@@ -138,7 +142,11 @@ private[streaming] object UIUtils {
     } else {
       var nextLineIndex = failure.indexOf("\n")
       if (nextLineIndex < 0) {
+<<<<<<< HEAD
         nextLineIndex = failure.length
+=======
+        nextLineIndex = failure.size
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       val firstLine = failure.substring(0, nextLineIndex)
       s"Failed due to error: $firstLine\n$failure"

@@ -17,16 +17,27 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
 // $example on$
 import org.apache.spark.ml.classification.LogisticRegression;
 import org.apache.spark.ml.classification.LogisticRegressionModel;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+// $example on$
+import org.apache.spark.ml.classification.LogisticRegression;
+import org.apache.spark.ml.classification.LogisticRegressionModel;
+import org.apache.spark.sql.DataFrame;
+import org.apache.spark.sql.SQLContext;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example off$
 
 public class JavaLogisticRegressionWithElasticNetExample {
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaLogisticRegressionWithElasticNetExample")
@@ -35,6 +46,15 @@ public class JavaLogisticRegressionWithElasticNetExample {
     // $example on$
     // Load training data
     Dataset<Row> training = spark.read().format("libsvm")
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaLogisticRegressionWithElasticNetExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext sqlContext = new SQLContext(jsc);
+
+    // $example on$
+    // Load training data
+    DataFrame training = sqlContext.read().format("libsvm")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .load("data/mllib/sample_libsvm_data.txt");
 
     LogisticRegression lr = new LogisticRegression()
@@ -48,6 +68,7 @@ public class JavaLogisticRegressionWithElasticNetExample {
     // Print the coefficients and intercept for logistic regression
     System.out.println("Coefficients: "
       + lrModel.coefficients() + " Intercept: " + lrModel.intercept());
+<<<<<<< HEAD
 
     // We can also use the multinomial family for binary classification
     LogisticRegression mlr = new LogisticRegression()
@@ -65,5 +86,10 @@ public class JavaLogisticRegressionWithElasticNetExample {
     // $example off$
 
     spark.stop();
+=======
+    // $example off$
+
+    jsc.stop();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

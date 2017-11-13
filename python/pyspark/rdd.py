@@ -1811,6 +1811,7 @@ class RDD(object):
 
         In addition, users can control the partitioning of the output RDD.
 
+<<<<<<< HEAD
         .. note:: V and C can be different -- for example, one might group an RDD of type
             (Int, Int) into an RDD of type (Int, List[Int]).
 
@@ -1828,6 +1829,12 @@ class RDD(object):
         ...
         >>> sorted(x.combineByKey(to_list, append, extend).collect())
         [('a', [1, 2]), ('b', [1])]
+=======
+        >>> x = sc.parallelize([("a", 1), ("b", 1), ("a", 1)])
+        >>> def add(a, b): return a + str(b)
+        >>> sorted(x.combineByKey(str, add, add).collect())
+        [('a', '11'), ('b', '1')]
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         if numPartitions is None:
             numPartitions = self._defaultReducePartitions()
@@ -2079,6 +2086,7 @@ class RDD(object):
         >>> sc.parallelize([1, 2, 3, 4, 5], 3).coalesce(1).glom().collect()
         [[1, 2, 3, 4, 5]]
         """
+<<<<<<< HEAD
         if shuffle:
             # Decrease the batch size in order to distribute evenly the elements across output
             # partitions. Otherwise, repartition will possibly produce highly skewed partitions.
@@ -2091,6 +2099,10 @@ class RDD(object):
             jrdd_deserializer = self._jrdd_deserializer
             jrdd = self._jrdd.coalesce(numPartitions, shuffle)
         return RDD(jrdd, self.ctx, jrdd_deserializer)
+=======
+        jrdd = self._jrdd.coalesce(numPartitions, shuffle)
+        return RDD(jrdd, self.ctx, self._jrdd_deserializer)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def zip(self, other):
         """

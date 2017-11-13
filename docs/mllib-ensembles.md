@@ -1,7 +1,12 @@
 ---
 layout: global
+<<<<<<< HEAD
 title: Ensembles - RDD-based API
 displayTitle: Ensembles - RDD-based API
+=======
+title: Ensembles - spark.mllib
+displayTitle: Ensembles - spark.mllib
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents
@@ -9,7 +14,11 @@ displayTitle: Ensembles - RDD-based API
 
 An [ensemble method](http://en.wikipedia.org/wiki/Ensemble_learning)
 is a learning algorithm which creates a model composed of a set of other base models.
+<<<<<<< HEAD
 `spark.mllib` supports two major ensemble algorithms: [`GradientBoostedTrees`](api/scala/index.html#org.apache.spark.mllib.tree.GradientBoostedTrees) and [`RandomForest`](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest$).
+=======
+`spark.mllib` supports two major ensemble algorithms: [`GradientBoostedTrees`](api/scala/index.html#org.apache.spark.mllib.tree.GradientBoostedTrees) and [`RandomForest`](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest).
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 Both use [decision trees](mllib-decision-tree.html) as their base models.
 
 ## Gradient-Boosted Trees vs. Random Forests
@@ -96,7 +105,11 @@ The test error is calculated to measure the algorithm accuracy.
 <div class="codetabs">
 
 <div data-lang="scala" markdown="1">
+<<<<<<< HEAD
 Refer to the [`RandomForest` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest$) and [`RandomForestModel` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.model.RandomForestModel) for details on the API.
+=======
+Refer to the [`RandomForest` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest) and [`RandomForestModel` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.model.RandomForestModel) for details on the API.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example scala/org/apache/spark/examples/mllib/RandomForestClassificationExample.scala %}
 </div>
@@ -127,7 +140,11 @@ The Mean Squared Error (MSE) is computed at the end to evaluate
 <div class="codetabs">
 
 <div data-lang="scala" markdown="1">
+<<<<<<< HEAD
 Refer to the [`RandomForest` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest$) and [`RandomForestModel` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.model.RandomForestModel) for details on the API.
+=======
+Refer to the [`RandomForest` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest) and [`RandomForestModel` Scala docs](api/scala/index.html#org.apache.spark.mllib.tree.model.RandomForestModel) for details on the API.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 {% include_example scala/org/apache/spark/examples/mllib/RandomForestRegressionExample.scala %}
 </div>

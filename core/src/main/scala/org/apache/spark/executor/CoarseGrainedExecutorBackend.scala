@@ -19,8 +19,14 @@ package org.apache.spark.executor
 
 import java.net.URL
 import java.nio.ByteBuffer
+<<<<<<< HEAD
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
+=======
+import java.util.concurrent.atomic.AtomicBoolean
+
+import org.apache.hadoop.conf.Configuration
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
@@ -114,6 +120,7 @@ private[spark] class CoarseGrainedExecutorBackend(
 
     case Shutdown =>
       stopping.set(true)
+<<<<<<< HEAD
       new Thread("CoarseGrainedExecutorBackend-stop-executor") {
         override def run(): Unit = {
           // executor.stop() will call `SparkEnv.stop()` which waits until RpcEnv stops totally.
@@ -123,14 +130,24 @@ private[spark] class CoarseGrainedExecutorBackend(
           executor.stop()
         }
       }.start()
+=======
+      executor.stop()
+      stop()
+      rpcEnv.shutdown()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def onDisconnected(remoteAddress: RpcAddress): Unit = {
     if (stopping.get()) {
       logInfo(s"Driver from $remoteAddress disconnected during shutdown")
     } else if (driver.exists(_.address == remoteAddress)) {
+<<<<<<< HEAD
       exitExecutor(1, s"Driver $remoteAddress disassociated! Shutting down.", null,
         notifyDriver = false)
+=======
+      logError(s"Driver $remoteAddress disassociated! Shutting down.")
+      System.exit(1)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } else {
       logWarning(s"An unknown ($remoteAddress) driver disconnected.")
     }

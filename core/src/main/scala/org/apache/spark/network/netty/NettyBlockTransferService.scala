@@ -18,7 +18,10 @@
 package org.apache.spark.network.netty
 
 import java.nio.ByteBuffer
+<<<<<<< HEAD
 import java.util.{HashMap => JHashMap, Map => JMap}
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Future, Promise}
@@ -151,7 +154,11 @@ private[spark] class NettyBlockTransferService(
     // Convert or copy nio buffer into array in order to serialize it.
     val array = JavaUtils.bufferToArray(blockData.nioByteBuffer())
 
+<<<<<<< HEAD
     client.sendRpc(new UploadBlock(appId, execId, blockId.name, metadata, array).toByteBuffer,
+=======
+    client.sendRpc(new UploadBlock(appId, execId, blockId.toString, levelBytes, array).toByteBuffer,
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       new RpcResponseCallback {
         override def onSuccess(response: ByteBuffer): Unit = {
           logTrace(s"Successfully uploaded block $blockId")

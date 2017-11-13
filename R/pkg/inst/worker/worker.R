@@ -90,7 +90,10 @@ bootTime <- currentTimeSecs()
 bootElap <- elapsedSecs()
 
 rLibDir <- Sys.getenv("SPARKR_RLIBDIR")
+<<<<<<< HEAD
 connectionTimeout <- as.integer(Sys.getenv("SPARKR_BACKEND_CONNECTION_TIMEOUT", "6000"))
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 dirs <- strsplit(rLibDir, ",")[[1]]
 # Set libPaths to include SparkR package as loadNamespace needs this
 # TODO: Figure out if we can avoid this by not loading any objects that require

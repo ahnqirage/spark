@@ -103,6 +103,7 @@ public final class UnsafeKVExternalSorter {
       // another is the key prefix.
       assert(map.numKeys() * 2 <= map.getArray().size() / 2);
       // During spilling, the array in map will not be used, so we can borrow that and use it
+<<<<<<< HEAD
       // as the underlying array for in-memory sorter (it's always large enough).
       // Since we will not grow the array, it's fine to pass `null` as consumer.
       final UnsafeInMemorySorter inMemSorter = new UnsafeInMemorySorter(
@@ -112,6 +113,12 @@ public final class UnsafeKVExternalSorter {
         prefixComparator,
         map.getArray(),
         canUseRadixSort);
+=======
+      // as the underline array for in-memory sorter (it's always large enough).
+      // Since we will not grow the array, it's fine to pass `null` as consumer.
+      final UnsafeInMemorySorter inMemSorter = new UnsafeInMemorySorter(
+        null, taskMemoryManager, recordComparator, prefixComparator, map.getArray());
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // We cannot use the destructive iterator here because we are reusing the existing memory
       // pages in BytesToBytesMap to hold records during sorting.

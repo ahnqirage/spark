@@ -165,7 +165,11 @@ private[deploy] class Worker(
   // time so that we can register with all masters.
   private val registerMasterThreadPool = ThreadUtils.newDaemonCachedThreadPool(
     "worker-register-master-threadpool",
+<<<<<<< HEAD
     masterRpcAddresses.length // Make sure we can register with all masters at the same time
+=======
+    masterRpcAddresses.size // Make sure we can register with all masters at the same time
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   )
 
   var coresUsed = 0
@@ -744,6 +748,7 @@ private[deploy] object Worker extends Logging {
     val args = new WorkerArguments(argStrings, conf)
     val rpcEnv = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, args.cores,
       args.memory, args.masters, args.workDir, conf = conf)
+<<<<<<< HEAD
     // With external shuffle service enabled, if we request to launch multiple workers on one host,
     // we can only successfully launch the first worker and the rest fails, because with the port
     // bound, we may launch no more than one external shuffle service on each host.
@@ -755,6 +760,8 @@ private[deploy] object Worker extends Logging {
       "Starting multiple workers on one host is failed because we may launch no more than one " +
         "external shuffle service on each host, please set spark.shuffle.service.enabled to " +
         "false or set SPARK_WORKER_INSTANCES to 1 to resolve the conflict.")
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     rpcEnv.awaitTermination()
   }
 

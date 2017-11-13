@@ -17,6 +17,7 @@
 
 package org.apache.spark.examples.ml;
 
+<<<<<<< HEAD
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SparkSession;
 
@@ -27,6 +28,20 @@ import java.util.List;
 import org.apache.spark.ml.feature.DCT;
 import org.apache.spark.ml.linalg.VectorUDT;
 import org.apache.spark.ml.linalg.Vectors;
+=======
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SQLContext;
+
+// $example on$
+import java.util.Arrays;
+
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.ml.feature.DCT;
+import org.apache.spark.mllib.linalg.VectorUDT;
+import org.apache.spark.mllib.linalg.Vectors;
+import org.apache.spark.sql.DataFrame;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.Metadata;
@@ -36,6 +51,7 @@ import org.apache.spark.sql.types.StructType;
 
 public class JavaDCTExample {
   public static void main(String[] args) {
+<<<<<<< HEAD
     SparkSession spark = SparkSession
       .builder()
       .appName("JavaDCTExample")
@@ -52,10 +68,27 @@ public class JavaDCTExample {
     });
     Dataset<Row> df = spark.createDataFrame(data, schema);
 
+=======
+    SparkConf conf = new SparkConf().setAppName("JavaDCTExample");
+    JavaSparkContext jsc = new JavaSparkContext(conf);
+    SQLContext jsql = new SQLContext(jsc);
+
+    // $example on$
+    JavaRDD<Row> data = jsc.parallelize(Arrays.asList(
+      RowFactory.create(Vectors.dense(0.0, 1.0, -2.0, 3.0)),
+      RowFactory.create(Vectors.dense(-1.0, 2.0, 4.0, -7.0)),
+      RowFactory.create(Vectors.dense(14.0, -2.0, -5.0, 1.0))
+    ));
+    StructType schema = new StructType(new StructField[]{
+      new StructField("features", new VectorUDT(), false, Metadata.empty()),
+    });
+    DataFrame df = jsql.createDataFrame(data, schema);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     DCT dct = new DCT()
       .setInputCol("features")
       .setOutputCol("featuresDCT")
       .setInverse(false);
+<<<<<<< HEAD
 
     Dataset<Row> dctDf = dct.transform(df);
 
@@ -63,6 +96,12 @@ public class JavaDCTExample {
     // $example off$
 
     spark.stop();
+=======
+    DataFrame dctDf = dct.transform(df);
+    dctDf.select("featuresDCT").show(3);
+    // $example off$
+    jsc.stop();
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

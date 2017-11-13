@@ -21,6 +21,7 @@ package org.apache.spark.examples.ml
 // $example on$
 import org.apache.spark.ml.feature.StandardScaler
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 
 object StandardScalerExample {
@@ -32,6 +33,19 @@ object StandardScalerExample {
 
     // $example on$
     val dataFrame = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.{SparkConf, SparkContext}
+
+object StandardScalerExample {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("StandardScalerExample")
+    val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
+
+    // $example on$
+    val dataFrame = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val scaler = new StandardScaler()
       .setInputCol("features")
@@ -46,8 +60,12 @@ object StandardScalerExample {
     val scaledData = scalerModel.transform(dataFrame)
     scaledData.show()
     // $example off$
+<<<<<<< HEAD
 
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

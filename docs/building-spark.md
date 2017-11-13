@@ -74,12 +74,20 @@ Examples:
 To enable Hive integration for Spark SQL along with its JDBC server and CLI,
 add the `-Phive` and `Phive-thriftserver` profiles to your existing build options.
 By default Spark will build with Hive 1.2.1 bindings.
+<<<<<<< HEAD
+=======
+{% highlight bash %}
+# Apache Hadoop 2.4.X with Hive 1.2.1 support
+mvn -Pyarn -Phadoop-2.4 -Dhadoop.version=2.4.0 -Phive -Phive-thriftserver -DskipTests clean package
+{% endhighlight %}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     # With Hive 1.2.1 support
     ./build/mvn -Pyarn -Phive -Phive-thriftserver -DskipTests clean package
 
 ## Packaging without Hadoop Dependencies for YARN
 
+<<<<<<< HEAD
 The assembly directory produced by `mvn package` will, by default, include all of Spark's
 dependencies, including Hadoop and some of its ecosystem projects. On YARN deployments, this
 causes multiple versions of these to appear on executor classpaths: the version packaged in
@@ -88,6 +96,9 @@ The `hadoop-provided` profile builds the assembly without including Hadoop-ecosy
 like ZooKeeper and Hadoop itself.
 
 ## Building with Mesos support
+=======
+# Spark Tests in Maven
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     ./build/mvn -Pmesos -DskipTests clean package
     
@@ -186,7 +197,17 @@ For help in setting up IntelliJ IDEA or Eclipse for Spark development, and troub
 Tests are run by default via the [ScalaTest Maven plugin](http://www.scalatest.org/user_guide/using_the_scalatest_maven_plugin).
 Note that tests should not be run as root or an admin user.
 
+<<<<<<< HEAD
 The following is an example of a command to run the tests:
+=======
+or
+
+    sbt -Pjava8-tests java8-tests/test
+
+Java 8 tests are run when `-Pjava8-tests` profile is enabled, they will run in spite of `-DskipTests`.
+For these tests to run your system must have a JDK 8 installation.
+If you have JDK 8 installed but it is not the system default, you can set JAVA_HOME to point to JDK 8 before running the tests.
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     ./build/mvn test
 

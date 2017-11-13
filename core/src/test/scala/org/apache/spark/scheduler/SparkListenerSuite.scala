@@ -25,7 +25,11 @@ import scala.collection.mutable
 import org.mockito.Mockito
 import org.scalatest.Matchers
 
+<<<<<<< HEAD
 import org.apache.spark._
+=======
+import org.apache.spark.SparkException
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.internal.config.LISTENER_BUS_EVENT_QUEUE_CAPACITY
 import org.apache.spark.metrics.MetricsSystem
@@ -41,6 +45,7 @@ class SparkListenerSuite extends SparkFunSuite with LocalSparkContext with Match
 
   val jobCompletionTime = 1421191296660L
 
+<<<<<<< HEAD
   private val mockSparkContext: SparkContext = Mockito.mock(classOf[SparkContext])
   private val mockMetricsSystem: MetricsSystem = Mockito.mock(classOf[MetricsSystem])
 
@@ -66,6 +71,20 @@ class SparkListenerSuite extends SparkFunSuite with LocalSparkContext with Match
     sc.listenerBus.waitUntilEmpty(WAIT_TIMEOUT_MILLIS)
     sc.stop()
 
+=======
+  test("don't call sc.stop in listener") {
+    sc = new SparkContext("local", "SparkListenerSuite")
+    val listener = new SparkContextStoppingListener(sc)
+    val bus = new LiveListenerBus
+    bus.addListener(listener)
+
+    // Starting listener bus should flush all buffered events
+    bus.start(sc)
+    bus.post(SparkListenerJobEnd(0, jobCompletionTime, JobSucceeded))
+    bus.waitUntilEmpty(WAIT_TIMEOUT_MILLIS)
+
+    bus.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(listener.sparkExSeen)
   }
 
@@ -349,14 +368,25 @@ class SparkListenerSuite extends SparkFunSuite with LocalSparkContext with Match
   }
 
   test("onTaskGettingResult() called when result fetched remotely") {
+<<<<<<< HEAD
     val conf = new SparkConf().set("spark.rpc.message.maxSize", "1")
+=======
+    val conf = new SparkConf().set("spark.akka.frameSize", "1")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     sc = new SparkContext("local", "SparkListenerSuite", conf)
     val listener = new SaveTaskEvents
     sc.addSparkListener(listener)
 
+<<<<<<< HEAD
     // Make a task whose result is larger than the RPC message size
     val maxRpcMessageSize = RpcUtils.maxMessageSizeBytes(conf)
     assert(maxRpcMessageSize === 1024 * 1024)
+=======
+    // Make a task whose result is larger than the akka frame size
+    val akkaFrameSize =
+      sc.env.actorSystem.settings.config.getBytes("akka.remote.netty.tcp.maximum-frame-size").toInt
+    assert(akkaFrameSize === 1024 * 1024)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val result = sc.parallelize(Seq(1), 1)
       .map { x => 1.to(maxRpcMessageSize).toArray }
       .reduce { case (x, y) => x }

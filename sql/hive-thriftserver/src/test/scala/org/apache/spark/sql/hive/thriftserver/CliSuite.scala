@@ -266,6 +266,7 @@ class CliSuite extends SparkFunSuite with BeforeAndAfterAll with Logging {
     )
   }
 
+<<<<<<< HEAD
   test("list file <filepath>") {
     val dataFilePath = Thread.currentThread().
       getContextClassLoader.getResource("data/files/small_kv.txt")
@@ -295,5 +296,10 @@ class CliSuite extends SparkFunSuite with BeforeAndAfterAll with Logging {
       Seq(s"--conf", s"spark.hadoop.${ConfVars.METASTOREWAREHOUSE}=$tmpDir"))(
       "set spark.sql.warehouse.dir;" -> tmpDir.getAbsolutePath)
     tmpDir.delete()
+=======
+  test("SPARK-11624 Spark SQL CLI should set sessionState only once") {
+    runCliWithin(2.minute, Seq("-e", "!echo \"This is a test for Spark-11624\";"))(
+      "" -> "This is a test for Spark-11624")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

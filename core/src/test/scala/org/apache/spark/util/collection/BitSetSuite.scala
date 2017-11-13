@@ -152,6 +152,7 @@ class BitSetSuite extends SparkFunSuite {
     assert(bitsetDiff.nextSetBit(85) === 85)
     assert(bitsetDiff.nextSetBit(86) === -1)
   }
+<<<<<<< HEAD
 
   test( "[gs]etUntil" ) {
     val bitSet = new BitSet(100)
@@ -184,4 +185,6 @@ class BitSetSuite extends SparkFunSuite {
       assert(!bitSet.get(i))
     }
   }
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

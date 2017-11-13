@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 
+<<<<<<< HEAD
 # $example on$
 from pyspark.ml.feature import IndexToString, StringIndexer
 # $example off$
@@ -52,3 +53,31 @@ if __name__ == "__main__":
     # $example off$
 
     spark.stop()
+=======
+from pyspark import SparkContext
+# $example on$
+from pyspark.ml.feature import IndexToString, StringIndexer
+# $example off$
+from pyspark.sql import SQLContext
+
+if __name__ == "__main__":
+    sc = SparkContext(appName="IndexToStringExample")
+    sqlContext = SQLContext(sc)
+
+    # $example on$
+    df = sqlContext.createDataFrame(
+        [(0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c")],
+        ["id", "category"])
+
+    stringIndexer = StringIndexer(inputCol="category", outputCol="categoryIndex")
+    model = stringIndexer.fit(df)
+    indexed = model.transform(df)
+
+    converter = IndexToString(inputCol="categoryIndex", outputCol="originalCategory")
+    converted = converter.transform(indexed)
+
+    converted.select("id", "originalCategory").show()
+    # $example off$
+
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

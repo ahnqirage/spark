@@ -18,6 +18,7 @@
 package org.apache.spark.sql.execution
 
 import org.apache.spark.rdd.RDD
+<<<<<<< HEAD
 import org.apache.spark.sql.{Encoder, Row, SparkSession}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
@@ -25,6 +26,13 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.SQLMetrics
+=======
+import org.apache.spark.sql.catalyst.{InternalRow, CatalystTypeConverters}
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubQueries, MultiInstanceRelation}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericMutableRow}
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Statistics}
+import org.apache.spark.sql.sources.{HadoopFsRelation, BaseRelation}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types.DataType
 import org.apache.spark.util.Utils
 
@@ -83,10 +91,24 @@ case class ExternalRDD[T](
 
   override protected final def otherCopyArgs: Seq[AnyRef] = session :: Nil
 
+<<<<<<< HEAD
   override def newInstance(): ExternalRDD.this.type =
     ExternalRDD(outputObjAttr.newInstance(), rdd)(session).asInstanceOf[this.type]
 
   override protected def stringArgs: Iterator[Any] = Iterator(output)
+=======
+  override protected final def otherCopyArgs: Seq[AnyRef] = sqlContext :: Nil
+
+  override def newInstance(): LogicalRDD.this.type =
+    LogicalRDD(output.map(_.newInstance()), rdd)(sqlContext).asInstanceOf[this.type]
+
+  override def sameResult(plan: LogicalPlan): Boolean = {
+    EliminateSubQueries(plan) match {
+      case LogicalRDD(_, otherRDD) => rdd.id == otherRDD.id
+      case _ => false
+    }
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def computeStats(): Statistics = Statistics(
     // TODO: Instead of returning a default value here, find a way to return a meaningful size
@@ -124,13 +146,21 @@ case class ExternalRDDScanExec[T](
 case class LogicalRDD(
     output: Seq[Attribute],
     rdd: RDD[InternalRow],
+<<<<<<< HEAD
     outputPartitioning: Partitioning = UnknownPartitioning(0),
     outputOrdering: Seq[SortOrder] = Nil,
     override val isStreaming: Boolean = false)(session: SparkSession)
   extends LeafNode with MultiInstanceRelation {
+=======
+    override val nodeName: String,
+    override val metadata: Map[String, String] = Map.empty,
+    override val outputsUnsafeRows: Boolean = false)
+  extends LeafNode {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override protected final def otherCopyArgs: Seq[AnyRef] = session :: Nil
 
+<<<<<<< HEAD
   override def newInstance(): LogicalRDD.this.type = {
     val rewrite = output.zip(output.map(_.newInstance())).toMap
 
@@ -191,4 +221,26 @@ case class RDDScanExec(
   override def simpleString: String = {
     s"Scan $nodeName${Utils.truncatedString(output, "[", ",", "]")}"
   }
+=======
+  override def simpleString: String = {
+    val metadataEntries = for ((key, value) <- metadata.toSeq.sorted) yield s"$key: $value"
+    s"Scan $nodeName${output.mkString("[", ",", "]")}${metadataEntries.mkString(" ", ", ", "")}"
+  }
+}
+
+private[sql] object PhysicalRDD {
+  // Metadata keys
+  val INPUT_PATHS = "InputPaths"
+  val PUSHED_FILTERS = "PushedFilters"
+
+  def createFromDataSource(
+      output: Seq[Attribute],
+      rdd: RDD[InternalRow],
+      relation: BaseRelation,
+      metadata: Map[String, String] = Map.empty): PhysicalRDD = {
+    // All HadoopFsRelations output UnsafeRows
+    val outputUnsafeRows = relation.isInstanceOf[HadoopFsRelation]
+    PhysicalRDD(output, rdd, relation.toString, metadata, outputUnsafeRows)
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

@@ -23,14 +23,19 @@ import javax.annotation.concurrent.GuardedBy
 
 import scala.util.control.NonFatal
 
+<<<<<<< HEAD
 import org.apache.spark.SparkException
 import org.apache.spark.internal.Logging
+=======
+import org.apache.spark.{Logging, SparkException}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.network.client.{RpcResponseCallback, TransportClient}
 import org.apache.spark.rpc.{RpcAddress, RpcEnvStoppedException}
 
 private[netty] sealed trait OutboxMessage {
 
   def sendWith(client: TransportClient): Unit
+<<<<<<< HEAD
 
   def onFailure(e: Throwable): Unit
 
@@ -58,6 +63,32 @@ private[netty] case class RpcOutboxMessage(
     _onSuccess: (TransportClient, ByteBuffer) => Unit)
   extends OutboxMessage with RpcResponseCallback with Logging {
 
+=======
+
+  def onFailure(e: Throwable): Unit
+
+}
+
+private[netty] case class OneWayOutboxMessage(content: ByteBuffer) extends OutboxMessage
+  with Logging {
+
+  override def sendWith(client: TransportClient): Unit = {
+    client.send(content)
+  }
+
+  override def onFailure(e: Throwable): Unit = {
+    logWarning(s"Failed to send one-way RPC.", e)
+  }
+
+}
+
+private[netty] case class RpcOutboxMessage(
+    content: ByteBuffer,
+    _onFailure: (Throwable) => Unit,
+    _onSuccess: (TransportClient, ByteBuffer) => Unit)
+  extends OutboxMessage with RpcResponseCallback {
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private var client: TransportClient = _
   private var requestId: Long = _
 
@@ -67,11 +98,24 @@ private[netty] case class RpcOutboxMessage(
   }
 
   def onTimeout(): Unit = {
+<<<<<<< HEAD
     if (client != null) {
       client.removeRpcRequest(requestId)
     } else {
       logError("Ask timeout before connecting successfully")
     }
+=======
+    require(client != null, "TransportClient has not yet been set.")
+    client.removeRpcRequest(requestId)
+  }
+
+  override def onFailure(e: Throwable): Unit = {
+    _onFailure(e)
+  }
+
+  override def onSuccess(response: ByteBuffer): Unit = {
+    _onSuccess(client, response)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def onFailure(e: Throwable): Unit = {

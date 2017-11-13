@@ -65,12 +65,47 @@ private[libsvm] class LibSVMOutputWriter(
   }
 }
 
+<<<<<<< HEAD
 /** @see [[LibSVMDataSource]] for public documentation. */
 // If this is moved or renamed, please update DataSource's backwardCompatibilityMap.
 private[libsvm] class LibSVMFileFormat
   extends TextBasedFileFormat
   with DataSourceRegister
   with Logging {
+=======
+/**
+ * `libsvm` package implements Spark SQL data source API for loading LIBSVM data as [[DataFrame]].
+ * The loaded [[DataFrame]] has two columns: `label` containing labels stored as doubles and
+ * `features` containing feature vectors stored as [[Vector]]s.
+ *
+ * To use LIBSVM data source, you need to set "libsvm" as the format in [[DataFrameReader]] and
+ * optionally specify options, for example:
+ * {{{
+ *   // Scala
+ *   val df = sqlContext.read.format("libsvm")
+ *     .option("numFeatures", "780")
+ *     .load("data/mllib/sample_libsvm_data.txt")
+ *
+ *   // Java
+ *   DataFrame df = sqlContext.read().format("libsvm")
+ *     .option("numFeatures, "780")
+ *     .load("data/mllib/sample_libsvm_data.txt");
+ * }}}
+ *
+ * LIBSVM data source supports the following options:
+ *  - "numFeatures": number of features.
+ *    If unspecified or nonpositive, the number of features will be determined automatically at the
+ *    cost of one additional pass.
+ *    This is also useful when the dataset is already split into multiple files and you want to load
+ *    them separately, because some features may not present in certain files, which leads to
+ *    inconsistent feature dimensions.
+ *  - "vectorType": feature vector type, "sparse" (default) or "dense".
+ *
+ *  @see [[https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/ LIBSVM datasets]]
+ */
+@Since("1.6.0")
+class DefaultSource extends RelationProvider with DataSourceRegister {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def shortName(): String = "libsvm"
 

@@ -21,8 +21,11 @@ import java.util.concurrent.ConcurrentMap
 
 import com.google.common.collect.MapMaker
 
+<<<<<<< HEAD
 import org.apache.spark.util.Utils
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 object OuterScopes {
   @transient
   lazy val outerScopes: ConcurrentMap[String, AnyRef] =
@@ -30,7 +33,11 @@ object OuterScopes {
 
   /**
    * Adds a new outer scope to this context that can be used when instantiating an `inner class`
+<<<<<<< HEAD
    * during deserialization. Inner classes are created when a case class is defined in the
+=======
+   * during deserialialization. Inner classes are created when a case class is defined in the
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * Spark REPL and registering the outer scope that this class was defined in allows us to create
    * new instances on the spark executors.  In normal use, users should not need to call this
    * function.
@@ -41,6 +48,7 @@ object OuterScopes {
   def addOuterScope(outer: AnyRef): Unit = {
     outerScopes.putIfAbsent(outer.getClass.getName, outer)
   }
+<<<<<<< HEAD
 
   /**
    * Returns a function which can get the outer scope for the given inner class.  By using function
@@ -95,4 +103,6 @@ object OuterScopes {
 
   // The format of REPL generated wrapper class's name, e.g. `$line12.$read$$iw$$iw`
   private[this] val REPLClass = """^(\$line(?:\d+)\.\$read)(?:\$\$iw)+$""".r
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

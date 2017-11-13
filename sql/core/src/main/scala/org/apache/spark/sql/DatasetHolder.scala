@@ -30,6 +30,7 @@ import org.apache.spark.annotation.InterfaceStability
  *
  * @since 1.6.0
  */
+<<<<<<< HEAD
 @InterfaceStability.Stable
 case class DatasetHolder[T] private[sql](private val ds: Dataset[T]) {
 
@@ -42,4 +43,11 @@ case class DatasetHolder[T] private[sql](private val ds: Dataset[T]) {
   def toDF(): DataFrame = ds.toDF()
 
   def toDF(colNames: String*): DataFrame = ds.toDF(colNames : _*)
+=======
+case class DatasetHolder[T] private[sql](private val ds: Dataset[T]) {
+
+  // This is declared with parentheses to prevent the Scala compiler from treating
+  // `rdd.toDS("1")` as invoking this toDS and then apply on the returned Dataset.
+  def toDS(): Dataset[T] = ds
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

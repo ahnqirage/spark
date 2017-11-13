@@ -21,12 +21,19 @@ package org.apache.spark.examples.ml
 // $example on$
 import org.apache.spark.ml.classification.{BinaryLogisticRegressionSummary, LogisticRegression}
 // $example off$
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.max
+=======
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.functions.max
+import org.apache.spark.{SparkConf, SparkContext}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 object LogisticRegressionSummaryExample {
 
   def main(args: Array[String]): Unit = {
+<<<<<<< HEAD
     val spark = SparkSession
       .builder
       .appName("LogisticRegressionSummaryExample")
@@ -35,6 +42,15 @@ object LogisticRegressionSummaryExample {
 
     // Load training data
     val training = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+=======
+    val conf = new SparkConf().setAppName("LogisticRegressionSummaryExample")
+    val sc = new SparkContext(conf)
+    val sqlCtx = new SQLContext(sc)
+    import sqlCtx.implicits._
+
+    // Load training data
+    val training = sqlCtx.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val lr = new LogisticRegression()
       .setMaxIter(10)
@@ -51,7 +67,10 @@ object LogisticRegressionSummaryExample {
 
     // Obtain the objective per iteration.
     val objectiveHistory = trainingSummary.objectiveHistory
+<<<<<<< HEAD
     println("objectiveHistory:")
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     objectiveHistory.foreach(loss => println(loss))
 
     // Obtain the metrics useful to judge performance on test data.
@@ -62,7 +81,11 @@ object LogisticRegressionSummaryExample {
     // Obtain the receiver-operating characteristic as a dataframe and areaUnderROC.
     val roc = binarySummary.roc
     roc.show()
+<<<<<<< HEAD
     println(s"areaUnderROC: ${binarySummary.areaUnderROC}")
+=======
+    println(binarySummary.areaUnderROC)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Set the model threshold to maximize F-Measure
     val fMeasure = binarySummary.fMeasureByThreshold
@@ -72,7 +95,11 @@ object LogisticRegressionSummaryExample {
     lrModel.setThreshold(bestThreshold)
     // $example off$
 
+<<<<<<< HEAD
     spark.stop()
+=======
+    sc.stop()
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

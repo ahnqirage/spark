@@ -1004,6 +1004,7 @@ class TaskSetManagerSuite extends SparkFunSuite with LocalSparkContext with Logg
     assert(TaskLocation("executor_host1_3") === ExecutorCacheTaskLocation("host1", "3"))
     assert(TaskLocation("executor_some.host1_executor_task_3") ===
       ExecutorCacheTaskLocation("some.host1", "executor_task_3"))
+<<<<<<< HEAD
   }
 
   test("Kill other task attempts when one attempt belonging to the same task succeeds") {
@@ -1360,6 +1361,8 @@ class TaskSetManagerSuite extends SparkFunSuite with LocalSparkContext with Logg
 
     val taskOption4 = manager2.resourceOffer("exec1", "host1", NO_PREF)
     assert(taskOption4.get.addedJars === addedJarsMidTaskSet)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private def createTaskResult(

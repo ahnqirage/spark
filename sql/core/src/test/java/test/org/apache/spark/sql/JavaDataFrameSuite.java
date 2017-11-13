@@ -18,11 +18,19 @@
 package test.org.apache.spark.sql;
 
 import java.io.Serializable;
+<<<<<<< HEAD
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 import java.math.BigInteger;
 import java.math.BigDecimal;
+=======
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
@@ -70,6 +78,13 @@ public class JavaDataFrameSuite {
   @Test
   public void testCollectAndTake() {
     Dataset<Row> df = spark.table("testData").filter("key = 1 or key = 2 or key = 3");
+    Assert.assertEquals(3, df.select("key").collectAsList().size());
+    Assert.assertEquals(2, df.select("key").takeAsList(2).size());
+  }
+
+  @Test
+  public void testCollectAndTake() {
+    DataFrame df = context.table("testData").filter("key = 1 or key = 2 or key = 3");
     Assert.assertEquals(3, df.select("key").collectAsList().size());
     Assert.assertEquals(2, df.select("key").takeAsList(2).size());
   }
@@ -225,16 +240,30 @@ public class JavaDataFrameSuite {
     StructType schema1 = StructType$.MODULE$.apply(fields1);
     Assert.assertEquals(0, schema1.fieldIndex("id"));
 
+<<<<<<< HEAD
     List<StructField> fields2 =
         Arrays.asList(new StructField("id", DataTypes.StringType, true, Metadata.empty()));
+=======
+    List<StructField> fields2 = Arrays.asList(new StructField("id", DataTypes.StringType, true, Metadata.empty()));
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     StructType schema2 = StructType$.MODULE$.apply(fields2);
     Assert.assertEquals(0, schema2.fieldIndex("id"));
   }
 
+<<<<<<< HEAD
   private static final Comparator<Row> crosstabRowComparator = (row1, row2) -> {
     String item1 = row1.getString(0);
     String item2 = row2.getString(0);
     return item1.compareTo(item2);
+=======
+  private static final Comparator<Row> crosstabRowComparator = new Comparator<Row>() {
+    @Override
+    public int compare(Row row1, Row row2) {
+      String item1 = row1.getString(0);
+      String item2 = row2.getString(0);
+      return item1.compareTo(item2);
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   };
 
   @Test
@@ -280,6 +309,7 @@ public class JavaDataFrameSuite {
 
   @Test
   public void testSampleBy() {
+<<<<<<< HEAD
     Dataset<Row> df = spark.range(0, 100, 1, 2).select(col("id").mod(3).as("key"));
     Dataset<Row> sampled = df.stat().sampleBy("key", ImmutableMap.of(0, 0.1, 1, 0.2), 0L);
     List<Row> actual = sampled.groupBy("key").count().orderBy("key").collectAsList();
@@ -287,10 +317,20 @@ public class JavaDataFrameSuite {
     Assert.assertTrue(0 <= actual.get(0).getLong(1) && actual.get(0).getLong(1) <= 8);
     Assert.assertEquals(1, actual.get(1).getLong(0));
     Assert.assertTrue(2 <= actual.get(1).getLong(1) && actual.get(1).getLong(1) <= 13);
+=======
+    DataFrame df = context.range(0, 100, 1, 2).select(col("id").mod(3).as("key"));
+    DataFrame sampled = df.stat().<Integer>sampleBy("key", ImmutableMap.of(0, 0.1, 1, 0.2), 0L);
+    Row[] actual = sampled.groupBy("key").count().orderBy("key").collect();
+    Assert.assertEquals(0, actual[0].getLong(0));
+    Assert.assertTrue(0 <= actual[0].getLong(1) && actual[0].getLong(1) <= 8);
+    Assert.assertEquals(1, actual[1].getLong(0));
+    Assert.assertTrue(2 <= actual[1].getLong(1) && actual[1].getLong(1) <= 13);
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   @Test
   public void pivot() {
+<<<<<<< HEAD
     Dataset<Row> df = spark.table("courseSales");
     List<Row> actual = df.groupBy("year")
       .pivot("course", Arrays.asList("dotNET", "Java"))
@@ -330,11 +370,36 @@ public class JavaDataFrameSuite {
     Dataset<Row> df2 = spark.read().format("text").load(
       getResource("test-data/text-suite.txt"),
       getResource("test-data/text-suite2.txt"));
+=======
+    DataFrame df = context.table("courseSales");
+    Row[] actual = df.groupBy("year")
+      .pivot("course", Arrays.<Object>asList("dotNET", "Java"))
+      .agg(sum("earnings")).orderBy("year").collect();
+
+    Assert.assertEquals(2012, actual[0].getInt(0));
+    Assert.assertEquals(15000.0, actual[0].getDouble(1), 0.01);
+    Assert.assertEquals(20000.0, actual[0].getDouble(2), 0.01);
+
+    Assert.assertEquals(2013, actual[1].getInt(0));
+    Assert.assertEquals(48000.0, actual[1].getDouble(1), 0.01);
+    Assert.assertEquals(30000.0, actual[1].getDouble(2), 0.01);
+  }
+
+  public void testGenericLoad() {
+    DataFrame df1 = context.read().format("text").load(
+      Thread.currentThread().getContextClassLoader().getResource("text-suite.txt").toString());
+    Assert.assertEquals(4L, df1.count());
+
+    DataFrame df2 = context.read().format("text").load(
+      Thread.currentThread().getContextClassLoader().getResource("text-suite.txt").toString(),
+      Thread.currentThread().getContextClassLoader().getResource("text-suite2.txt").toString());
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     Assert.assertEquals(5L, df2.count());
   }
 
   @Test
   public void testTextLoad() {
+<<<<<<< HEAD
     Dataset<String> ds1 = spark.read().textFile(getResource("test-data/text-suite.txt"));
     Assert.assertEquals(4L, ds1.count());
 
@@ -454,5 +519,15 @@ public class JavaDataFrameSuite {
   public void testCircularReferenceBean() {
     CircularReference1Bean bean = new CircularReference1Bean();
     spark.createDataFrame(Arrays.asList(bean), CircularReference1Bean.class);
+=======
+    DataFrame df1 = context.read().text(
+      Thread.currentThread().getContextClassLoader().getResource("text-suite.txt").toString());
+    Assert.assertEquals(4L, df1.count());
+
+    DataFrame df2 = context.read().text(
+      Thread.currentThread().getContextClassLoader().getResource("text-suite.txt").toString(),
+      Thread.currentThread().getContextClassLoader().getResource("text-suite2.txt").toString());
+    Assert.assertEquals(5L, df2.count());
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

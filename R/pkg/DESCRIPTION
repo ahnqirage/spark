@@ -1,5 +1,6 @@
 Package: SparkR
 Type: Package
+<<<<<<< HEAD
 Version: 2.3.0
 Title: R Frontend for Apache Spark
 Description: Provides an R Frontend for Apache Spark.
@@ -13,6 +14,15 @@ Authors@R: c(person("Shivaram", "Venkataraman", role = c("aut", "cre"),
 License: Apache License (== 2.0)
 URL: http://www.apache.org/ http://spark.apache.org/
 BugReports: http://spark.apache.org/contributing.html
+=======
+Title: R frontend for Spark
+Version: 1.6.4
+Date: 2013-09-09
+Author: The Apache Software Foundation
+Maintainer: Shivaram Venkataraman <shivaram@cs.berkeley.edu>
+Imports:
+    methods
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 Depends:
     R (>= 3.0),
     methods
@@ -53,9 +63,15 @@ Collate:
     'serialize.R'
     'sparkR.R'
     'stats.R'
+<<<<<<< HEAD
     'streaming.R'
     'types.R'
     'utils.R'
     'window.R'
 RoxygenNote: 5.0.1
 VignetteBuilder: knitr
+=======
+    'types.R'
+    'utils.R'
+RoxygenNote: 5.0.1
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -25,6 +25,7 @@ import org.apache.spark.sql.execution.datasources.{DataSourceStrategy, FileSourc
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Strategy
 import org.apache.spark.sql.internal.SQLConf
 
+<<<<<<< HEAD
 class SparkPlanner(
     val sparkContext: SparkContext,
     val conf: SQLConf,
@@ -40,6 +41,18 @@ class SparkPlanner(
       FileSourceStrategy ::
       DataSourceStrategy(conf) ::
       SpecialLimits ::
+=======
+class SparkPlanner(val sqlContext: SQLContext) extends SparkStrategies {
+  val sparkContext: SparkContext = sqlContext.sparkContext
+
+  def numPartitions: Int = sqlContext.conf.numShufflePartitions
+
+  def strategies: Seq[Strategy] =
+    sqlContext.experimental.extraStrategies ++ (
+      DataSourceStrategy ::
+      DDLStrategy ::
+      TakeOrderedAndProject ::
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       Aggregation ::
       JoinSelection ::
       InMemoryScans ::

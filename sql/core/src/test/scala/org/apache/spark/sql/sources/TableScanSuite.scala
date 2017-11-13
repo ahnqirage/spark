@@ -222,8 +222,13 @@ class TableScanSuite extends DataSourceTest with SharedSQLContext {
       StructField("decimalField2", DecimalType(9, 2), true) ::
       StructField("dateField", DateType, true) ::
       StructField("timestampField", TimestampType, true) ::
+<<<<<<< HEAD
       StructField("varcharField", StringType, true, hiveMetadata("varchar(12)")) ::
       StructField("charField", StringType, true, hiveMetadata("char(18)")) ::
+=======
+      StructField("varcharField", StringType, true) ::
+      StructField("charField", StringType, true) ::
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       StructField("arrayFieldSimple", ArrayType(IntegerType), true) ::
       StructField("arrayFieldComplex",
         ArrayType(
@@ -246,6 +251,7 @@ class TableScanSuite extends DataSourceTest with SharedSQLContext {
       Nil
     )
 
+<<<<<<< HEAD
     assert(expectedSchema == spark.table("tableWithSchema").schema)
 
     withSQLConf(SQLConf.SUPPORT_QUOTED_REGEX_COLUMN_NAME.key -> "false") {
@@ -276,6 +282,36 @@ class TableScanSuite extends DataSourceTest with SharedSQLContext {
         tableWithSchemaExpected
       )
     }
+=======
+    assert(expectedSchema == caseInsensitiveContext.table("tableWithSchema").schema)
+
+    checkAnswer(
+      sql(
+        """SELECT
+          | `string$%Field`,
+          | cast(binaryField as string),
+          | booleanField,
+          | byteField,
+          | shortField,
+          | int_Field,
+          | `longField_:,<>=+/~^`,
+          | floatField,
+          | doubleField,
+          | decimalField1,
+          | decimalField2,
+          | dateField,
+          | timestampField,
+          | varcharField,
+          | charField,
+          | arrayFieldSimple,
+          | arrayFieldComplex,
+          | mapFieldSimple,
+          | mapFieldComplex,
+          | structFieldSimple,
+          | structFieldComplex FROM tableWithSchema""".stripMargin),
+      tableWithSchemaExpected
+    )
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   sqlTest(

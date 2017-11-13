@@ -19,8 +19,15 @@ package org.apache.spark.ml.clustering
 
 import org.apache.hadoop.fs.Path
 
+<<<<<<< HEAD
 import org.apache.spark.SparkException
 import org.apache.spark.annotation.{Experimental, Since}
+=======
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.param.shared._
+import org.apache.spark.ml.param.{IntParam, Param, ParamMap, Params}
+import org.apache.spark.ml.util._
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.{Vector, VectorUDT}
 import org.apache.spark.ml.param._
@@ -33,8 +40,12 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.{IntegerType, StructType}
+<<<<<<< HEAD
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.VersionUtils.majorVersion
+=======
+import org.apache.spark.sql.{DataFrame, Row}
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Common params for KMeans and KMeansModel
@@ -151,6 +162,7 @@ class KMeansModel private[ml] (
     parentModel.computeCost(data)
   }
 
+<<<<<<< HEAD
   /**
    * Returns a [[org.apache.spark.ml.util.MLWriter]] instance for this ML instance.
    *
@@ -183,6 +195,10 @@ class KMeansModel private[ml] (
     throw new SparkException(
       s"No training summary available for the ${this.getClass.getSimpleName}")
   }
+=======
+  @Since("1.6.0")
+  override def write: MLWriter = new KMeansModel.KMeansModelWriter(this)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 @Since("1.6.0")
@@ -194,6 +210,7 @@ object KMeansModel extends MLReadable[KMeansModel] {
   @Since("1.6.0")
   override def load(path: String): KMeansModel = super.load(path)
 
+<<<<<<< HEAD
   /** Helper class for storing model data */
   private case class Data(clusterIdx: Int, clusterCenter: Vector)
 
@@ -206,15 +223,28 @@ object KMeansModel extends MLReadable[KMeansModel] {
   /** [[MLWriter]] instance for [[KMeansModel]] */
   private[KMeansModel] class KMeansModelWriter(instance: KMeansModel) extends MLWriter {
 
+=======
+  /** [[MLWriter]] instance for [[KMeansModel]] */
+  private[KMeansModel] class KMeansModelWriter(instance: KMeansModel) extends MLWriter {
+
+    private case class Data(clusterCenters: Array[Vector])
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     override protected def saveImpl(path: String): Unit = {
       // Save metadata and Params
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       // Save model data: cluster centers
+<<<<<<< HEAD
       val data: Array[Data] = instance.clusterCenters.zipWithIndex.map { case (center, idx) =>
         Data(idx, center)
       }
       val dataPath = new Path(path, "data").toString
       sparkSession.createDataFrame(data).repartition(1).write.parquet(dataPath)
+=======
+      val data = Data(instance.clusterCenters)
+      val dataPath = new Path(path, "data").toString
+      sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -224,6 +254,7 @@ object KMeansModel extends MLReadable[KMeansModel] {
     private val className = classOf[KMeansModel].getName
 
     override def load(path: String): KMeansModel = {
+<<<<<<< HEAD
       // Import implicits for Dataset Encoder
       val sparkSession = super.sparkSession
       import sparkSession.implicits._
@@ -239,6 +270,15 @@ object KMeansModel extends MLReadable[KMeansModel] {
         sparkSession.read.parquet(dataPath).as[OldData].head().clusterCenters
       }
       val model = new KMeansModel(metadata.uid, new MLlibKMeansModel(clusterCenters))
+=======
+      val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
+
+      val dataPath = new Path(path, "data").toString
+      val data = sqlContext.read.parquet(dataPath).select("clusterCenters").head()
+      val clusterCenters = data.getAs[Seq[Vector]](0).toArray
+      val model = new KMeansModel(metadata.uid, new MLlibKMeansModel(clusterCenters))
+
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       DefaultParamsReader.getAndSetParams(model, metadata)
       model
     }
@@ -348,6 +388,7 @@ object KMeans extends DefaultParamsReadable[KMeans] {
   override def load(path: String): KMeans = super.load(path)
 }
 
+<<<<<<< HEAD
 /**
  * :: Experimental ::
  * Summary of KMeans.
@@ -364,3 +405,5 @@ class KMeansSummary private[clustering] (
     predictionCol: String,
     featuresCol: String,
     k: Int) extends ClusteringSummary(predictions, predictionCol, featuresCol, k)
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

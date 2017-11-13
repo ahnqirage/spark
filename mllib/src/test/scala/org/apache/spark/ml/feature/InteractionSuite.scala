@@ -19,6 +19,7 @@ package org.apache.spark.ml.feature
 
 import scala.collection.mutable.ArrayBuilder
 
+import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.{SparkException, SparkFunSuite}
 import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.{Vector, Vectors}
@@ -28,9 +29,12 @@ import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.functions.col
 
 class InteractionSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
+<<<<<<< HEAD
 
   import testImplicits._
 
+=======
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("params") {
     ParamsSuite.checkParams(new Interaction())
   }

@@ -17,6 +17,7 @@
 
 package org.apache.spark.ml.tuning
 
+<<<<<<< HEAD
 import java.io.IOException
 import java.util.{List => JList}
 
@@ -30,6 +31,11 @@ import org.json4s.DefaultFormats
 
 import org.apache.spark.annotation.Since
 import org.apache.spark.internal.Logging
+=======
+import org.apache.spark.Logging
+import org.apache.spark.annotation.{Experimental, Since}
+import org.apache.spark.ml.evaluation.Evaluator
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.evaluation.Evaluator
 import org.apache.spark.ml.param.{DoubleParam, ParamMap, ParamValidators}
@@ -65,9 +71,16 @@ private[ml] trait TrainValidationSplitParams extends ValidatorParams {
  * Similar to [[CrossValidator]], but only splits the set once.
  */
 @Since("1.5.0")
+<<<<<<< HEAD
 class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: String)
   extends Estimator[TrainValidationSplitModel]
   with TrainValidationSplitParams with HasParallelism with MLWritable with Logging {
+=======
+@Experimental
+class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: String)
+  extends Estimator[TrainValidationSplitModel]
+  with TrainValidationSplitParams with Logging {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.5.0")
   def this() = this(Identifiable.randomUID("tvs"))
@@ -88,6 +101,7 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
   @Since("1.5.0")
   def setTrainRatio(value: Double): this.type = set(trainRatio, value)
 
+<<<<<<< HEAD
   /** @group setParam */
   @Since("2.0.0")
   def setSeed(value: Long): this.type = set(seed, value)
@@ -103,6 +117,10 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
 
   @Since("2.0.0")
   override def fit(dataset: Dataset[_]): TrainValidationSplitModel = {
+=======
+  @Since("1.5.0")
+  override def fit(dataset: DataFrame): TrainValidationSplitModel = {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val schema = dataset.schema
     transformSchema(schema, logging = true)
     val est = $(estimator)
@@ -162,7 +180,22 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
   }
 
   @Since("1.5.0")
+<<<<<<< HEAD
   override def transformSchema(schema: StructType): StructType = transformSchemaImpl(schema)
+=======
+  override def transformSchema(schema: StructType): StructType = {
+    $(estimator).transformSchema(schema)
+  }
+
+  @Since("1.5.0")
+  override def validateParams(): Unit = {
+    super.validateParams()
+    val est = $(estimator)
+    for (paramMap <- $(estimatorParamMaps)) {
+      est.copy(paramMap).validateParams()
+    }
+  }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.5.0")
   override def copy(extra: ParamMap): TrainValidationSplit = {
@@ -227,10 +260,15 @@ object TrainValidationSplit extends MLReadable[TrainValidationSplit] {
  * @param validationMetrics Evaluated validation metrics.
  */
 @Since("1.5.0")
+<<<<<<< HEAD
+=======
+@Experimental
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class TrainValidationSplitModel private[ml] (
     @Since("1.5.0") override val uid: String,
     @Since("1.5.0") val bestModel: Model[_],
     @Since("1.5.0") val validationMetrics: Array[Double])
+<<<<<<< HEAD
   extends Model[TrainValidationSplitModel] with TrainValidationSplitParams with MLWritable {
 
   /** A Python-friendly auxiliary constructor. */
@@ -240,6 +278,17 @@ class TrainValidationSplitModel private[ml] (
 
   @Since("2.0.0")
   override def transform(dataset: Dataset[_]): DataFrame = {
+=======
+  extends Model[TrainValidationSplitModel] with TrainValidationSplitParams {
+
+  @Since("1.5.0")
+  override def validateParams(): Unit = {
+    bestModel.validateParams()
+  }
+
+  @Since("1.5.0")
+  override def transform(dataset: DataFrame): DataFrame = {
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     transformSchema(dataset.schema, logging = true)
     bestModel.transform(dataset)
   }
