@@ -162,6 +162,9 @@ class SimpleTextRelation(
     SimpleTextRelation.requiredColumns = requiredColumns
     SimpleTextRelation.pushedFilters = filters.toSet
 
+    SimpleTextRelation.requiredColumns = requiredColumns
+    SimpleTextRelation.pushedFilters = filters.toSet
+
     val fields = this.dataSchema.map(_.dataType)
     val inputAttributes = this.dataSchema.toAttributes
     val outputAttributes = requiredColumns.flatMap(name => inputAttributes.find(_.name == name))
@@ -227,25 +230,6 @@ class SimpleTextOutputWriter(path: String, dataSchema: StructType, context: Task
   }
 }
 
-object SimpleTextRelation {
-  // Used to test column pruning
-  var requiredColumns: Seq[String] = Nil
-
-  // Used to test filter push-down
-  var pushedFilters: Set[Filter] = Set.empty
-
-  // Used to test failed committer
-  var failCommitter = false
-
-  // Used to test failed writer
-  var failWriter = false
-
-  // Used to test failure callback
-  var callbackCalled = false
-
-  // Used by the test case to check the value propagated in the hadoop confs.
-  var lastHadoopConf: Option[Configuration] = None
-=======
 object SimpleTextRelation {
   // Used to test column pruning
   var requiredColumns: Seq[String] = Nil

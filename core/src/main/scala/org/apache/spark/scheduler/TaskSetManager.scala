@@ -211,14 +211,10 @@ private[spark] class TaskSetManager(
   private[spark] def addPendingTask(index: Int) {
 =======
   private def addPendingTask(index: Int) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     for (loc <- tasks(index).preferredLocations) {
       loc match {
         case e: ExecutorCacheTaskLocation =>
           pendingTasksForExecutor.getOrElseUpdate(e.executorId, new ArrayBuffer) += index
-<<<<<<< HEAD
-        case e: HDFSCacheTaskLocation =>
-=======
         case e: HDFSCacheTaskLocation => {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           val exe = sched.getExecutorsAliveOnHost(loc.host)

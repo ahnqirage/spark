@@ -18,11 +18,7 @@
 // scalastyle:off println
 package org.apache.spark.examples.mllib
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkConf, SparkContext}
-=======
 import org.apache.spark.{SparkContext, SparkConf}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.mllib.tree.GradientBoostedTrees
 import org.apache.spark.mllib.tree.configuration.BoostingStrategy
@@ -65,11 +61,6 @@ object GradientBoostingRegressionExample {
     val sameModel = GradientBoostedTreesModel.load(sc,
       "target/tmp/myGradientBoostingRegressionModel")
     // $example off$
-<<<<<<< HEAD
-
-    sc.stop()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

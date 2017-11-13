@@ -24,15 +24,8 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.{JobConf, OutputFormat}
 import org.apache.hadoop.mapreduce.{OutputFormat => NewOutputFormat}
 
-<<<<<<< HEAD
-import org.apache.spark.{HashPartitioner, Partitioner}
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.rdd.RDD
-import org.apache.spark.streaming._
-=======
-import org.apache.spark.annotation.Experimental
-import org.apache.spark.rdd.RDD
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.streaming.StreamingContext.rddToFileName
 import org.apache.spark.streaming._
 import org.apache.spark.util.{SerializableConfiguration, SerializableJobConf}
@@ -363,13 +356,8 @@ class PairDStreamFunctions[K, V](self: DStream[(K, V)])
    * Return a [[MapWithStateDStream]] by applying a function to every key-value element of
    * `this` stream, while maintaining some state data for each unique key. The mapping function
    * and other specification (e.g. partitioners, timeouts, initial state data, etc.) of this
-<<<<<<< HEAD
-   * transformation can be specified using `StateSpec` class. The state data is accessible in
-   * as a parameter of type `State` in the mapping function.
-=======
    * transformation can be specified using [[StateSpec]] class. The state data is accessible in
    * as a parameter of type [[State]] in the mapping function.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * Example of using `mapWithState`:
    * {{{

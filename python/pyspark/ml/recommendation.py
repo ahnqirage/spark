@@ -82,39 +82,6 @@ class ALS(JavaEstimator, HasCheckpointInterval, HasMaxIter, HasPredictionCol, Ha
     Row(user=1, item=0, prediction=2.6258413791656494)
     >>> predictions[2]
     Row(user=2, item=0, prediction=-1.5018409490585327)
-<<<<<<< HEAD
-    >>> user_recs = model.recommendForAllUsers(3)
-    >>> user_recs.where(user_recs.user == 0)\
-        .select("recommendations.item", "recommendations.rating").collect()
-    [Row(item=[0, 1, 2], rating=[3.910..., 1.992..., -0.138...])]
-    >>> item_recs = model.recommendForAllItems(3)
-    >>> item_recs.where(item_recs.item == 2)\
-        .select("recommendations.user", "recommendations.rating").collect()
-    [Row(user=[2, 1, 0], rating=[4.901..., 3.981..., -0.138...])]
-    >>> user_subset = df.where(df.user == 2)
-    >>> user_subset_recs = model.recommendForUserSubset(user_subset, 3)
-    >>> user_subset_recs.select("recommendations.item", "recommendations.rating").first()
-    Row(item=[2, 1, 0], rating=[4.901..., 1.056..., -1.501...])
-    >>> item_subset = df.where(df.item == 0)
-    >>> item_subset_recs = model.recommendForItemSubset(item_subset, 3)
-    >>> item_subset_recs.select("recommendations.user", "recommendations.rating").first()
-    Row(user=[0, 1, 2], rating=[3.910..., 2.625..., -1.501...])
-    >>> als_path = temp_path + "/als"
-    >>> als.save(als_path)
-    >>> als2 = ALS.load(als_path)
-    >>> als.getMaxIter()
-    5
-    >>> model_path = temp_path + "/als_model"
-    >>> model.save(model_path)
-    >>> model2 = ALSModel.load(model_path)
-    >>> model.rank == model2.rank
-    True
-    >>> sorted(model.userFactors.collect()) == sorted(model2.userFactors.collect())
-    True
-    >>> sorted(model.itemFactors.collect()) == sorted(model2.itemFactors.collect())
-    True
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.4.0
     """

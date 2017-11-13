@@ -21,28 +21,6 @@ library(SparkR)
 # Turn all warnings into errors
 options("warn" = 2)
 
-<<<<<<< HEAD
-if (.Platform$OS.type == "windows") {
-  Sys.setenv(TZ = "GMT")
-}
-
-# Setup global test environment
-# Install Spark first to set SPARK_HOME
-install.spark()
-
-sparkRDir <- file.path(Sys.getenv("SPARK_HOME"), "R")
-sparkRWhitelistSQLDirs <- c("spark-warehouse", "metastore_db")
-invisible(lapply(sparkRWhitelistSQLDirs,
-                 function(x) { unlink(file.path(sparkRDir, x), recursive = TRUE, force = TRUE)}))
-sparkRFilesBefore <- list.files(path = sparkRDir, all.files = TRUE)
-
-sparkRTestMaster <- "local[1]"
-if (identical(Sys.getenv("NOT_CRAN"), "true")) {
-  sparkRTestMaster <- ""
-}
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 test_package("SparkR")
 
 if (identical(Sys.getenv("NOT_CRAN"), "true")) {

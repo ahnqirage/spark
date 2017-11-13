@@ -28,34 +28,6 @@ import org.apache.spark.ml.classification.NaiveBayesSuite._
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.param.ParamsSuite
-<<<<<<< HEAD
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-import org.apache.spark.ml.util.TestingUtils._
-import org.apache.spark.mllib.util.MLlibTestSparkContext
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
-
-class NaiveBayesSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
-
-  import testImplicits._
-
-  @transient var dataset: Dataset[_] = _
-  @transient var bernoulliDataset: Dataset[_] = _
-
-  private val seed = 42
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-
-    val pi = Array(0.3, 0.3, 0.4).map(math.log)
-    val theta = Array(
-      Array(0.30, 0.30, 0.30, 0.30), // label 0
-      Array(0.30, 0.30, 0.30, 0.30), // label 1
-      Array(0.40, 0.40, 0.40, 0.40)  // label 2
-    ).map(_.map(math.log))
-
-    dataset = generateNaiveBayesInput(pi, theta, 100, seed).toDF()
-    bernoulliDataset = generateNaiveBayesInput(pi, theta, 100, seed, "bernoulli").toDF()
-=======
 import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.mllib.classification.NaiveBayes.{Bernoulli, Multinomial}
 import org.apache.spark.mllib.classification.NaiveBayesSuite._
@@ -79,7 +51,6 @@ class NaiveBayesSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
     ).map(_.map(math.log))
 
     dataset = sqlContext.createDataFrame(generateNaiveBayesInput(pi, theta, 100, 42))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def validatePrediction(predictionAndLabels: DataFrame): Unit = {
@@ -271,115 +242,6 @@ class NaiveBayesSuite extends SparkFunSuite with MLlibTestSparkContext with Defa
       LabeledPoint(1.0, Vectors.sparse(1, Array.empty, Array.empty))))
     intercept[SparkException] {
       new NaiveBayes().fit(nan)
-    }
-  }
-
-  test("detect non zero or one values in Bernoulli") {
-    val badTrain = spark.createDataFrame(Seq(
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(0.0, Vectors.dense(2.0)),
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(1.0, Vectors.dense(0.0))))
-
-    intercept[SparkException] {
-      new NaiveBayes().setModelType(Bernoulli).setSmoothing(1.0).fit(badTrain)
-    }
-
-    val okTrain = spark.createDataFrame(Seq(
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(0.0, Vectors.dense(0.0)),
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(0.0, Vectors.dense(0.0)),
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(1.0, Vectors.dense(1.0))))
-
-    val model = new NaiveBayes().setModelType(Bernoulli).setSmoothing(1.0).fit(okTrain)
-
-    val badPredict = spark.createDataFrame(Seq(
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(1.0, Vectors.dense(2.0)),
-      LabeledPoint(1.0, Vectors.dense(1.0)),
-      LabeledPoint(1.0, Vectors.dense(0.0))))
-
-    intercept[SparkException] {
-      model.transform(badPredict).collect()
-    }
-  }
-
-  test("read/write") {
-    def checkModelData(model: NaiveBayesModel, model2: NaiveBayesModel): Unit = {
-      assert(model.pi === model2.pi)
-      assert(model.theta === model2.theta)
-    }
-    val nb = new NaiveBayes()
-    testEstimatorAndModelReadWrite(nb, dataset, NaiveBayesSuite.allParamSettings,
-      NaiveBayesSuite.allParamSettings, checkModelData)
-  }
-
-  test("should support all NumericType labels and weights, and not support other types") {
-    val nb = new NaiveBayes()
-    MLTestingUtils.checkNumericTypes[NaiveBayesModel, NaiveBayes](
-      nb, spark) { (expected, actual) =>
-        assert(expected.pi === actual.pi)
-        assert(expected.theta === actual.theta)
-      }
-  }
-}
-
-object NaiveBayesSuite {
-
-  /**
-   * Mapping from all Params to valid settings which differ from the defaults.
-   * This is useful for tests which need to exercise all Params, such as save/load.
-   * This excludes input columns to simplify some tests.
-   */
-  val allParamSettings: Map[String, Any] = Map(
-    "predictionCol" -> "myPrediction",
-    "smoothing" -> 0.1
-  )
-
-  private def calcLabel(p: Double, pi: Array[Double]): Int = {
-    var sum = 0.0
-    for (j <- 0 until pi.length) {
-      sum += pi(j)
-      if (p < sum) return j
-    }
-    -1
-  }
-
-  // Generate input of the form Y = (theta * x).argmax()
-  def generateNaiveBayesInput(
-    pi: Array[Double],            // 1XC
-    theta: Array[Array[Double]],  // CXD
-    nPoints: Int,
-    seed: Int,
-    modelType: String = Multinomial,
-    sample: Int = 10): Seq[LabeledPoint] = {
-    val D = theta(0).length
-    val rnd = new Random(seed)
-    val _pi = pi.map(math.exp)
-    val _theta = theta.map(row => row.map(math.exp))
-
-    for (i <- 0 until nPoints) yield {
-      val y = calcLabel(rnd.nextDouble(), _pi)
-      val xi = modelType match {
-        case Bernoulli => Array.tabulate[Double] (D) { j =>
-            if (rnd.nextDouble () < _theta(y)(j) ) 1 else 0
-        }
-        case Multinomial =>
-          val mult = BrzMultinomial(BDV(_theta(y)))
-          val emptyMap = (0 until D).map(x => (x, 0.0)).toMap
-          val counts = emptyMap ++ mult.sample(sample).groupBy(x => x).map {
-            case (index, reps) => (index, reps.size.toDouble)
-          }
-          counts.toArray.sortBy(_._1).map(_._2)
-        case _ =>
-          // This should never happen.
-          throw new UnknownError(s"Invalid modelType: $modelType.")
-      }
-
-      LabeledPoint(y, Vectors.dense(xi))
     }
   }
 

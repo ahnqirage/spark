@@ -149,13 +149,9 @@ class StopWordsRemoverSuite
     val remover = new StopWordsRemover()
       .setInputCol("raw")
       .setOutputCol(outputCol)
-<<<<<<< HEAD
-    val dataSet = Seq((Seq("The", "the", "swift"), Seq("swift"))).toDF("raw", outputCol)
-=======
     val dataSet = sqlContext.createDataFrame(Seq(
       (Seq("The", "the", "swift"), Seq("swift"))
     )).toDF("raw", outputCol)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val thrown = intercept[IllegalArgumentException] {
       testStopWordsRemover(remover, dataSet)

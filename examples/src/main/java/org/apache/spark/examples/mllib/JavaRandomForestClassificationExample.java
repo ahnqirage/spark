@@ -19,10 +19,6 @@ package org.apache.spark.examples.mllib;
 
 // $example on$
 import java.util.HashMap;
-<<<<<<< HEAD
-import java.util.Map;
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.Tuple2;
 
@@ -30,11 +26,8 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-<<<<<<< HEAD
-=======
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.tree.RandomForest;
 import org.apache.spark.mllib.tree.model.RandomForestModel;
@@ -57,11 +50,7 @@ public class JavaRandomForestClassificationExample {
     // Train a RandomForest model.
     // Empty categoricalFeaturesInfo indicates all features are continuous.
     Integer numClasses = 2;
-<<<<<<< HEAD
-    Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<>();
-=======
     HashMap<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     Integer numTrees = 3; // Use more in practice.
     String featureSubsetStrategy = "auto"; // Let the algorithm choose.
     String impurity = "gini";
@@ -69,21 +58,12 @@ public class JavaRandomForestClassificationExample {
     Integer maxBins = 32;
     Integer seed = 12345;
 
-<<<<<<< HEAD
-    RandomForestModel model = RandomForest.trainClassifier(trainingData, numClasses,
-=======
     final RandomForestModel model = RandomForest.trainClassifier(trainingData, numClasses,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       categoricalFeaturesInfo, numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins,
       seed);
 
     // Evaluate model on test instances and compute test error
     JavaPairRDD<Double, Double> predictionAndLabel =
-<<<<<<< HEAD
-      testData.mapToPair(p -> new Tuple2<>(model.predict(p.features()), p.label()));
-    double testErr =
-      predictionAndLabel.filter(pl -> !pl._1().equals(pl._2())).count() / (double) testData.count();
-=======
       testData.mapToPair(new PairFunction<LabeledPoint, Double, Double>() {
         @Override
         public Tuple2<Double, Double> call(LabeledPoint p) {
@@ -97,7 +77,6 @@ public class JavaRandomForestClassificationExample {
           return !pl._1().equals(pl._2());
         }
       }).count() / testData.count();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     System.out.println("Test Error: " + testErr);
     System.out.println("Learned classification forest model:\n" + model.toDebugString());
 
@@ -106,10 +85,5 @@ public class JavaRandomForestClassificationExample {
     RandomForestModel sameModel = RandomForestModel.load(jsc.sc(),
       "target/tmp/myRandomForestClassificationModel");
     // $example off$
-<<<<<<< HEAD
-
-    jsc.stop();
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

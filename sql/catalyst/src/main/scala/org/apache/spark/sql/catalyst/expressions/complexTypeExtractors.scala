@@ -104,22 +104,6 @@ trait ExtractValue extends Expression
  * For example, when get field `yEAr` from `<year: int, month: int>`, we should pass in `yEAr`.
  */
 case class GetStructField(child: Expression, ordinal: Int, name: Option[String] = None)
-<<<<<<< HEAD
-  extends UnaryExpression with ExtractValue with NullIntolerant {
-
-  lazy val childSchema = child.dataType.asInstanceOf[StructType]
-
-  override def dataType: DataType = childSchema(ordinal).dataType
-  override def nullable: Boolean = child.nullable || childSchema(ordinal).nullable
-
-  override def toString: String = {
-    val fieldName = if (resolved) childSchema(ordinal).name else s"_$ordinal"
-    s"$child.${name.getOrElse(fieldName)}"
-  }
-
-  override def sql: String =
-    child.sql + s".${quoteIdentifier(name.getOrElse(childSchema(ordinal).name))}"
-=======
   extends UnaryExpression {
 
   private[sql] lazy val childSchema = child.dataType.asInstanceOf[StructType]
@@ -127,7 +111,6 @@ case class GetStructField(child: Expression, ordinal: Int, name: Option[String] 
   override def dataType: DataType = childSchema(ordinal).dataType
   override def nullable: Boolean = child.nullable || childSchema(ordinal).nullable
   override def toString: String = s"$child.${name.getOrElse(childSchema(ordinal).name)}"
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   protected override def nullSafeEval(input: Any): Any =
     input.asInstanceOf[InternalRow].get(ordinal, childSchema(ordinal).dataType)
@@ -259,7 +242,6 @@ case class GetArrayItem(child: Expression, ordinal: Expression)
 =======
         final int index = (int) $eval2;
         if (index >= $eval1.numElements() || index < 0 || $eval1.isNullAt(index)) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           ${ev.isNull} = true;
         } else {
           ${ev.value} = ${ctx.getValue(eval1, dataType, index)};

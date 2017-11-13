@@ -17,17 +17,6 @@
 
 package org.apache.spark.sql.execution.datasources
 
-<<<<<<< HEAD
-import java.util.Locale
-import java.util.concurrent.Callable
-
-import org.apache.hadoop.fs.Path
-
-import org.apache.spark.internal.Logging
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow, QualifiedTableName}
-=======
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.deploy.SparkHadoopUtil
@@ -105,16 +94,6 @@ case class DataSourceAnalysis(conf: SQLConf) extends Rule[LogicalPlan] with Cast
       // Predicates with both partition keys and attributes
       val partitionAndNormalColumnFilters =
         filters.toSet -- partitionFilters.toSet -- pushedFilters.toSet
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-    staticPartitions.foreach {
-      case (partKey, partValue) =>
-        if (!targetPartitionSchema.fields.exists(field => resolver(field.name, partKey))) {
-          throw new AnalysisException(
-            s"$partKey is not a partition column. Partition columns are " +
-              s"${targetPartitionSchema.fields.map(_.name).mkString("[", ",", "]")}")
-        }
-    }
 
     val partitionList = targetPartitionSchema.fields.map { field =>
       val potentialSpecs = staticPartitions.filter {
@@ -144,6 +123,14 @@ case class DataSourceAnalysis(conf: SQLConf) extends Rule[LogicalPlan] with Cast
             "partition columns that do not have an assigned constant value.")
     }
 =======
+      // need to add projections from "partitionAndNormalColumnAttrs" in if it is not empty
+      val partitionAndNormalColumnAttrs = AttributeSet(partitionAndNormalColumnFilters)
+      val partitionAndNormalColumnProjs = if (partitionAndNormalColumnAttrs.isEmpty) {
+        projects
+      } else {
+        (partitionAndNormalColumnAttrs ++ projects).toSeq
+      }
+
       // need to add projections from "partitionAndNormalColumnAttrs" in if it is not empty
       val partitionAndNormalColumnAttrs = AttributeSet(partitionAndNormalColumnFilters)
       val partitionAndNormalColumnProjs = if (partitionAndNormalColumnAttrs.isEmpty) {
@@ -501,11 +488,6 @@ case class DataSourceStrategy(conf: SQLConf) extends Strategy with Logging with 
         pushedFilters.toSet,
         handledFilters,
         scanBuilder(requestedColumns, candidatePredicates, pushedFilters),
-<<<<<<< HEAD
-        relation.relation,
-        relation.catalogTable.map(_.identifier))
-      filterCondition.map(execution.FilterExec(_, scan)).getOrElse(scan)
-=======
         relation.relation, metadata)
       filterCondition.map(execution.Filter(_, scan)).getOrElse(scan)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -528,16 +510,9 @@ case class DataSourceStrategy(conf: SQLConf) extends Strategy with Logging with 
         pushedFilters.toSet,
         handledFilters,
         scanBuilder(requestedColumns, candidatePredicates, pushedFilters),
-<<<<<<< HEAD
-        relation.relation,
-        relation.catalogTable.map(_.identifier))
-      execution.ProjectExec(
-        projects, filterCondition.map(execution.FilterExec(_, scan)).getOrElse(scan))
-=======
         relation.relation, metadata)
       execution.Project(
         projects, filterCondition.map(execution.Filter(_, scan)).getOrElse(scan))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -658,7 +633,6 @@ object DataSourceStrategy {
    *         predicate [[Expression]]s that are either not convertible or cannot be handled by
    *         `relation`. The second element contains all converted data source [[Filter]]s that
    *         will be pushed down to the data source.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   protected[sql] def selectFilters(
       relation: BaseRelation,
@@ -691,24 +665,11 @@ object DataSourceStrategy {
     // Catalyst predicate expressions that cannot be converted to data source filters.
     val nonconvertiblePredicates = predicates.filterNot(translatedMap.contains)
 
-    // Data source filters that cannot be handled by `relation`. An unhandled filter means
-    // the data source cannot guarantee the rows returned can pass the filter.
-    // As a result we must return it so Spark can plan an extra filter operator.
-    val unhandledFilters = relation.unhandledFilters(translatedMap.values.toArray).toSet
-    val unhandledPredicates = translatedMap.filter { case (p, f) =>
-      unhandledFilters.contains(f)
-    }.keys
-    val handledFilters = pushedFilters.toSet -- unhandledFilters
-
-<<<<<<< HEAD
-    (nonconvertiblePredicates ++ unhandledPredicates, pushedFilters, handledFilters)
-=======
     // translated contains all filters that have been converted to the public Filter interface.
     // We should always push them to the data source no matter whether the data source can apply
     // a filter to every row or not.
     val (_, translatedFilters) = translated.unzip
 
     (unrecognizedPredicates ++ unhandledPredicates, translatedFilters)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

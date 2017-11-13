@@ -47,11 +47,7 @@ private[spark] object BlockManagerMessages {
     extends ToBlockManagerSlave
 
   /**
-<<<<<<< HEAD
-   * Driver to Executor message to trigger a thread dump.
-=======
    * Driver -> Executor message to trigger a thread dump.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   case object TriggerThreadDump extends ToBlockManagerSlave
 

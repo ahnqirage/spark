@@ -17,18 +17,11 @@
 
 package org.apache.spark.ml.feature
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Since, Experimental}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.Transformer
 import org.apache.spark.ml.param.{BooleanParam, ParamMap, StringArrayParam}
 import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
 import org.apache.spark.ml.util._
-<<<<<<< HEAD
-import org.apache.spark.sql.{DataFrame, Dataset}
-=======
 import org.apache.spark.sql.DataFrame
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions.{col, udf}
@@ -48,7 +41,6 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
 =======
 @Experimental
 class StopWordsRemover(override val uid: String)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Transformer with HasInputCol with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.5.0")
@@ -134,30 +126,6 @@ class StopWordsRemover(override val uid: String)
 @Since("1.6.0")
 object StopWordsRemover extends DefaultParamsReadable[StopWordsRemover] {
 
-<<<<<<< HEAD
-  private[feature]
-  val supportedLanguages = Set("danish", "dutch", "english", "finnish", "french", "german",
-    "hungarian", "italian", "norwegian", "portuguese", "russian", "spanish", "swedish", "turkish")
-
   @Since("1.6.0")
   override def load(path: String): StopWordsRemover = super.load(path)
-
-  /**
-   * Loads the default stop words for the given language.
-   * Supported languages: danish, dutch, english, finnish, french, german, hungarian,
-   * italian, norwegian, portuguese, russian, spanish, swedish, turkish
-   * @see <a href="http://anoncvs.postgresql.org/cvsweb.cgi/pgsql/src/backend/snowball/stopwords/">
-   * here</a>
-   */
-  @Since("2.0.0")
-  def loadDefaultStopWords(language: String): Array[String] = {
-    require(supportedLanguages.contains(language),
-      s"$language is not in the supported language list: ${supportedLanguages.mkString(", ")}.")
-    val is = getClass.getResourceAsStream(s"/org/apache/spark/ml/feature/stopwords/$language.txt")
-    scala.io.Source.fromInputStream(is)(scala.io.Codec.UTF8).getLines().toArray
-  }
-=======
-  @Since("1.6.0")
-  override def load(path: String): StopWordsRemover = super.load(path)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

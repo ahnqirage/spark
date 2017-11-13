@@ -83,28 +83,17 @@ class StorageStatusListenerSuite extends SparkFunSuite {
   }
 
   test("updated blocks") {
-<<<<<<< HEAD
-    val listener = new StorageStatusListener(conf)
-=======
     val listener = new StorageStatusListener
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     listener.onBlockManagerAdded(SparkListenerBlockManagerAdded(1L, bm1, 1000L))
     listener.onBlockManagerAdded(SparkListenerBlockManagerAdded(1L, bm2, 2000L))
 
     val blockUpdateInfos1 = Seq(
-<<<<<<< HEAD
-      BlockUpdatedInfo(bm1, RDDBlockId(1, 1), StorageLevel.DISK_ONLY, 0L, 100L),
-      BlockUpdatedInfo(bm1, RDDBlockId(1, 2), StorageLevel.DISK_ONLY, 0L, 200L)
-    )
-    val blockUpdateInfos2 =
-      Seq(BlockUpdatedInfo(bm2, RDDBlockId(4, 0), StorageLevel.DISK_ONLY, 0L, 300L))
-=======
       BlockUpdatedInfo(bm1, RDDBlockId(1, 1), StorageLevel.DISK_ONLY, 0L, 100L, 0L),
       BlockUpdatedInfo(bm1, RDDBlockId(1, 2), StorageLevel.DISK_ONLY, 0L, 200L, 0L)
     )
     val blockUpdateInfos2 =
       Seq(BlockUpdatedInfo(bm2, RDDBlockId(4, 0), StorageLevel.DISK_ONLY, 0L, 300L, 0L))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Add some new blocks
     assert(listener.executorIdToStorageStatus("big").numBlocks === 0)
@@ -124,21 +113,12 @@ class StorageStatusListenerSuite extends SparkFunSuite {
 
     // Dropped the blocks
     val droppedBlockInfo1 = Seq(
-<<<<<<< HEAD
-      BlockUpdatedInfo(bm1, RDDBlockId(1, 1), StorageLevel.NONE, 0L, 0L),
-      BlockUpdatedInfo(bm1, RDDBlockId(4, 0), StorageLevel.NONE, 0L, 0L)
-    )
-    val droppedBlockInfo2 = Seq(
-      BlockUpdatedInfo(bm2, RDDBlockId(1, 2), StorageLevel.NONE, 0L, 0L),
-      BlockUpdatedInfo(bm2, RDDBlockId(4, 0), StorageLevel.NONE, 0L, 0L)
-=======
       BlockUpdatedInfo(bm1, RDDBlockId(1, 1), StorageLevel.NONE, 0L, 0L, 0L),
       BlockUpdatedInfo(bm1, RDDBlockId(4, 0), StorageLevel.NONE, 0L, 0L, 0L)
     )
     val droppedBlockInfo2 = Seq(
       BlockUpdatedInfo(bm2, RDDBlockId(1, 2), StorageLevel.NONE, 0L, 0L, 0L),
       BlockUpdatedInfo(bm2, RDDBlockId(4, 0), StorageLevel.NONE, 0L, 0L, 0L)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     )
 
     postUpdateBlock(listener, droppedBlockInfo1)
@@ -159,19 +139,11 @@ class StorageStatusListenerSuite extends SparkFunSuite {
     val listener = new StorageStatusListener(conf)
     listener.onBlockManagerAdded(SparkListenerBlockManagerAdded(1L, bm1, 1000L))
     val blockUpdateInfos1 = Seq(
-<<<<<<< HEAD
-      BlockUpdatedInfo(bm1, RDDBlockId(1, 1), StorageLevel.DISK_ONLY, 0L, 100L),
-      BlockUpdatedInfo(bm1, RDDBlockId(1, 2), StorageLevel.DISK_ONLY, 0L, 200L)
-    )
-    val blockUpdateInfos2 =
-      Seq(BlockUpdatedInfo(bm1, RDDBlockId(4, 0), StorageLevel.DISK_ONLY, 0L, 300L))
-=======
       BlockUpdatedInfo(bm1, RDDBlockId(1, 1), StorageLevel.DISK_ONLY, 0L, 100L, 0L),
       BlockUpdatedInfo(bm1, RDDBlockId(1, 2), StorageLevel.DISK_ONLY, 0L, 200L, 0L)
     )
     val blockUpdateInfos2 =
       Seq(BlockUpdatedInfo(bm1, RDDBlockId(4, 0), StorageLevel.DISK_ONLY, 0L, 300L, 0L))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     postUpdateBlock(listener, blockUpdateInfos1)
     postUpdateBlock(listener, blockUpdateInfos2)
     assert(listener.executorIdToStorageStatus("big").numBlocks === 3)

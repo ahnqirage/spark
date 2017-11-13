@@ -22,31 +22,11 @@ import org.apache.spark.sql.{execution, AnalysisException, Strategy}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.expressions._
-<<<<<<< HEAD
-=======
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.planning._
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.plans.physical._
-<<<<<<< HEAD
-import org.apache.spark.sql.execution.columnar.{InMemoryRelation, InMemoryTableScanExec}
-import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.execution.exchange.ShuffleExchangeExec
-import org.apache.spark.sql.execution.joins.{BuildLeft, BuildRight}
-import org.apache.spark.sql.execution.streaming._
-import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.streaming.StreamingQuery
-
-/**
- * Converts a logical plan into zero or more SparkPlans.  This API is exposed for experimenting
- * with the query planner and is not designed to be stable across spark releases.  Developers
- * writing libraries should instead consider using the stable APIs provided in
- * [[org.apache.spark.sql.sources]]
- */
-abstract class SparkStrategy extends GenericStrategy[SparkPlan] {
-=======
 import org.apache.spark.sql.execution.columnar.{InMemoryColumnarTableScan, InMemoryRelation}
 import org.apache.spark.sql.execution.datasources.{CreateTableUsing, CreateTempTableUsing, DescribeCommand => LogicalDescribeCommand, _}
 import org.apache.spark.sql.execution.{DescribeCommand => RunnableDescribeCommand}
@@ -108,18 +88,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
    *     [[org.apache.spark.sql.functions.broadcast()]] function to a DataFrame), then that side
    *     of the join will be broadcasted and the other side will be streamed, with no shuffling
    *     performed. If both sides of the join are eligible to be broadcasted then the
-<<<<<<< HEAD
-   * - Shuffle hash join: if the average size of a single partition is small enough to build a hash
-   *     table.
    * - Sort merge: if the matching join keys are sortable.
-   *
-   * If there is no joining keys, Join implementations are chosen with the following precedence:
-   * - BroadcastNestedLoopJoin: if one side of the join could be broadcasted
-   * - CartesianProduct: for Inner join
-   * - BroadcastNestedLoopJoin
-=======
-   * - Sort merge: if the matching join keys are sortable.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   object JoinSelection extends Strategy with PredicateHelper {
 
@@ -198,87 +167,16 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
           leftKeys, rightKeys, joinType, BuildRight, condition, planLater(left), planLater(right)))
 
       case ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right)
-<<<<<<< HEAD
-         if !conf.preferSortMergeJoin && canBuildLeft(joinType) && canBuildLocalHashMap(left)
-           && muchSmaller(left, right) ||
-           !RowOrdering.isOrderable(leftKeys) =>
-        Seq(joins.ShuffledHashJoinExec(
-          leftKeys, rightKeys, joinType, BuildLeft, condition, planLater(left), planLater(right)))
-
-      // --- SortMergeJoin ------------------------------------------------------------
-
-      case ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition, left, right)
-        if RowOrdering.isOrderable(leftKeys) =>
-        joins.SortMergeJoinExec(
-          leftKeys, rightKeys, joinType, condition, planLater(left), planLater(right)) :: Nil
-
-      // --- Without joining keys ------------------------------------------------------------
-
-      // Pick BroadcastNestedLoopJoin if one side could be broadcasted
-      case j @ logical.Join(left, right, joinType, condition)
-          if canBuildRight(joinType) && canBroadcast(right) =>
-        joins.BroadcastNestedLoopJoinExec(
-          planLater(left), planLater(right), BuildRight, joinType, condition) :: Nil
-      case j @ logical.Join(left, right, joinType, condition)
-          if canBuildLeft(joinType) && canBroadcast(left) =>
-        joins.BroadcastNestedLoopJoinExec(
-          planLater(left), planLater(right), BuildLeft, joinType, condition) :: Nil
-
-      // Pick CartesianProduct for InnerJoin
-      case logical.Join(left, right, _: InnerLike, condition) =>
-        joins.CartesianProductExec(planLater(left), planLater(right), condition) :: Nil
-
-      case logical.Join(left, right, joinType, condition) =>
-        val buildSide =
-          if (right.stats.sizeInBytes <= left.stats.sizeInBytes) {
-            BuildRight
-          } else {
-            BuildLeft
-          }
-        // This join could be very slow or OOM
-        joins.BroadcastNestedLoopJoinExec(
-          planLater(left), planLater(right), buildSide, joinType, condition) :: Nil
-
-=======
         if RowOrdering.isOrderable(leftKeys) =>
         joins.SortMergeOuterJoin(
           leftKeys, rightKeys, joinType, condition, planLater(left), planLater(right)) :: Nil
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // --- Cases where this strategy does not apply ---------------------------------------------
 
       case _ => Nil
     }
   }
 
-<<<<<<< HEAD
-  /**
-   * Used to plan streaming aggregation queries that are computed incrementally as part of a
-   * [[StreamingQuery]]. Currently this rule is injected into the planner
-   * on-demand, only when planning in a [[org.apache.spark.sql.execution.streaming.StreamExecution]]
-   */
-  object StatefulAggregationStrategy extends Strategy {
-    override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-      case _ if !plan.isStreaming => Nil
-
-      case EventTimeWatermark(columnName, delay, child) =>
-        EventTimeWatermarkExec(columnName, delay, planLater(child)) :: Nil
-
-      case PhysicalAggregation(
-        namedGroupingExpressions, aggregateExpressions, rewrittenResultExpressions, child) =>
-
-        aggregate.AggUtils.planStreamingAggregation(
-          namedGroupingExpressions,
-          aggregateExpressions,
-          rewrittenResultExpressions,
-          planLater(child))
-
-      case _ => Nil
-    }
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   /**
    * Used to plan the streaming deduplicate operator.
    */
@@ -383,7 +281,6 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
           }
 
         aggregateOperator
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       case _ => Nil
     }
@@ -476,29 +373,6 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
     }
   }
 
-<<<<<<< HEAD
-  /**
-   * Strategy to convert [[FlatMapGroupsWithState]] logical operator to physical operator
-   * in streaming plans. Conversion for batch plans is handled by [[BasicOperators]].
-   */
-  object FlatMapGroupsWithStateStrategy extends Strategy {
-    override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
-      case FlatMapGroupsWithState(
-        func, keyDeser, valueDeser, groupAttr, dataAttr, outputAttr, stateEnc, outputMode, _,
-        timeout, child) =>
-        val execPlan = FlatMapGroupsWithStateExec(
-          func, keyDeser, valueDeser, groupAttr, dataAttr, outputAttr, None, stateEnc, outputMode,
-          timeout, batchTimestampMs = None, eventTimeWatermark = None, planLater(child))
-        execPlan :: Nil
-      case _ =>
-        Nil
-    }
-  }
-
-  // Can we automate these 'pass through' operations?
-  object BasicOperators extends Strategy {
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
       case r: RunnableCommand => ExecutedCommandExec(r, r.children.map(planLater)) :: Nil
 

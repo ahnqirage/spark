@@ -27,6 +27,8 @@ import org.apache.commons.lang3.StringEscapeUtils
 
 import org.apache.commons.lang3.StringEscapeUtils
 
+import org.apache.commons.lang3.StringEscapeUtils
+
 import org.apache.spark.JobExecutionStatus
 import org.apache.spark.scheduler._
 import org.apache.spark.ui.{ToolTips, UIUtils, WebUIPage}
@@ -79,9 +81,6 @@ private[ui] class JobPage(parent: JobsTab) extends WebUIPage("job") {
          |  'content': '<div class="job-timeline-content" data-toggle="tooltip"' +
          |   'data-placement="top" data-html="true"' +
          |   'data-title="${jsEscapedName} (Stage ${stageId}.${attemptId})<br>' +
-<<<<<<< HEAD
-         |   'Status: ${status.toUpperCase(Locale.ROOT)}<br>' +
-=======
          |   'Status: ${status.toUpperCase}<br>' +
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
          |   'Submitted: ${UIUtils.formatDate(new Date(submissionTime))}' +

@@ -20,12 +20,6 @@ package org.apache.spark.ml.feature
 import org.scalatest.exceptions.TestFailedException
 
 import org.apache.spark.SparkFunSuite
-<<<<<<< HEAD
-import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
-import org.apache.spark.ml.param.ParamsSuite
-import org.apache.spark.ml.util.DefaultReadWriteTest
-import org.apache.spark.ml.util.TestingUtils._
-=======
 import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector, Vectors}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -34,11 +28,6 @@ import org.apache.spark.sql.Row
 
 class PolynomialExpansionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
-<<<<<<< HEAD
-
-  import testImplicits._
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new PolynomialExpansion)
@@ -103,25 +92,6 @@ class PolynomialExpansionSuite
     }
   }
 
-<<<<<<< HEAD
-  test("Polynomial expansion with degree 1 is identity on vectors") {
-    val df = data.zip(data).toSeq.toDF("features", "expected")
-
-    val polynomialExpansion = new PolynomialExpansion()
-      .setInputCol("features")
-      .setOutputCol("polyFeatures")
-      .setDegree(1)
-
-    polynomialExpansion.transform(df).select("polyFeatures", "expected").collect().foreach {
-      case Row(expanded: Vector, expected: Vector) =>
-        assert(expanded ~== expected absTol 1e-1)
-      case _ =>
-        throw new TestFailedException("Unmatched data types after polynomial expansion", 0)
-    }
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("read/write") {
     val t = new PolynomialExpansion()
       .setInputCol("myInputCol")
@@ -129,31 +99,5 @@ class PolynomialExpansionSuite
       .setDegree(3)
     testDefaultReadWrite(t)
   }
-<<<<<<< HEAD
-
-  test("SPARK-17027. Integer overflow in PolynomialExpansion.getPolySize") {
-    val data: Array[(Vector, Int, Int)] = Array(
-      (Vectors.dense(1.0, 2.0, 3.0, 4.0, 5.0), 3002, 4367),
-      (Vectors.sparse(5, Seq((0, 1.0), (4, 5.0))), 3002, 4367),
-      (Vectors.dense(1.0, 2.0, 3.0, 4.0, 5.0, 6.0), 8007, 12375)
-    )
-
-    val df = data.toSeq.toDF("features", "expectedPoly10size", "expectedPoly11size")
-
-    val t = new PolynomialExpansion()
-      .setInputCol("features")
-      .setOutputCol("polyFeatures")
-
-    for (i <- Seq(10, 11)) {
-      val transformed = t.setDegree(i)
-        .transform(df)
-        .select(s"expectedPoly${i}size", "polyFeatures")
-        .rdd.map { case Row(expected: Int, v: Vector) => expected == v.size }
-
-      assert(transformed.collect.forall(identity))
-    }
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 

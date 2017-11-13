@@ -19,23 +19,6 @@
 package org.apache.spark.examples.mllib
 
 // $example on$
-<<<<<<< HEAD
-import org.apache.spark.mllib.evaluation.{RankingMetrics, RegressionMetrics}
-import org.apache.spark.mllib.recommendation.{ALS, Rating}
-// $example off$
-import org.apache.spark.sql.SparkSession
-
-object RankingMetricsExample {
-  def main(args: Array[String]) {
-    val spark = SparkSession
-      .builder
-      .appName("RankingMetricsExample")
-      .getOrCreate()
-    import spark.implicits._
-    // $example on$
-    // Read in the ratings data
-    val ratings = spark.read.textFile("data/mllib/sample_movielens_data.txt").rdd.map { line =>
-=======
 import org.apache.spark.mllib.evaluation.{RegressionMetrics, RankingMetrics}
 import org.apache.spark.mllib.recommendation.{ALS, Rating}
 // $example off$
@@ -51,7 +34,6 @@ object RankingMetricsExample {
     // $example on$
     // Read in the ratings data
     val ratings = sc.textFile("data/mllib/sample_movielens_data.txt").map { line =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val fields = line.split("::")
       Rating(fields(0).toInt, fields(1).toInt, fields(2).toDouble - 2.5)
     }.cache()

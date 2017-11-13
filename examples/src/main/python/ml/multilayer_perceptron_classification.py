@@ -17,28 +17,12 @@
 
 from __future__ import print_function
 
-<<<<<<< HEAD
-=======
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 # $example on$
 from pyspark.ml.classification import MultilayerPerceptronClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 # $example off$
-<<<<<<< HEAD
-from pyspark.sql import SparkSession
-
-if __name__ == "__main__":
-    spark = SparkSession\
-        .builder.appName("multilayer_perceptron_classification_example").getOrCreate()
-
-    # $example on$
-    # Load training data
-    data = spark.read.format("libsvm")\
-        .load("data/mllib/sample_multiclass_classification_data.txt")
-
-=======
 
 if __name__ == "__main__":
 
@@ -49,36 +33,14 @@ if __name__ == "__main__":
     # Load training data
     data = sqlContext.read.format("libsvm")\
         .load("data/mllib/sample_multiclass_classification_data.txt")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     # Split the data into train and test
     splits = data.randomSplit([0.6, 0.4], 1234)
     train = splits[0]
     test = splits[1]
-<<<<<<< HEAD
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     # specify layers for the neural network:
     # input layer of size 4 (features), two intermediate of size 5 and 4
     # and output of size 3 (classes)
     layers = [4, 5, 4, 3]
-<<<<<<< HEAD
-
-    # create the trainer and set its parameters
-    trainer = MultilayerPerceptronClassifier(maxIter=100, layers=layers, blockSize=128, seed=1234)
-
-    # train the model
-    model = trainer.fit(train)
-
-    # compute accuracy on the test set
-    result = model.transform(test)
-    predictionAndLabels = result.select("prediction", "label")
-    evaluator = MulticlassClassificationEvaluator(metricName="accuracy")
-    print("Test set accuracy = " + str(evaluator.evaluate(predictionAndLabels)))
-    # $example off$
-
-    spark.stop()
-=======
     # create the trainer and set its parameters
     trainer = MultilayerPerceptronClassifier(maxIter=100, layers=layers, blockSize=128, seed=1234)
     # train the model
@@ -91,4 +53,3 @@ if __name__ == "__main__":
     # $example off$
 
     sc.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

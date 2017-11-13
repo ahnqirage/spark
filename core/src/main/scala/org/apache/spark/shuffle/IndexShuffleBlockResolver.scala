@@ -22,21 +22,12 @@ import java.nio.file.Files
 
 import com.google.common.io.ByteStreams
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkConf, SparkEnv}
-import org.apache.spark.internal.Logging
-import org.apache.spark.io.NioBufferedFileInputStream
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.network.buffer.{FileSegmentManagedBuffer, ManagedBuffer}
 import org.apache.spark.network.netty.SparkTransportConf
 import org.apache.spark.shuffle.IndexShuffleBlockResolver.NOOP_REDUCE_ID
 import org.apache.spark.storage._
 import org.apache.spark.util.Utils
-<<<<<<< HEAD
-=======
 import org.apache.spark.{SparkEnv, Logging, SparkConf}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Create and maintain the shuffle blocks' mapping between logic block and physical file location.
@@ -98,11 +89,7 @@ private[spark] class IndexShuffleBlockResolver(
     val lengths = new Array[Long](blocks)
     // Read the lengths of blocks
     val in = try {
-<<<<<<< HEAD
-      new DataInputStream(new NioBufferedFileInputStream(index))
-=======
       new DataInputStream(new BufferedInputStream(new FileInputStream(index)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } catch {
       case e: IOException =>
         return null
@@ -144,11 +131,7 @@ private[spark] class IndexShuffleBlockResolver(
    * replace them with new ones.
    *
    * Note: the `lengths` will be updated to match the existing index file if use the existing ones.
-<<<<<<< HEAD
-   */
-=======
    * */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def writeIndexFileAndCommit(
       shuffleId: Int,
       mapId: Int,
@@ -157,12 +140,7 @@ private[spark] class IndexShuffleBlockResolver(
     val indexFile = getIndexFile(shuffleId, mapId)
     val indexTmp = Utils.tempFileWith(indexFile)
     try {
-<<<<<<< HEAD
-      val out = new DataOutputStream(
-        new BufferedOutputStream(Files.newOutputStream(indexTmp.toPath)))
-=======
       val out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(indexTmp)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       Utils.tryWithSafeFinally {
         // We take in lengths of each block, need to convert it to offsets.
         var offset = 0L

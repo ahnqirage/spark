@@ -24,13 +24,8 @@ import java.sql.{Date, DriverManager, SQLException, Statement}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-<<<<<<< HEAD
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.concurrent.duration._
-=======
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Promise, future}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.io.Source
 import scala.util.{Random, Try}
 
@@ -50,8 +45,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.test.ProcessTestUtils.ProcessOutputCapturer
 import org.apache.spark.util.{ThreadUtils, Utils}
-<<<<<<< HEAD
-=======
 import org.apache.spark.{Logging, SparkFunSuite}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -414,9 +407,6 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
   // This test often hangs and then times out, leaving the hanging processes.
   // Let's ignore it and improve the test.
   ignore("test jdbc cancel") {
-<<<<<<< HEAD
-    withJdbcStatement("test_map") { statement =>
-=======
     withJdbcStatement { statement =>
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val queries = Seq(
@@ -429,11 +419,7 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
       try {
         // Start a very-long-running query that will take hours to finish, then cancel it in order
         // to demonstrate that cancellation works.
-<<<<<<< HEAD
-        val f = Future {
-=======
         val f = future {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           statement.executeQuery(
             "SELECT COUNT(*) FROM test_map " +
             List.fill(10)("join test_map").mkString(" "))
@@ -443,26 +429,15 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
         // slightly more conservatively than may be strictly necessary.
         Thread.sleep(1000)
         statement.cancel()
-<<<<<<< HEAD
-        val e = intercept[SparkException] {
-          ThreadUtils.awaitResult(f, 3.minute)
-        }.getCause
-        assert(e.isInstanceOf[SQLException])
-=======
         val e = intercept[SQLException] {
           Await.result(f, 3.minute)
         }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         assert(e.getMessage.contains("cancelled"))
 
         // Cancellation is a no-op if spark.sql.hive.thriftServer.async=false
         statement.executeQuery("SET spark.sql.hive.thriftServer.async=false")
         try {
-<<<<<<< HEAD
-          val sf = Future {
-=======
           val sf = future {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             statement.executeQuery(
               "SELECT COUNT(*) FROM test_map " +
                 List.fill(4)("join test_map").mkString(" ")
@@ -472,11 +447,7 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
           // might race and complete before we issue the cancel.
           Thread.sleep(1000)
           statement.cancel()
-<<<<<<< HEAD
-          val rs1 = ThreadUtils.awaitResult(sf, 3.minute)
-=======
           val rs1 = Await.result(sf, 3.minute)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           rs1.next()
           assert(rs1.getInt(1) === math.pow(5, 5))
           rs1.close()
@@ -570,53 +541,6 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
   }
 
   test("SPARK-11595 ADD JAR with input path having URL scheme") {
-<<<<<<< HEAD
-    withJdbcStatement("test_udtf") { statement =>
-      try {
-        val jarPath = "../hive/src/test/resources/TestUDTF.jar"
-        val jarURL = s"file://${System.getProperty("user.dir")}/$jarPath"
-
-        Seq(
-          s"ADD JAR $jarURL",
-          s"""CREATE TEMPORARY FUNCTION udtf_count2
-             |AS 'org.apache.spark.sql.hive.execution.GenericUDTFCount2'
-           """.stripMargin
-        ).foreach(statement.execute)
-
-        val rs1 = statement.executeQuery("DESCRIBE FUNCTION udtf_count2")
-
-        assert(rs1.next())
-        assert(rs1.getString(1) === "Function: udtf_count2")
-
-        assert(rs1.next())
-        assertResult("Class: org.apache.spark.sql.hive.execution.GenericUDTFCount2") {
-          rs1.getString(1)
-        }
-
-        assert(rs1.next())
-        assert(rs1.getString(1) === "Usage: N/A.")
-
-        val dataPath = "../hive/src/test/resources/data/files/kv1.txt"
-
-        Seq(
-          "CREATE TABLE test_udtf(key INT, value STRING)",
-          s"LOAD DATA LOCAL INPATH '$dataPath' OVERWRITE INTO TABLE test_udtf"
-        ).foreach(statement.execute)
-
-        val rs2 = statement.executeQuery(
-          "SELECT key, cc FROM test_udtf LATERAL VIEW udtf_count2(value) dd AS cc")
-
-        assert(rs2.next())
-        assert(rs2.getInt(1) === 97)
-        assert(rs2.getInt(2) === 500)
-
-        assert(rs2.next())
-        assert(rs2.getInt(1) === 97)
-        assert(rs2.getInt(2) === 500)
-      } finally {
-        statement.executeQuery("DROP TEMPORARY FUNCTION udtf_count2")
-      }
-=======
     withJdbcStatement { statement =>
       val jarPath = "../hive/src/test/resources/TestUDTF.jar"
       val jarURL = s"file://${System.getProperty("user.dir")}/$jarPath"
@@ -658,23 +582,13 @@ class HiveThriftBinaryServerSuite extends HiveThriftJdbcTest {
       assert(rs2.next())
       assert(rs2.getInt(1) === 97)
       assert(rs2.getInt(2) === 500)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
   test("SPARK-11043 check operation log root directory") {
     val expectedLine =
       "Operation log root directory is created: " + operationLogPath.getAbsoluteFile
-<<<<<<< HEAD
-    val bufferSrc = Source.fromFile(logPath)
-    Utils.tryWithSafeFinally {
-      assert(bufferSrc.getLines().exists(_.contains(expectedLine)))
-    } {
-      bufferSrc.close()
-    }
-=======
     assert(Source.fromFile(logPath).getLines().exists(_.contains(expectedLine)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
@@ -684,13 +598,8 @@ class SingleSessionSuite extends HiveThriftJdbcTest {
   override protected def extraConf: Seq[String] =
     "--conf spark.sql.hive.thriftServer.singleSession=true" :: Nil
 
-<<<<<<< HEAD
-  test("share the temporary functions across JDBC connections") {
-    withMultipleConnectionJdbcStatement()(
-=======
   test("test single session") {
     withMultipleConnectionJdbcStatement(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       { statement =>
         val jarPath = "../hive/src/test/resources/TestUDTF.jar"
         val jarURL = s"file://${System.getProperty("user.dir")}/$jarPath"
@@ -707,78 +616,6 @@ class SingleSessionSuite extends HiveThriftJdbcTest {
       },
 
       { statement =>
-<<<<<<< HEAD
-        try {
-          val rs1 = statement.executeQuery("SET foo")
-
-          assert(rs1.next())
-          assert(rs1.getString(1) === "foo")
-          assert(rs1.getString(2) === "bar")
-
-          val rs2 = statement.executeQuery("DESCRIBE FUNCTION udtf_count2")
-
-          assert(rs2.next())
-          assert(rs2.getString(1) === "Function: udtf_count2")
-
-          assert(rs2.next())
-          assertResult("Class: org.apache.spark.sql.hive.execution.GenericUDTFCount2") {
-            rs2.getString(1)
-          }
-
-          assert(rs2.next())
-          assert(rs2.getString(1) === "Usage: N/A.")
-        } finally {
-          statement.executeQuery("DROP TEMPORARY FUNCTION udtf_count2")
-        }
-      }
-    )
-  }
-
-  test("unable to changing spark.sql.hive.thriftServer.singleSession using JDBC connections") {
-    withJdbcStatement() { statement =>
-      // JDBC connections are not able to set the conf spark.sql.hive.thriftServer.singleSession
-      val e = intercept[SQLException] {
-        statement.executeQuery("SET spark.sql.hive.thriftServer.singleSession=false")
-      }.getMessage
-      assert(e.contains(
-        "Cannot modify the value of a static config: spark.sql.hive.thriftServer.singleSession"))
-    }
-  }
-
-  test("share the current database and temporary tables across JDBC connections") {
-    withMultipleConnectionJdbcStatement()(
-      { statement =>
-        statement.execute("CREATE DATABASE IF NOT EXISTS db1")
-      },
-
-      { statement =>
-        val rs1 = statement.executeQuery("SELECT current_database()")
-        assert(rs1.next())
-        assert(rs1.getString(1) === "default")
-
-        statement.execute("USE db1")
-
-        val rs2 = statement.executeQuery("SELECT current_database()")
-        assert(rs2.next())
-        assert(rs2.getString(1) === "db1")
-
-        statement.execute("CREATE TEMP VIEW tempView AS SELECT 123")
-      },
-
-      { statement =>
-        // the current database is set to db1 by another JDBC connection.
-        val rs1 = statement.executeQuery("SELECT current_database()")
-        assert(rs1.next())
-        assert(rs1.getString(1) === "db1")
-
-        val rs2 = statement.executeQuery("SELECT * from tempView")
-        assert(rs2.next())
-        assert(rs2.getString(1) === "123")
-
-        statement.execute("USE default")
-        statement.execute("DROP VIEW tempView")
-        statement.execute("DROP DATABASE db1 CASCADE")
-=======
         val rs1 = statement.executeQuery("SET foo")
 
         assert(rs1.next())
@@ -797,7 +634,6 @@ class SingleSessionSuite extends HiveThriftJdbcTest {
 
         assert(rs2.next())
         assert(rs2.getString(1) === "Usage: To be added.")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     )
   }

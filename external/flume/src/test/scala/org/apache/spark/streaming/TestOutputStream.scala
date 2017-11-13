@@ -40,7 +40,6 @@ class TestOutputStream[T: ClassTag](parent: DStream[T],
     output.add(collected)
 =======
     output += collected
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }, false) {
 
   // This is to clear the output buffer every it is read from a checkpoint

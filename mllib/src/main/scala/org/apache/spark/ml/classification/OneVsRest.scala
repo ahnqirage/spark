@@ -23,17 +23,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.language.existentials
 
-<<<<<<< HEAD
-import org.apache.hadoop.fs.Path
-import org.json4s.{DefaultFormats, JObject, _}
-import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
-
-import org.apache.spark.SparkContext
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Experimental, Since}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml._
 import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.Vector
@@ -136,22 +126,6 @@ private[ml] object OneVsRestParams extends ClassifierTypeTrait {
  *               (taking label 0).
  */
 @Since("1.4.0")
-<<<<<<< HEAD
-final class OneVsRestModel private[ml] (
-    @Since("1.4.0") override val uid: String,
-    private[ml] val labelMetadata: Metadata,
-    @Since("1.4.0") val models: Array[_ <: ClassificationModel[_, _]])
-  extends Model[OneVsRestModel] with OneVsRestParams with MLWritable {
-
-  /** @group setParam */
-  @Since("2.1.0")
-  def setFeaturesCol(value: String): this.type = set(featuresCol, value)
-
-  /** @group setParam */
-  @Since("2.1.0")
-  def setPredictionCol(value: String): this.type = set(predictionCol, value)
-
-=======
 @Experimental
 final class OneVsRestModel private[ml] (
     @Since("1.4.0")  override val uid: String,
@@ -159,16 +133,11 @@ final class OneVsRestModel private[ml] (
     @Since("1.4.0") val models: Array[_ <: ClassificationModel[_, _]])
   extends Model[OneVsRestModel] with OneVsRestParams {
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.4.0")
   override def transformSchema(schema: StructType): StructType = {
     validateAndTransformSchema(schema, fitting = false, getClassifier.featuresDataType)
   }
 
-<<<<<<< HEAD
-  @Since("2.0.0")
-  override def transform(dataset: Dataset[_]): DataFrame = {
-=======
   @Since("1.4.0")
   override def transform(dataset: DataFrame): DataFrame = {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -291,11 +260,6 @@ object OneVsRestModel extends MLReadable[OneVsRestModel] {
  * is picked to label the example.
  */
 @Since("1.4.0")
-<<<<<<< HEAD
-final class OneVsRest @Since("1.4.0") (
-    @Since("1.4.0") override val uid: String)
-  extends Estimator[OneVsRestModel] with OneVsRestParams with HasParallelism with MLWritable {
-=======
 @Experimental
 final class OneVsRest @Since("1.4.0") (
     @Since("1.4.0") override val uid: String)
@@ -323,47 +287,11 @@ final class OneVsRest @Since("1.4.0") (
   @Since("1.5.0")
   def setPredictionCol(value: String): this.type = set(predictionCol, value)
 
-<<<<<<< HEAD
-  /**
-   * The implementation of parallel one vs. rest runs the classification for
-   * each class in a separate threads.
-   *
-   * @group expertSetParam
-   */
-  @Since("2.3.0")
-  def setParallelism(value: Int): this.type = {
-    set(parallelism, value)
-  }
-
-  /**
-   * Sets the value of param [[weightCol]].
-   *
-   * This is ignored if weight is not supported by [[classifier]].
-   * If this is not set or empty, we treat all instance weights as 1.0.
-   * Default is not set, so all instances have weight one.
-   *
-   * @group setParam
-   */
-  @Since("2.3.0")
-  def setWeightCol(value: String): this.type = set(weightCol, value)
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.4.0")
   override def transformSchema(schema: StructType): StructType = {
     validateAndTransformSchema(schema, fitting = true, getClassifier.featuresDataType)
   }
 
-<<<<<<< HEAD
-  @Since("2.0.0")
-  override def fit(dataset: Dataset[_]): OneVsRestModel = {
-    transformSchema(dataset.schema)
-
-    val instr = Instrumentation.create(this, dataset)
-    instr.logParams(labelCol, featuresCol, predictionCol, parallelism)
-    instr.logNamedValue("classifier", $(classifier).getClass.getCanonicalName)
-
-=======
   @Since("1.4.0")
   override def fit(dataset: DataFrame): OneVsRestModel = {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

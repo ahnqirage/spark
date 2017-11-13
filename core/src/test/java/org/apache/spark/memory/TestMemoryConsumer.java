@@ -20,16 +20,8 @@ package org.apache.spark.memory;
 import java.io.IOException;
 
 public class TestMemoryConsumer extends MemoryConsumer {
-<<<<<<< HEAD
-  public TestMemoryConsumer(TaskMemoryManager memoryManager, MemoryMode mode) {
-    super(memoryManager, 1024L, mode);
-  }
-  public TestMemoryConsumer(TaskMemoryManager memoryManager) {
-    this(memoryManager, MemoryMode.ON_HEAP);
-=======
   public TestMemoryConsumer(TaskMemoryManager memoryManager) {
     super(memoryManager);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   @Override
@@ -40,27 +32,19 @@ public class TestMemoryConsumer extends MemoryConsumer {
   }
 
   void use(long size) {
-<<<<<<< HEAD
-    long got = taskMemoryManager.acquireExecutionMemory(size, this);
-=======
     long got = taskMemoryManager.acquireExecutionMemory(
       size,
       taskMemoryManager.tungstenMemoryMode,
       this);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     used += got;
   }
 
   void free(long size) {
     used -= size;
-<<<<<<< HEAD
-    taskMemoryManager.releaseExecutionMemory(size, this);
-=======
     taskMemoryManager.releaseExecutionMemory(
       size,
       taskMemoryManager.tungstenMemoryMode,
       this);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

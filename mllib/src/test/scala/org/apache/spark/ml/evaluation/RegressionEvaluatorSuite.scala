@@ -20,21 +20,12 @@ package org.apache.spark.ml.evaluation
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.regression.LinearRegression
-<<<<<<< HEAD
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-=======
 import org.apache.spark.ml.util.DefaultReadWriteTest
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.{LinearDataGenerator, MLlibTestSparkContext}
 import org.apache.spark.mllib.util.TestingUtils._
 
 class RegressionEvaluatorSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
-<<<<<<< HEAD
-
-  import testImplicits._
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new RegressionEvaluator)
@@ -95,6 +86,14 @@ class RegressionEvaluatorSuite
 
   test("should support all NumericType labels and not support other types") {
     MLTestingUtils.checkNumericTypes(new RegressionEvaluator, spark)
+  }
+
+  test("read/write") {
+    val evaluator = new RegressionEvaluator()
+      .setPredictionCol("myPrediction")
+      .setLabelCol("myLabel")
+      .setMetricName("r2")
+    testDefaultReadWrite(evaluator)
   }
 
   test("read/write") {

@@ -18,11 +18,7 @@
 package org.apache.spark.launcher;
 
 import java.io.IOException;
-<<<<<<< HEAD
-import java.io.InputStream;
-=======
 import java.lang.reflect.Method;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -102,12 +98,6 @@ class ChildProcAppHandle implements SparkAppHandle {
   public synchronized void kill() {
     disconnect();
     if (childProc != null) {
-<<<<<<< HEAD
-      if (childProc.isAlive()) {
-        childProc.destroyForcibly();
-      }
-      childProc = null;
-=======
       try {
         childProc.exitValue();
       } catch (IllegalThreadStateException e) {
@@ -122,7 +112,6 @@ class ChildProcAppHandle implements SparkAppHandle {
       } finally {
         childProc = null;
       }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     setState(State.KILLED);
   }

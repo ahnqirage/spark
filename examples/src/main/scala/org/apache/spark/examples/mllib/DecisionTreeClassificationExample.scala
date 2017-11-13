@@ -18,19 +18,12 @@
 // scalastyle:off println
 package org.apache.spark.examples.mllib
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkConf, SparkContext}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.mllib.tree.DecisionTree
 import org.apache.spark.mllib.tree.model.DecisionTreeModel
 import org.apache.spark.mllib.util.MLUtils
 // $example off$
-<<<<<<< HEAD
-=======
 import org.apache.spark.{SparkConf, SparkContext}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 object DecisionTreeClassificationExample {
 
@@ -69,11 +62,6 @@ object DecisionTreeClassificationExample {
     model.save(sc, "target/tmp/myDecisionTreeClassificationModel")
     val sameModel = DecisionTreeModel.load(sc, "target/tmp/myDecisionTreeClassificationModel")
     // $example off$
-<<<<<<< HEAD
-
-    sc.stop()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

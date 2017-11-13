@@ -28,7 +28,6 @@ import org.apache.spark.sql.internal.SQLConf
 =======
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.sql.{Row, SQLConf}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.sources.HadoopFsRelationTest
 import org.apache.spark.sql.types._
 
@@ -76,59 +75,13 @@ class OrcHadoopFsRelationSuite extends HadoopFsRelationTest {
         (1 to 5).map(i => (i, (i % 2).toString)).toDF("a", "b").write.orc(path)
 
         checkAnswer(
-<<<<<<< HEAD
-          spark.read.orc(path).where("not (a = 2) or not(b in ('1'))"),
-          (1 to 5).map(i => Row(i, (i % 2).toString)))
-
-        checkAnswer(
-          spark.read.orc(path).where("not (a = 2 and b in ('1'))"),
-=======
           sqlContext.read.orc(path).where("not (a = 2) or not(b in ('1'))"),
           (1 to 5).map(i => Row(i, (i % 2).toString)))
 
         checkAnswer(
           sqlContext.read.orc(path).where("not (a = 2 and b in ('1'))"),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           (1 to 5).map(i => Row(i, (i % 2).toString)))
       }
     }
   }
-<<<<<<< HEAD
-
-  test("SPARK-13543: Support for specifying compression codec for ORC via option()") {
-    withTempPath { dir =>
-      val path = s"${dir.getCanonicalPath}/table1"
-      val df = (1 to 5).map(i => (i, (i % 2).toString)).toDF("a", "b")
-      df.write
-        .option("compression", "ZlIb")
-        .orc(path)
-
-      // Check if this is compressed as ZLIB.
-      val maybeOrcFile = new File(path).listFiles().find { f =>
-        !f.getName.startsWith("_") && f.getName.endsWith(".zlib.orc")
-      }
-      assert(maybeOrcFile.isDefined)
-      val orcFilePath = maybeOrcFile.get.toPath.toString
-      val expectedCompressionKind =
-        OrcFileOperator.getFileReader(orcFilePath).get.getCompression
-      assert("ZLIB" === expectedCompressionKind.name())
-
-      val copyDf = spark
-        .read
-        .orc(path)
-      checkAnswer(df, copyDf)
-    }
-  }
-
-  test("Default compression codec is snappy for ORC compression") {
-    withTempPath { file =>
-      spark.range(0, 10).write
-        .orc(file.getCanonicalPath)
-      val expectedCompressionKind =
-        OrcFileOperator.getFileReader(file.getCanonicalPath).get.getCompression
-      assert("SNAPPY" === expectedCompressionKind.name())
-    }
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

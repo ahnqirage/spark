@@ -21,11 +21,6 @@ import java.lang.reflect.{ParameterizedType, Type, WildcardType}
 
 import scala.collection.JavaConverters._
 
-<<<<<<< HEAD
-import org.apache.hadoop.{io => hadoopIo}
-import org.apache.hadoop.hive.common.`type`.{HiveChar, HiveDecimal, HiveVarchar}
-import org.apache.hadoop.hive.serde2.{io => hiveIo}
-=======
 import org.apache.hadoop.hive.common.`type`.{HiveChar, HiveDecimal, HiveVarchar}
 import org.apache.hadoop.hive.serde2.objectinspector.primitive._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -37,10 +32,6 @@ import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util._
-<<<<<<< HEAD
-import org.apache.spark.sql.types
-import org.apache.spark.sql.types._
-=======
 import org.apache.spark.sql.types.{ArrayBasedMapData => _, _}
 import org.apache.spark.sql.{AnalysisException, types}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -426,6 +417,15 @@ private[hive] trait HiveInspectors {
         }
 
     case _: JavaHiveCharObjectInspector =>
+      (o: Any) =>
+        if (o != null) {
+          val s = o.asInstanceOf[UTF8String].toString
+          new HiveChar(s, s.size)
+        } else {
+          null
+        }
+
+    case _: JavaHiveDecimalObjectInspector =>
       (o: Any) =>
         if (o != null) {
           val s = o.asInstanceOf[UTF8String].toString

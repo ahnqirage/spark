@@ -93,10 +93,6 @@ case class DecimalType(precision: Int, scale: Int) extends FractionalType {
   }
 
   /**
-<<<<<<< HEAD
-   * The default size of a value of the DecimalType is 8 bytes when precision is at most 18,
-   * and 16 bytes otherwise.
-=======
    * The default size of a value of the DecimalType is 4096 bytes.
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */

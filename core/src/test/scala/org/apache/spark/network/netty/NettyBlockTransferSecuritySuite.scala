@@ -167,11 +167,7 @@ class NettyBlockTransferSecuritySuite extends SparkFunSuite with MockitoSugar wi
         }
       }, null)
 
-<<<<<<< HEAD
-    ThreadUtils.awaitReady(promise.future, FiniteDuration(10, TimeUnit.SECONDS))
-=======
     Await.ready(promise.future, FiniteDuration(10, TimeUnit.SECONDS))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     promise.future.value.get
   }
 }

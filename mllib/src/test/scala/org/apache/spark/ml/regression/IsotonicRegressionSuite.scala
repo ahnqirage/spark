@@ -21,8 +21,6 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-<<<<<<< HEAD
-=======
 import org.apache.spark.mllib.linalg.Vectors
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
@@ -31,11 +29,6 @@ import org.apache.spark.sql.{DataFrame, Row}
 class IsotonicRegressionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
 
-<<<<<<< HEAD
-  import testImplicits._
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def generateIsotonicInput(labels: Seq[Double]): DataFrame = {
     labels.zipWithIndex.map { case (label, i) => (label, i.toDouble, 1.0) }
       .toDF("label", "features", "weight")
@@ -184,20 +177,7 @@ class IsotonicRegressionSuite
 
     val ir = new IsotonicRegression()
     testEstimatorAndModelReadWrite(ir, dataset, IsotonicRegressionSuite.allParamSettings,
-<<<<<<< HEAD
-      IsotonicRegressionSuite.allParamSettings, checkModelData)
-  }
-
-  test("should support all NumericType labels and weights, and not support other types") {
-    val ir = new IsotonicRegression()
-    MLTestingUtils.checkNumericTypes[IsotonicRegressionModel, IsotonicRegression](
-      ir, spark, isClassification = false) { (expected, actual) =>
-        assert(expected.boundaries === actual.boundaries)
-        assert(expected.predictions === actual.predictions)
-      }
-=======
       checkModelData)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

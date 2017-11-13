@@ -157,22 +157,9 @@ _functions_1_6 = {
     'var_pop':  'Aggregate function: returns the population variance of the values in a group.',
     'skewness': 'Aggregate function: returns the skewness of the values in a group.',
     'kurtosis': 'Aggregate function: returns the kurtosis of the values in a group.',
-<<<<<<< HEAD
-    'collect_list': _collect_list_doc,
-    'collect_set': _collect_set_doc
-}
-
-_functions_2_1 = {
-    # unary math functions
-    'degrees': 'Converts an angle measured in radians to an approximately equivalent angle ' +
-               'measured in degrees.',
-    'radians': 'Converts an angle measured in degrees to an approximately equivalent angle ' +
-               'measured in radians.',
-=======
     'collect_list': 'Aggregate function: returns a list of objects with duplicates.',
     'collect_set': 'Aggregate function: returns a set of objects with duplicate elements' +
                    ' eliminated.'
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 # math functions that take two arguments as input
@@ -194,21 +181,13 @@ _window_functions = {
         """returns a sequential number starting at 1 within a window partition.""",
     'denseRank':
         """.. note:: Deprecated in 1.6, use dense_rank instead.""",
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     'dense_rank':
         """returns the rank of rows within a window partition, without any gaps.
 
         The difference between rank and dense_rank is that dense_rank leaves no gaps in ranking
         sequence when there are ties. That is, if you were ranking a competition using dense_rank
         and had three people tie for second place, you would say that all three were in second
-<<<<<<< HEAD
-        place and that the next person came in third. Rank would give me sequential numbers, making
-        the person that came in third place (after the ties) would register as coming in fifth.
-
-        This is equivalent to the DENSE_RANK function in SQL.""",
-=======
         place and that the next person came in third.""",
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     'rank':
         """returns the rank of rows within a window partition.
 
@@ -231,7 +210,6 @@ _window_functions = {
         i.e. the fraction of rows that are below the current row.""",
     'percentRank':
         """.. note:: Deprecated in 1.6, use percent_rank instead.""",
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     'percent_rank':
         """returns the relative rank (i.e. percentile) of rows within a window partition.""",
 }
@@ -324,15 +302,6 @@ def coalesce(*cols):
 
 @since(1.6)
 def corr(col1, col2):
-<<<<<<< HEAD
-    """Returns a new :class:`Column` for the Pearson Correlation Coefficient for ``col1`` and ``col2``.
-
-    >>> a = range(20)
-    >>> b = [2 * x for x in range(20)]
-    >>> df = spark.createDataFrame(zip(a, b), ["a", "b"])
-    >>> df.agg(corr("a", "b").alias('c')).collect()
-    [Row(c=1.0)]
-=======
     """Returns a new :class:`Column` for the Pearson Correlation Coefficient for ``col1``
     and ``col2``.
 
@@ -342,43 +311,11 @@ def corr(col1, col2):
     >>> corrDf = corrDf.agg(corr(corrDf._1, corrDf._2).alias('c'))
     >>> corrDf.selectExpr('abs(c - 0.9572339139475857) < 1e-16 as t').collect()
     [Row(t=True)]
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     """
     sc = SparkContext._active_spark_context
     return Column(sc._jvm.functions.corr(_to_java_column(col1), _to_java_column(col2)))
 
 
-<<<<<<< HEAD
-@since(2.0)
-def covar_pop(col1, col2):
-    """Returns a new :class:`Column` for the population covariance of ``col1`` and ``col2``.
-
-    >>> a = [1] * 10
-    >>> b = [1] * 10
-    >>> df = spark.createDataFrame(zip(a, b), ["a", "b"])
-    >>> df.agg(covar_pop("a", "b").alias('c')).collect()
-    [Row(c=0.0)]
-    """
-    sc = SparkContext._active_spark_context
-    return Column(sc._jvm.functions.covar_pop(_to_java_column(col1), _to_java_column(col2)))
-
-
-@since(2.0)
-def covar_samp(col1, col2):
-    """Returns a new :class:`Column` for the sample covariance of ``col1`` and ``col2``.
-
-    >>> a = [1] * 10
-    >>> b = [1] * 10
-    >>> df = spark.createDataFrame(zip(a, b), ["a", "b"])
-    >>> df.agg(covar_samp("a", "b").alias('c')).collect()
-    [Row(c=0.0)]
-    """
-    sc = SparkContext._active_spark_context
-    return Column(sc._jvm.functions.covar_samp(_to_java_column(col1), _to_java_column(col2)))
-
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 @since(1.3)
 def countDistinct(col, *cols):
     """Returns a new :class:`Column` for distinct count of ``col`` or ``cols``.
@@ -394,65 +331,6 @@ def countDistinct(col, *cols):
     return Column(jc)
 
 
-<<<<<<< HEAD
-@since(1.3)
-def first(col, ignorenulls=False):
-    """Aggregate function: returns the first value in a group.
-
-    The function by default returns the first values it sees. It will return the first non-null
-    value it sees when ignoreNulls is set to true. If all values are null, then null is returned.
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.first(_to_java_column(col), ignorenulls)
-    return Column(jc)
-
-
-@since(2.0)
-def grouping(col):
-    """
-    Aggregate function: indicates whether a specified column in a GROUP BY list is aggregated
-    or not, returns 1 for aggregated or 0 for not aggregated in the result set.
-
-    >>> df.cube("name").agg(grouping("name"), sum("age")).orderBy("name").show()
-    +-----+--------------+--------+
-    | name|grouping(name)|sum(age)|
-    +-----+--------------+--------+
-    | null|             1|       7|
-    |Alice|             0|       2|
-    |  Bob|             0|       5|
-    +-----+--------------+--------+
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.grouping(_to_java_column(col))
-    return Column(jc)
-
-
-@since(2.0)
-def grouping_id(*cols):
-    """
-    Aggregate function: returns the level of grouping, equals to
-
-       (grouping(c1) << (n-1)) + (grouping(c2) << (n-2)) + ... + grouping(cn)
-
-    .. note:: The list of columns should match with grouping columns exactly, or empty (means all
-        the grouping columns).
-
-    >>> df.cube("name").agg(grouping_id(), sum("age")).orderBy("name").show()
-    +-----+-------------+--------+
-    | name|grouping_id()|sum(age)|
-    +-----+-------------+--------+
-    | null|            1|       7|
-    |Alice|            0|       2|
-    |  Bob|            0|       5|
-    +-----+-------------+--------+
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.grouping_id(_to_seq(sc, cols, _to_java_column))
-    return Column(jc)
-
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 @since(1.6)
 def input_file_name():
     """Creates a string column for the file name of the current Spark task.
@@ -465,11 +343,7 @@ def input_file_name():
 def isnan(col):
     """An expression that returns true iff the column is NaN.
 
-<<<<<<< HEAD
-    >>> df = spark.createDataFrame([(1.0, float('nan')), (float('nan'), 2.0)], ("a", "b"))
-=======
     >>> df = sqlContext.createDataFrame([(1.0, float('nan')), (float('nan'), 2.0)], ("a", "b"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     >>> df.select(isnan("a").alias("r1"), isnan(df.a).alias("r2")).collect()
     [Row(r1=False, r2=False), Row(r1=True, r2=True)]
     """
@@ -481,11 +355,7 @@ def isnan(col):
 def isnull(col):
     """An expression that returns true iff the column is null.
 
-<<<<<<< HEAD
-    >>> df = spark.createDataFrame([(1, None), (None, 2)], ("a", "b"))
-=======
     >>> df = sqlContext.createDataFrame([(1, None), (None, 2)], ("a", "b"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     >>> df.select(isnull("a").alias("r1"), isnull(df.a).alias("r2")).collect()
     [Row(r1=False, r2=False), Row(r1=True, r2=True)]
     """
@@ -493,25 +363,12 @@ def isnull(col):
     return Column(sc._jvm.functions.isnull(_to_java_column(col)))
 
 
-<<<<<<< HEAD
-@since(1.3)
-def last(col, ignorenulls=False):
-    """Aggregate function: returns the last value in a group.
-
-    The function by default returns the last values it sees. It will return the last non-null
-    value it sees when ignoreNulls is set to true. If all values are null, then null is returned.
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.last(_to_java_column(col), ignorenulls)
-    return Column(jc)
-=======
 @since(1.4)
 def monotonicallyIncreasingId():
     """
     .. note:: Deprecated in 1.6, use monotonically_increasing_id instead.
     """
     return monotonically_increasing_id()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 
 @since(1.6)
@@ -539,8 +396,14 @@ def monotonically_increasing_id():
 def nanvl(col1, col2):
     """Returns col1 if it is not NaN, or col2 if col1 is NaN.
 
-<<<<<<< HEAD
-    Both inputs should be floating point columns (:class:`DoubleType` or :class:`FloatType`).
+    Both inputs should be floating point columns (DoubleType or FloatType).
+
+    >>> df = sqlContext.createDataFrame([(1.0, float('nan')), (float('nan'), 2.0)], ("a", "b"))
+    >>> df.select(nanvl("a", "b").alias("r1"), nanvl(df.a, df.b).alias("r2")).collect()
+    [Row(r1=1.0, r2=1.0), Row(r1=2.0, r2=2.0)]
+    """
+    sc = SparkContext._active_spark_context
+    return Column(sc._jvm.functions.nanvl(_to_java_column(col1), _to_java_column(col2)))
 
     >>> df = spark.createDataFrame([(1.0, float('nan')), (float('nan'), 2.0)], ("a", "b"))
 =======
@@ -1642,14 +1505,7 @@ def regexp_extract(str, pattern, idx):
     >>> df = spark.createDataFrame([('100-200',)], ['str'])
     >>> df.select(regexp_extract('str', '(\d+)-(\d+)', 1).alias('d')).collect()
     [Row(d=u'100')]
-<<<<<<< HEAD
-    >>> df = spark.createDataFrame([('foo',)], ['str'])
-    >>> df.select(regexp_extract('str', '(\d+)', 1).alias('d')).collect()
-    [Row(d=u'')]
-    >>> df = spark.createDataFrame([('aaaac',)], ['str'])
-=======
     >>> df = sqlContext.createDataFrame([('aaaac',)], ['str'])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     >>> df.select(regexp_extract('str', '(a+)(b)?(c)', 2).alias('d')).collect()
     [Row(d=u'')]
     """
@@ -1846,95 +1702,6 @@ def explode(col):
     return Column(jc)
 
 
-<<<<<<< HEAD
-@since(2.1)
-def posexplode(col):
-    """Returns a new row for each element with position in the given array or map.
-
-    >>> from pyspark.sql import Row
-    >>> eDF = spark.createDataFrame([Row(a=1, intlist=[1,2,3], mapfield={"a": "b"})])
-    >>> eDF.select(posexplode(eDF.intlist)).collect()
-    [Row(pos=0, col=1), Row(pos=1, col=2), Row(pos=2, col=3)]
-
-    >>> eDF.select(posexplode(eDF.mapfield)).show()
-    +---+---+-----+
-    |pos|key|value|
-    +---+---+-----+
-    |  0|  a|    b|
-    +---+---+-----+
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.posexplode(_to_java_column(col))
-    return Column(jc)
-
-
-@since(2.3)
-def explode_outer(col):
-    """Returns a new row for each element in the given array or map.
-    Unlike explode, if the array/map is null or empty then null is produced.
-
-    >>> df = spark.createDataFrame(
-    ...     [(1, ["foo", "bar"], {"x": 1.0}), (2, [], {}), (3, None, None)],
-    ...     ("id", "an_array", "a_map")
-    ... )
-    >>> df.select("id", "an_array", explode_outer("a_map")).show()
-    +---+----------+----+-----+
-    | id|  an_array| key|value|
-    +---+----------+----+-----+
-    |  1|[foo, bar]|   x|  1.0|
-    |  2|        []|null| null|
-    |  3|      null|null| null|
-    +---+----------+----+-----+
-
-    >>> df.select("id", "a_map", explode_outer("an_array")).show()
-    +---+-------------+----+
-    | id|        a_map| col|
-    +---+-------------+----+
-    |  1|Map(x -> 1.0)| foo|
-    |  1|Map(x -> 1.0)| bar|
-    |  2|        Map()|null|
-    |  3|         null|null|
-    +---+-------------+----+
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.explode_outer(_to_java_column(col))
-    return Column(jc)
-
-
-@since(2.3)
-def posexplode_outer(col):
-    """Returns a new row for each element with position in the given array or map.
-    Unlike posexplode, if the array/map is null or empty then the row (null, null) is produced.
-
-    >>> df = spark.createDataFrame(
-    ...     [(1, ["foo", "bar"], {"x": 1.0}), (2, [], {}), (3, None, None)],
-    ...     ("id", "an_array", "a_map")
-    ... )
-    >>> df.select("id", "an_array", posexplode_outer("a_map")).show()
-    +---+----------+----+----+-----+
-    | id|  an_array| pos| key|value|
-    +---+----------+----+----+-----+
-    |  1|[foo, bar]|   0|   x|  1.0|
-    |  2|        []|null|null| null|
-    |  3|      null|null|null| null|
-    +---+----------+----+----+-----+
-    >>> df.select("id", "a_map", posexplode_outer("an_array")).show()
-    +---+-------------+----+----+
-    | id|        a_map| pos| col|
-    +---+-------------+----+----+
-    |  1|Map(x -> 1.0)|   0| foo|
-    |  1|Map(x -> 1.0)|   1| bar|
-    |  2|        Map()|null|null|
-    |  3|         null|null|null|
-    +---+-------------+----+----+
-    """
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.posexplode_outer(_to_java_column(col))
-    return Column(jc)
-
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 @ignore_unicode_prefix
 @since(1.6)
 def get_json_object(col, path):
@@ -1946,15 +1713,9 @@ def get_json_object(col, path):
     :param path: path to the json object to extract
 
     >>> data = [("1", '''{"f1": "value1", "f2": "value2"}'''), ("2", '''{"f1": "value12"}''')]
-<<<<<<< HEAD
-    >>> df = spark.createDataFrame(data, ("key", "jstring"))
-    >>> df.select(df.key, get_json_object(df.jstring, '$.f1').alias("c0"), \\
-    ...                   get_json_object(df.jstring, '$.f2').alias("c1") ).collect()
-=======
     >>> df = sqlContext.createDataFrame(data, ("key", "jstring"))
     >>> df.select(df.key, get_json_object(df.jstring, '$.f1').alias("c0"), \
                           get_json_object(df.jstring, '$.f2').alias("c1") ).collect()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     [Row(key=u'1', c0=u'value1', c1=u'value2'), Row(key=u'2', c0=u'value12', c1=None)]
     """
     sc = SparkContext._active_spark_context
@@ -1971,11 +1732,7 @@ def json_tuple(col, *fields):
     :param fields: list of fields to extract
 
     >>> data = [("1", '''{"f1": "value1", "f2": "value2"}'''), ("2", '''{"f1": "value12"}''')]
-<<<<<<< HEAD
-    >>> df = spark.createDataFrame(data, ("key", "jstring"))
-=======
     >>> df = sqlContext.createDataFrame(data, ("key", "jstring"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     >>> df.select(df.key, json_tuple(df.jstring, 'f1', 'f2')).collect()
     [Row(key=u'1', c0=u'value1', c1=u'value2'), Row(key=u'2', c0=u'value12', c1=None)]
     """
@@ -1984,82 +1741,6 @@ def json_tuple(col, *fields):
     return Column(jc)
 
 
-<<<<<<< HEAD
-@since(2.1)
-def from_json(col, schema, options={}):
-    """
-    Parses a column containing a JSON string into a :class:`StructType` or :class:`ArrayType`
-    of :class:`StructType`\\s with the specified schema. Returns `null`, in the case of an
-    unparseable string.
-
-    :param col: string column in json format
-    :param schema: a StructType or ArrayType of StructType to use when parsing the json column.
-    :param options: options to control parsing. accepts the same options as the json datasource
-
-    .. note:: Since Spark 2.3, the DDL-formatted string or a JSON format string is also
-              supported for ``schema``.
-
-    >>> from pyspark.sql.types import *
-    >>> data = [(1, '''{"a": 1}''')]
-    >>> schema = StructType([StructField("a", IntegerType())])
-    >>> df = spark.createDataFrame(data, ("key", "value"))
-    >>> df.select(from_json(df.value, schema).alias("json")).collect()
-    [Row(json=Row(a=1))]
-    >>> df.select(from_json(df.value, "a INT").alias("json")).collect()
-    [Row(json=Row(a=1))]
-    >>> data = [(1, '''[{"a": 1}]''')]
-    >>> schema = ArrayType(StructType([StructField("a", IntegerType())]))
-    >>> df = spark.createDataFrame(data, ("key", "value"))
-    >>> df.select(from_json(df.value, schema).alias("json")).collect()
-    [Row(json=[Row(a=1)])]
-    """
-
-    sc = SparkContext._active_spark_context
-    if isinstance(schema, DataType):
-        schema = schema.json()
-    jc = sc._jvm.functions.from_json(_to_java_column(col), schema, options)
-    return Column(jc)
-
-
-@ignore_unicode_prefix
-@since(2.1)
-def to_json(col, options={}):
-    """
-    Converts a column containing a :class:`StructType`, :class:`ArrayType` of
-    :class:`StructType`\\s, a :class:`MapType` or :class:`ArrayType` of :class:`MapType`\\s
-    into a JSON string. Throws an exception, in the case of an unsupported type.
-
-    :param col: name of column containing the struct, array of the structs, the map or
-        array of the maps.
-    :param options: options to control converting. accepts the same options as the json datasource
-
-    >>> from pyspark.sql import Row
-    >>> from pyspark.sql.types import *
-    >>> data = [(1, Row(name='Alice', age=2))]
-    >>> df = spark.createDataFrame(data, ("key", "value"))
-    >>> df.select(to_json(df.value).alias("json")).collect()
-    [Row(json=u'{"age":2,"name":"Alice"}')]
-    >>> data = [(1, [Row(name='Alice', age=2), Row(name='Bob', age=3)])]
-    >>> df = spark.createDataFrame(data, ("key", "value"))
-    >>> df.select(to_json(df.value).alias("json")).collect()
-    [Row(json=u'[{"age":2,"name":"Alice"},{"age":3,"name":"Bob"}]')]
-    >>> data = [(1, {"name": "Alice"})]
-    >>> df = spark.createDataFrame(data, ("key", "value"))
-    >>> df.select(to_json(df.value).alias("json")).collect()
-    [Row(json=u'{"name":"Alice"}')]
-    >>> data = [(1, [{"name": "Alice"}, {"name": "Bob"}])]
-    >>> df = spark.createDataFrame(data, ("key", "value"))
-    >>> df.select(to_json(df.value).alias("json")).collect()
-    [Row(json=u'[{"name":"Alice"},{"name":"Bob"}]')]
-    """
-
-    sc = SparkContext._active_spark_context
-    jc = sc._jvm.functions.to_json(_to_java_column(col), options)
-    return Column(jc)
-
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 @since(1.5)
 def size(col):
     """

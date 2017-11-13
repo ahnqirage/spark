@@ -44,11 +44,7 @@ import org.apache.ivy.plugins.matcher.GlobPatternMatcher
 import org.apache.ivy.plugins.repository.file.FileRepository
 import org.apache.ivy.plugins.resolver.{ChainResolver, FileSystemResolver, IBiblioResolver}
 
-<<<<<<< HEAD
-import org.apache.spark._
-=======
 import org.apache.spark.{SparkException, SparkUserAppException, SPARK_VERSION}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.api.r.RUtils
 import org.apache.spark.deploy.rest._
 import org.apache.spark.internal.Logging
@@ -478,6 +474,16 @@ object SparkSubmit extends CommandLineUtils with Logging {
       printErrorAndExit("Distributing R packages with standalone cluster is not supported.")
     }
 
+    // TODO: Support SparkR with mesos cluster
+    if (args.isR && clusterManager == MESOS) {
+      printErrorAndExit("SparkR is not supported for Mesos cluster.")
+    }
+
+    // TODO: Support distributing R packages with standalone cluster
+    if (args.isR && clusterManager == STANDALONE && !RUtils.rPackages.isEmpty) {
+      printErrorAndExit("Distributing R packages with standalone cluster is not supported.")
+    }
+
 <<<<<<< HEAD
     // TODO: Support distributing R packages with mesos cluster
     if (args.isR && clusterManager == MESOS && !RUtils.rPackages.isEmpty) {
@@ -652,29 +658,19 @@ object SparkSubmit extends CommandLineUtils with Logging {
     }
 
     // assure a keytab is available from any place in a JVM
-<<<<<<< HEAD
-    if (clusterManager == YARN || clusterManager == LOCAL || clusterManager == MESOS) {
-      if (args.principal != null) {
-        if (args.keytab != null) {
-          require(new File(args.keytab).exists(), s"Keytab file: ${args.keytab} does not exist")
-=======
     if (clusterManager == YARN || clusterManager == LOCAL) {
       if (args.principal != null) {
         require(args.keytab != null, "Keytab must be specified when principal is specified")
         if (!new File(args.keytab).exists()) {
           throw new SparkException(s"Keytab file: ${args.keytab} does not exist")
         } else {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           // Add keytab and principal configurations in sysProps to make them available
           // for later use; e.g. in spark sql, the isolated class loader used to talk
           // to HiveMetastore will use these settings. They will be set as Java system
           // properties and then loaded by SparkConf
           sysProps.put("spark.yarn.keytab", args.keytab)
           sysProps.put("spark.yarn.principal", args.principal)
-<<<<<<< HEAD
-=======
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           UserGroupInformation.loginUserFromKeytab(args.principal, args.keytab)
         }
       }

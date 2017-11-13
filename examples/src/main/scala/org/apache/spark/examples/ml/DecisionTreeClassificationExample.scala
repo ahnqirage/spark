@@ -18,26 +18,6 @@
 // scalastyle:off println
 package org.apache.spark.examples.ml
 
-<<<<<<< HEAD
-// $example on$
-import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.classification.DecisionTreeClassificationModel
-import org.apache.spark.ml.classification.DecisionTreeClassifier
-import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
-import org.apache.spark.ml.feature.{IndexToString, StringIndexer, VectorIndexer}
-// $example off$
-import org.apache.spark.sql.SparkSession
-
-object DecisionTreeClassificationExample {
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder
-      .appName("DecisionTreeClassificationExample")
-      .getOrCreate()
-    // $example on$
-    // Load the data stored in LIBSVM format as a DataFrame.
-    val data = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
-=======
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkContext, SparkConf}
 // $example on$
@@ -56,7 +36,6 @@ object DecisionTreeClassificationExample {
     // $example on$
     // Load the data stored in LIBSVM format as a DataFrame.
     val data = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Index labels, adding metadata to the label column.
     // Fit on whole dataset to include all labels in index.
@@ -68,17 +47,10 @@ object DecisionTreeClassificationExample {
     val featureIndexer = new VectorIndexer()
       .setInputCol("features")
       .setOutputCol("indexedFeatures")
-<<<<<<< HEAD
-      .setMaxCategories(4) // features with > 4 distinct values are treated as continuous.
-      .fit(data)
-
-    // Split the data into training and test sets (30% held out for testing).
-=======
       .setMaxCategories(4) // features with > 4 distinct values are treated as continuous
       .fit(data)
 
     // Split the data into training and test sets (30% held out for testing)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val Array(trainingData, testData) = data.randomSplit(Array(0.7, 0.3))
 
     // Train a DecisionTree model.
@@ -92,19 +64,11 @@ object DecisionTreeClassificationExample {
       .setOutputCol("predictedLabel")
       .setLabels(labelIndexer.labels)
 
-<<<<<<< HEAD
-    // Chain indexers and tree in a Pipeline.
-    val pipeline = new Pipeline()
-      .setStages(Array(labelIndexer, featureIndexer, dt, labelConverter))
-
-    // Train model. This also runs the indexers.
-=======
     // Chain indexers and tree in a Pipeline
     val pipeline = new Pipeline()
       .setStages(Array(labelIndexer, featureIndexer, dt, labelConverter))
 
     // Train model.  This also runs the indexers.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val model = pipeline.fit(trainingData)
 
     // Make predictions.
@@ -113,30 +77,17 @@ object DecisionTreeClassificationExample {
     // Select example rows to display.
     predictions.select("predictedLabel", "label", "features").show(5)
 
-<<<<<<< HEAD
-    // Select (prediction, true label) and compute test error.
-    val evaluator = new MulticlassClassificationEvaluator()
-      .setLabelCol("indexedLabel")
-      .setPredictionCol("prediction")
-      .setMetricName("accuracy")
-=======
     // Select (prediction, true label) and compute test error
     val evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("indexedLabel")
       .setPredictionCol("prediction")
       .setMetricName("precision")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val accuracy = evaluator.evaluate(predictions)
     println("Test Error = " + (1.0 - accuracy))
 
     val treeModel = model.stages(2).asInstanceOf[DecisionTreeClassificationModel]
     println("Learned classification tree model:\n" + treeModel.toDebugString)
     // $example off$
-<<<<<<< HEAD
-
-    spark.stop()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

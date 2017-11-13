@@ -91,11 +91,7 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
       "hdfs://host:9000/path/a=10.5/b=hello")
 
     var exception = intercept[AssertionError] {
-<<<<<<< HEAD
-      parsePartitions(paths.map(new Path(_)), true, Set.empty[Path], timeZoneId)
-=======
       parsePartitions(paths.map(new Path(_)), defaultPartitionName, true, Set.empty[Path])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     assert(exception.getMessage().contains("Conflicting directory structures detected"))
 
@@ -107,15 +103,9 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
 
     parsePartitions(
       paths.map(new Path(_)),
-<<<<<<< HEAD
-      true,
-      Set(new Path("hdfs://host:9000/path/")),
-      timeZoneId)
-=======
       defaultPartitionName,
       true,
       Set(new Path("hdfs://host:9000/path/")))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Valid
     paths = Seq(
@@ -126,15 +116,9 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
 
     parsePartitions(
       paths.map(new Path(_)),
-<<<<<<< HEAD
-      true,
-      Set(new Path("hdfs://host:9000/path/something=true/table")),
-      timeZoneId)
-=======
       defaultPartitionName,
       true,
       Set(new Path("hdfs://host:9000/path/something=true/table")))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Valid
     paths = Seq(
@@ -145,15 +129,9 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
 
     parsePartitions(
       paths.map(new Path(_)),
-<<<<<<< HEAD
-      true,
-      Set(new Path("hdfs://host:9000/path/table=true")),
-      timeZoneId)
-=======
       defaultPartitionName,
       true,
       Set(new Path("hdfs://host:9000/path/table=true")))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Invalid
     paths = Seq(
@@ -164,15 +142,9 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
     exception = intercept[AssertionError] {
       parsePartitions(
         paths.map(new Path(_)),
-<<<<<<< HEAD
-        true,
-        Set(new Path("hdfs://host:9000/path/")),
-        timeZoneId)
-=======
         defaultPartitionName,
         true,
         Set(new Path("hdfs://host:9000/path/")))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     assert(exception.getMessage().contains("Conflicting directory structures detected"))
 
@@ -190,36 +162,22 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
     exception = intercept[AssertionError] {
       parsePartitions(
         paths.map(new Path(_)),
-<<<<<<< HEAD
-        true,
-        Set(new Path("hdfs://host:9000/tmp/tables/")),
-        timeZoneId)
-=======
         defaultPartitionName,
         true,
         Set(new Path("hdfs://host:9000/tmp/tables/")))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     assert(exception.getMessage().contains("Conflicting directory structures detected"))
   }
 
   test("parse partition") {
     def check(path: String, expected: Option[PartitionValues]): Unit = {
-<<<<<<< HEAD
-      val actual = parsePartition(new Path(path), true, Set.empty[Path], timeZone)._1
-=======
       val actual = parsePartition(new Path(path), defaultPartitionName, true, Set.empty[Path])._1
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       assert(expected === actual)
     }
 
     def checkThrows[T <: Throwable: Manifest](path: String, expected: String): Unit = {
       val message = intercept[T] {
-<<<<<<< HEAD
-        parsePartition(new Path(path), true, Set.empty[Path], timeZone)
-=======
         parsePartition(new Path(path), defaultPartitionName, true, Set.empty[Path])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }.getMessage
 
       assert(message.contains(expected))
@@ -288,15 +246,9 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
       val actualSpec =
         parsePartitions(
           paths.map(new Path(_)),
-<<<<<<< HEAD
-          true,
-          rootPaths,
-          timeZoneId)
-=======
           defaultPartitionName,
           true,
           rootPaths)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       assert(actualSpec === spec)
     }
 
@@ -377,11 +329,7 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
   test("parse partitions with type inference disabled") {
     def check(paths: Seq[String], spec: PartitionSpec): Unit = {
       val actualSpec =
-<<<<<<< HEAD
-        parsePartitions(paths.map(new Path(_)), false, Set.empty[Path], timeZoneId)
-=======
         parsePartitions(paths.map(new Path(_)), defaultPartitionName, false, Set.empty[Path])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       assert(actualSpec === spec)
     }
 
@@ -959,6 +907,93 @@ class ParquetPartitionDiscoverySuite extends QueryTest with ParquetTest with Sha
           Files.touch(new File(s"${tablePath.getCanonicalPath}/b=1/c=1", "_SUCCESS"))
           Files.touch(new File(s"${tablePath.getCanonicalPath}/b=1/c=1/d=1", "_SUCCESS"))
           checkAnswer(spark.read.format("parquet").load(tablePath.getCanonicalPath), df)
+        }
+      }
+    }
+  }
+
+  test("SPARK-11678: Partition discovery stops at the root path of the dataset") {
+    withTempPath { dir =>
+      val tablePath = new File(dir, "key=value")
+      val df = (1 to 3).map(i => (i, i, i, i)).toDF("a", "b", "c", "d")
+
+      df.write
+        .format("parquet")
+        .partitionBy("b", "c", "d")
+        .save(tablePath.getCanonicalPath)
+
+      Files.touch(new File(s"${tablePath.getCanonicalPath}/", "_SUCCESS"))
+      Files.createParentDirs(new File(s"${dir.getCanonicalPath}/b=1/c=1/.foo/bar"))
+
+      checkAnswer(sqlContext.read.format("parquet").load(tablePath.getCanonicalPath), df)
+    }
+
+    withTempPath { dir =>
+      val path = new File(dir, "key=value")
+      val tablePath = new File(path, "table")
+
+      val df = (1 to 3).map(i => (i, i, i, i)).toDF("a", "b", "c", "d")
+
+      df.write
+        .format("parquet")
+        .partitionBy("b", "c", "d")
+        .save(tablePath.getCanonicalPath)
+
+      Files.touch(new File(s"${tablePath.getCanonicalPath}/", "_SUCCESS"))
+      Files.createParentDirs(new File(s"${dir.getCanonicalPath}/b=1/c=1/.foo/bar"))
+
+      checkAnswer(sqlContext.read.format("parquet").load(tablePath.getCanonicalPath), df)
+    }
+  }
+
+  test("use basePath to specify the root dir of a partitioned table.") {
+    withTempPath { dir =>
+      val tablePath = new File(dir, "table")
+      val df = (1 to 3).map(i => (i, i, i, i)).toDF("a", "b", "c", "d")
+
+      df.write
+        .format("parquet")
+        .partitionBy("b", "c", "d")
+        .save(tablePath.getCanonicalPath)
+
+      val twoPartitionsDF =
+        sqlContext
+          .read
+          .option("basePath", tablePath.getCanonicalPath)
+          .parquet(
+            s"${tablePath.getCanonicalPath}/b=1",
+            s"${tablePath.getCanonicalPath}/b=2")
+
+      checkAnswer(twoPartitionsDF, df.filter("b != 3"))
+
+      intercept[AssertionError] {
+        sqlContext
+          .read
+          .parquet(
+            s"${tablePath.getCanonicalPath}/b=1",
+            s"${tablePath.getCanonicalPath}/b=2")
+      }
+    }
+  }
+
+  test("_SUCCESS should not break partitioning discovery") {
+    Seq(1, 32).foreach { threshold =>
+      // We have two paths to list files, one at driver side, another one that we use
+      // a Spark job. We need to test both ways.
+      withSQLConf(SQLConf.PARALLEL_PARTITION_DISCOVERY_THRESHOLD.key -> threshold.toString) {
+        withTempPath { dir =>
+          val tablePath = new File(dir, "table")
+          val df = (1 to 3).map(i => (i, i, i, i)).toDF("a", "b", "c", "d")
+
+          df.write
+            .format("parquet")
+            .partitionBy("b", "c", "d")
+            .save(tablePath.getCanonicalPath)
+
+          Files.touch(new File(s"${tablePath.getCanonicalPath}/b=1", "_SUCCESS"))
+          Files.touch(new File(s"${tablePath.getCanonicalPath}/b=1/c=1", "_SUCCESS"))
+          Files.touch(new File(s"${tablePath.getCanonicalPath}/b=1/c=1/d=1", "_SUCCESS"))
+          checkAnswer(sqlContext.read.format("parquet").load(tablePath.getCanonicalPath), df)
         }
       }
     }

@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Ensembles - RDD-based API
-displayTitle: Ensembles - RDD-based API
-=======
 title: Ensembles - spark.mllib
 displayTitle: Ensembles - spark.mllib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents
@@ -14,11 +9,7 @@ displayTitle: Ensembles - spark.mllib
 
 An [ensemble method](http://en.wikipedia.org/wiki/Ensemble_learning)
 is a learning algorithm which creates a model composed of a set of other base models.
-<<<<<<< HEAD
-`spark.mllib` supports two major ensemble algorithms: [`GradientBoostedTrees`](api/scala/index.html#org.apache.spark.mllib.tree.GradientBoostedTrees) and [`RandomForest`](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest$).
-=======
 `spark.mllib` supports two major ensemble algorithms: [`GradientBoostedTrees`](api/scala/index.html#org.apache.spark.mllib.tree.GradientBoostedTrees) and [`RandomForest`](api/scala/index.html#org.apache.spark.mllib.tree.RandomForest).
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 Both use [decision trees](mllib-decision-tree.html) as their base models.
 
 ## Gradient-Boosted Trees vs. Random Forests

@@ -20,21 +20,14 @@ package org.apache.spark.ml.tuning
 import scala.annotation.varargs
 import scala.collection.mutable
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Experimental, Since}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.param._
 
 /**
  * Builder for a param grid used in grid search-based model selection.
  */
 @Since("1.2.0")
-<<<<<<< HEAD
-=======
 @Experimental
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class ParamGridBuilder @Since("1.2.0") {
 
   private val paramGrid = mutable.Map.empty[Param[_], Iterable[_]]

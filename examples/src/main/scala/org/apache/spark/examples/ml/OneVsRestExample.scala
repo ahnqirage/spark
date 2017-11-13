@@ -88,7 +88,6 @@ object OneVsRestExample {
       }
     }
     val Array(train, test) = data.map(_.cache())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // instantiate the base classifier
     val classifier = new LogisticRegression()

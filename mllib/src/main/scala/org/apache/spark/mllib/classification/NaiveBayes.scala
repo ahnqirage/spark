@@ -194,9 +194,6 @@ object NaiveBayesModel extends Loader[NaiveBayesModel] {
         modelType: String)
 
     def save(sc: SparkContext, path: String, data: Data): Unit = {
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -213,11 +210,7 @@ object NaiveBayesModel extends Loader[NaiveBayesModel] {
 
     @Since("1.3.0")
     def load(sc: SparkContext, path: String): NaiveBayesModel = {
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // Load Parquet data.
       val dataRDD = spark.read.parquet(dataPath(path))
       // Check schema explicitly since erasure makes it hard to use match-case for checking.
@@ -248,9 +241,6 @@ object NaiveBayesModel extends Loader[NaiveBayesModel] {
         theta: Array[Array[Double]])
 
     def save(sc: SparkContext, path: String, data: Data): Unit = {
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -266,11 +256,7 @@ object NaiveBayesModel extends Loader[NaiveBayesModel] {
     }
 
     def load(sc: SparkContext, path: String): NaiveBayesModel = {
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // Load Parquet data.
       val dataRDD = spark.read.parquet(dataPath(path))
       // Check schema explicitly since erasure makes it hard to use match-case for checking.

@@ -26,14 +26,6 @@ import org.apache.hadoop.fs.Path
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-<<<<<<< HEAD
-import org.apache.spark.SparkContext
-import org.apache.spark.annotation.{DeveloperApi, Since}
-import org.apache.spark.internal.Logging
-import org.apache.spark.ml.param.{Param, ParamMap, Params}
-import org.apache.spark.ml.util._
-import org.apache.spark.sql.{DataFrame, Dataset}
-=======
 import org.apache.spark.{SparkContext, Logging}
 import org.apache.spark.annotation.{Since, DeveloperApi, Experimental}
 import org.apache.spark.ml.param.{Param, ParamMap, Params}
@@ -109,7 +101,6 @@ class Pipeline @Since("1.4.0") (
 =======
 @Experimental
 class Pipeline(override val uid: String) extends Estimator[PipelineModel] with MLWritable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("pipeline"))
@@ -122,10 +113,6 @@ class Pipeline(override val uid: String) extends Estimator[PipelineModel] with M
   val stages: Param[Array[PipelineStage]] = new Param(this, "stages", "stages of the pipeline")
 
   /** @group setParam */
-<<<<<<< HEAD
-  @Since("1.2.0")
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def setStages(value: Array[_ <: PipelineStage]): this.type = {
     set(stages, value.asInstanceOf[Array[PipelineStage]])
     this
@@ -234,13 +221,7 @@ object Pipeline extends MLReadable[Pipeline] {
     }
   }
 
-<<<<<<< HEAD
-  /**
-   * Methods for `MLReader` and `MLWriter` shared between [[Pipeline]] and [[PipelineModel]]
-   */
-=======
   /** Methods for [[MLReader]] and [[MLWriter]] shared between [[Pipeline]] and [[PipelineModel]] */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private[ml] object SharedReadWrite {
 
     import org.json4s.JsonDSL._
@@ -272,14 +253,8 @@ object Pipeline extends MLReadable[Pipeline] {
 
       // Save stages
       val stagesDir = new Path(path, "stages").toString
-<<<<<<< HEAD
-      stages.zipWithIndex.foreach { case (stage, idx) =>
-        stage.asInstanceOf[MLWritable].write.save(
-          getStagePath(stage.uid, idx, stages.length, stagesDir))
-=======
       stages.zipWithIndex.foreach { case (stage: MLWritable, idx: Int) =>
         stage.write.save(getStagePath(stage.uid, idx, stages.length, stagesDir))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
 
@@ -324,7 +299,6 @@ class PipelineModel private[ml] (
 =======
     override val uid: String,
     val stages: Array[Transformer])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Model[PipelineModel] with MLWritable with Logging {
 
   /** A Java/Python-friendly auxiliary constructor. */

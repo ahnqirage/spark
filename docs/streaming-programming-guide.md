@@ -752,8 +752,6 @@ Some of these advanced sources are as follows.
 
 - **Kinesis:** Spark Streaming {{site.SPARK_VERSION_SHORT}} is compatible with Kinesis Client Library 1.2.1. See the [Kinesis Integration Guide](streaming-kinesis-integration.html) for more details.
 
-<<<<<<< HEAD
-=======
 - **Twitter:** Spark Streaming's TwitterUtils uses Twitter4j to get the public stream of tweets using
   [Twitter's Streaming API](https://dev.twitter.com/docs/streaming-apis). Authentication information
   can be provided by any of the [methods](http://twitter4j.org/en/configuration.html) supported by
@@ -2205,12 +2203,6 @@ To run a Spark Streaming applications, you need to have the following.
   `spark.streaming.driver.writeAheadLog.closeFileAfterWrite` and
   `spark.streaming.receiver.writeAheadLog.closeFileAfterWrite`. See
   [Spark Streaming Configuration](configuration.html#spark-streaming) for more details.
-<<<<<<< HEAD
-  Note that Spark will not encrypt data written to the write ahead log when I/O encryption is
-  enabled. If encryption of the write ahead log data is desired, it should be stored in a file
-  system that supports encryption natively.
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 - *Setting the max receiving rate* - If the cluster resources is not large enough for the streaming
   application to process data as fast as it is being received, the receivers can be rate limited
@@ -2385,8 +2377,6 @@ If the number of tasks launched per second is high (say, 50 or more per second),
 of sending out tasks to the slaves may be significant and will make it hard to achieve sub-second
 latencies. The overhead can be reduced by the following changes:
 
-<<<<<<< HEAD
-=======
 * **Task Serialization**: Using Kryo serialization for serializing tasks can reduce the task sizes, and therefore reduce the time taken to send them to the slaves. This is controlled by the ```spark.closure.serializer``` property. However, at this time, Kryo serialization cannot be enabled for closure serialization. This may be resolved in a future release.
 
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

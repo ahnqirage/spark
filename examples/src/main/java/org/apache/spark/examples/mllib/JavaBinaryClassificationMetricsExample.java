@@ -21,10 +21,7 @@ package org.apache.spark.examples.mllib;
 import scala.Tuple2;
 
 import org.apache.spark.api.java.*;
-<<<<<<< HEAD
-=======
 import org.apache.spark.api.java.function.Function;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.classification.LogisticRegressionModel;
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS;
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics;
@@ -49,11 +46,7 @@ public class JavaBinaryClassificationMetricsExample {
     JavaRDD<LabeledPoint> test = splits[1];
 
     // Run training algorithm to build the model.
-<<<<<<< HEAD
-    LogisticRegressionModel model = new LogisticRegressionWithLBFGS()
-=======
     final LogisticRegressionModel model = new LogisticRegressionWithLBFGS()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .setNumClasses(2)
       .run(training.rdd());
 
@@ -61,40 +54,6 @@ public class JavaBinaryClassificationMetricsExample {
     model.clearThreshold();
 
     // Compute raw scores on the test set.
-<<<<<<< HEAD
-    JavaPairRDD<Object, Object> predictionAndLabels = test.mapToPair(p ->
-      new Tuple2<>(model.predict(p.features()), p.label()));
-
-    // Get evaluation metrics.
-    BinaryClassificationMetrics metrics =
-      new BinaryClassificationMetrics(predictionAndLabels.rdd());
-
-    // Precision by threshold
-    JavaRDD<Tuple2<Object, Object>> precision = metrics.precisionByThreshold().toJavaRDD();
-    System.out.println("Precision by threshold: " + precision.collect());
-
-    // Recall by threshold
-    JavaRDD<?> recall = metrics.recallByThreshold().toJavaRDD();
-    System.out.println("Recall by threshold: " + recall.collect());
-
-    // F Score by threshold
-    JavaRDD<?> f1Score = metrics.fMeasureByThreshold().toJavaRDD();
-    System.out.println("F1 Score by threshold: " + f1Score.collect());
-
-    JavaRDD<?> f2Score = metrics.fMeasureByThreshold(2.0).toJavaRDD();
-    System.out.println("F2 Score by threshold: " + f2Score.collect());
-
-    // Precision-recall curve
-    JavaRDD<?> prc = metrics.pr().toJavaRDD();
-    System.out.println("Precision-recall curve: " + prc.collect());
-
-    // Thresholds
-    JavaRDD<Double> thresholds = precision.map(t -> Double.parseDouble(t._1().toString()));
-
-    // ROC Curve
-    JavaRDD<?> roc = metrics.roc().toJavaRDD();
-    System.out.println("ROC curve: " + roc.collect());
-=======
     JavaRDD<Tuple2<Object, Object>> predictionAndLabels = test.map(
       new Function<LabeledPoint, Tuple2<Object, Object>>() {
         public Tuple2<Object, Object> call(LabeledPoint p) {
@@ -138,7 +97,6 @@ public class JavaBinaryClassificationMetricsExample {
     // ROC Curve
     JavaRDD<Tuple2<Object, Object>> roc = metrics.roc().toJavaRDD();
     System.out.println("ROC curve: " + roc.toArray());
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // AUPRC
     System.out.println("Area under precision-recall curve = " + metrics.areaUnderPR());
@@ -148,15 +106,8 @@ public class JavaBinaryClassificationMetricsExample {
 
     // Save and load model
     model.save(sc, "target/tmp/LogisticRegressionModel");
-<<<<<<< HEAD
-    LogisticRegressionModel.load(sc, "target/tmp/LogisticRegressionModel");
-    // $example off$
-
-    sc.stop();
-=======
     LogisticRegressionModel sameModel = LogisticRegressionModel.load(sc,
       "target/tmp/LogisticRegressionModel");
     // $example off$
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

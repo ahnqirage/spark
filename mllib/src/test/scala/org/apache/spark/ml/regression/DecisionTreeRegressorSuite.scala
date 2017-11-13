@@ -53,9 +53,6 @@ class DecisionTreeRegressorSuite
       .setMaxDepth(2)
       .setMaxBins(100)
       .setSeed(1)
-<<<<<<< HEAD
-    val categoricalFeatures = Map(0 -> 3, 1 -> 3)
-=======
     val categoricalFeatures = Map(0 -> 3, 1-> 3)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     compareAPIs(categoricalDataPointsRDD, dt, categoricalFeatures)

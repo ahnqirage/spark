@@ -59,11 +59,7 @@ module Jekyll
       rendered_code = Pygments.highlight(code, :lexer => @lang)
 
       hint = "<div><small>Find full example code at " \
-<<<<<<< HEAD
-        "\"examples/src/main/#{snippet_file}\" in the Spark repo.</small></div>"
-=======
         "\"examples/src/main/#{clean_markup}\" in the Spark repo.</small></div>"
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       rendered_code + hint
     end

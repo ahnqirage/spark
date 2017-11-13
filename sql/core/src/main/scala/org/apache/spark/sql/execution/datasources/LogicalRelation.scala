@@ -16,12 +16,6 @@
  */
 package org.apache.spark.sql.execution.datasources
 
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
-import org.apache.spark.sql.catalyst.catalog.CatalogTable
-import org.apache.spark.sql.catalyst.expressions.{AttributeMap, AttributeReference}
-import org.apache.spark.sql.catalyst.plans.QueryPlan
-=======
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubQueries, MultiInstanceRelation}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeMap, AttributeReference}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -50,12 +44,6 @@ case class LogicalRelation(
     com.google.common.base.Objects.hashCode(relation, output)
   }
 
-<<<<<<< HEAD
-  // Only care about relation when canonicalizing.
-  override lazy val canonicalized: LogicalPlan = copy(
-    output = output.map(QueryPlan.normalizeExprId(_, output)),
-    catalogTable = None)
-=======
   override def sameResult(otherPlan: LogicalPlan): Boolean = {
     EliminateSubQueries(otherPlan) match {
       case LogicalRelation(otherRelation, _) => relation == otherRelation

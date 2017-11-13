@@ -86,21 +86,13 @@ private[streaming] class BlockGenerator(
   /**
    * The BlockGenerator can be in 5 possible states, in the order as follows.
    *
-<<<<<<< HEAD
-   *  - Initialized: Nothing has been started.
-=======
    *  - Initialized: Nothing has been started
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *  - Active: start() has been called, and it is generating blocks on added data.
    *  - StoppedAddingData: stop() has been called, the adding of data has been stopped,
    *                       but blocks are still being generated and pushed.
    *  - StoppedGeneratingBlocks: Generating of blocks has been stopped, but
    *                             they are still being pushed.
-<<<<<<< HEAD
-   *  - StoppedAll: Everything has been stopped, and the BlockGenerator object can be GCed.
-=======
    *  - StoppedAll: Everything has stopped, and the BlockGenerator object can be GCed.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   private object GeneratorState extends Enumeration {
     type GeneratorState = Value

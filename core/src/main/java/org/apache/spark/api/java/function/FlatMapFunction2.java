@@ -25,9 +25,5 @@ import java.util.Iterator;
  */
 @FunctionalInterface
 public interface FlatMapFunction2<T1, T2, R> extends Serializable {
-<<<<<<< HEAD
-  Iterator<R> call(T1 t1, T2 t2) throws Exception;
-=======
   Iterable<R> call(T1 t1, T2 t2) throws Exception;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

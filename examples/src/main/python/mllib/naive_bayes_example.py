@@ -24,11 +24,6 @@ Usage:
 
 from __future__ import print_function
 
-<<<<<<< HEAD
-import shutil
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 from pyspark import SparkContext
 # $example on$
 from pyspark.mllib.classification import NaiveBayes, NaiveBayesModel

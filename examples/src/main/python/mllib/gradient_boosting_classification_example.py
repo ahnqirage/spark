@@ -20,11 +20,8 @@ Gradient Boosted Trees Classification Example.
 """
 from __future__ import print_function
 
-<<<<<<< HEAD
-=======
 import sys
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 from pyspark import SparkContext
 # $example on$
 from pyspark.mllib.tree import GradientBoostedTrees, GradientBoostedTreesModel
@@ -48,12 +45,7 @@ if __name__ == "__main__":
     # Evaluate model on test instances and compute test error
     predictions = model.predict(testData.map(lambda x: x.features))
     labelsAndPredictions = testData.map(lambda lp: lp.label).zip(predictions)
-<<<<<<< HEAD
-    testErr = labelsAndPredictions.filter(
-        lambda lp: lp[0] != lp[1]).count() / float(testData.count())
-=======
     testErr = labelsAndPredictions.filter(lambda (v, p): v != p).count() / float(testData.count())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     print('Test Error = ' + str(testErr))
     print('Learned classification GBT model:')
     print(model.toDebugString())

@@ -1000,20 +1000,7 @@ object Matrices {
           sm
         }
         // There is no isTranspose flag for sparse matrices in Breeze
-<<<<<<< HEAD
-        val nsm = if (sm.rowIndices.length > sm.activeSize) {
-          // This sparse matrix has trailing zeros.
-          // Remove them by compacting the matrix.
-          val csm = sm.copy
-          csm.compact()
-          csm
-        } else {
-          sm
-        }
-        new SparseMatrix(nsm.rows, nsm.cols, nsm.colPtrs, nsm.rowIndices, nsm.data)
-=======
         new SparseMatrix(mat.rows, mat.cols, mat.colPtrs, mat.rowIndices, mat.data)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case _ =>
         throw new UnsupportedOperationException(
           s"Do not support conversion from type ${breeze.getClass.getName}.")

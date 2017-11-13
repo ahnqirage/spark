@@ -27,23 +27,11 @@ import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
 import com.google.common.io.ByteStreams
-<<<<<<< HEAD
-import org.apache.commons.io.FileUtils
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileStatus, FSDataInputStream, Path}
-import org.scalatest.{BeforeAndAfterEach, Matchers}
-import org.scalatest.concurrent.TimeLimits
-import org.scalatest.time.SpanSugar._
-
-import org.apache.spark._
-import org.apache.spark.TestUtils.JavaSourceFromString
-=======
 import org.scalatest.{BeforeAndAfterEach, Matchers}
 import org.scalatest.concurrent.Timeouts
 import org.scalatest.time.SpanSugar._
 
 import org.apache.spark._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.api.r.RUtils
 import org.apache.spark.deploy.SparkSubmit._
 import org.apache.spark.deploy.SparkSubmitUtils.MavenCoordinate
@@ -516,29 +504,6 @@ class SparkSubmitSuite
     }
   }
 
-<<<<<<< HEAD
-  test("includes jars passed through spark.jars.packages and spark.jars.repositories") {
-    val unusedJar = TestUtils.createJarWithClasses(Seq.empty)
-    val main = MavenCoordinate("my.great.lib", "mylib", "0.1")
-    val dep = MavenCoordinate("my.great.dep", "mylib", "0.1")
-    // Test using "spark.jars.packages" and "spark.jars.repositories" configurations.
-    IvyTestUtils.withRepository(main, Some(dep.toString), None) { repo =>
-      val args = Seq(
-        "--class", JarCreationTest.getClass.getName.stripSuffix("$"),
-        "--name", "testApp",
-        "--master", "local-cluster[2,1,1024]",
-        "--conf", "spark.jars.packages=my.great.lib:mylib:0.1,my.great.dep:mylib:0.1",
-        "--conf", s"spark.jars.repositories=$repo",
-        "--conf", "spark.ui.enabled=false",
-        "--conf", "spark.master.rest.enabled=false",
-        unusedJar.toString,
-        "my.great.lib.MyLib", "my.great.dep.MyLib")
-      runSparkSubmit(args)
-    }
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   // TODO(SPARK-9603): Building a package is flaky on Jenkins Maven builds.
   // See https://gist.github.com/shivaram/3a2fecce60768a603dac for a error log
   ignore("correctly builds R packages included in a jar with --packages") {
@@ -561,44 +526,6 @@ class SparkSubmitSuite
         rScriptDir)
       runSparkSubmit(args)
     }
-<<<<<<< HEAD
-  }
-
-  test("include an external JAR in SparkR") {
-    assume(RUtils.isRInstalled, "R isn't installed on this machine.")
-    val sparkHome = sys.props.getOrElse("spark.test.home", fail("spark.test.home is not set!"))
-    // Check if the SparkR package is installed
-    assume(RUtils.isSparkRInstalled, "SparkR is not installed in this build.")
-    val rScriptDir =
-      Seq(sparkHome, "R", "pkg", "tests", "fulltests", "jarTest.R").mkString(File.separator)
-    assert(new File(rScriptDir).exists)
-
-    // compile a small jar containing a class that will be called from R code.
-    val tempDir = Utils.createTempDir()
-    val srcDir = new File(tempDir, "sparkrtest")
-    srcDir.mkdirs()
-    val excSource = new JavaSourceFromString(new File(srcDir, "DummyClass").toURI.getPath,
-      """package sparkrtest;
-        |
-        |public class DummyClass implements java.io.Serializable {
-        |  public static String helloWorld(String arg) { return "Hello " + arg; }
-        |  public static int addStuff(int arg1, int arg2) { return arg1 + arg2; }
-        |}
-      """.stripMargin)
-    val excFile = TestUtils.createCompiledClass("DummyClass", srcDir, excSource, Seq.empty)
-    val jarFile = new File(tempDir, "sparkRTestJar-%s.jar".format(System.currentTimeMillis()))
-    val jarURL = TestUtils.createJar(Seq(excFile), jarFile, directoryPrefix = Some("sparkrtest"))
-
-    val args = Seq(
-      "--name", "testApp",
-      "--master", "local",
-      "--jars", jarURL.toString,
-      "--verbose",
-      "--conf", "spark.ui.enabled=false",
-      rScriptDir)
-    runSparkSubmit(args)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("resolves command line argument paths correctly") {

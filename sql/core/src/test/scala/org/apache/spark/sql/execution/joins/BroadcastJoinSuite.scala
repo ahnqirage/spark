@@ -57,7 +57,6 @@ class BroadcastJoinSuite extends QueryTest with SQLTestUtils {
       .setAppName("testing")
     val sc = new SparkContext(conf)
     sqlContext = new SQLContext(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def afterAll(): Unit = {

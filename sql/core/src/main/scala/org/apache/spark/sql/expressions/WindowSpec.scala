@@ -27,6 +27,7 @@ import org.apache.spark.sql.{Column, catalyst}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 
+
 /**
  * A window specification that defines the partitioning, ordering, and frame boundaries.
  *

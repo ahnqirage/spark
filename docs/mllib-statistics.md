@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Basic Statistics - RDD-based API
-displayTitle: Basic Statistics - RDD-based API
-=======
 title: Basic Statistics - spark.mllib
 displayTitle: Basic Statistics - spark.mllib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents
@@ -76,9 +71,6 @@ Refer to the [`MultivariateStatisticalSummary` Python docs](api/python/pyspark.m
 ## Correlations
 
 Calculating the correlation between two series of data is a common operation in Statistics. In `spark.mllib`
-<<<<<<< HEAD
-we provide the flexibility to calculate pairwise correlations among many series. The supported
-=======
 we provide the flexibility to calculate pairwise correlations among many series. The supported 
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 correlation methods are currently Pearson's and Spearman's correlation.
@@ -170,16 +162,11 @@ significant, whether this result occurred by chance or not. `spark.mllib` curren
 =======
 Hypothesis testing is a powerful tool in statistics to determine whether a result is statistically 
 significant, whether this result occurred by chance or not. `spark.mllib` currently supports Pearson's 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 chi-squared ( $\chi^2$) tests for goodness of fit and independence. The input data types determine
 whether the goodness of fit or the independence test is conducted. The goodness of fit test requires
 an input type of `Vector`, whereas the independence test requires a `Matrix` as input.
 
-<<<<<<< HEAD
-`spark.mllib` also supports the input type `RDD[LabeledPoint]` to enable feature selection via chi-squared
-=======
 `spark.mllib` also supports the input type `RDD[LabeledPoint]` to enable feature selection via chi-squared 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 independence tests.
 
 <div class="codetabs">
@@ -283,6 +270,31 @@ provides streaming hypothesis testing.
 provides streaming hypothesis testing.
 
 {% include_example java/org/apache/spark/examples/mllib/JavaStreamingTestExample.java %}
+</div>
+</div>
+
+### Streaming Significance Testing
+`spark.mllib` provides online implementations of some tests to support use cases
+like A/B testing. These tests may be performed on a Spark Streaming
+`DStream[(Boolean,Double)]` where the first element of each tuple
+indicates control group (`false`) or treatment group (`true`) and the
+second element is the value of an observation.
+
+Streaming significance testing supports the following parameters:
+
+* `peacePeriod` - The number of initial data points from the stream to
+ignore, used to mitigate novelty effects.
+* `windowSize` - The number of past batches to perform hypothesis
+testing over. Setting to `0` will perform cumulative processing using
+all prior batches.
+
+
+<div class="codetabs">
+<div data-lang="scala" markdown="1">
+[`StreamingTest`](api/scala/index.html#org.apache.spark.mllib.stat.test.StreamingTest)
+provides streaming hypothesis testing.
+
+{% include_example scala/org/apache/spark/examples/mllib/StreamingTestExample.scala %}
 </div>
 </div>
 

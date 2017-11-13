@@ -18,12 +18,6 @@
 package org.apache.spark.deploy.master
 
 import java.text.SimpleDateFormat
-<<<<<<< HEAD
-import java.util.{Date, Locale}
-import java.util.concurrent.{ScheduledFuture, TimeUnit}
-
-import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
-=======
 import java.util.Date
 import java.util.concurrent.{ConcurrentHashMap, ScheduledFuture, TimeUnit}
 
@@ -87,11 +81,8 @@ private[deploy] class Master(
   private val addressToApp = new HashMap[RpcAddress, ApplicationInfo]
   private val completedApps = new ArrayBuffer[ApplicationInfo]
   private var nextAppNumber = 0
-<<<<<<< HEAD
-=======
   // Using ConcurrentHashMap so that master-rebuild-ui-thread can add a UI after asyncRebuildUI
   private val appIdToUI = new ConcurrentHashMap[String, SparkUI]
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private val drivers = new HashSet[DriverInfo]
   private val completedDrivers = new ArrayBuffer[DriverInfo]
@@ -304,11 +295,7 @@ private[deploy] class Master(
             appInfo.resetRetryCount()
           }
 
-<<<<<<< HEAD
-          exec.application.driver.send(ExecutorUpdated(execId, state, message, exitStatus, false))
-=======
           exec.application.driver.send(ExecutorUpdated(execId, state, message, exitStatus))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
           if (ExecutorState.isFinished(state)) {
             // Remove this executor from the worker and app
@@ -336,8 +323,6 @@ private[deploy] class Master(
             }
           }
           schedule()
-<<<<<<< HEAD
-=======
         }
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         case None =>
@@ -443,7 +428,6 @@ private[deploy] class Master(
     case AttachCompletedRebuildUI(appId) =>
       // An asyncRebuildSparkUI has completed, so need to attach to master webUi
       Option(appIdToUI.get(appId)).foreach { ui => webUi.attachSparkUI(ui) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
@@ -897,7 +881,6 @@ private[deploy] class Master(
 =======
         completedApps.take(toRemove).foreach( a => {
           Option(appIdToUI.remove(a.id)).foreach { ui => webUi.detachSparkUI(ui) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           applicationMetricsSystem.removeSource(a.appSource)
         }
         completedApps.trimStart(toRemove)

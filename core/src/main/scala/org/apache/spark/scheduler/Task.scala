@@ -109,7 +109,6 @@ private[spark] abstract class Task[T](
       runTask(context)
 =======
       (runTask(context), context.collectAccumulators())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } catch {
       case e: Throwable =>
         // Catch all errors; run task failure callbacks, and rethrow the exception.
@@ -119,15 +118,6 @@ private[spark] abstract class Task[T](
           case t: Throwable =>
             e.addSuppressed(t)
         }
-<<<<<<< HEAD
-        context.markTaskCompleted(Some(e))
-        throw e
-    } finally {
-      try {
-        // Call the task completion callbacks. If "markTaskCompleted" is called twice, the second
-        // one is no-op.
-        context.markTaskCompleted(None)
-=======
         throw e
     } finally {
       // Call the task completion callbacks.

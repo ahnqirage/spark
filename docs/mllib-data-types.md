@@ -6,7 +6,6 @@ displayTitle: Data Types - RDD-based API
 =======
 title: Data Types - MLlib
 displayTitle: Data Types - MLlib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents

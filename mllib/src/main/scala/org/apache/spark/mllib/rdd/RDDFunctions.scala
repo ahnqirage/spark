@@ -48,9 +48,6 @@ class RDDFunctions[T: ClassTag](self: RDD[T]) extends Serializable {
   }
 
   /**
-<<<<<<< HEAD
-   * `sliding(Int, Int)*` with step = 1.
-=======
    * [[sliding(Int, Int)*]] with step = 1.
    */
   def sliding(windowSize: Int): RDD[Array[T]] = sliding(windowSize, 1)

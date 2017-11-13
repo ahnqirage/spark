@@ -130,8 +130,6 @@ private[sql] case class JDBCRelation(
     JDBCRDD.scanTable(
       sparkSession.sparkContext,
       schema,
-<<<<<<< HEAD
-=======
       url,
       properties,
       table,

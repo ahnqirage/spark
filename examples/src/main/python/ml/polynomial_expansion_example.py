@@ -17,34 +17,6 @@
 
 from __future__ import print_function
 
-<<<<<<< HEAD
-# $example on$
-from pyspark.ml.feature import PolynomialExpansion
-from pyspark.ml.linalg import Vectors
-# $example off$
-from pyspark.sql import SparkSession
-
-if __name__ == "__main__":
-    spark = SparkSession\
-        .builder\
-        .appName("PolynomialExpansionExample")\
-        .getOrCreate()
-
-    # $example on$
-    df = spark.createDataFrame([
-        (Vectors.dense([2.0, 1.0]),),
-        (Vectors.dense([0.0, 0.0]),),
-        (Vectors.dense([3.0, -1.0]),)
-    ], ["features"])
-
-    polyExpansion = PolynomialExpansion(degree=3, inputCol="features", outputCol="polyFeatures")
-    polyDF = polyExpansion.transform(df)
-
-    polyDF.show(truncate=False)
-    # $example off$
-
-    spark.stop()
-=======
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
 # $example on$
@@ -69,4 +41,3 @@ if __name__ == "__main__":
     # $example off$
 
     sc.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

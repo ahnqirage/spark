@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Optimization - RDD-based API
-displayTitle: Optimization - RDD-based API
-=======
 title: Optimization - spark.mllib
 displayTitle: Optimization - spark.mllib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents

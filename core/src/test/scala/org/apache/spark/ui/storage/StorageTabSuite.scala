@@ -122,14 +122,6 @@ class StorageTabSuite extends SparkFunSuite with BeforeAndAfter {
 
     // Some blocks updated
     val blockUpdateInfos = Seq(
-<<<<<<< HEAD
-      BlockUpdatedInfo(bm1, RDDBlockId(0, 100), memAndDisk, 400L, 0L),
-      BlockUpdatedInfo(bm1, RDDBlockId(0, 101), memAndDisk, 0L, 400L),
-      BlockUpdatedInfo(bm1, RDDBlockId(1, 20), memAndDisk, 0L, 240L)
-    )
-    postUpdateBlocks(bus, blockUpdateInfos)
-    assert(storageListener._rddInfoMap(0).memSize === 400L)
-=======
       BlockUpdatedInfo(bm1, RDDBlockId(0, 100), memAndDisk, 400L, 0L, 0L),
       BlockUpdatedInfo(bm1, RDDBlockId(0, 101), memAndDisk, 0L, 400L, 0L),
       BlockUpdatedInfo(bm1, RDDBlockId(0, 102), memAndDisk, 400L, 0L, 200L),
@@ -150,15 +142,6 @@ class StorageTabSuite extends SparkFunSuite with BeforeAndAfter {
 
     // Drop some blocks
     val blockUpdateInfos2 = Seq(
-<<<<<<< HEAD
-      BlockUpdatedInfo(bm1, RDDBlockId(0, 100), none, 0L, 0L),
-      BlockUpdatedInfo(bm1, RDDBlockId(1, 20), none, 0L, 0L),
-      BlockUpdatedInfo(bm1, RDDBlockId(2, 40), none, 0L, 0L), // doesn't actually exist
-      BlockUpdatedInfo(bm1, RDDBlockId(4, 80), none, 0L, 0L) // doesn't actually exist
-    )
-    postUpdateBlocks(bus, blockUpdateInfos2)
-    assert(storageListener._rddInfoMap(0).memSize === 0L)
-=======
       BlockUpdatedInfo(bm1, RDDBlockId(0, 100), none, 0L, 0L, 0L),
       BlockUpdatedInfo(bm1, RDDBlockId(1, 20), none, 0L, 0L, 0L),
       BlockUpdatedInfo(bm1, RDDBlockId(2, 40), none, 0L, 0L, 0L), // doesn't actually exist
@@ -182,13 +165,8 @@ class StorageTabSuite extends SparkFunSuite with BeforeAndAfter {
     val rddInfo1 = new RDDInfo(1, "rdd1", 1, memOnly, Seq(4))
     val stageInfo0 = new StageInfo(0, 0, "stage0", 1, Seq(rddInfo0), Seq.empty, "details")
     val stageInfo1 = new StageInfo(1, 0, "stage1", 1, Seq(rddInfo1), Seq.empty, "details")
-<<<<<<< HEAD
-    val blockUpdateInfos1 = Seq(BlockUpdatedInfo(bm1, RDDBlockId(0, 1), memOnly, 100L, 0L))
-    val blockUpdateInfos2 = Seq(BlockUpdatedInfo(bm1, RDDBlockId(1, 1), memOnly, 200L, 0L))
-=======
     val blockUpdateInfos1 = Seq(BlockUpdatedInfo(bm1, RDDBlockId(0, 1), memOnly, 100L, 0L, 0L))
     val blockUpdateInfos2 = Seq(BlockUpdatedInfo(bm1, RDDBlockId(1, 1), memOnly, 200L, 0L, 0L))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     bus.postToAll(SparkListenerBlockManagerAdded(1L, bm1, 1000L))
     bus.postToAll(SparkListenerStageSubmitted(stageInfo0))
     assert(storageListener.rddInfoList.size === 0)
@@ -204,26 +182,6 @@ class StorageTabSuite extends SparkFunSuite with BeforeAndAfter {
     assert(storageListener.rddInfoList.size === 2)
   }
 
-<<<<<<< HEAD
-  test("verify StorageTab still contains a renamed RDD") {
-    val rddInfo = new RDDInfo(0, "original_name", 1, memOnly, Seq(4))
-    val stageInfo0 = new StageInfo(0, 0, "stage0", 1, Seq(rddInfo), Seq.empty, "details")
-    bus.postToAll(SparkListenerBlockManagerAdded(1L, bm1, 1000L))
-    bus.postToAll(SparkListenerStageSubmitted(stageInfo0))
-    val blockUpdateInfos1 = Seq(BlockUpdatedInfo(bm1, RDDBlockId(0, 1), memOnly, 100L, 0L))
-    postUpdateBlocks(bus, blockUpdateInfos1)
-    assert(storageListener.rddInfoList.size == 1)
-
-    val newName = "new_name"
-    val rddInfoRenamed = new RDDInfo(0, newName, 1, memOnly, Seq(4))
-    val stageInfo1 = new StageInfo(1, 0, "stage1", 1, Seq(rddInfoRenamed), Seq.empty, "details")
-    bus.postToAll(SparkListenerStageSubmitted(stageInfo1))
-    assert(storageListener.rddInfoList.size == 1)
-    assert(storageListener.rddInfoList.head.name == newName)
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def postUpdateBlocks(
       bus: SparkListenerBus, blockUpdateInfos: Seq[BlockUpdatedInfo]): Unit = {
     blockUpdateInfos.foreach { blockUpdateInfo =>

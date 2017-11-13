@@ -17,21 +17,6 @@
 
 from __future__ import print_function
 
-<<<<<<< HEAD
-# $example on$
-from pyspark.ml.feature import OneHotEncoder, StringIndexer
-# $example off$
-from pyspark.sql import SparkSession
-
-if __name__ == "__main__":
-    spark = SparkSession\
-        .builder\
-        .appName("OneHotEncoderExample")\
-        .getOrCreate()
-
-    # $example on$
-    df = spark.createDataFrame([
-=======
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
 # $example on$
@@ -44,7 +29,6 @@ if __name__ == "__main__":
 
     # $example on$
     df = sqlContext.createDataFrame([
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         (0, "a"),
         (1, "b"),
         (2, "c"),
@@ -56,19 +40,9 @@ if __name__ == "__main__":
     stringIndexer = StringIndexer(inputCol="category", outputCol="categoryIndex")
     model = stringIndexer.fit(df)
     indexed = model.transform(df)
-<<<<<<< HEAD
-
-    encoder = OneHotEncoder(inputCol="categoryIndex", outputCol="categoryVec")
-    encoded = encoder.transform(indexed)
-    encoded.show()
-    # $example off$
-
-    spark.stop()
-=======
     encoder = OneHotEncoder(dropLast=False, inputCol="categoryIndex", outputCol="categoryVec")
     encoded = encoder.transform(indexed)
     encoded.select("id", "categoryVec").show()
     # $example off$
 
     sc.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

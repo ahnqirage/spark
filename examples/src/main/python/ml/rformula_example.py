@@ -17,21 +17,6 @@
 
 from __future__ import print_function
 
-<<<<<<< HEAD
-# $example on$
-from pyspark.ml.feature import RFormula
-# $example off$
-from pyspark.sql import SparkSession
-
-if __name__ == "__main__":
-    spark = SparkSession\
-        .builder\
-        .appName("RFormulaExample")\
-        .getOrCreate()
-
-    # $example on$
-    dataset = spark.createDataFrame(
-=======
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
 # $example on$
@@ -44,29 +29,16 @@ if __name__ == "__main__":
 
     # $example on$
     dataset = sqlContext.createDataFrame(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         [(7, "US", 18, 1.0),
          (8, "CA", 12, 0.0),
          (9, "NZ", 15, 0.0)],
         ["id", "country", "hour", "clicked"])
-<<<<<<< HEAD
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     formula = RFormula(
         formula="clicked ~ country + hour",
         featuresCol="features",
         labelCol="label")
-<<<<<<< HEAD
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     output = formula.fit(dataset).transform(dataset)
     output.select("features", "label").show()
     # $example off$
 
-<<<<<<< HEAD
-    spark.stop()
-=======
     sc.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -27,11 +27,7 @@ import scala.language.implicitConversions
 import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV}
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
-<<<<<<< HEAD
-import org.json4s.jackson.JsonMethods.{compact, parse => parseJson, render}
-=======
 import org.json4s.jackson.JsonMethods.{compact, render, parse => parseJson}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.spark.SparkException
 import org.apache.spark.annotation.{AlphaComponent, Since}
@@ -201,16 +197,6 @@ sealed trait Vector extends Serializable {
    */
   @Since("1.6.0")
   def toJson: String
-<<<<<<< HEAD
-
-  /**
-   * Convert this vector to the new mllib-local representation.
-   * This does NOT copy the data; it copies references.
-   */
-  @Since("2.0.0")
-  def asML: newlinalg.Vector
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -728,14 +714,6 @@ class DenseVector @Since("1.0.0") (
     val jValue = ("type" -> 1) ~ ("values" -> values.toSeq)
     compact(render(jValue))
   }
-<<<<<<< HEAD
-
-  @Since("2.0.0")
-  override def asML: newlinalg.DenseVector = {
-    new newlinalg.DenseVector(values)
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 @Since("1.3.0")
@@ -942,14 +920,6 @@ class SparseVector @Since("1.0.0") (
       ("values" -> values.toSeq)
     compact(render(jValue))
   }
-<<<<<<< HEAD
-
-  @Since("2.0.0")
-  override def asML: newlinalg.SparseVector = {
-    new newlinalg.SparseVector(size, indices, values)
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 @Since("1.3.0")

@@ -18,23 +18,14 @@
 package org.apache.spark
 
 import java.lang.ref.{ReferenceQueue, WeakReference}
-<<<<<<< HEAD
-import java.util.Collections
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue, ScheduledExecutorService, TimeUnit}
-=======
 import java.util.concurrent.{TimeUnit, ScheduledExecutorService}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters._
 
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.{RDD, ReliableRDDCheckpointData}
-<<<<<<< HEAD
-import org.apache.spark.util.{AccumulatorContext, AccumulatorV2, ThreadUtils, Utils}
-=======
 import org.apache.spark.util.{ThreadUtils, Utils}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Classes that represent cleaning tasks.

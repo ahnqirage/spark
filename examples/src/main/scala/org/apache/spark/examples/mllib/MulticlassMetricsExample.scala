@@ -18,20 +18,13 @@
 // scalastyle:off println
 package org.apache.spark.examples.mllib
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkConf, SparkContext}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.util.MLUtils
 // $example off$
-<<<<<<< HEAD
-=======
 import org.apache.spark.{SparkContext, SparkConf}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 object MulticlassMetricsExample {
 
@@ -66,11 +59,6 @@ object MulticlassMetricsExample {
     println(metrics.confusionMatrix)
 
     // Overall Statistics
-<<<<<<< HEAD
-    val accuracy = metrics.accuracy
-    println("Summary Statistics")
-    println(s"Accuracy = $accuracy")
-=======
     val precision = metrics.precision
     val recall = metrics.recall // same as true positive rate
     val f1Score = metrics.fMeasure
@@ -78,7 +66,6 @@ object MulticlassMetricsExample {
     println(s"Precision = $precision")
     println(s"Recall = $recall")
     println(s"F1 Score = $f1Score")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Precision by label
     val labels = metrics.labels
@@ -107,11 +94,6 @@ object MulticlassMetricsExample {
     println(s"Weighted F1 score: ${metrics.weightedFMeasure}")
     println(s"Weighted false positive rate: ${metrics.weightedFalsePositiveRate}")
     // $example off$
-<<<<<<< HEAD
-
-    sc.stop()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

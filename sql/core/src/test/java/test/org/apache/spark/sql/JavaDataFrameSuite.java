@@ -30,7 +30,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
@@ -78,6 +77,13 @@ public class JavaDataFrameSuite {
   @Test
   public void testCollectAndTake() {
     Dataset<Row> df = spark.table("testData").filter("key = 1 or key = 2 or key = 3");
+    Assert.assertEquals(3, df.select("key").collectAsList().size());
+    Assert.assertEquals(2, df.select("key").takeAsList(2).size());
+  }
+
+  @Test
+  public void testCollectAndTake() {
+    DataFrame df = context.table("testData").filter("key = 1 or key = 2 or key = 3");
     Assert.assertEquals(3, df.select("key").collectAsList().size());
     Assert.assertEquals(2, df.select("key").takeAsList(2).size());
   }
@@ -240,22 +246,11 @@ public class JavaDataFrameSuite {
     StructType schema1 = StructType$.MODULE$.apply(fields1);
     Assert.assertEquals(0, schema1.fieldIndex("id"));
 
-<<<<<<< HEAD
-    List<StructField> fields2 =
-        Arrays.asList(new StructField("id", DataTypes.StringType, true, Metadata.empty()));
-=======
     List<StructField> fields2 = Arrays.asList(new StructField("id", DataTypes.StringType, true, Metadata.empty()));
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     StructType schema2 = StructType$.MODULE$.apply(fields2);
     Assert.assertEquals(0, schema2.fieldIndex("id"));
   }
 
-<<<<<<< HEAD
-  private static final Comparator<Row> crosstabRowComparator = (row1, row2) -> {
-    String item1 = row1.getString(0);
-    String item2 = row2.getString(0);
-    return item1.compareTo(item2);
-=======
   private static final Comparator<Row> crosstabRowComparator = new Comparator<Row>() {
     @Override
     public int compare(Row row1, Row row2) {
@@ -325,52 +320,10 @@ public class JavaDataFrameSuite {
     Assert.assertTrue(0 <= actual[0].getLong(1) && actual[0].getLong(1) <= 8);
     Assert.assertEquals(1, actual[1].getLong(0));
     Assert.assertTrue(2 <= actual[1].getLong(1) && actual[1].getLong(1) <= 13);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   @Test
   public void pivot() {
-<<<<<<< HEAD
-    Dataset<Row> df = spark.table("courseSales");
-    List<Row> actual = df.groupBy("year")
-      .pivot("course", Arrays.asList("dotNET", "Java"))
-      .agg(sum("earnings")).orderBy("year").collectAsList();
-
-    Assert.assertEquals(2012, actual.get(0).getInt(0));
-    Assert.assertEquals(15000.0, actual.get(0).getDouble(1), 0.01);
-    Assert.assertEquals(20000.0, actual.get(0).getDouble(2), 0.01);
-
-    Assert.assertEquals(2013, actual.get(1).getInt(0));
-    Assert.assertEquals(48000.0, actual.get(1).getDouble(1), 0.01);
-    Assert.assertEquals(30000.0, actual.get(1).getDouble(2), 0.01);
-  }
-
-  private String getResource(String resource) {
-    try {
-      // The following "getResource" has different behaviors in SBT and Maven.
-      // When running in Jenkins, the file path may contain "@" when there are multiple
-      // SparkPullRequestBuilders running in the same worker
-      // (e.g., /home/jenkins/workspace/SparkPullRequestBuilder@2)
-      // When running in SBT, "@" in the file path will be returned as "@", however,
-      // when running in Maven, "@" will be encoded as "%40".
-      // Therefore, we convert it to URI then call "getPath" to decode it back so that it can both
-      // work both in SBT and Maven.
-      URL url = Thread.currentThread().getContextClassLoader().getResource(resource);
-      return url.toURI().getPath();
-    } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Test
-  public void testGenericLoad() {
-    Dataset<Row> df1 = spark.read().format("text").load(getResource("test-data/text-suite.txt"));
-    Assert.assertEquals(4L, df1.count());
-
-    Dataset<Row> df2 = spark.read().format("text").load(
-      getResource("test-data/text-suite.txt"),
-      getResource("test-data/text-suite2.txt"));
-=======
     DataFrame df = context.table("courseSales");
     Row[] actual = df.groupBy("year")
       .pivot("course", Arrays.<Object>asList("dotNET", "Java"))
@@ -393,133 +346,11 @@ public class JavaDataFrameSuite {
     DataFrame df2 = context.read().format("text").load(
       Thread.currentThread().getContextClassLoader().getResource("text-suite.txt").toString(),
       Thread.currentThread().getContextClassLoader().getResource("text-suite2.txt").toString());
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     Assert.assertEquals(5L, df2.count());
   }
 
   @Test
   public void testTextLoad() {
-<<<<<<< HEAD
-    Dataset<String> ds1 = spark.read().textFile(getResource("test-data/text-suite.txt"));
-    Assert.assertEquals(4L, ds1.count());
-
-    Dataset<String> ds2 = spark.read().textFile(
-      getResource("test-data/text-suite.txt"),
-      getResource("test-data/text-suite2.txt"));
-    Assert.assertEquals(5L, ds2.count());
-  }
-
-  @Test
-  public void testCountMinSketch() {
-    Dataset<Long> df = spark.range(1000);
-
-    CountMinSketch sketch1 = df.stat().countMinSketch("id", 10, 20, 42);
-    Assert.assertEquals(1000, sketch1.totalCount());
-    Assert.assertEquals(10, sketch1.depth());
-    Assert.assertEquals(20, sketch1.width());
-
-    CountMinSketch sketch2 = df.stat().countMinSketch(col("id"), 10, 20, 42);
-    Assert.assertEquals(1000, sketch2.totalCount());
-    Assert.assertEquals(10, sketch2.depth());
-    Assert.assertEquals(20, sketch2.width());
-
-    CountMinSketch sketch3 = df.stat().countMinSketch("id", 0.001, 0.99, 42);
-    Assert.assertEquals(1000, sketch3.totalCount());
-    Assert.assertEquals(0.001, sketch3.relativeError(), 1.0e-4);
-    Assert.assertEquals(0.99, sketch3.confidence(), 5.0e-3);
-
-    CountMinSketch sketch4 = df.stat().countMinSketch(col("id"), 0.001, 0.99, 42);
-    Assert.assertEquals(1000, sketch4.totalCount());
-    Assert.assertEquals(0.001, sketch4.relativeError(), 1.0e-4);
-    Assert.assertEquals(0.99, sketch4.confidence(), 5.0e-3);
-  }
-
-  @Test
-  public void testBloomFilter() {
-    Dataset<Long> df = spark.range(1000);
-
-    BloomFilter filter1 = df.stat().bloomFilter("id", 1000, 0.03);
-    Assert.assertTrue(filter1.expectedFpp() - 0.03 < 1e-3);
-    for (int i = 0; i < 1000; i++) {
-      Assert.assertTrue(filter1.mightContain(i));
-    }
-
-    BloomFilter filter2 = df.stat().bloomFilter(col("id").multiply(3), 1000, 0.03);
-    Assert.assertTrue(filter2.expectedFpp() - 0.03 < 1e-3);
-    for (int i = 0; i < 1000; i++) {
-      Assert.assertTrue(filter2.mightContain(i * 3));
-    }
-
-    BloomFilter filter3 = df.stat().bloomFilter("id", 1000, 64 * 5);
-    Assert.assertEquals(64 * 5, filter3.bitSize());
-    for (int i = 0; i < 1000; i++) {
-      Assert.assertTrue(filter3.mightContain(i));
-    }
-
-    BloomFilter filter4 = df.stat().bloomFilter(col("id").multiply(3), 1000, 64 * 5);
-    Assert.assertEquals(64 * 5, filter4.bitSize());
-    for (int i = 0; i < 1000; i++) {
-      Assert.assertTrue(filter4.mightContain(i * 3));
-    }
-  }
-
-  public static class BeanWithoutGetter implements Serializable {
-    private String a;
-
-    public void setA(String a) {
-      this.a = a;
-    }
-  }
-
-  @Test
-  public void testBeanWithoutGetter() {
-    BeanWithoutGetter bean = new BeanWithoutGetter();
-    List<BeanWithoutGetter> data = Arrays.asList(bean);
-    Dataset<Row> df = spark.createDataFrame(data, BeanWithoutGetter.class);
-    Assert.assertEquals(df.schema().length(), 0);
-    Assert.assertEquals(df.collectAsList().size(), 1);
-  }
-
-  @Test
-  public void testJsonRDDToDataFrame() {
-    // This is a test for the deprecated API in SPARK-15615.
-    JavaRDD<String> rdd = jsc.parallelize(Arrays.asList("{\"a\": 2}"));
-    Dataset<Row> df = spark.read().json(rdd);
-    Assert.assertEquals(1L, df.count());
-    Assert.assertEquals(2L, df.collectAsList().get(0).getLong(0));
-  }
-
-  public class CircularReference1Bean implements Serializable {
-    private CircularReference2Bean child;
-
-    public CircularReference2Bean getChild() {
-      return child;
-    }
-
-    public void setChild(CircularReference2Bean child) {
-      this.child = child;
-    }
-  }
-
-  public class CircularReference2Bean implements Serializable {
-    private CircularReference1Bean child;
-
-    public CircularReference1Bean getChild() {
-      return child;
-    }
-
-    public void setChild(CircularReference1Bean child) {
-      this.child = child;
-    }
-  }
-
-  // Checks a simple case for DataFrame here and put exhaustive tests for the issue
-  // of circular references in `JavaDatasetSuite`.
-  @Test(expected = UnsupportedOperationException.class)
-  public void testCircularReferenceBean() {
-    CircularReference1Bean bean = new CircularReference1Bean();
-    spark.createDataFrame(Arrays.asList(bean), CircularReference1Bean.class);
-=======
     DataFrame df1 = context.read().text(
       Thread.currentThread().getContextClassLoader().getResource("text-suite.txt").toString());
     Assert.assertEquals(4L, df1.count());
@@ -528,6 +359,5 @@ public class JavaDataFrameSuite {
       Thread.currentThread().getContextClassLoader().getResource("text-suite.txt").toString(),
       Thread.currentThread().getContextClassLoader().getResource("text-suite2.txt").toString());
     Assert.assertEquals(5L, df2.count());
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

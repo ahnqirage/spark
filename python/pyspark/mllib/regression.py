@@ -761,17 +761,6 @@ class StreamingLinearAlgorithm(object):
 @inherit_doc
 class StreamingLinearRegressionWithSGD(StreamingLinearAlgorithm):
     """
-<<<<<<< HEAD
-    Train or predict a linear regression model on streaming data.
-    Training uses Stochastic Gradient Descent to update the model
-    based on each new batch of incoming data from a DStream
-    (see `LinearRegressionWithSGD` for model equation).
-
-    Each batch of data is assumed to be an RDD of LabeledPoints.
-    The number of data points per batch can vary, but the number
-    of features must be constant. An initial weight vector must
-    be provided.
-=======
     Train or predict a linear regression model on streaming data. Training uses
     Stochastic Gradient Descent to update the model based on each new batch of
     incoming data from a DStream (see `LinearRegressionWithSGD` for model equation).
@@ -780,7 +769,6 @@ class StreamingLinearRegressionWithSGD(StreamingLinearAlgorithm):
     The number of data points per batch can vary, but the number
     of features must be constant. An initial weight
     vector must be provided.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     :param stepSize:
       Step size for each iteration of gradient descent.

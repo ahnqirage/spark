@@ -26,8 +26,6 @@ fi
 # NOTE: This exact class name is matched downstream by SparkSubmit.
 # Any changes need to be reflected there.
 CLASS="org.apache.spark.deploy.master.Master"
-<<<<<<< HEAD
-=======
 
 if [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then
   echo "Usage: ./sbin/start-master.sh [options]"
@@ -93,10 +91,6 @@ if [ "$SPARK_MASTER_WEBUI_PORT" = "" ]; then
 fi
 
 "${SPARK_HOME}/sbin"/spark-daemon.sh start $CLASS 1 \
-<<<<<<< HEAD
-  --host $SPARK_MASTER_HOST --port $SPARK_MASTER_PORT --webui-port $SPARK_MASTER_WEBUI_PORT \
-  $ORIGINAL_ARGS
-=======
   --ip $SPARK_MASTER_IP --port $SPARK_MASTER_PORT --webui-port $SPARK_MASTER_WEBUI_PORT \
   $ORIGINAL_ARGS
 

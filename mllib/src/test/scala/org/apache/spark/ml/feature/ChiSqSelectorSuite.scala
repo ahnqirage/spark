@@ -18,14 +18,6 @@
 package org.apache.spark.ml.feature
 
 import org.apache.spark.SparkFunSuite
-<<<<<<< HEAD
-import org.apache.spark.ml.linalg.{Vector, Vectors}
-import org.apache.spark.ml.param.ParamsSuite
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-import org.apache.spark.ml.util.TestingUtils._
-import org.apache.spark.mllib.util.MLlibTestSparkContext
-import org.apache.spark.sql.{Dataset, Row}
-=======
 import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.mllib.feature
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
@@ -146,22 +138,9 @@ class ChiSqSelectorSuite extends SparkFunSuite with MLlibTestSparkContext
     ChiSqSelectorSuite.testSelector(selector, dataset)
   }
 
-  test("Test Chi-Square selector: fdr") {
-    val selector = new ChiSqSelector()
-      .setOutputCol("filtered").setSelectorType("fdr").setFdr(0.12)
-    ChiSqSelectorSuite.testSelector(selector, dataset)
-  }
+class ChiSqSelectorSuite extends SparkFunSuite with MLlibTestSparkContext
+  with DefaultReadWriteTest {
 
-  test("Test Chi-Square selector: fwe") {
-    val selector = new ChiSqSelector()
-      .setOutputCol("filtered").setSelectorType("fwe").setFwe(0.12)
-    ChiSqSelectorSuite.testSelector(selector, dataset)
-  }
-
-  test("read/write") {
-    def checkModelData(model: ChiSqSelectorModel, model2: ChiSqSelectorModel): Unit = {
-      assert(model.selectedFeatures === model2.selectedFeatures)
-=======
   test("Test Chi-Square selector") {
     val sqlContext = SQLContext.getOrCreate(sc)
     import sqlContext.implicits._
@@ -217,34 +196,19 @@ class ChiSqSelectorSuite extends SparkFunSuite with MLlibTestSparkContext
     testDefaultReadWrite(t)
   }
 
+  test("ChiSqSelector read/write") {
+    val t = new ChiSqSelector()
+      .setFeaturesCol("myFeaturesCol")
+      .setLabelCol("myLabelCol")
+      .setOutputCol("myOutputCol")
+      .setNumTopFeatures(2)
+    testDefaultReadWrite(t)
+  }
+
   test("ChiSqSelectorModel read/write") {
     val oldModel = new feature.ChiSqSelectorModel(Array(1, 3))
     val instance = new ChiSqSelectorModel("myChiSqSelectorModel", oldModel)
     val newInstance = testDefaultReadWrite(instance)
     assert(newInstance.selectedFeatures === instance.selectedFeatures)
   }
-}
-
-object ChiSqSelectorSuite {
-
-  private def testSelector(selector: ChiSqSelector, dataset: Dataset[_]): ChiSqSelectorModel = {
-    val selectorModel = selector.fit(dataset)
-    selectorModel.transform(dataset).select("filtered", "topFeature").collect()
-      .foreach { case Row(vec1: Vector, vec2: Vector) =>
-        assert(vec1 ~== vec2 absTol 1e-1)
-      }
-    selectorModel
-  }
-
-  /**
-   * Mapping from all Params to valid settings which differ from the defaults.
-   * This is useful for tests which need to exercise all Params, such as save/load.
-   * This excludes input columns to simplify some tests.
-   */
-  val allParamSettings: Map[String, Any] = Map(
-    "selectorType" -> "percentile",
-    "numTopFeatures" -> 1,
-    "percentile" -> 0.12,
-    "outputCol" -> "myOutput"
-  )
 }

@@ -429,14 +429,10 @@ class KMeans private (
             s0
           }
         )
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       bcNewCenters.unpersist(blocking = false)
       preCosts.unpersist(blocking = false)
 
-<<<<<<< HEAD
-      val chosen = data.zip(costs).mapPartitionsWithIndex { (index, pointCosts) =>
-=======
       val chosen = data.zip(costs).mapPartitionsWithIndex { (index, pointsWithCosts) =>
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         val rand = new XORShiftRandom(seed ^ (step << 16) ^ index)

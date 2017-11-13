@@ -17,20 +17,11 @@
 
 package org.apache.spark.ml.feature
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Since, Experimental}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.Transformer
 import org.apache.spark.ml.attribute.{Attribute, AttributeGroup}
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.param.{IntArrayParam, ParamMap, StringArrayParam}
-<<<<<<< HEAD
-import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol}
-import org.apache.spark.ml.util._
-import org.apache.spark.sql.{DataFrame, Dataset}
-=======
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.linalg._
 import org.apache.spark.sql.DataFrame
@@ -55,7 +46,6 @@ final class VectorSlicer @Since("1.5.0") (@Since("1.5.0") override val uid: Stri
 =======
 @Experimental
 final class VectorSlicer(override val uid: String)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Transformer with HasInputCol with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.5.0")

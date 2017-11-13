@@ -23,12 +23,6 @@ import java.util.Iterator;
 /**
  * A function that returns zero or more output records from each grouping key and its values.
  */
-<<<<<<< HEAD
-@FunctionalInterface
-public interface FlatMapGroupsFunction<K, V, R> extends Serializable {
-  Iterator<R> call(K key, Iterator<V> values) throws Exception;
-=======
 public interface FlatMapGroupsFunction<K, V, R> extends Serializable {
   Iterable<R> call(K key, Iterator<V> values) throws Exception;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

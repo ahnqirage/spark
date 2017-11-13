@@ -18,22 +18,6 @@
 package org.apache.spark.streaming.util
 
 import java.nio.ByteBuffer
-<<<<<<< HEAD
-import java.util.{Iterator => JIterator}
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.AtomicBoolean
-
-import scala.collection.JavaConverters._
-import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Promise
-import scala.concurrent.duration._
-import scala.util.control.NonFatal
-
-import org.apache.spark.SparkConf
-import org.apache.spark.internal.Logging
-import org.apache.spark.network.util.JavaUtils
-import org.apache.spark.util.{ThreadUtils, Utils}
-=======
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.{Iterator => JIterator}
 
@@ -45,7 +29,6 @@ import scala.util.control.NonFatal
 
 import org.apache.spark.{Logging, SparkConf}
 import org.apache.spark.util.Utils
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * A wrapper for a WriteAheadLog that batches records before writing data. Handles aggregation
@@ -75,11 +58,7 @@ private[util] class BatchedWriteAheadLog(val wrappedLog: WriteAheadLog, conf: Sp
   private val walWriteQueue = new LinkedBlockingQueue[Record]()
 
   // Whether the writer thread is active
-<<<<<<< HEAD
-  private val active: AtomicBoolean = new AtomicBoolean(true)
-=======
   @volatile private var active: Boolean = true
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private val buffer = new ArrayBuffer[Record]()
 
   private val batchedWriterThread = startBatchedWriterThread()
@@ -91,11 +70,7 @@ private[util] class BatchedWriteAheadLog(val wrappedLog: WriteAheadLog, conf: Sp
   override def write(byteBuffer: ByteBuffer, time: Long): WriteAheadLogRecordHandle = {
     val promise = Promise[WriteAheadLogRecordHandle]()
     val putSuccessfully = synchronized {
-<<<<<<< HEAD
-      if (active.get()) {
-=======
       if (active) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         walWriteQueue.offer(Record(byteBuffer, time, promise))
         true
       } else {
@@ -103,12 +78,7 @@ private[util] class BatchedWriteAheadLog(val wrappedLog: WriteAheadLog, conf: Sp
       }
     }
     if (putSuccessfully) {
-<<<<<<< HEAD
-      ThreadUtils.awaitResult(
-        promise.future, WriteAheadLogUtils.getBatchingTimeout(conf).milliseconds)
-=======
       Await.result(promise.future, WriteAheadLogUtils.getBatchingTimeout(conf).milliseconds)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } else {
       throw new IllegalStateException("close() was called on BatchedWriteAheadLog before " +
         s"write request with time $time could be fulfilled.")
@@ -148,13 +118,9 @@ private[util] class BatchedWriteAheadLog(val wrappedLog: WriteAheadLog, conf: Sp
    */
   override def close(): Unit = {
     logInfo(s"BatchedWriteAheadLog shutting down at time: ${System.currentTimeMillis()}.")
-<<<<<<< HEAD
-    if (!active.getAndSet(false)) return
-=======
     synchronized {
       active = false
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     batchedWriterThread.interrupt()
     batchedWriterThread.join()
     while (!walWriteQueue.isEmpty) {
@@ -169,11 +135,7 @@ private[util] class BatchedWriteAheadLog(val wrappedLog: WriteAheadLog, conf: Sp
   private def startBatchedWriterThread(): Thread = {
     val thread = new Thread(new Runnable {
       override def run(): Unit = {
-<<<<<<< HEAD
-        while (active.get()) {
-=======
         while (active) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           try {
             flushRecords()
           } catch {
@@ -192,11 +154,7 @@ private[util] class BatchedWriteAheadLog(val wrappedLog: WriteAheadLog, conf: Sp
   /** Write all the records in the buffer to the write ahead log. */
   private def flushRecords(): Unit = {
     try {
-<<<<<<< HEAD
-      buffer += walWriteQueue.take()
-=======
       buffer.append(walWriteQueue.take())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val numBatched = walWriteQueue.drainTo(buffer.asJava) + 1
       logDebug(s"Received $numBatched records from queue")
     } catch {
@@ -205,11 +163,7 @@ private[util] class BatchedWriteAheadLog(val wrappedLog: WriteAheadLog, conf: Sp
     }
     try {
       var segment: WriteAheadLogRecordHandle = null
-<<<<<<< HEAD
-      if (buffer.nonEmpty) {
-=======
       if (buffer.length > 0) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         logDebug(s"Batched ${buffer.length} records for Write Ahead Log write")
         // threads may not be able to add items in order by time
         val sortedByTime = buffer.sortBy(_.time)
@@ -245,12 +199,6 @@ private[util] object BatchedWriteAheadLog {
    */
   case class Record(data: ByteBuffer, time: Long, promise: Promise[WriteAheadLogRecordHandle])
 
-<<<<<<< HEAD
-  /** Aggregate multiple serialized ReceivedBlockTrackerLogEvents in a single ByteBuffer. */
-  def aggregate(records: Seq[Record]): ByteBuffer = {
-    ByteBuffer.wrap(Utils.serialize[Array[Array[Byte]]](
-      records.map(record => JavaUtils.bufferToArray(record.data)).toArray))
-=======
   /** Copies the byte array of a ByteBuffer. */
   private def getByteArray(buffer: ByteBuffer): Array[Byte] = {
     val byteArray = new Array[Byte](buffer.remaining())
@@ -262,7 +210,6 @@ private[util] object BatchedWriteAheadLog {
   def aggregate(records: Seq[Record]): ByteBuffer = {
     ByteBuffer.wrap(Utils.serialize[Array[Array[Byte]]](
       records.map(record => getByteArray(record.data)).toArray))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -271,20 +218,10 @@ private[util] object BatchedWriteAheadLog {
    * method therefore needs to be backwards compatible.
    */
   def deaggregate(buffer: ByteBuffer): Array[ByteBuffer] = {
-<<<<<<< HEAD
-    val prevPosition = buffer.position()
-    try {
-      Utils.deserialize[Array[Array[Byte]]](JavaUtils.bufferToArray(buffer)).map(ByteBuffer.wrap)
-    } catch {
-      case _: ClassCastException => // users may restart a stream with batching enabled
-        // Restore `position` so that the user can read `buffer` later
-        buffer.position(prevPosition)
-=======
     try {
       Utils.deserialize[Array[Array[Byte]]](getByteArray(buffer)).map(ByteBuffer.wrap)
     } catch {
       case _: ClassCastException => // users may restart a stream with batching enabled
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Array(buffer)
     }
   }

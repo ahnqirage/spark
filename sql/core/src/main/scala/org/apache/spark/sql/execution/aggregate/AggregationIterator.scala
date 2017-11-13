@@ -78,19 +78,6 @@ abstract class AggregationIterator(
 
   // Initialize all AggregateFunctions by binding references if necessary,
   // and set inputBufferOffset and mutableBufferOffset.
-<<<<<<< HEAD
-  protected def initializeAggregateFunctions(
-      expressions: Seq[AggregateExpression],
-      startingInputBufferOffset: Int): Array[AggregateFunction] = {
-    var mutableBufferOffset = 0
-    var inputBufferOffset: Int = startingInputBufferOffset
-    val expressionsLength = expressions.length
-    val functions = new Array[AggregateFunction](expressionsLength)
-    var i = 0
-    while (i < expressionsLength) {
-      val func = expressions(i).aggregateFunction
-      val funcWithBoundReferences: AggregateFunction = expressions(i).mode match {
-=======
   protected val allAggregateFunctions: Array[AggregateFunction] = {
     var mutableBufferOffset = 0
     var inputBufferOffset: Int = initialInputBufferOffset
@@ -99,7 +86,6 @@ abstract class AggregationIterator(
     while (i < allAggregateExpressions.length) {
       val func = allAggregateExpressions(i).aggregateFunction
       val funcWithBoundReferences: AggregateFunction = allAggregateExpressions(i).mode match {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         case Partial | Complete if func.isInstanceOf[ImperativeAggregate] =>
           // We need to create BoundReferences if the function is not an
           // expression-based aggregate function (it does not support code-gen) and the mode of
@@ -323,7 +309,6 @@ abstract class AggregationIterator(
           completeAggregateFunctions.flatMap {
             case ae: DeclarativeAggregate => ae.updateExpressions
             case agg: AggregateFunction => Seq.fill(agg.aggBufferAttributes.length)(NoOp)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           }
         case (agg: AggregateFunction, _) => Seq.fill(agg.aggBufferAttributes.length)(NoOp)
       }
@@ -402,7 +387,6 @@ abstract class AggregationIterator(
         val evalExpressions = allAggregateFunctions.map {
           case ae: DeclarativeAggregate => ae.evaluateExpression
           case agg: AggregateFunction => NoOp
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
         resultProjection(joinedRow(currentGroupingKey, aggregateResult))
       }

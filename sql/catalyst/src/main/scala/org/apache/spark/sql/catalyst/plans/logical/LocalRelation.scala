@@ -18,11 +18,6 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import org.apache.spark.sql.Row
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
-import org.apache.spark.sql.catalyst.analysis
-import org.apache.spark.sql.catalyst.expressions.{Attribute, Literal}
-=======
 import org.apache.spark.sql.catalyst.analysis.EliminateSubQueries
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow, analysis}
@@ -81,7 +76,6 @@ case class LocalRelation(output: Seq[Attribute],
       case LocalRelation(otherOutput, otherData) =>
         otherOutput.map(_.dataType) == output.map(_.dataType) && otherData == data
       case _ => false
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

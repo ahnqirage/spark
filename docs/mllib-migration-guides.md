@@ -1,12 +1,5 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Old Migration Guides - MLlib
-displayTitle: Old Migration Guides - MLlib
----
-
-The migration guide for the current Spark version is kept on the [MLlib Guide main page](ml-guide.html#migration-guide).
-=======
 title: Old Migration Guides - spark.mllib
 displayTitle: Old Migration Guides - spark.mllib
 description: MLlib migration guides from before Spark SPARK_VERSION_SHORT

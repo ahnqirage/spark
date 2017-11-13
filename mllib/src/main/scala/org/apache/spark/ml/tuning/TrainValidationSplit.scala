@@ -71,11 +71,6 @@ private[ml] trait TrainValidationSplitParams extends ValidatorParams {
  * Similar to [[CrossValidator]], but only splits the set once.
  */
 @Since("1.5.0")
-<<<<<<< HEAD
-class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: String)
-  extends Estimator[TrainValidationSplitModel]
-  with TrainValidationSplitParams with HasParallelism with MLWritable with Logging {
-=======
 @Experimental
 class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: String)
   extends Estimator[TrainValidationSplitModel]
@@ -101,23 +96,6 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
   @Since("1.5.0")
   def setTrainRatio(value: Double): this.type = set(trainRatio, value)
 
-<<<<<<< HEAD
-  /** @group setParam */
-  @Since("2.0.0")
-  def setSeed(value: Long): this.type = set(seed, value)
-
-  /**
-   * Set the mamixum level of parallelism to evaluate models in parallel.
-   * Default is 1 for serial evaluation
-   *
-   * @group expertSetParam
-   */
-  @Since("2.3.0")
-  def setParallelism(value: Int): this.type = set(parallelism, value)
-
-  @Since("2.0.0")
-  override def fit(dataset: Dataset[_]): TrainValidationSplitModel = {
-=======
   @Since("1.5.0")
   override def fit(dataset: DataFrame): TrainValidationSplitModel = {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -180,9 +158,6 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
   }
 
   @Since("1.5.0")
-<<<<<<< HEAD
-  override def transformSchema(schema: StructType): StructType = transformSchemaImpl(schema)
-=======
   override def transformSchema(schema: StructType): StructType = {
     $(estimator).transformSchema(schema)
   }
@@ -260,25 +235,12 @@ object TrainValidationSplit extends MLReadable[TrainValidationSplit] {
  * @param validationMetrics Evaluated validation metrics.
  */
 @Since("1.5.0")
-<<<<<<< HEAD
-=======
 @Experimental
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class TrainValidationSplitModel private[ml] (
     @Since("1.5.0") override val uid: String,
     @Since("1.5.0") val bestModel: Model[_],
     @Since("1.5.0") val validationMetrics: Array[Double])
-<<<<<<< HEAD
-  extends Model[TrainValidationSplitModel] with TrainValidationSplitParams with MLWritable {
-
-  /** A Python-friendly auxiliary constructor. */
-  private[ml] def this(uid: String, bestModel: Model[_], validationMetrics: JList[Double]) = {
-    this(uid, bestModel, validationMetrics.asScala.toArray)
-  }
-
-  @Since("2.0.0")
-  override def transform(dataset: Dataset[_]): DataFrame = {
-=======
   extends Model[TrainValidationSplitModel] with TrainValidationSplitParams {
 
   @Since("1.5.0")

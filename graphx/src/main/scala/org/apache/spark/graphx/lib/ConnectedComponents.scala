@@ -50,12 +50,7 @@ object ConnectedComponents {
       }
     }
     val initialMessage = Long.MaxValue
-<<<<<<< HEAD
-    val pregelGraph = Pregel(ccGraph, initialMessage,
-      maxIterations, EdgeDirection.Either)(
-=======
     val pregelGraph = Pregel(ccGraph, initialMessage, activeDirection = EdgeDirection.Either)(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       vprog = (id, attr, msg) => math.min(attr, msg),
       sendMsg = sendMessage,
       mergeMsg = (a, b) => math.min(a, b))

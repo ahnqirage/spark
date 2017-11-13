@@ -18,10 +18,6 @@
 # Worker daemon
 
 rLibDir <- Sys.getenv("SPARKR_RLIBDIR")
-<<<<<<< HEAD
-connectionTimeout <- as.integer(Sys.getenv("SPARKR_BACKEND_CONNECTION_TIMEOUT", "6000"))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 dirs <- strsplit(rLibDir, ",")[[1]]
 script <- file.path(dirs[[1]], "SparkR", "worker", "worker.R")
 

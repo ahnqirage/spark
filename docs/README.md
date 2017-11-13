@@ -42,7 +42,6 @@ installed. Also install the following libraries:
     $ sudo pip install sphinx
     $ Rscript -e 'install.packages(c("knitr", "devtools"), repos="http://cran.stat.ucla.edu/")'
 ```
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ## Generating the Documentation HTML
 
 We include the Spark documentation as part of the source (as opposed to using a hosted wiki, such as
@@ -64,15 +63,6 @@ $ jekyll build
 ```
 
 You can modify the default Jekyll build as follows:
-<<<<<<< HEAD
-
-```sh
-# Skip generating API docs (which takes a while)
-$ SKIP_API=1 jekyll build
-
-# Serve content locally on port 4000
-$ jekyll serve --watch
-=======
 ```sh
     # Skip generating API docs (which takes a while)
     $ SKIP_API=1 jekyll build
@@ -82,11 +72,6 @@ $ jekyll serve --watch
     
     # Build the site with extra features used on the live page
     $ PRODUCTION=1 jekyll build
-```
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-# Build the site with extra features used on the live page
-$ PRODUCTION=1 jekyll build
 ```
 
 ## API Docs (Scaladoc, Javadoc, Sphinx, roxygen2, MkDocs)

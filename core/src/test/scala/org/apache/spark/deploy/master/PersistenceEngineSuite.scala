@@ -88,13 +88,9 @@ class PersistenceEngineSuite extends SparkFunSuite {
           cores = 0,
           memory = 0,
           endpoint = workerEndpoint,
-<<<<<<< HEAD
-          webUiAddress = "http://localhost:80")
-=======
           webUiPort = 0,
           publicAddress = ""
         )
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         persistenceEngine.addWorker(workerToPersist)
 
@@ -113,12 +109,8 @@ class PersistenceEngineSuite extends SparkFunSuite {
         assert(workerToPersist.cores === recoveryWorkerInfo.cores)
         assert(workerToPersist.memory === recoveryWorkerInfo.memory)
         assert(workerToPersist.endpoint === recoveryWorkerInfo.endpoint)
-<<<<<<< HEAD
-        assert(workerToPersist.webUiAddress === recoveryWorkerInfo.webUiAddress)
-=======
         assert(workerToPersist.webUiPort === recoveryWorkerInfo.webUiPort)
         assert(workerToPersist.publicAddress === recoveryWorkerInfo.publicAddress)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       } finally {
         testRpcEnv.shutdown()
         testRpcEnv.awaitTermination()

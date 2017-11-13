@@ -25,8 +25,6 @@ import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.{SparseVector, Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-<<<<<<< HEAD
-=======
 import org.apache.spark.mllib.linalg.{SparseVector, Vector, Vectors}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext

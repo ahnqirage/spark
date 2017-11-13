@@ -170,7 +170,6 @@ abstract class AbstractCommandBuilder {
       List<String> projects = Arrays.asList("core", "repl", "mllib", "bagel", "graphx",
         "streaming", "tools", "sql/catalyst", "sql/core", "sql/hive", "sql/hive-thriftserver",
         "yarn", "launcher", "network/common", "network/shuffle", "network/yarn");
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       if (prependClasses) {
         if (!isTesting) {
           System.err.println(

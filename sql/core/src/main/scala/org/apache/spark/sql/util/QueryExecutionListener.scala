@@ -22,24 +22,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.{DeveloperApi, Experimental, InterfaceStability}
-import org.apache.spark.internal.Logging
-=======
 import org.apache.spark.Logging
 import org.apache.spark.annotation.{DeveloperApi, Experimental}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.execution.QueryExecution
 
 /**
  * :: Experimental ::
  * The interface of query execution listener that can be used to analyze execution metrics.
  *
-<<<<<<< HEAD
- * @note Implementations should guarantee thread-safety as they can be invoked by
-=======
  * Note that implementations should guarantee thread-safety as they can be invoked by
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * multiple different threads.
  */
 @Experimental
@@ -48,30 +39,19 @@ trait QueryExecutionListener {
 
   /**
    * A callback function that will be called when a query executed successfully.
-<<<<<<< HEAD
-=======
    * Note that this can be invoked by multiple different threads.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @param funcName name of the action that triggered this query.
    * @param qe the QueryExecution object that carries detail information like logical plan,
    *           physical plan, etc.
    * @param durationNs the execution time for this query in nanoseconds.
-<<<<<<< HEAD
-   *
-   * @note This can be invoked by multiple different threads.
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   @DeveloperApi
   def onSuccess(funcName: String, qe: QueryExecution, durationNs: Long): Unit
 
   /**
    * A callback function that will be called when a query execution failed.
-<<<<<<< HEAD
-=======
    * Note that this can be invoked by multiple different threads.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @param funcName the name of the action that triggered this query.
    * @param qe the QueryExecution object that carries detail information like logical plan,
@@ -88,16 +68,9 @@ trait QueryExecutionListener {
 /**
  * :: Experimental ::
  *
-<<<<<<< HEAD
- * Manager for [[QueryExecutionListener]]. See `org.apache.spark.sql.SQLContext.listenerManager`.
- */
-@Experimental
-@InterfaceStability.Evolving
-=======
  * Manager for [[QueryExecutionListener]]. See [[org.apache.spark.sql.SQLContext.listenerManager]].
  */
 @Experimental
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class ExecutionListenerManager private[sql] () extends Logging {
 
   /**
@@ -124,19 +97,6 @@ class ExecutionListenerManager private[sql] () extends Logging {
     listeners.clear()
   }
 
-<<<<<<< HEAD
-  /**
-   * Get an identical copy of this listener manager.
-   */
-  @DeveloperApi
-  override def clone(): ExecutionListenerManager = writeLock {
-    val newListenerManager = new ExecutionListenerManager
-    listeners.foreach(newListenerManager.register)
-    newListenerManager
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private[sql] def onSuccess(funcName: String, qe: QueryExecution, duration: Long): Unit = {
     readLock {
       withErrorHandling { listener =>

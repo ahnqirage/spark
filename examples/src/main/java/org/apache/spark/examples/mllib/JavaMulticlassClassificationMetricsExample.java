@@ -21,10 +21,7 @@ package org.apache.spark.examples.mllib;
 import scala.Tuple2;
 
 import org.apache.spark.api.java.*;
-<<<<<<< HEAD
-=======
 import org.apache.spark.api.java.function.Function;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.classification.LogisticRegressionModel;
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS;
 import org.apache.spark.mllib.evaluation.MulticlassMetrics;
@@ -49,19 +46,11 @@ public class JavaMulticlassClassificationMetricsExample {
     JavaRDD<LabeledPoint> test = splits[1];
 
     // Run training algorithm to build the model.
-<<<<<<< HEAD
-    LogisticRegressionModel model = new LogisticRegressionWithLBFGS()
-=======
     final LogisticRegressionModel model = new LogisticRegressionWithLBFGS()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .setNumClasses(3)
       .run(training.rdd());
 
     // Compute raw scores on the test set.
-<<<<<<< HEAD
-    JavaPairRDD<Object, Object> predictionAndLabels = test.mapToPair(p ->
-      new Tuple2<>(model.predict(p.features()), p.label()));
-=======
     JavaRDD<Tuple2<Object, Object>> predictionAndLabels = test.map(
       new Function<LabeledPoint, Tuple2<Object, Object>>() {
         public Tuple2<Object, Object> call(LabeledPoint p) {
@@ -70,7 +59,6 @@ public class JavaMulticlassClassificationMetricsExample {
         }
       }
     );
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Get evaluation metrics.
     MulticlassMetrics metrics = new MulticlassMetrics(predictionAndLabels.rdd());
@@ -80,18 +68,6 @@ public class JavaMulticlassClassificationMetricsExample {
     System.out.println("Confusion matrix: \n" + confusion);
 
     // Overall statistics
-<<<<<<< HEAD
-    System.out.println("Accuracy = " + metrics.accuracy());
-
-    // Stats by labels
-    for (int i = 0; i < metrics.labels().length; i++) {
-      System.out.format("Class %f precision = %f\n", metrics.labels()[i],metrics.precision(
-        metrics.labels()[i]));
-      System.out.format("Class %f recall = %f\n", metrics.labels()[i], metrics.recall(
-        metrics.labels()[i]));
-      System.out.format("Class %f F1 score = %f\n", metrics.labels()[i], metrics.fMeasure(
-        metrics.labels()[i]));
-=======
     System.out.println("Precision = " + metrics.precision());
     System.out.println("Recall = " + metrics.recall());
     System.out.println("F1 Score = " + metrics.fMeasure());
@@ -104,7 +80,6 @@ public class JavaMulticlassClassificationMetricsExample {
         .labels()[i]));
       System.out.format("Class %f F1 score = %f\n", metrics.labels()[i], metrics.fMeasure
         (metrics.labels()[i]));
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     //Weighted stats
@@ -118,10 +93,5 @@ public class JavaMulticlassClassificationMetricsExample {
     LogisticRegressionModel sameModel = LogisticRegressionModel.load(sc,
       "target/tmp/LogisticRegressionModel");
     // $example off$
-<<<<<<< HEAD
-
-    sc.stop();
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

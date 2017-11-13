@@ -355,7 +355,6 @@ trait Row extends Serializable {
    * Returns a Map consisting of names and values for the requested fieldNames
 =======
    * Returns a Map(name -> value) for the requested fieldNames
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * For primitive types if value is null it returns 'zero value' specific for primitive
    * ie. 0 for Int - use isNullAt to ensure that value is not null
    *
@@ -474,21 +473,13 @@ trait Row extends Serializable {
   def mkString(start: String, sep: String, end: String): String = toSeq.mkString(start, sep, end)
 
   /**
-<<<<<<< HEAD
-   * Returns the value at position i.
-=======
    * Returns the value of a given fieldName.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @throws UnsupportedOperationException when schema is not defined.
    * @throws ClassCastException when data type does not match.
    * @throws NullPointerException when value is null.
    */
   private def getAnyValAs[T <: AnyVal](i: Int): T =
-<<<<<<< HEAD
-    if (isNullAt(i)) throw new NullPointerException(s"Value at index $i is null")
-=======
     if (isNullAt(i)) throw new NullPointerException(s"Value at index $i in null")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     else getAs[T](i)
 }

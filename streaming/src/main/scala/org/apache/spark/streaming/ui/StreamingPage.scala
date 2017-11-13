@@ -467,9 +467,6 @@ private[ui] class StreamingPage(parent: StreamingTab)
       <td rowspan="2" style="vertical-align: middle; width: 151px;">
         <div style="width: 151px;">
           <div style="word-wrap: break-word;"><strong>{receiverName}</strong></div>
-<<<<<<< HEAD
-          <div>Avg: {receivedRecords.formattedAvg} records/sec</div>
-=======
           <div>Avg: {receivedRecords.formattedAvg} events/sec</div>
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         </div>

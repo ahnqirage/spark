@@ -39,7 +39,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Random
 import scala.util.control.NonFatal
 import scala.collection.JavaConverters._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import com.codahale.metrics.{MetricRegistry, MetricSet}
 
@@ -54,15 +53,8 @@ import org.apache.spark.network.netty.SparkTransportConf
 import org.apache.spark.network.shuffle.ExternalShuffleClient
 import org.apache.spark.network.shuffle.protocol.ExecutorShuffleInfo
 import org.apache.spark.rpc.RpcEnv
-<<<<<<< HEAD
-import org.apache.spark.serializer.{SerializerInstance, SerializerManager}
-import org.apache.spark.shuffle.ShuffleManager
-import org.apache.spark.storage.memory._
-import org.apache.spark.unsafe.Platform
-=======
 import org.apache.spark.serializer.{Serializer, SerializerInstance}
 import org.apache.spark.shuffle.ShuffleManager
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util._
 import org.apache.spark.util.io.ChunkedByteBuffer
 
@@ -194,10 +186,6 @@ private[spark] class BlockManager(
   // standard BlockTransferService to directly connect to other Executors.
   private[spark] val shuffleClient = if (externalShuffleServiceEnabled) {
     val transConf = SparkTransportConf.fromSparkConf(conf, "shuffle", numUsableCores)
-<<<<<<< HEAD
-    new ExternalShuffleClient(transConf, securityManager,
-      securityManager.isAuthenticationEnabled(), conf.get(config.SHUFFLE_REGISTRATION_TIMEOUT))
-=======
     new ExternalShuffleClient(transConf, securityManager, securityManager.isAuthenticationEnabled(),
       securityManager.isSaslEncryptionEnabled())
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -224,6 +212,11 @@ private[spark] class BlockManager(
   private var lastPeerFetchTime = 0L
 
   private var blockReplicationPolicy: BlockReplicationPolicy = _
+
+  // Blocks are removing by another thread
+  val pendingToRemove = new ConcurrentHashMap[BlockId, Long]()
+
+  private val NON_TASK_WRITER = -1024L
 
   // Blocks are removing by another thread
   val pendingToRemove = new ConcurrentHashMap[BlockId, Long]()
@@ -1001,7 +994,6 @@ private[spark] class BlockManager(
     new DiskBlockObjectWriter(file, serializerManager, serializerInstance, bufferSize,
 =======
     new DiskBlockObjectWriter(file, serializerInstance, bufferSize, compressStream,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       syncWrites, writeMetrics, blockId)
   }
 
@@ -1886,7 +1878,6 @@ private[spark] class BlockManager(
       .newInstance()
       .deserializeStream(wrapForCompression(blockId, stream))
       .asIterator
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def stop(): Unit = {
@@ -1899,8 +1890,6 @@ private[spark] class BlockManager(
     rpcEnv.stop(slaveEndpoint)
     blockInfoManager.clear()
     memoryStore.clear()
-<<<<<<< HEAD
-=======
     pendingToRemove.clear()
     diskStore.clear()
     if (externalBlockStoreInitialized) {

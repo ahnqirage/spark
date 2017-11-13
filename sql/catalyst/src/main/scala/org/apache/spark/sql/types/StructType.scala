@@ -26,11 +26,6 @@ import org.json4s.JsonDSL._
 import org.apache.spark.SparkException
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, InterpretedOrdering}
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.parser.{CatalystSqlParser, LegacyTypeStringParser}
-import org.apache.spark.sql.catalyst.util.quoteIdentifier
-import org.apache.spark.util.Utils
-=======
 
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -263,8 +258,6 @@ case class StructType(fields: Array[StructField]) extends DataType with Seq[Stru
   }
 
   /**
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * Extracts the [[StructField]] with the given name.
    *
    * @throws IllegalArgumentException if a field with the given name does not exist

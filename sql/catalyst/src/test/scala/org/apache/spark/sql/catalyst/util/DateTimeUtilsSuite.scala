@@ -507,7 +507,6 @@ class DateTimeUtilsSuite extends SparkFunSuite {
     assert(stringToTimestamp(
       UTF8String.fromString("2015-03-18T12:03:17.123456789+0:00")).get ===
         c.getTimeInMillis * 1000 + 123456)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("hours") {
@@ -549,6 +548,19 @@ class DateTimeUtilsSuite extends SparkFunSuite {
       Timestamp.valueOf("1700-02-28 12:14:50.123456")).foreach { t =>
       val us = fromJavaTimestamp(t)
       assert(toJavaTimestamp(us) === t)
+    }
+  }
+
+  test("hours / minutes / seconds") {
+    Seq(Timestamp.valueOf("2015-06-11 10:12:35.789"),
+      Timestamp.valueOf("2015-06-11 20:13:40.789"),
+      Timestamp.valueOf("1900-06-11 12:14:50.789"),
+      Timestamp.valueOf("1700-02-28 12:14:50.123456")).foreach { t =>
+      val us = fromJavaTimestamp(t)
+      assert(toJavaTimestamp(us) === t)
+      assert(getHours(us) === t.getHours)
+      assert(getMinutes(us) === t.getMinutes)
+      assert(getSeconds(us) === t.getSeconds)
     }
   }
 
@@ -722,24 +734,6 @@ class DateTimeUtilsSuite extends SparkFunSuite {
   }
 
   test("daysToMillis and millisToDays") {
-<<<<<<< HEAD
-    val c = Calendar.getInstance(TimeZonePST)
-
-    c.set(2015, 11, 31, 16, 0, 0)
-    assert(millisToDays(c.getTimeInMillis, TimeZonePST) === 16800)
-    assert(millisToDays(c.getTimeInMillis, TimeZoneGMT) === 16801)
-
-    c.set(2015, 11, 31, 0, 0, 0)
-    c.set(Calendar.MILLISECOND, 0)
-    assert(daysToMillis(16800, TimeZonePST) === c.getTimeInMillis)
-
-    c.setTimeZone(TimeZoneGMT)
-    c.set(2015, 11, 31, 0, 0, 0)
-    c.set(Calendar.MILLISECOND, 0)
-    assert(daysToMillis(16800, TimeZoneGMT) === c.getTimeInMillis)
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // There are some days are skipped entirely in some timezone, skip them here.
     val skipped_days = Map[String, Int](
       "Kwajalein" -> 8632,
@@ -750,20 +744,12 @@ class DateTimeUtilsSuite extends SparkFunSuite {
       "Pacific/Kwajalein" -> 8632,
       "MIT" -> 15338)
     for (tz <- DateTimeTestUtils.ALL_TIMEZONES) {
-<<<<<<< HEAD
-      val skipped = skipped_days.getOrElse(tz.getID, Int.MinValue)
-      (-20000 to 20000).foreach { d =>
-        if (d != skipped) {
-          assert(millisToDays(daysToMillis(d, tz), tz) === d,
-            s"Round trip of ${d} did not work in tz ${tz}")
-=======
       DateTimeTestUtils.withDefaultTimeZone(tz) {
         val skipped = skipped_days.getOrElse(tz.getID, Int.MinValue)
         (-20000 to 20000).foreach { d =>
           if (d != skipped) {
             assert(millisToDays(daysToMillis(d)) === d)
           }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       }
     }

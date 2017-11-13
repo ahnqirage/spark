@@ -24,7 +24,6 @@ import java.nio.ByteBuffer
 import java.nio.{ByteBuffer, MappedByteBuffer}
 import java.util.Arrays
 import java.util.concurrent.CountDownLatch
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -1049,11 +1048,7 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
       } finally {
         TaskContext.unset()
       }
-<<<<<<< HEAD
-      context.taskMetrics.updatedBlockStatuses
-=======
       context.taskMetrics.updatedBlocks.getOrElse(Seq[(BlockId, BlockStatus)]())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     // 1 updated block (i.e. list1)
@@ -1543,47 +1538,43 @@ class BlockManagerSuite extends SparkFunSuite with Matchers with BeforeAndAfterE
     }
   }
 
-}
+  private def testReadWithLossOfOnDiskFiles(
+      storageLevel: StorageLevel,
+      readMethod: BlockManager => Option[_]): Unit = {
+    store = makeBlockManager(12000)
+    assert(store.putSingle("blockId", new Array[Byte](4000), storageLevel).nonEmpty)
+    assert(store.getStatus("blockId").isDefined)
+    // Directly delete all files from the disk store, triggering failures when reading blocks:
+    store.diskBlockManager.getAllFiles().foreach(_.delete())
+    // The BlockManager still thinks that these blocks exist:
+    assert(store.getStatus("blockId").isDefined)
+    // Because the BlockManager's metadata claims that the block exists (i.e. that it's present
+    // in at least one store), the read attempts to read it and fails when the on-disk file is
+    // missing.
+    intercept[BlockException] {
+      readMethod(store)
+    }
+    // Subsequent read attempts will succeed; the block isn't present but we return an expected
+    // "block not found" response rather than a fatal error:
+    assert(readMethod(store).isEmpty)
+    // The reason why this second read succeeded is because the metadata entry for the missing
+    // block was removed as a result of the read failure:
+    assert(store.getStatus("blockId").isEmpty)
+  }
 
-private object BlockManagerSuite {
-
-  private implicit class BlockManagerTestUtils(store: BlockManager) {
-
-    def dropFromMemoryIfExists(
-        blockId: BlockId,
-        data: () => Either[Array[Any], ChunkedByteBuffer]): Unit = {
-      store.blockInfoManager.lockForWriting(blockId).foreach { info =>
-        val newEffectiveStorageLevel = store.dropFromMemory(blockId, data)
-        if (newEffectiveStorageLevel.isValid) {
-          // The block is still present in at least one store, so release the lock
-          // but don't delete the block info
-          store.releaseLock(blockId)
-        } else {
-          // The block isn't present in any store, so delete the block info so that the
-          // block can be stored again
-          store.blockInfoManager.removeBlock(blockId)
-        }
+  test("remove cached block if a read fails due to missing on-disk files") {
+    val storageLevels = Seq(
+      StorageLevel(useDisk = true, useMemory = false, deserialized = false),
+      StorageLevel(useDisk = true, useMemory = false, deserialized = true))
+    val readMethods = Map[String, BlockManager => Option[_]](
+      "getLocalBytes" -> ((m: BlockManager) => m.getLocalBytes("blockId")),
+      "getLocal" -> ((m: BlockManager) => m.getLocal("blockId"))
+    )
+    testReadWithLossOfOnDiskFiles(StorageLevel.DISK_ONLY, _.getLocalBytes("blockId"))
+    for ((readMethodName, readMethod) <- readMethods; storageLevel <- storageLevels) {
+      withClue(s"$readMethodName $storageLevel") {
+        testReadWithLossOfOnDiskFiles(storageLevel, readMethod)
       }
-    }
-
-    private def wrapGet[T](f: BlockId => Option[T]): BlockId => Option[T] = (blockId: BlockId) => {
-      val result = f(blockId)
-      if (result.isDefined) {
-        store.releaseLock(blockId)
-      }
-      result
-    }
-
-    def hasLocalBlock(blockId: BlockId): Boolean = {
-      getLocalAndReleaseLock(blockId).isDefined
-    }
-
-    val getLocalAndReleaseLock: (BlockId) => Option[BlockResult] = wrapGet(store.getLocalValues)
-    val getAndReleaseLock: (BlockId) => Option[BlockResult] = wrapGet(store.get)
-    val getSingleAndReleaseLock: (BlockId) => Option[Any] = wrapGet(store.getSingle)
-    val getLocalBytesAndReleaseLock: (BlockId) => Option[ChunkedByteBuffer] = {
-      val allocator = ByteBuffer.allocate _
-      wrapGet { bid => store.getLocalBytes(bid).map(_.toChunkedByteBuffer(allocator)) }
     }
   }
 

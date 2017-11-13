@@ -24,9 +24,6 @@ import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.types._
 
 /** The mode of an [[AggregateFunction]]. */
-<<<<<<< HEAD
-sealed trait AggregateMode
-=======
 private[sql] sealed trait AggregateMode
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -88,52 +85,12 @@ object AggregateExpression {
  * A container for an [[AggregateFunction]] with its [[AggregateMode]] and a field
  * (`isDistinct`) indicating if DISTINCT keyword is specified for this function.
  */
-<<<<<<< HEAD
-case class AggregateExpression(
-    aggregateFunction: AggregateFunction,
-    mode: AggregateMode,
-    isDistinct: Boolean,
-    resultId: ExprId)
-  extends Expression
-  with Unevaluable {
-
-  lazy val resultAttribute: Attribute = if (aggregateFunction.resolved) {
-    AttributeReference(
-      aggregateFunction.toString,
-      aggregateFunction.dataType,
-      aggregateFunction.nullable)(exprId = resultId)
-  } else {
-    // This is a bit of a hack.  Really we should not be constructing this container and reasoning
-    // about datatypes / aggregation mode until after we have finished analysis and made it to
-    // planning.
-    UnresolvedAttribute(aggregateFunction.toString)
-  }
-
-  // We compute the same thing regardless of our final result.
-  override lazy val canonicalized: Expression = {
-    val normalizedAggFunc = mode match {
-      // For PartialMerge or Final mode, the input to the `aggregateFunction` is aggregate buffers,
-      // and the actual children of `aggregateFunction` is not used, here we normalize the expr id.
-      case PartialMerge | Final => aggregateFunction.transform {
-        case a: AttributeReference => a.withExprId(ExprId(0))
-      }
-      case Partial | Complete => aggregateFunction
-    }
-
-    AggregateExpression(
-      normalizedAggFunc.canonicalized.asInstanceOf[AggregateFunction],
-      mode,
-      isDistinct,
-      ExprId(0))
-  }
-=======
 private[sql] case class AggregateExpression(
     aggregateFunction: AggregateFunction,
     mode: AggregateMode,
     isDistinct: Boolean)
   extends Expression
   with Unevaluable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def children: Seq[Expression] = aggregateFunction :: Nil
   override def dataType: DataType = aggregateFunction.dataType
@@ -149,18 +106,6 @@ private[sql] case class AggregateExpression(
     AttributeSet(childReferences)
   }
 
-<<<<<<< HEAD
-  override def toString: String = {
-    val prefix = mode match {
-      case Partial => "partial_"
-      case PartialMerge => "merge_"
-      case Final | Complete => ""
-    }
-    prefix + aggregateFunction.toAggString(isDistinct)
-  }
-
-  override def sql: String = aggregateFunction.sql(isDistinct)
-=======
   override def prettyString: String = aggregateFunction.prettyString
 
   override def toString: String = s"(${aggregateFunction},mode=$mode,isDistinct=$isDistinct)"
@@ -184,11 +129,7 @@ private[sql] case class AggregateExpression(
  * Code which accepts [[AggregateFunction]] instances should be prepared to handle both types of
  * aggregate functions.
  */
-<<<<<<< HEAD
-abstract class AggregateFunction extends Expression {
-=======
 sealed abstract class AggregateFunction extends Expression with ImplicitCastInputTypes {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /** An aggregate function is not foldable. */
   final override def foldable: Boolean = false
@@ -250,6 +191,12 @@ sealed abstract class AggregateFunction extends Expression with ImplicitCastInpu
    */
   def defaultResult: Option[Literal] = None
 
+  /**
+   * Result of the aggregate function when the input is empty. This is currently only used for the
+   * proper rewriting of distinct aggregate functions.
+   */
+  def defaultResult: Option[Literal] = None
+
   override protected def genCode(ctx: CodeGenContext, ev: GeneratedExpressionCode): String =
     throw new UnsupportedOperationException(s"Cannot evaluate expression: $this")
 
@@ -272,7 +219,6 @@ sealed abstract class AggregateFunction extends Expression with ImplicitCastInpu
    */
   def toAggregateExpression(isDistinct: Boolean): AggregateExpression = {
     AggregateExpression(aggregateFunction = this, mode = Complete, isDistinct = isDistinct)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
@@ -294,11 +240,7 @@ sealed abstract class AggregateFunction extends Expression with ImplicitCastInpu
  * `inputAggBufferOffset`, but not on the correctness of the attribute ids in `aggBufferAttributes`
  * and `inputAggBufferAttributes`.
  */
-<<<<<<< HEAD
-abstract class ImperativeAggregate extends AggregateFunction with CodegenFallback {
-=======
 abstract class ImperativeAggregate extends AggregateFunction {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * The offset of this function's first buffer value in the underlying shared mutable aggregation

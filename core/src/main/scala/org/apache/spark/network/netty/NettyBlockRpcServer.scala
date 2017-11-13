@@ -66,7 +66,6 @@ class NettyBlockRpcServer(
 =======
         logTrace(s"Registered streamId $streamId with ${blocks.size} buffers")
         responseContext.onSuccess(new StreamHandle(streamId, blocks.size).toByteBuffer)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       case uploadBlock: UploadBlock =>
         // StorageLevel and ClassTag are serialized as bytes using our JavaSerializer.
@@ -82,7 +81,6 @@ class NettyBlockRpcServer(
         blockManager.putBlockData(blockId, data, level, classTag)
 =======
         blockManager.putBlockData(BlockId(uploadBlock.blockId), data, level)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         responseContext.onSuccess(ByteBuffer.allocate(0))
     }
   }

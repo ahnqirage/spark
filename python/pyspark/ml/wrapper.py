@@ -157,32 +157,9 @@ class JavaParams(JavaWrapper, Params):
         for param in self.params:
             if self._java_obj.hasParam(param.name):
                 java_param = self._java_obj.getParam(param.name)
-<<<<<<< HEAD
-                # SPARK-14931: Only check set params back to avoid default params mismatch.
-                if self._java_obj.isSet(java_param):
-                    value = _java2py(sc, self._java_obj.getOrDefault(java_param))
-                    self._set(**{param.name: value})
-                # SPARK-10931: Temporary fix for params that have a default in Java
-                if self._java_obj.hasDefault(java_param) and not self.isDefined(param):
-                    value = _java2py(sc, self._java_obj.getDefault(java_param)).get()
-                    self._setDefault(**{param.name: value})
-
-    def _transfer_param_map_from_java(self, javaParamMap):
-        """
-        Transforms a Java ParamMap into a Python ParamMap.
-        """
-        sc = SparkContext._active_spark_context
-        paramMap = dict()
-        for pair in javaParamMap.toList():
-            param = pair.param()
-            if self.hasParam(str(param.name())):
-                paramMap[self.getParam(param.name())] = _java2py(sc, pair.value())
-        return paramMap
-=======
                 if self._java_obj.isDefined(java_param):
                     value = _java2py(sc, self._java_obj.getOrDefault(java_param))
                     self._paramMap[param] = value
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     @staticmethod
     def _empty_java_param_map():

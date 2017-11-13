@@ -22,10 +22,6 @@ import java.io.Serializable;
 /**
  * Base interface for function used in Dataset's reduce.
  */
-<<<<<<< HEAD
-@FunctionalInterface
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 public interface ReduceFunction<T> extends Serializable {
   T call(T v1, T v2) throws Exception;
 }

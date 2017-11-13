@@ -17,14 +17,6 @@
 
 package org.apache.spark.ml.classification
 
-<<<<<<< HEAD
-import org.json4s.{DefaultFormats, JObject}
-import org.json4s.JsonDSL._
-
-import org.apache.spark.annotation.Since
-import org.apache.spark.ml.feature.LabeledPoint
-import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
-=======
 import org.apache.spark.annotation.{Experimental, Since}
 import org.apache.spark.ml.tree.impl.RandomForest
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -47,12 +39,8 @@ import org.apache.spark.sql.functions._
  * features.
  */
 @Since("1.4.0")
-<<<<<<< HEAD
-class RandomForestClassifier @Since("1.4.0") (
-=======
 @Experimental
 final class RandomForestClassifier @Since("1.4.0") (
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     @Since("1.4.0") override val uid: String)
   extends ProbabilisticClassifier[Vector, RandomForestClassifier, RandomForestClassificationModel]
   with RandomForestClassifierParams with DefaultParamsWritable {
@@ -64,65 +52,6 @@ final class RandomForestClassifier @Since("1.4.0") (
 
   // Parameters from TreeClassifierParams:
 
-<<<<<<< HEAD
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setMaxDepth(value: Int): this.type = set(maxDepth, value)
-
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setMaxBins(value: Int): this.type = set(maxBins, value)
-
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setMinInstancesPerNode(value: Int): this.type = set(minInstancesPerNode, value)
-
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setMinInfoGain(value: Double): this.type = set(minInfoGain, value)
-
-  /** @group expertSetParam */
-  @Since("1.4.0")
-  override def setMaxMemoryInMB(value: Int): this.type = set(maxMemoryInMB, value)
-
-  /** @group expertSetParam */
-  @Since("1.4.0")
-  override def setCacheNodeIds(value: Boolean): this.type = set(cacheNodeIds, value)
-
-  /**
-   * Specifies how often to checkpoint the cached node IDs.
-   * E.g. 10 means that the cache will get checkpointed every 10 iterations.
-   * This is only used if cacheNodeIds is true and if the checkpoint directory is set in
-   * [[org.apache.spark.SparkContext]].
-   * Must be at least 1.
-   * (default = 10)
-   * @group setParam
-   */
-  @Since("1.4.0")
-  override def setCheckpointInterval(value: Int): this.type = set(checkpointInterval, value)
-
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setImpurity(value: String): this.type = set(impurity, value)
-
-  // Parameters from TreeEnsembleParams:
-
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setSubsamplingRate(value: Double): this.type = set(subsamplingRate, value)
-
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setSeed(value: Long): this.type = set(seed, value)
-
-  // Parameters from RandomForestParams:
-
-  /** @group setParam */
-  @Since("1.4.0")
-  override def setNumTrees(value: Int): this.type = set(numTrees, value)
-
-  /** @group setParam */
-=======
   @Since("1.4.0")
   override def setMaxDepth(value: Int): this.type = super.setMaxDepth(value)
 
@@ -161,7 +90,6 @@ final class RandomForestClassifier @Since("1.4.0") (
   @Since("1.4.0")
   override def setNumTrees(value: Int): this.type = super.setNumTrees(value)
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.4.0")
   override def setFeatureSubsetStrategy(value: String): this.type =
     set(featureSubsetStrategy, value)
@@ -201,9 +129,6 @@ final class RandomForestClassifier @Since("1.4.0") (
 }
 
 @Since("1.4.0")
-<<<<<<< HEAD
-object RandomForestClassifier extends DefaultParamsReadable[RandomForestClassifier] {
-=======
 @Experimental
 object RandomForestClassifier {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -229,12 +154,8 @@ object RandomForestClassifier {
  *                Warning: These have null parents.
  */
 @Since("1.4.0")
-<<<<<<< HEAD
-class RandomForestClassificationModel private[ml] (
-=======
 @Experimental
 final class RandomForestClassificationModel private[ml] (
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     @Since("1.5.0") override val uid: String,
     private val _trees: Array[DecisionTreeClassificationModel],
     @Since("1.6.0") override val numFeatures: Int,
@@ -257,9 +178,6 @@ final class RandomForestClassificationModel private[ml] (
     this(Identifiable.randomUID("rfc"), trees, numFeatures, numClasses)
 
   @Since("1.4.0")
-<<<<<<< HEAD
-  override def trees: Array[DecisionTreeClassificationModel] = _trees
-=======
   override def trees: Array[DecisionTreeModel] = _trees.asInstanceOf[Array[DecisionTreeModel]]
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 

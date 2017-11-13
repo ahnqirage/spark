@@ -325,10 +325,6 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
       sessionState.close()
       System.exit(0)
     }
-<<<<<<< HEAD
-    if (tokens(0).toLowerCase(Locale.ROOT).equals("source") ||
-      cmd_trimmed.startsWith("!") || isRemoteMode) {
-=======
     if (tokens(0).toLowerCase(Locale.ENGLISH).equals("source") ||
       cmd_trimmed.startsWith("!") ||
       tokens(0).toLowerCase.equals("list") ||

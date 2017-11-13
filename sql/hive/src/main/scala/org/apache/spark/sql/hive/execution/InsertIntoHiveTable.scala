@@ -17,21 +17,6 @@
 
 package org.apache.spark.sql.hive.execution
 
-<<<<<<< HEAD
-import scala.util.control.NonFatal
-
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.ql.ErrorMsg
-import org.apache.hadoop.hive.ql.plan.TableDesc
-
-import org.apache.spark.SparkException
-import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
-import org.apache.spark.sql.catalyst.catalog.CatalogTable
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.SparkPlan
-import org.apache.spark.sql.execution.command.CommandUtils
-=======
 import java.io.IOException
 import java.net.URI
 import java.text.SimpleDateFormat
@@ -262,7 +247,6 @@ case class InsertIntoHiveTable(
     val jobConf = new JobConf(sc.hiveconf)
     val tmpLocation = getExternalTmpPath(tableLocation, jobConf)
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val fileSinkConf = new FileSinkDesc(tmpLocation.toString, tableDesc, false)
 
     val numDynamicPartitions = partition.values.count(_.isEmpty)
@@ -304,27 +288,6 @@ case class InsertIntoHiveTable(
       }
     }
 
-<<<<<<< HEAD
-    table.bucketSpec match {
-      case Some(bucketSpec) =>
-        // Writes to bucketed hive tables are allowed only if user does not care about maintaining
-        // table's bucketing ie. both "hive.enforce.bucketing" and "hive.enforce.sorting" are
-        // set to false
-        val enforceBucketingConfig = "hive.enforce.bucketing"
-        val enforceSortingConfig = "hive.enforce.sorting"
-
-        val message = s"Output Hive table ${table.identifier} is bucketed but Spark" +
-          "currently does NOT populate bucketed output which is compatible with Hive."
-
-        if (hadoopConf.get(enforceBucketingConfig, "true").toBoolean ||
-          hadoopConf.get(enforceSortingConfig, "true").toBoolean) {
-          throw new AnalysisException(message)
-        } else {
-          logWarning(message + s" Inserting data anyways since both $enforceBucketingConfig and " +
-            s"$enforceSortingConfig are set to false.")
-        }
-      case _ => // do nothing since table has no bucketing
-=======
     val jobConfSer = new SerializableJobConf(jobConf)
 
     // When speculation is on and output committer class name contains "Direct", we should warn
@@ -431,6 +394,15 @@ case class InsertIntoHiveTable(
 
     CommandUtils.updateTableStats(sparkSession, table)
 =======
+    try {
+      createdTempDir.foreach { path => path.getFileSystem(jobConf).delete(path, true) }
+    } catch {
+      case NonFatal(e) =>
+        logWarning(s"Unable to delete staging directory: $stagingDir.\n" + e)
+    }
+
+    // Attempt to delete the staging directory and the inclusive files. If failed, the files are
+    // expected to be dropped at the normal termination of VM since deleteOnExit is used.
     try {
       createdTempDir.foreach { path => path.getFileSystem(jobConf).delete(path, true) }
     } catch {

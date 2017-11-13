@@ -287,9 +287,6 @@ public final class BytesToBytesMap extends MemoryConsumer {
           }
           try {
             Closeables.close(reader, /* swallowIOException = */ false);
-<<<<<<< HEAD
-            reader = spillWriters.getFirst().getReader(serializerManager);
-=======
             reader = spillWriters.getFirst().getReader(blockManager);
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             recordsInPage = -1;
@@ -891,7 +888,6 @@ public final class BytesToBytesMap extends MemoryConsumer {
     numElements = 0;
     longArray.zeroOut();
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     while (dataPages.size() > 0) {
       MemoryBlock dataPage = dataPages.removeLast();
       freePage(dataPage);
@@ -933,8 +929,6 @@ public final class BytesToBytesMap extends MemoryConsumer {
       longArray.set(newPos * 2 + 1, hashcode);
     }
     freeArray(oldLongArray);
-<<<<<<< HEAD
-=======
 
     if (enablePerfMetrics) {
       timeSpentResizingNs += System.nanoTime() - resizeStartTime;

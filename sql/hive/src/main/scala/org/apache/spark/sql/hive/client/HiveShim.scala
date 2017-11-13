@@ -590,7 +590,6 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
     lazy val varcharKeys = table.getPartitionKeys.asScala
 =======
     val varcharKeys = table.getPartitionKeys.asScala
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .filter(col => col.getType.startsWith(serdeConstants.VARCHAR_TYPE_NAME) ||
         col.getType.startsWith(serdeConstants.CHAR_TYPE_NAME))
       .map(col => col.getName).toSet

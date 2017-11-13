@@ -74,10 +74,6 @@ final class RegressionEvaluator @Since("1.4.0") (@Since("1.4.0") override val ui
   @Since("2.0.0")
   override def evaluate(dataset: Dataset[_]): Double = {
     val schema = dataset.schema
-<<<<<<< HEAD
-    SchemaUtils.checkColumnTypes(schema, $(predictionCol), Seq(DoubleType, FloatType))
-    SchemaUtils.checkNumericType(schema, $(labelCol))
-=======
     val predictionColName = $(predictionCol)
     val predictionType = schema($(predictionCol)).dataType
     require(predictionType == FloatType || predictionType == DoubleType,
@@ -87,7 +83,6 @@ final class RegressionEvaluator @Since("1.4.0") (@Since("1.4.0") override val ui
     val labelType = schema($(labelCol)).dataType
     require(labelType == FloatType || labelType == DoubleType,
       s"Label column $labelColName must be of type float or double, but not $labelType")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val predictionAndLabels = dataset
       .select(col($(predictionCol)).cast(DoubleType), col($(labelCol)).cast(DoubleType))

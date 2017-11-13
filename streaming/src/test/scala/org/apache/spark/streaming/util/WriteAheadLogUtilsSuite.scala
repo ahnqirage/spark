@@ -24,11 +24,7 @@ import scala.reflect.ClassTag
 
 import org.apache.hadoop.conf.Configuration
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkConf, SparkException, SparkFunSuite}
-=======
 import org.apache.spark.{SparkException, SparkConf, SparkFunSuite}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.Utils
 
 class WriteAheadLogUtilsSuite extends SparkFunSuite {

@@ -2802,7 +2802,6 @@ class Word2Vec(JavaEstimator, HasStepSize, HasMaxIter, HasSeed, HasInputCol, Has
     ...
     >>> model.transform(doc).head().model
     DenseVector([0.5524, -0.4995, -0.3599, 0.0241, 0.3461])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.4.0
     """

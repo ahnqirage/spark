@@ -76,74 +76,6 @@ class SQLContextSuite extends SparkFunSuite with SharedSparkContext {
     }
   }
 
-<<<<<<< HEAD
-  test("Catalyst optimization passes are modifiable at runtime") {
-    val sqlContext = SQLContext.getOrCreate(sc)
-    sqlContext.experimental.extraOptimizations = Seq(DummyRule)
-    assert(sqlContext.sessionState.optimizer.batches.flatMap(_.rules).contains(DummyRule))
-  }
-
-  test("get all tables") {
-    val sqlContext = SQLContext.getOrCreate(sc)
-    val df = sqlContext.range(10)
-    df.createOrReplaceTempView("listtablessuitetable")
-    assert(
-      sqlContext.tables().filter("tableName = 'listtablessuitetable'").collect().toSeq ==
-      Row("", "listtablessuitetable", true) :: Nil)
-
-    assert(
-      sqlContext.sql("SHOW tables").filter("tableName = 'listtablessuitetable'").collect().toSeq ==
-      Row("", "listtablessuitetable", true) :: Nil)
-
-    sqlContext.sessionState.catalog.dropTable(
-      TableIdentifier("listtablessuitetable"), ignoreIfNotExists = true, purge = false)
-    assert(sqlContext.tables().filter("tableName = 'listtablessuitetable'").count() === 0)
-  }
-
-  test("getting all tables with a database name has no impact on returned table names") {
-    val sqlContext = SQLContext.getOrCreate(sc)
-    val df = sqlContext.range(10)
-    df.createOrReplaceTempView("listtablessuitetable")
-    assert(
-      sqlContext.tables("default").filter("tableName = 'listtablessuitetable'").collect().toSeq ==
-      Row("", "listtablessuitetable", true) :: Nil)
-
-    assert(
-      sqlContext.sql("show TABLES in default").filter("tableName = 'listtablessuitetable'")
-        .collect().toSeq == Row("", "listtablessuitetable", true) :: Nil)
-
-    sqlContext.sessionState.catalog.dropTable(
-      TableIdentifier("listtablessuitetable"), ignoreIfNotExists = true, purge = false)
-    assert(sqlContext.tables().filter("tableName = 'listtablessuitetable'").count() === 0)
-  }
-
-  test("query the returned DataFrame of tables") {
-    val sqlContext = SQLContext.getOrCreate(sc)
-    val df = sqlContext.range(10)
-    df.createOrReplaceTempView("listtablessuitetable")
-
-    val expectedSchema = StructType(
-      StructField("database", StringType, false) ::
-        StructField("tableName", StringType, false) ::
-        StructField("isTemporary", BooleanType, false) :: Nil)
-
-    Seq(sqlContext.tables(), sqlContext.sql("SHOW TABLes")).foreach {
-      case tableDF =>
-        assert(expectedSchema === tableDF.schema)
-
-        tableDF.createOrReplaceTempView("tables")
-        assert(
-          sqlContext.sql(
-            "SELECT isTemporary, tableName from tables WHERE tableName = 'listtablessuitetable'")
-            .collect().toSeq == Row(true, "listtablessuitetable") :: Nil)
-        assert(
-          sqlContext.tables().filter("tableName = 'tables'").select("tableName", "isTemporary")
-            .collect().toSeq == Row("tables", true) :: Nil)
-        sqlContext.dropTempTable("tables")
-    }
-  }
-
-=======
   test("SPARK-13390: createDataFrame(java.util.List[_],Class[_]) NotSerializableException") {
     val rows = new java.util.ArrayList[IntJavaBean]()
     rows.add(new IntJavaBean(1))
@@ -160,5 +92,4 @@ class IntJavaBean(private var i: Int) extends Serializable {
   def setInt(i: Int): Unit = {
     this.i = i
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

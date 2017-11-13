@@ -149,20 +149,6 @@ private[ml] trait DecisionTreeParams extends PredictorParams
   /** @group getParam */
   final def getMinInfoGain: Double = $(minInfoGain)
 
-<<<<<<< HEAD
-  /**
-   * @deprecated This method is deprecated and will be removed in 3.0.0.
-   * @group setParam
-   */
-  @deprecated("This method is deprecated and will be removed in 3.0.0.", "2.1.0")
-  def setSeed(value: Long): this.type = set(seed, value)
-
-  /**
-   * @deprecated This method is deprecated and will be removed in 3.0.0.
-   * @group expertSetParam
-   */
-  @deprecated("This method is deprecated and will be removed in 3.0.0.", "2.1.0")
-=======
   /** @group setParam */
   def setSeed(value: Long): this.type = set(seed, value)
 

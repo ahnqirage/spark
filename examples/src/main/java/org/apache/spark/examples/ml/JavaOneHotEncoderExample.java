@@ -17,18 +17,6 @@
 
 package org.apache.spark.examples.ml;
 
-<<<<<<< HEAD
-import org.apache.spark.sql.SparkSession;
-
-// $example on$
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.spark.ml.feature.OneHotEncoder;
-import org.apache.spark.ml.feature.StringIndexer;
-import org.apache.spark.ml.feature.StringIndexerModel;
-import org.apache.spark.sql.Dataset;
-=======
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SQLContext;
@@ -41,7 +29,6 @@ import org.apache.spark.ml.feature.OneHotEncoder;
 import org.apache.spark.ml.feature.StringIndexer;
 import org.apache.spark.ml.feature.StringIndexerModel;
 import org.apache.spark.sql.DataFrame;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
@@ -52,38 +39,18 @@ import org.apache.spark.sql.types.StructType;
 
 public class JavaOneHotEncoderExample {
   public static void main(String[] args) {
-<<<<<<< HEAD
-    SparkSession spark = SparkSession
-      .builder()
-      .appName("JavaOneHotEncoderExample")
-      .getOrCreate();
-
-    // $example on$
-    List<Row> data = Arrays.asList(
-=======
     SparkConf conf = new SparkConf().setAppName("JavaOneHotEncoderExample");
     JavaSparkContext jsc = new JavaSparkContext(conf);
     SQLContext sqlContext = new SQLContext(jsc);
 
     // $example on$
     JavaRDD<Row> jrdd = jsc.parallelize(Arrays.asList(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       RowFactory.create(0, "a"),
       RowFactory.create(1, "b"),
       RowFactory.create(2, "c"),
       RowFactory.create(3, "a"),
       RowFactory.create(4, "a"),
       RowFactory.create(5, "c")
-<<<<<<< HEAD
-    );
-
-    StructType schema = new StructType(new StructField[]{
-      new StructField("id", DataTypes.IntegerType, false, Metadata.empty()),
-      new StructField("category", DataTypes.StringType, false, Metadata.empty())
-    });
-
-    Dataset<Row> df = spark.createDataFrame(data, schema);
-=======
     ));
 
     StructType schema = new StructType(new StructField[]{
@@ -92,34 +59,20 @@ public class JavaOneHotEncoderExample {
     });
 
     DataFrame df = sqlContext.createDataFrame(jrdd, schema);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     StringIndexerModel indexer = new StringIndexer()
       .setInputCol("category")
       .setOutputCol("categoryIndex")
       .fit(df);
-<<<<<<< HEAD
-    Dataset<Row> indexed = indexer.transform(df);
-=======
     DataFrame indexed = indexer.transform(df);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     OneHotEncoder encoder = new OneHotEncoder()
       .setInputCol("categoryIndex")
       .setOutputCol("categoryVec");
-<<<<<<< HEAD
-
-    Dataset<Row> encoded = encoder.transform(indexed);
-    encoded.show();
-    // $example off$
-
-    spark.stop();
-=======
     DataFrame encoded = encoder.transform(indexed);
     encoded.select("id", "categoryVec").show();
     // $example off$
     jsc.stop();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

@@ -24,12 +24,7 @@ import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.memory.TaskMemoryManager
 import org.apache.spark.metrics.source.Source
-<<<<<<< HEAD
-import org.apache.spark.shuffle.FetchFailedException
-import org.apache.spark.util.{AccumulatorV2, TaskCompletionListener, TaskFailureListener}
-=======
 import org.apache.spark.util.{TaskCompletionListener, TaskFailureListener}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 
 object TaskContext {
@@ -126,12 +121,6 @@ abstract class TaskContext extends Serializable {
    * An example use is for HadoopRDD to register a callback to close the input stream.
    *
    * Exceptions thrown by the listener will result in failure of the task.
-<<<<<<< HEAD
-   */
-  def addTaskCompletionListener(f: (TaskContext) => Unit): TaskContext = {
-    addTaskCompletionListener(new TaskCompletionListener {
-      override def onTaskCompletion(context: TaskContext): Unit = f(context)
-=======
    */
   def addTaskCompletionListener(f: (TaskContext) => Unit): TaskContext = {
     addTaskCompletionListener(new TaskCompletionListener {
@@ -144,6 +133,16 @@ abstract class TaskContext extends Serializable {
    * Operations defined here must be idempotent, as `onTaskFailure` can be called multiple times.
    */
   def addTaskFailureListener(listener: TaskFailureListener): TaskContext
+
+  /**
+   * Adds a listener to be executed on task failure.
+   * Operations defined here must be idempotent, as `onTaskFailure` can be called multiple times.
+   */
+  def addTaskFailureListener(f: (TaskContext, Throwable) => Unit): TaskContext = {
+    addTaskFailureListener(new TaskFailureListener {
+      override def onTaskFailure(context: TaskContext, error: Throwable): Unit = f(context, error)
+    })
+  }
 
   /**
    * Adds a listener to be executed on task failure.

@@ -23,12 +23,6 @@ import java.util.Iterator;
 /**
  * Base interface for function used in Dataset's mapPartitions.
  */
-<<<<<<< HEAD
-@FunctionalInterface
-public interface MapPartitionsFunction<T, U> extends Serializable {
-  Iterator<U> call(Iterator<T> input) throws Exception;
-=======
 public interface MapPartitionsFunction<T, U> extends Serializable {
   Iterable<U> call(Iterator<T> input) throws Exception;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

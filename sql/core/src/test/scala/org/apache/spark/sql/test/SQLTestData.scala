@@ -266,6 +266,17 @@ private[sql] trait SQLTestData { self =>
     df
   }
 
+  protected lazy val courseSales: DataFrame = {
+    val df = sqlContext.sparkContext.parallelize(
+      CourseSales("dotNET", 2012, 10000) ::
+        CourseSales("Java", 2012, 20000) ::
+        CourseSales("dotNET", 2012, 5000) ::
+        CourseSales("dotNET", 2013, 48000) ::
+        CourseSales("Java", 2013, 30000) :: Nil).toDF()
+    df.registerTempTable("courseSales")
+    df
+  }
+
   /**
    * Initialize all test data such that all temp tables are properly registered.
    */

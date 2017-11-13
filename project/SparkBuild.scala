@@ -282,22 +282,12 @@ object SparkBuild extends PomBuild {
       if (major >= 8) Seq("-Xdoclint:all", "-Xdoclint:-missing") else Seq.empty
     },
 
-<<<<<<< HEAD
-    javacJVMVersion := "1.8",
-    scalacJVMVersion := "1.8",
-
-    javacOptions in Compile ++= Seq(
-      "-encoding", "UTF-8",
-      "-source", javacJVMVersion.value,
-      "-Xlint:unchecked"
-=======
     javacJVMVersion := "1.7",
     scalacJVMVersion := "1.7",
 
     javacOptions in Compile ++= Seq(
       "-encoding", "UTF-8",
       "-source", javacJVMVersion.value
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     ),
     // This -target option cannot be set in the Compile configuration scope since `javadoc` doesn't
     // play nicely with it; see https://github.com/sbt/sbt/issues/355#issuecomment-3817629 for
@@ -365,7 +355,6 @@ object SparkBuild extends PomBuild {
   (allProjects ++ optionallyEnabledProjects ++ assemblyProjects ++ Seq(spark, tools))
     .foreach(enable(sharedSettings ++ DependencyOverrides.settings ++
       ExcludedDependencies.settings ++ Revolver.settings))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /* Enable tests settings for all projects except examples, assembly and tools */
   (allProjects ++ optionallyEnabledProjects).foreach(enable(TestSettings.settings))
@@ -416,14 +405,9 @@ object SparkBuild extends PomBuild {
 
   enable(Flume.settings)(streamingFlumeSink)
 
-<<<<<<< HEAD
-  // SPARK-14738 - Remove docker tests from main Spark build
-  // enable(DockerIntegrationTests.settings)(dockerIntegrationTests)
-=======
   enable(Java8TestSettings.settings)(java8Tests)
 
   enable(DockerIntegrationTests.settings)(dockerIntegrationTests)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Adds the ability to run the spark shell directly from SBT without building an assembly
@@ -506,16 +490,16 @@ object Flume {
 object DockerIntegrationTests {
   // This serves to override the override specified in DependencyOverrides:
   lazy val settings = Seq(
-<<<<<<< HEAD
-    dependencyOverrides += "com.google.guava" % "guava" % "18.0",
-    resolvers += "DB2" at "https://app.camunda.com/nexus/content/repositories/public/",
-    libraryDependencies += "com.oracle" % "ojdbc6" % "11.2.0.1.0" from "https://app.camunda.com/nexus/content/repositories/public/com/oracle/ojdbc6/11.2.0.1.0/ojdbc6-11.2.0.1.0.jar" // scalastyle:ignore
+    dependencyOverrides += "com.google.guava" % "guava" % "18.0"
   )
 }
 
-=======
-    dependencyOverrides += "com.google.guava" % "guava" % "18.0"
-  )
+/**
+ * Overrides to work around sbt's dependency resolution being different from Maven's.
+ */
+object DependencyOverrides {
+  lazy val settings = Seq(
+    dependencyOverrides += "com.google.guava" % "guava" % "14.0.1")
 }
 
 /**
@@ -778,23 +762,9 @@ object Unidoc {
     publish := {},
 
     unidocProjectFilter in(ScalaUnidoc, unidoc) :=
-<<<<<<< HEAD
-      inAnyProject -- inProjects(OldDeps.project, repl, examples, tools, streamingFlumeSink, yarn, tags, streamingKafka010, sqlKafka010),
-    unidocProjectFilter in(JavaUnidoc, unidoc) :=
-      inAnyProject -- inProjects(OldDeps.project, repl, examples, tools, streamingFlumeSink, yarn, tags, streamingKafka010, sqlKafka010),
-
-    unidocAllClasspaths in (ScalaUnidoc, unidoc) := {
-      ignoreClasspaths((unidocAllClasspaths in (ScalaUnidoc, unidoc)).value)
-    },
-
-    unidocAllClasspaths in (JavaUnidoc, unidoc) := {
-      ignoreClasspaths((unidocAllClasspaths in (JavaUnidoc, unidoc)).value)
-    },
-=======
       inAnyProject -- inProjects(OldDeps.project, repl, examples, tools, streamingFlumeSink, yarn, testTags),
     unidocProjectFilter in(JavaUnidoc, unidoc) :=
       inAnyProject -- inProjects(OldDeps.project, repl, bagel, examples, tools, streamingFlumeSink, yarn, testTags),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Skip actual catalyst, but include the subproject.
     // Catalyst is not public API and contains quasiquotes which break scaladoc.
@@ -838,34 +808,6 @@ object Unidoc {
   )
 }
 
-<<<<<<< HEAD
-object CopyDependencies {
-
-  val copyDeps = TaskKey[Unit]("copyDeps", "Copies needed dependencies to the build directory.")
-  val destPath = (crossTarget in Compile) { _ / "jars"}
-
-  lazy val settings = Seq(
-    copyDeps := {
-      val dest = destPath.value
-      if (!dest.isDirectory() && !dest.mkdirs()) {
-        throw new IOException("Failed to create jars directory.")
-      }
-
-      (dependencyClasspath in Compile).value.map(_.data)
-        .filter { jar => jar.isFile() }
-        .foreach { jar =>
-          val destJar = new File(dest, jar.getName())
-          if (destJar.isFile()) {
-            destJar.delete()
-          }
-          Files.copy(jar.toPath(), destJar.toPath())
-        }
-    },
-    crossTarget in (Compile, packageBin) := destPath.value,
-    packageBin in Compile := (packageBin in Compile).dependsOn(copyDeps).value
-  )
-
-=======
 object Java8TestSettings {
   import BuildCommons._
 
@@ -874,7 +816,6 @@ object Java8TestSettings {
     // Targeting Java 8 bytecode is only supported in Scala 2.11.4 and higher:
     scalacJVMVersion := (if (System.getProperty("scala-2.11") == "true") "1.8" else "1.7")
   )
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 object TestSettings {

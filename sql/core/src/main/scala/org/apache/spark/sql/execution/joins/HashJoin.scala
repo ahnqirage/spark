@@ -74,79 +74,6 @@ trait HashJoin {
   }
 
 
-<<<<<<< HEAD
-
-  protected def buildSideKeyGenerator(): Projection =
-    UnsafeProjection.create(buildKeys)
-
-  protected def streamSideKeyGenerator(): UnsafeProjection =
-    UnsafeProjection.create(streamedKeys)
-
-  @transient private[this] lazy val boundCondition = if (condition.isDefined) {
-    newPredicate(condition.get, streamedPlan.output ++ buildPlan.output).eval _
-  } else {
-    (r: InternalRow) => true
-  }
-
-  protected def createResultProjection(): (InternalRow) => InternalRow = joinType match {
-    case LeftExistence(_) =>
-      UnsafeProjection.create(output, output)
-    case _ =>
-      // Always put the stream side on left to simplify implementation
-      // both of left and right side could be null
-      UnsafeProjection.create(
-        output, (streamedPlan.output ++ buildPlan.output).map(_.withNullability(true)))
-  }
-
-  private def innerJoin(
-      streamIter: Iterator[InternalRow],
-      hashedRelation: HashedRelation): Iterator[InternalRow] = {
-    val joinRow = new JoinedRow
-    val joinKeys = streamSideKeyGenerator()
-    streamIter.flatMap { srow =>
-      joinRow.withLeft(srow)
-      val matches = hashedRelation.get(joinKeys(srow))
-      if (matches != null) {
-        matches.map(joinRow.withRight(_)).filter(boundCondition)
-      } else {
-        Seq.empty
-      }
-    }
-  }
-
-  private def outerJoin(
-      streamedIter: Iterator[InternalRow],
-    hashedRelation: HashedRelation): Iterator[InternalRow] = {
-    val joinedRow = new JoinedRow()
-    val keyGenerator = streamSideKeyGenerator()
-    val nullRow = new GenericInternalRow(buildPlan.output.length)
-
-    streamedIter.flatMap { currentRow =>
-      val rowKey = keyGenerator(currentRow)
-      joinedRow.withLeft(currentRow)
-      val buildIter = hashedRelation.get(rowKey)
-      new RowIterator {
-        private var found = false
-        override def advanceNext(): Boolean = {
-          while (buildIter != null && buildIter.hasNext) {
-            val nextBuildRow = buildIter.next()
-            if (boundCondition(joinedRow.withRight(nextBuildRow))) {
-              found = true
-              return true
-            }
-          }
-          if (!found) {
-            joinedRow.withRight(nullRow)
-            found = true
-            return true
-          }
-          false
-        }
-        override def getRow: InternalRow = joinedRow
-      }.toScala
-    }
-  }
-=======
   override def outputsUnsafeRows: Boolean = true
   override def canProcessUnsafeRows: Boolean = true
   override def canProcessSafeRows: Boolean = false
@@ -156,7 +83,6 @@ trait HashJoin {
 
   protected def streamSideKeyGenerator: Projection =
     UnsafeProjection.create(streamedKeys, streamedPlan.output)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private def semiJoin(
       streamIter: Iterator[InternalRow],
@@ -186,7 +112,6 @@ trait HashJoin {
       private[this] val joinRow = new JoinedRow
       private[this] val resultProjection: (InternalRow) => InternalRow =
         UnsafeProjection.create(self.schema)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private def existenceJoin(
       streamIter: Iterator[InternalRow],

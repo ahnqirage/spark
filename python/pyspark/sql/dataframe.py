@@ -712,6 +712,67 @@ class DataFrame(object):
             raise TypeError("numPartitions should be an int or Column")
 
     @since(1.3)
+    def repartition(self, numPartitions, *cols):
+        """
+        Returns a new :class:`DataFrame` partitioned by the given partitioning expressions. The
+        resulting DataFrame is hash partitioned.
+
+        ``numPartitions`` can be an int to specify the target number of partitions or a Column.
+        If it is a Column, it will be used as the first partitioning column. If not specified,
+        the default number of partitions is used.
+
+        .. versionchanged:: 1.6
+           Added optional arguments to specify the partitioning columns. Also made numPartitions
+           optional if partitioning columns are specified.
+
+        >>> df.repartition(10).rdd.getNumPartitions()
+        10
+        >>> data = df.unionAll(df).repartition("age")
+        >>> data.show()
+        +---+-----+
+        |age| name|
+        +---+-----+
+        |  2|Alice|
+        |  2|Alice|
+        |  5|  Bob|
+        |  5|  Bob|
+        +---+-----+
+        >>> data = data.repartition(7, "age")
+        >>> data.show()
+        +---+-----+
+        |age| name|
+        +---+-----+
+        |  5|  Bob|
+        |  5|  Bob|
+        |  2|Alice|
+        |  2|Alice|
+        +---+-----+
+        >>> data.rdd.getNumPartitions()
+        7
+        >>> data = data.repartition("name", "age")
+        >>> data.show()
+        +---+-----+
+        |age| name|
+        +---+-----+
+        |  5|  Bob|
+        |  5|  Bob|
+        |  2|Alice|
+        |  2|Alice|
+        +---+-----+
+        """
+        if isinstance(numPartitions, int):
+            if len(cols) == 0:
+                return DataFrame(self._jdf.repartition(numPartitions), self.sql_ctx)
+            else:
+                return DataFrame(
+                    self._jdf.repartition(numPartitions, self._jcols(*cols)), self.sql_ctx)
+        elif isinstance(numPartitions, (basestring, Column)):
+            cols = (numPartitions, ) + cols
+            return DataFrame(self._jdf.repartition(self._jcols(*cols)), self.sql_ctx)
+        else:
+            raise TypeError("numPartitions should be an int or Column")
+
+    @since(1.3)
     def distinct(self):
         """Returns a new :class:`DataFrame` containing the distinct rows in this :class:`DataFrame`.
 
@@ -724,71 +785,13 @@ class DataFrame(object):
     def sample(self, withReplacement=None, fraction=None, seed=None):
         """Returns a sampled subset of this :class:`DataFrame`.
 
-<<<<<<< HEAD
-        :param withReplacement: Sample with replacement or not (default False).
-        :param fraction: Fraction of rows to generate, range [0.0, 1.0].
-        :param seed: Seed for sampling (default a random seed).
-
-        .. note:: This is not guaranteed to provide exactly the fraction specified of the total
-            count of the given :class:`DataFrame`.
-
-        .. note:: `fraction` is required and, `withReplacement` and `seed` are optional.
-
-        >>> df = spark.range(10)
-        >>> df.sample(0.5, 3).count()
-        4
-        >>> df.sample(fraction=0.5, seed=3).count()
-        4
-        >>> df.sample(withReplacement=True, fraction=0.5, seed=3).count()
-        1
-        >>> df.sample(1.0).count()
-        10
-        >>> df.sample(fraction=1.0).count()
-        10
-        >>> df.sample(False, fraction=1.0).count()
-        10
-=======
         >>> df.sample(False, 0.5, 42).count()
         2
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
-
-        # For the cases below:
-        #   sample(True, 0.5 [, seed])
-        #   sample(True, fraction=0.5 [, seed])
-        #   sample(withReplacement=False, fraction=0.5 [, seed])
-        is_withReplacement_set = \
-            type(withReplacement) == bool and isinstance(fraction, float)
-
-        # For the case below:
-        #   sample(faction=0.5 [, seed])
-        is_withReplacement_omitted_kwargs = \
-            withReplacement is None and isinstance(fraction, float)
-
-        # For the case below:
-        #   sample(0.5 [, seed])
-        is_withReplacement_omitted_args = isinstance(withReplacement, float)
-
-        if not (is_withReplacement_set
-                or is_withReplacement_omitted_kwargs
-                or is_withReplacement_omitted_args):
-            argtypes = [
-                str(type(arg)) for arg in [withReplacement, fraction, seed] if arg is not None]
-            raise TypeError(
-                "withReplacement (optional), fraction (required) and seed (optional)"
-                " should be a bool, float and number; however, "
-                "got [%s]." % ", ".join(argtypes))
-
-        if is_withReplacement_omitted_args:
-            if fraction is not None:
-                seed = fraction
-            fraction = withReplacement
-            withReplacement = None
-
-        seed = long(seed) if seed is not None else None
-        args = [arg for arg in [withReplacement, fraction, seed] if arg is not None]
-        jdf = self._jdf.sample(*args)
-        return DataFrame(jdf, self.sql_ctx)
+        assert fraction >= 0.0, "Negative fraction value: %s" % fraction
+        seed = seed if seed is not None else random.randint(0, sys.maxsize)
+        rdd = self._jdf.sample(withReplacement, fraction, long(seed))
+        return DataFrame(rdd, self.sql_ctx)
 
     @since(1.5)
     def sampleBy(self, col, fractions, seed=None):
@@ -925,13 +928,15 @@ class DataFrame(object):
             the column(s) must exist on both sides, and this performs an equi-join.
         :param how: str, default 'inner'.
             One of `inner`, `outer`, `left_outer`, `right_outer`, `leftsemi`.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         >>> df.join(df2, df.name == df2.name, 'outer').select(df.name, df2.height).collect()
         [Row(name=None, height=80), Row(name=u'Bob', height=85), Row(name=u'Alice', height=None)]
 
         >>> df.join(df2, 'name', 'outer').select('name', 'height').collect()
         [Row(name=u'Tom', height=80), Row(name=u'Bob', height=85), Row(name=u'Alice', height=None)]
+
+        >>> df.join(df2, 'name', 'outer').select('name', 'height').collect()
+        [Row(name=u'Tom', height=80), Row(name=u'Alice', height=None), Row(name=u'Bob', height=85)]
 
         >>> df.join(df2, 'name', 'outer').select('name', 'height').collect()
         [Row(name=u'Tom', height=80), Row(name=u'Alice', height=None), Row(name=u'Bob', height=85)]
@@ -967,6 +972,26 @@ class DataFrame(object):
                 on = self._jseq([])
             assert isinstance(how, basestring), "how should be basestring"
             jdf = self._jdf.join(other._jdf, on, how)
+        return DataFrame(jdf, self.sql_ctx)
+
+    @since(1.6)
+    def sortWithinPartitions(self, *cols, **kwargs):
+        """Returns a new :class:`DataFrame` with each partition sorted by the specified column(s).
+
+        :param cols: list of :class:`Column` or column names to sort by.
+        :param ascending: boolean or list of boolean (default True).
+            Sort ascending vs. descending. Specify list for multiple sort orders.
+            If a list is specified, length of the list must equal length of the `cols`.
+
+        >>> df.sortWithinPartitions("age", ascending=False).show()
+        +---+-----+
+        |age| name|
+        +---+-----+
+        |  2|Alice|
+        |  5|  Bob|
+        +---+-----+
+        """
+        jdf = self._jdf.sortWithinPartitions(self._sort_cols(cols, kwargs))
         return DataFrame(jdf, self.sql_ctx)
 
     @since(1.6)

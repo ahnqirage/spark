@@ -24,7 +24,6 @@ import java.util
 
 import com.clearspring.analytics.hash.MurmurHash
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
@@ -67,6 +66,36 @@ case class HyperLogLogPlusPlus(
   def this(child: Expression) = {
     this(child = child, relativeSD = 0.05, mutableAggBufferOffset = 0, inputAggBufferOffset = 0)
   }
+
+  def this(child: Expression, relativeSD: Expression) = {
+    this(
+      child = child,
+      relativeSD = HyperLogLogPlusPlus.validateDoubleLiteral(relativeSD),
+      mutableAggBufferOffset = 0,
+      inputAggBufferOffset = 0)
+  }
+
+  override def withNewMutableAggBufferOffset(newMutableAggBufferOffset: Int): ImperativeAggregate =
+    copy(mutableAggBufferOffset = newMutableAggBufferOffset)
+
+  override def withNewInputAggBufferOffset(newInputAggBufferOffset: Int): ImperativeAggregate =
+    copy(inputAggBufferOffset = newInputAggBufferOffset)
+
+  /**
+   * HLL++ uses 'p' bits for addressing. The more addressing bits we use, the more precise the
+   * algorithm will be, and the more memory it will require. The 'p' value is based on the relative
+   * error requested.
+   *
+   * HLL++ requires that we use at least 4 bits of addressing space (a minimum precision of 27%).
+   *
+   * This method rounds up to the nearest integer. This means that the error is always equal to or
+   * lower than the requested error. Use the <code>trueRsd</code> method to get the actual RSD
+   * value.
+   */
+  private[this] val p = Math.ceil(2.0d * Math.log(1.106d / relativeSD) / Math.log(2.0d)).toInt
+
+  require(p >= 4, "HLL++ requires at least 4 bits for addressing. " +
+    "Use a lower error, at most 27%.")
 
   def this(child: Expression, relativeSD: Expression) = {
     this(
@@ -280,5 +309,4 @@ object HyperLogLogPlusPlus {
       throw new AnalysisException("The second argument should be a double literal.")
   }
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

@@ -543,35 +543,6 @@ case class DateFormatClass(left: Expression, right: Expression, timeZoneId: Opti
  * Converts time string with given pattern.
  * Deterministic version of [[UnixTimestamp]], must have at least one parameter.
  */
-<<<<<<< HEAD
-@ExpressionDescription(
-  usage = "_FUNC_(expr[, pattern]) - Returns the UNIX timestamp of the given time.",
-  examples = """
-    Examples:
-      > SELECT _FUNC_('2016-04-08', 'yyyy-MM-dd');
-       1460041200
-  """,
-  since = "1.6.0")
-case class ToUnixTimestamp(
-    timeExp: Expression,
-    format: Expression,
-    timeZoneId: Option[String] = None)
-  extends UnixTime {
-
-  def this(timeExp: Expression, format: Expression) = this(timeExp, format, None)
-
-  override def left: Expression = timeExp
-  override def right: Expression = format
-
-  override def withTimeZone(timeZoneId: String): TimeZoneAwareExpression =
-    copy(timeZoneId = Option(timeZoneId))
-
-  def this(time: Expression) = {
-    this(time, Literal("yyyy-MM-dd HH:mm:ss"))
-  }
-
-  override def prettyName: String = "to_unix_timestamp"
-=======
 case class ToUnixTimestamp(timeExp: Expression, format: Expression) extends UnixTime {
   override def left: Expression = timeExp
   override def right: Expression = format
@@ -579,7 +550,6 @@ case class ToUnixTimestamp(timeExp: Expression, format: Expression) extends Unix
   def this(time: Expression) = {
     this(time, Literal("yyyy-MM-dd HH:mm:ss"))
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -592,25 +562,7 @@ case class ToUnixTimestamp(timeExp: Expression, format: Expression) extends Unix
  * If the first parameter is a Date or Timestamp instead of String, we will ignore the
  * second parameter.
  */
-<<<<<<< HEAD
-@ExpressionDescription(
-  usage = "_FUNC_([expr[, pattern]]) - Returns the UNIX timestamp of current or specified time.",
-  examples = """
-    Examples:
-      > SELECT _FUNC_();
-       1476884637
-      > SELECT _FUNC_('2016-04-08', 'yyyy-MM-dd');
-       1460041200
-  """,
-  since = "1.5.0")
-case class UnixTimestamp(timeExp: Expression, format: Expression, timeZoneId: Option[String] = None)
-  extends UnixTime {
-
-  def this(timeExp: Expression, format: Expression) = this(timeExp, format, None)
-
-=======
 case class UnixTimestamp(timeExp: Expression, format: Expression) extends UnixTime {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def left: Expression = timeExp
   override def right: Expression = format
 
@@ -627,12 +579,6 @@ case class UnixTimestamp(timeExp: Expression, format: Expression) extends UnixTi
 }
 
 abstract class UnixTime extends BinaryExpression with ExpectsInputTypes {
-
-  override def prettyName: String = "unix_timestamp"
-}
-
-abstract class UnixTime
-  extends BinaryExpression with TimeZoneAwareExpression with ExpectsInputTypes {
 
   override def inputTypes: Seq[AbstractDataType] =
     Seq(TypeCollection(StringType, DateType, TimestampType), StringType)

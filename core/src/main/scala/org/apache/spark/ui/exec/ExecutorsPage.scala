@@ -51,8 +51,6 @@ private[ui] class ExecutorsPage(
   extends WebUIPage("") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
-<<<<<<< HEAD
-=======
     val (storageStatusList, execInfo) = listener.synchronized {
       // The follow codes should be protected by `listener` to make sure no executors will be
       // removed before we query their status. See SPARK-12784.

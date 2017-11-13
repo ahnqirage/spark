@@ -21,17 +21,10 @@ import javax.annotation.concurrent.GuardedBy
 
 import scala.collection.mutable
 
-<<<<<<< HEAD
-import org.apache.spark.internal.Logging
-
-/**
- * Implements policies and bookkeeping for sharing an adjustable-sized pool of memory between tasks.
-=======
 import org.apache.spark.Logging
 
 /**
  * Implements policies and bookkeeping for sharing a adjustable-sized pool of memory between tasks.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  *
  * Tries to ensure that each task gets a reasonable share of memory, instead of some task ramping up
  * to a large amount first and then causing others to spill to disk repeatedly.
@@ -44,20 +37,6 @@ import org.apache.spark.Logging
  * tasks was performed by the ShuffleMemoryManager.
  *
  * @param lock a [[MemoryManager]] instance to synchronize on
-<<<<<<< HEAD
- * @param memoryMode the type of memory tracked by this pool (on- or off-heap)
- */
-private[memory] class ExecutionMemoryPool(
-    lock: Object,
-    memoryMode: MemoryMode
-  ) extends MemoryPool(lock) with Logging {
-
-  private[this] val poolName: String = memoryMode match {
-    case MemoryMode.ON_HEAP => "on-heap execution"
-    case MemoryMode.OFF_HEAP => "off-heap execution"
-  }
-
-=======
  * @param poolName a human-readable name for this pool, for use in log messages
  */
 private[memory] class ExecutionMemoryPool(
@@ -65,7 +44,6 @@ private[memory] class ExecutionMemoryPool(
     poolName: String
   ) extends MemoryPool(lock) with Logging {
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   /**
    * Map from taskAttemptId -> memory consumption in bytes
    */

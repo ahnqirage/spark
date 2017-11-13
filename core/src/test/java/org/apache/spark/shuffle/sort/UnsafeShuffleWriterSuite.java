@@ -470,10 +470,6 @@ public class UnsafeShuffleWriterSuite {
     memoryManager.limit(UnsafeShuffleWriter.DEFAULT_INITIAL_SORT_BUFFER_SIZE * 16);
     final UnsafeShuffleWriter<Object, Object> writer = createWriter(false);
     final ArrayList<Product2<Object, Object>> dataToWrite = new ArrayList<>();
-<<<<<<< HEAD
-    for (int i = 0; i < UnsafeShuffleWriter.DEFAULT_INITIAL_SORT_BUFFER_SIZE + 1; i++) {
-      dataToWrite.add(new Tuple2<>(i, i));
-=======
     for (int i = 0; i < UnsafeShuffleWriter.INITIAL_SORT_BUFFER_SIZE + 1; i++) {
       dataToWrite.add(new Tuple2<Object, Object>(i, i));
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

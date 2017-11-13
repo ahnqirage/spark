@@ -17,15 +17,6 @@
 
 package org.apache.spark.examples.ml;
 
-<<<<<<< HEAD
-import org.apache.spark.sql.SparkSession;
-// $example on$
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.spark.ml.feature.QuantileDiscretizer;
-import org.apache.spark.sql.Dataset;
-=======
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SQLContext;
@@ -35,7 +26,6 @@ import java.util.Arrays;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.ml.feature.QuantileDiscretizer;
 import org.apache.spark.sql.DataFrame;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
@@ -46,20 +36,6 @@ import org.apache.spark.sql.types.StructType;
 
 public class JavaQuantileDiscretizerExample {
   public static void main(String[] args) {
-<<<<<<< HEAD
-    SparkSession spark = SparkSession
-      .builder()
-      .appName("JavaQuantileDiscretizerExample")
-      .getOrCreate();
-
-    // $example on$
-    List<Row> data = Arrays.asList(
-      RowFactory.create(0, 18.0),
-      RowFactory.create(1, 19.0),
-      RowFactory.create(2, 8.0),
-      RowFactory.create(3, 5.0),
-      RowFactory.create(4, 2.2)
-=======
     SparkConf conf = new SparkConf().setAppName("JavaQuantileDiscretizerExample");
     JavaSparkContext jsc = new JavaSparkContext(conf);
     SQLContext sqlContext = new SQLContext(jsc);
@@ -73,7 +49,6 @@ public class JavaQuantileDiscretizerExample {
         RowFactory.create(3, 5.0),
         RowFactory.create(4, 2.2)
       )
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     );
 
     StructType schema = new StructType(new StructField[]{
@@ -81,33 +56,16 @@ public class JavaQuantileDiscretizerExample {
       new StructField("hour", DataTypes.DoubleType, false, Metadata.empty())
     });
 
-<<<<<<< HEAD
-    Dataset<Row> df = spark.createDataFrame(data, schema);
-    // $example off$
-    // Output of QuantileDiscretizer for such small datasets can depend on the number of
-    // partitions. Here we force a single partition to ensure consistent results.
-    // Note this is not necessary for normal use cases
-    df = df.repartition(1);
-    // $example on$
-=======
     DataFrame df = sqlContext.createDataFrame(jrdd, schema);
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     QuantileDiscretizer discretizer = new QuantileDiscretizer()
       .setInputCol("hour")
       .setOutputCol("result")
       .setNumBuckets(3);
 
-<<<<<<< HEAD
-    Dataset<Row> result = discretizer.fit(df).transform(df);
-    result.show();
-    // $example off$
-    spark.stop();
-=======
     DataFrame result = discretizer.fit(df).transform(df);
     result.show();
     // $example off$
     jsc.stop();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

@@ -248,55 +248,6 @@ private class EncryptedBlockData(
     }
   }
 
-<<<<<<< HEAD
-  override def size: Long = blockSize
-
-  override def dispose(): Unit = { }
-
-  private def open(): ReadableByteChannel = {
-    val channel = new FileInputStream(file).getChannel()
-    try {
-      CryptoStreamUtils.createReadableChannel(channel, conf, key)
-    } catch {
-      case e: Exception =>
-        Closeables.close(channel, true)
-        throw e
-    }
-  }
-
-}
-
-private class ReadableChannelFileRegion(source: ReadableByteChannel, blockSize: Long)
-  extends AbstractReferenceCounted with FileRegion {
-
-  private var _transferred = 0L
-
-  private val buffer = ByteBuffer.allocateDirect(64 * 1024)
-  buffer.flip()
-
-  override def count(): Long = blockSize
-
-  override def position(): Long = 0
-
-  override def transfered(): Long = _transferred
-
-  override def transferTo(target: WritableByteChannel, pos: Long): Long = {
-    assert(pos == transfered(), "Invalid position.")
-
-    var written = 0L
-    var lastWrite = -1L
-    while (lastWrite != 0) {
-      if (!buffer.hasRemaining()) {
-        buffer.clear()
-        source.read(buffer)
-        buffer.flip()
-      }
-      if (buffer.hasRemaining()) {
-        lastWrite = target.write(buffer)
-        written += lastWrite
-      } else {
-        lastWrite = 0
-=======
   override def remove(blockId: BlockId): Boolean = {
     val file = diskManager.getFile(blockId.name)
     if (file.exists()) {

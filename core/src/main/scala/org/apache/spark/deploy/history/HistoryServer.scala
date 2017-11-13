@@ -22,10 +22,6 @@ import java.util.zip.ZipOutputStream
 import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 
 import scala.util.control.NonFatal
-<<<<<<< HEAD
-import scala.xml.Node
-
-=======
 
 import com.google.common.cache._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -112,9 +108,6 @@ class HistoryServer(
   }
 
   def getSparkUI(appKey: String): Option[SparkUI] = {
-<<<<<<< HEAD
-    appCache.getSparkUI(appKey)
-=======
     try {
       val ui = appCache.get(appKey)
       Some(ui)
@@ -126,7 +119,6 @@ class HistoryServer(
         case cause: Exception => throw cause
       }
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   initialize()

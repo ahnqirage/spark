@@ -20,12 +20,7 @@ package org.apache.spark
 import java.io.{ByteArrayInputStream, File, FileInputStream, FileOutputStream}
 import java.net.{HttpURLConnection, URI, URL}
 import java.nio.charset.StandardCharsets
-<<<<<<< HEAD
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
-=======
 import java.nio.file.Paths
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.util.Arrays
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.jar.{JarEntry, JarOutputStream}
@@ -101,14 +96,7 @@ private[spark] object TestUtils {
     val jarStream = new JarOutputStream(jarFileStream, new java.util.jar.Manifest())
 
     for (file <- files) {
-<<<<<<< HEAD
-      // The `name` for the argument in `JarEntry` should use / for its separator. This is
-      // ZIP specification.
-      val prefix = directoryPrefix.map(d => s"$d/").getOrElse("")
-      val jarEntry = new JarEntry(prefix + file.getName)
-=======
       val jarEntry = new JarEntry(Paths.get(directoryPrefix.getOrElse(""), file.getName).toString)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       jarStream.putNextEntry(jarEntry)
 
       val in = new FileInputStream(file)

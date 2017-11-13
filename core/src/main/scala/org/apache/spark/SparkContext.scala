@@ -44,11 +44,6 @@ import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFor
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.deploy.{LocalSparkCluster, SparkHadoopUtil}
-<<<<<<< HEAD
-import org.apache.spark.input.{FixedLengthBinaryInputFormat, PortableDataStream, StreamInputFormat, WholeTextFileInputFormat}
-import org.apache.spark.internal.Logging
-import org.apache.spark.internal.config._
-=======
 import org.apache.spark.input.{StreamInputFormat, PortableDataStream, WholeTextFileInputFormat,
   FixedLengthBinaryInputFormat}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -61,9 +56,6 @@ import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, Standa
 import org.apache.spark.scheduler.local.LocalSchedulerBackend
 import org.apache.spark.storage._
 import org.apache.spark.storage.BlockManagerMessages.TriggerThreadDump
-<<<<<<< HEAD
-import org.apache.spark.ui.{ConsoleProgressBar, SparkUI}
-=======
 import org.apache.spark.ui.{SparkUI, ConsoleProgressBar}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ui.jobs.JobProgressListener
@@ -614,9 +606,6 @@ class SparkContext(config: SparkConf) extends Logging {
         Some(Utils.getThreadDump())
       } else {
         val endpointRef = env.blockManager.master.getExecutorEndpointRef(executorId).get
-<<<<<<< HEAD
-        Some(endpointRef.askSync[Array[ThreadStackTrace]](TriggerThreadDump))
-=======
         Some(endpointRef.askWithRetry[Array[ThreadStackTrace]](TriggerThreadDump))
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
@@ -1665,11 +1654,7 @@ class SparkContext(config: SparkConf) extends Logging {
   def killExecutors(executorIds: Seq[String]): Boolean = {
     schedulerBackend match {
       case b: CoarseGrainedSchedulerBackend =>
-<<<<<<< HEAD
-        b.killExecutors(executorIds, replace = false, force = true).nonEmpty
-=======
         b.killExecutors(executorIds, replace = false, force = true)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case _ =>
         logWarning("Killing executors is only supported in coarse-grained mode")
         false
@@ -1707,11 +1692,7 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def killAndReplaceExecutor(executorId: String): Boolean = {
     schedulerBackend match {
       case b: CoarseGrainedSchedulerBackend =>
-<<<<<<< HEAD
-        b.killExecutors(Seq(executorId), replace = true, force = true).nonEmpty
-=======
         b.killExecutors(Seq(executorId), replace = true, force = true)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case _ =>
         logWarning("Killing executors is only supported in coarse-grained mode")
         false
@@ -1853,11 +1834,7 @@ class SparkContext(config: SparkConf) extends Logging {
     } else {
       val key = if (path.contains("\\")) {
         // For local paths with backslashes on Windows, URI throws an exception
-<<<<<<< HEAD
-        addJarFile(new File(path))
-=======
         key = env.rpcEnv.fileServer.addJar(new File(path))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       } else {
         val uri = new URI(path)
         // SPARK-17650: Make sure this is a valid URL before adding it to the list of dependencies
@@ -1955,7 +1932,6 @@ class SparkContext(config: SparkConf) extends Logging {
     if (AsynchronousListenerBus.withinListenerThread.value) {
       throw new SparkException("Cannot stop SparkContext within listener thread of" +
         " AsynchronousListenerBus")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     // Use the stopping variable to ensure no contention for the stop scenario.
     // Still track the stopped variable for use elsewhere in the code.
@@ -2065,11 +2041,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * has overridden the call site using `setCallSite()`, this will return the user's version.
    */
   private[spark] def getCallSite(): CallSite = {
-<<<<<<< HEAD
-    lazy val callSite = Utils.getCallSite()
-=======
     val callSite = Utils.getCallSite()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     CallSite(
       Option(getLocalProperty(CallSite.SHORT_FORM)).getOrElse(callSite.shortForm),
       Option(getLocalProperty(CallSite.LONG_FORM)).getOrElse(callSite.longForm)
@@ -2908,8 +2880,6 @@ private object SparkMasterRegex {
   val LOCAL_CLUSTER_REGEX = """local-cluster\[\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*]""".r
   // Regular expression for connecting to Spark deploy clusters
   val SPARK_REGEX = """spark://(.*)""".r
-<<<<<<< HEAD
-=======
   // Regular expression for connection to Mesos cluster by mesos:// or mesos://zk:// url
   val MESOS_REGEX = """mesos://(.*)""".r
   // Regular expression for connection to Simr cluster

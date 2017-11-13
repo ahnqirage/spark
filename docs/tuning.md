@@ -116,22 +116,12 @@ Although there are two relevant configurations, the typical user should not need
 as the default values are applicable to most workloads:
 
 * `spark.memory.fraction` expresses the size of `M` as a fraction of the (JVM heap space - 300MB)
-<<<<<<< HEAD
-(default 0.6). The rest of the space (40%) is reserved for user data structures, internal
-=======
 (default 0.75). The rest of the space (25%) is reserved for user data structures, internal
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 metadata in Spark, and safeguarding against OOM errors in the case of sparse and unusually
 large records.
 * `spark.memory.storageFraction` expresses the size of `R` as a fraction of `M` (default 0.5).
 `R` is the storage space within `M` where cached blocks immune to being evicted by execution.
 
-<<<<<<< HEAD
-The value of `spark.memory.fraction` should be set in order to fit this amount of heap space
-comfortably within the JVM's old or "tenured" generation. See the discussion of advanced GC
-tuning below for details.
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 ## Determining Memory Consumption
 
@@ -212,8 +202,6 @@ temporary objects created during task execution. Some steps which may be useful 
 * Check if there are too many garbage collections by collecting GC stats. If a full GC is invoked multiple times for
   before a task completes, it means that there isn't enough memory available for executing tasks.
 
-<<<<<<< HEAD
-=======
 * In the GC stats that are printed, if the OldGen is close to being full, reduce the amount of
   memory used for caching by lowering `spark.memory.storageFraction`; it is better to cache fewer
   objects than to slow down task execution!

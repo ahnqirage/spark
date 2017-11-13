@@ -36,12 +36,6 @@ case class Max(child: Expression) extends DeclarativeAggregate {
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForOrderingExpr(child.dataType, "function max")
 
-<<<<<<< HEAD
-  private lazy val max = AttributeReference("max", child.dataType)()
-
-  override lazy val aggBufferAttributes: Seq[AttributeReference] = max :: Nil
-
-=======
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForOrderingExpr(child.dataType, "function max")
 
@@ -49,7 +43,6 @@ case class Max(child: Expression) extends DeclarativeAggregate {
 
   override lazy val aggBufferAttributes: Seq[AttributeReference] = max :: Nil
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override lazy val initialValues: Seq[Literal] = Seq(
     /* max = */ Literal.create(null, child.dataType)
   )

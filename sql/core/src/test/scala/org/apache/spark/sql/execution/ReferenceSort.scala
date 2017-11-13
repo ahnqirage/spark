@@ -17,11 +17,7 @@
 
 package org.apache.spark.sql.execution
 
-<<<<<<< HEAD
-import org.apache.spark.TaskContext
-=======
 import org.apache.spark.{InternalAccumulator, TaskContext}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.errors._
@@ -38,11 +34,7 @@ case class ReferenceSort(
     sortOrder: Seq[SortOrder],
     global: Boolean,
     child: SparkPlan)
-<<<<<<< HEAD
-  extends UnaryExecNode {
-=======
   extends UnaryNode {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def requiredChildDistribution: Seq[Distribution] =
     if (global) OrderedDistribution(sortOrder) :: Nil else UnspecifiedDistribution :: Nil
@@ -57,12 +49,8 @@ case class ReferenceSort(
       val context = TaskContext.get()
       context.taskMetrics().incDiskBytesSpilled(sorter.diskBytesSpilled)
       context.taskMetrics().incMemoryBytesSpilled(sorter.memoryBytesSpilled)
-<<<<<<< HEAD
-      context.taskMetrics().incPeakExecutionMemory(sorter.peakMemoryUsedBytes)
-=======
       context.internalMetricsToAccumulators(
         InternalAccumulator.PEAK_EXECUTION_MEMORY).add(sorter.peakMemoryUsedBytes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       CompletionIterator[InternalRow, Iterator[InternalRow]](baseIterator, sorter.stop())
     }, preservesPartitioning = true)
   }
@@ -70,9 +58,4 @@ case class ReferenceSort(
   override def output: Seq[Attribute] = child.output
 
   override def outputOrdering: Seq[SortOrder] = sortOrder
-<<<<<<< HEAD
-
-  override def outputPartitioning: Partitioning = child.outputPartitioning
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

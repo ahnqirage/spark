@@ -19,17 +19,11 @@ package org.apache.spark.ml.feature
 
 import edu.emory.mathcs.jtransforms.dct._
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Since, Experimental}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.UnaryTransformer
 import org.apache.spark.ml.linalg.{Vector, Vectors, VectorUDT}
 import org.apache.spark.ml.param.BooleanParam
 import org.apache.spark.ml.util._
-<<<<<<< HEAD
-=======
 import org.apache.spark.mllib.linalg.{Vector, VectorUDT, Vectors}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types.DataType
@@ -49,7 +43,6 @@ class DCT @Since("1.5.0") (@Since("1.5.0") override val uid: String)
 =======
 @Experimental
 class DCT(override val uid: String)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends UnaryTransformer[Vector, Vector, DCT] with DefaultParamsWritable {
 
   @Since("1.5.0")

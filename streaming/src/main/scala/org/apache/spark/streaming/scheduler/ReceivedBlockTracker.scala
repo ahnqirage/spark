@@ -119,11 +119,7 @@ private[streaming] class ReceivedBlockTracker(
         timeToAllocatedBlocks.put(batchTime, allocatedBlocks)
         lastAllocatedBatchTime = batchTime
       } else {
-<<<<<<< HEAD
-        logInfo(s"Possibly processed batch $batchTime needs to be processed again in WAL recovery")
-=======
         logInfo(s"Possibly processed batch $batchTime need to be processed again in WAL recovery")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     } else {
       // This situation occurs when:
@@ -175,7 +171,6 @@ private[streaming] class ReceivedBlockTracker(
     logInfo(s"Deleting batches: ${timesToCleanup.mkString(" ")}")
 =======
     logInfo("Deleting batches " + timesToCleanup)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     if (writeToLog(BatchCleanupEvent(timesToCleanup))) {
       timeToAllocatedBlocks --= timesToCleanup
       writeAheadLogOption.foreach(_.clean(cleanupThreshTime.milliseconds, waitForCompletion))

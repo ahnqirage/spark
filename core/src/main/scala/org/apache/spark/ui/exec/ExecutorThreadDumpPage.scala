@@ -17,10 +17,6 @@
 
 package org.apache.spark.ui.exec
 
-<<<<<<< HEAD
-import java.util.Locale
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import javax.servlet.http.HttpServletRequest
 
 import scala.xml.{Node, Text}
@@ -33,12 +29,7 @@ private[ui] class ExecutorThreadDumpPage(parent: ExecutorsTab) extends WebUIPage
 
   // stripXSS is called first to remove suspicious characters used in XSS attacks
   def render(request: HttpServletRequest): Seq[Node] = {
-<<<<<<< HEAD
-    val executorId =
-      Option(UIUtils.stripXSS(request.getParameter("executorId"))).map { executorId =>
-=======
     val executorId = Option(request.getParameter("executorId")).map { executorId =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       UIUtils.decodeURLParameter(executorId)
     }.getOrElse {
       throw new IllegalArgumentException(s"Missing executorId parameter")

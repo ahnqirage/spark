@@ -160,10 +160,6 @@ wrapInt <- function(value) {
 # TODO: this function does not handle integer overflow well
 mult31AndAdd <- function(val, addVal) {
   vec <- c(bitwShiftL(val, c(4, 3, 2, 1, 0)), addVal)
-<<<<<<< HEAD
-  vec[is.na(vec)] <- 0
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   Reduce(function(a, b) {
           wrapInt(as.numeric(a) + as.numeric(b))
          },
@@ -723,21 +719,13 @@ convertNamedListToEnv <- function(namedList) {
 
 # Assign a new environment for attach() and with() methods
 assignNewEnv <- function(data) {
-<<<<<<< HEAD
-  stopifnot(class(data) == "SparkDataFrame")
-=======
   stopifnot(class(data) == "DataFrame")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   cols <- columns(data)
   stopifnot(length(cols) > 0)
 
   env <- new.env()
   for (i in 1:length(cols)) {
-<<<<<<< HEAD
-    assign(x = cols[i], value = data[, cols[i], drop = F], envir = env)
-=======
     assign(x = cols[i], value = data[, cols[i]], envir = env)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
   env
 }
@@ -746,190 +734,3 @@ assignNewEnv <- function(data) {
 splitString <- function(input) {
   Filter(nzchar, unlist(strsplit(input, ",|\\s")))
 }
-<<<<<<< HEAD
-
-convertToJSaveMode <- function(mode) {
- allModes <- c("append", "overwrite", "error", "ignore")
- if (!(mode %in% allModes)) {
-   stop('mode should be one of "append", "overwrite", "error", "ignore"')  # nolint
- }
- jmode <- callJStatic("org.apache.spark.sql.api.r.SQLUtils", "saveMode", mode)
- jmode
-}
-
-varargsToJProperties <- function(...) {
-  pairs <- list(...)
-  props <- newJObject("java.util.Properties")
-  if (length(pairs) > 0) {
-    lapply(ls(pairs), function(k) {
-      callJMethod(props, "setProperty", as.character(k), as.character(pairs[[k]]))
-    })
-  }
-  props
-}
-
-launchScript <- function(script, combinedArgs, wait = FALSE) {
-  if (.Platform$OS.type == "windows") {
-    scriptWithArgs <- paste(script, combinedArgs, sep = " ")
-    # on Windows, intern = F seems to mean output to the console. (documentation on this is missing)
-    shell(scriptWithArgs, translate = TRUE, wait = wait, intern = wait) # nolint
-  } else {
-    # http://stat.ethz.ch/R-manual/R-devel/library/base/html/system2.html
-    # stdout = F means discard output
-    # stdout = "" means to its console (default)
-    # Note that the console of this child process might not be the same as the running R process.
-    system2(script, combinedArgs, stdout = "", wait = wait)
-  }
-}
-
-getSparkContext <- function() {
-  if (!exists(".sparkRjsc", envir = .sparkREnv)) {
-    stop("SparkR has not been initialized. Please call sparkR.session()")
-  }
-  sc <- get(".sparkRjsc", envir = .sparkREnv)
-  sc
-}
-
-isMasterLocal <- function(master) {
-  grepl("^local(\\[([0-9]+|\\*)\\])?$", master, perl = TRUE)
-}
-
-isClientMode <- function(master) {
-  grepl("([a-z]+)-client$", master, perl = TRUE)
-}
-
-isSparkRShell <- function() {
-  grepl(".*shell\\.R$", Sys.getenv("R_PROFILE_USER"), perl = TRUE)
-}
-
-# Works identically with `callJStatic(...)` but throws a pretty formatted exception.
-handledCallJStatic <- function(cls, method, ...) {
-  result <- tryCatch(callJStatic(cls, method, ...),
-                     error = function(e) {
-                       captureJVMException(e, method)
-                     })
-  result
-}
-
-# Works identically with `callJMethod(...)` but throws a pretty formatted exception.
-handledCallJMethod <- function(obj, method, ...) {
-  result <- tryCatch(callJMethod(obj, method, ...),
-                     error = function(e) {
-                       captureJVMException(e, method)
-                     })
-  result
-}
-
-captureJVMException <- function(e, method) {
-  rawmsg <- as.character(e)
-  if (any(grep("^Error in .*?: ", rawmsg))) {
-    # If the exception message starts with "Error in ...", this is possibly
-    # "Error in invokeJava(...)". Here, it replaces the characters to
-    # `paste("Error in", method, ":")` in order to identify which function
-    # was called in JVM side.
-    stacktrace <- strsplit(rawmsg, "Error in .*?: ")[[1]]
-    rmsg <- paste("Error in", method, ":")
-    stacktrace <- paste(rmsg[1], stacktrace[2])
-  } else {
-    # Otherwise, do not convert the error message just in case.
-    stacktrace <- rawmsg
-  }
-
-  # StreamingQueryException could wrap an IllegalArgumentException, so look for that first
-  if (any(grep("org.apache.spark.sql.streaming.StreamingQueryException: ", stacktrace))) {
-    msg <- strsplit(stacktrace, "org.apache.spark.sql.streaming.StreamingQueryException: ",
-                    fixed = TRUE)[[1]]
-    # Extract "Error in ..." message.
-    rmsg <- msg[1]
-    # Extract the first message of JVM exception.
-    first <- strsplit(msg[2], "\r?\n\tat")[[1]][1]
-    stop(paste0(rmsg, "streaming query error - ", first), call. = FALSE)
-  } else if (any(grep("java.lang.IllegalArgumentException: ", stacktrace))) {
-    msg <- strsplit(stacktrace, "java.lang.IllegalArgumentException: ", fixed = TRUE)[[1]]
-    # Extract "Error in ..." message.
-    rmsg <- msg[1]
-    # Extract the first message of JVM exception.
-    first <- strsplit(msg[2], "\r?\n\tat")[[1]][1]
-    stop(paste0(rmsg, "illegal argument - ", first), call. = FALSE)
-  } else if (any(grep("org.apache.spark.sql.AnalysisException: ", stacktrace))) {
-    msg <- strsplit(stacktrace, "org.apache.spark.sql.AnalysisException: ", fixed = TRUE)[[1]]
-    # Extract "Error in ..." message.
-    rmsg <- msg[1]
-    # Extract the first message of JVM exception.
-    first <- strsplit(msg[2], "\r?\n\tat")[[1]][1]
-    stop(paste0(rmsg, "analysis error - ", first), call. = FALSE)
-  } else
-    if (any(grep("org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException: ", stacktrace))) {
-    msg <- strsplit(stacktrace, "org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException: ",
-                    fixed = TRUE)[[1]]
-    # Extract "Error in ..." message.
-    rmsg <- msg[1]
-    # Extract the first message of JVM exception.
-    first <- strsplit(msg[2], "\r?\n\tat")[[1]][1]
-    stop(paste0(rmsg, "no such database - ", first), call. = FALSE)
-  } else
-    if (any(grep("org.apache.spark.sql.catalyst.analysis.NoSuchTableException: ", stacktrace))) {
-    msg <- strsplit(stacktrace, "org.apache.spark.sql.catalyst.analysis.NoSuchTableException: ",
-                    fixed = TRUE)[[1]]
-    # Extract "Error in ..." message.
-    rmsg <- msg[1]
-    # Extract the first message of JVM exception.
-    first <- strsplit(msg[2], "\r?\n\tat")[[1]][1]
-    stop(paste0(rmsg, "no such table - ", first), call. = FALSE)
-  } else if (any(grep("org.apache.spark.sql.catalyst.parser.ParseException: ", stacktrace))) {
-    msg <- strsplit(stacktrace, "org.apache.spark.sql.catalyst.parser.ParseException: ",
-                    fixed = TRUE)[[1]]
-    # Extract "Error in ..." message.
-    rmsg <- msg[1]
-    # Extract the first message of JVM exception.
-    first <- strsplit(msg[2], "\r?\n\tat")[[1]][1]
-    stop(paste0(rmsg, "parse error - ", first), call. = FALSE)
-  } else {
-    stop(stacktrace, call. = FALSE)
-  }
-}
-
-# rbind a list of rows with raw (binary) columns
-#
-# @param inputData a list of rows, with each row a list
-# @return data.frame with raw columns as lists
-rbindRaws <- function(inputData) {
-  row1 <- inputData[[1]]
-  rawcolumns <- ("raw" == sapply(row1, class))
-
-  listmatrix <- do.call(rbind, inputData)
-  # A dataframe with all list columns
-  out <- as.data.frame(listmatrix)
-  out[!rawcolumns] <- lapply(out[!rawcolumns], unlist)
-  out
-}
-
-# Get basename without extension from URL
-basenameSansExtFromUrl <- function(url) {
-  # split by '/'
-  splits <- unlist(strsplit(url, "^.+/"))
-  last <- tail(splits, 1)
-  # this is from file_path_sans_ext
-  # first, remove any compression extension
-  filename <- sub("[.](gz|bz2|xz)$", "", last)
-  # then, strip extension by the last '.'
-  sub("([^.]+)\\.[[:alnum:]]+$", "\\1", filename)
-}
-
-isAtomicLengthOne <- function(x) {
-  is.atomic(x) && length(x) == 1
-}
-
-is_windows <- function() {
-  .Platform$OS.type == "windows"
-}
-
-hadoop_home_set <- function() {
-  !identical(Sys.getenv("HADOOP_HOME"), "")
-}
-
-windows_with_hadoop <- function() {
-  !is_windows() || hadoop_home_set()
-}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

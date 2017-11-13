@@ -183,6 +183,14 @@ abstract class CaseWhenBase(
   protected def shouldFallback: Boolean = {
     branches.length > 20
   }
+
+  /**
+   * Whether should it fallback to interpret mode or not.
+   * @return
+   */
+  protected def shouldFallback: Boolean = {
+    branches.length > 20
+  }
 }
 
 // scalastyle:off

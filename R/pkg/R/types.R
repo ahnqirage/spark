@@ -29,11 +29,7 @@ PRIMITIVE_TYPES <- as.environment(list(
   "string" = "character",
   "binary" = "raw",
   "boolean" = "logical",
-<<<<<<< HEAD
-  "timestamp" = c("POSIXct", "POSIXt"),
-=======
   "timestamp" = "POSIXct",
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   "date" = "Date",
   # following types are not SQL types returned by dtypes(). They are listed here for usage
   # by checkType() in schema.R.
@@ -71,22 +67,3 @@ rToSQLTypes <- as.environment(list(
   "double" = "double",
   "character" = "string",
   "logical" = "boolean"))
-<<<<<<< HEAD
-
-# Helper function of coverting decimal type. When backend returns column type in the
-# format of decimal(,) (e.g., decimal(10, 0)), this function coverts the column type
-# as double type. This function converts backend returned types that are not the key
-# of PRIMITIVE_TYPES, but should be treated as PRIMITIVE_TYPES.
-# @param A type returned from the JVM backend.
-# @return A type is the key of the PRIMITIVE_TYPES.
-specialtypeshandle <- function(type) {
-  returntype <- NULL
-  m <- regexec("^decimal(.+)$", type)
-  matchedStrings <- regmatches(type, m)
-  if (length(matchedStrings[[1]]) >= 2) {
-    returntype <- "double"
-  }
-  returntype
-}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

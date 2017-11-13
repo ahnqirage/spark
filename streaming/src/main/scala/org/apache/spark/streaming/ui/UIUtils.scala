@@ -142,11 +142,7 @@ private[streaming] object UIUtils {
     } else {
       var nextLineIndex = failure.indexOf("\n")
       if (nextLineIndex < 0) {
-<<<<<<< HEAD
-        nextLineIndex = failure.length
-=======
         nextLineIndex = failure.size
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       val firstLine = failure.substring(0, nextLineIndex)
       s"Failed due to error: $firstLine\n$failure"

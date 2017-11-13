@@ -41,17 +41,6 @@ import org.apache.spark.sql.hive.client.ClientWrapper
 import org.apache.spark.sql.types._
 
 
-<<<<<<< HEAD
-private[hive] case class HiveSimpleUDF(
-    name: String, funcWrapper: HiveFunctionWrapper, children: Seq[Expression])
-  extends Expression
-  with HiveInspectors
-  with CodegenFallback
-  with Logging
-  with UserDefinedExpression {
-
-  override def deterministic: Boolean = isUDFDeterministic && children.forall(_.deterministic)
-=======
 private[hive] class HiveFunctionRegistry(
     underlying: analysis.FunctionRegistry,
     executionHive: ClientWrapper)

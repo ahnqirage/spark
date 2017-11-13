@@ -551,7 +551,6 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
       identity[Any]
     case _: UserDefinedType[_] =>
       throw new SparkException(s"Cannot cast $from to $to.")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private[this] lazy val cast: Any => Any = cast(child.dataType, dataType)
@@ -1084,6 +1083,15 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
     case _: ArrayType | _: MapType | _: StructType => child.sql
     case _ => s"CAST(${child.sql} AS ${dataType.sql})"
   }
+}
+
+/**
+ * Cast the child expression to the target data type, but will throw error if the cast might
+ * truncate, e.g. long -> int, timestamp -> data.
+ */
+case class UpCast(child: Expression, dataType: DataType, walkedTypePath: Seq[String])
+  extends UnaryExpression with Unevaluable {
+  override lazy val resolved = false
 }
 
 /**

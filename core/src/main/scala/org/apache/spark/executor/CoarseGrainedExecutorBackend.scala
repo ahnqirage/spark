@@ -19,10 +19,6 @@ package org.apache.spark.executor
 
 import java.net.URL
 import java.nio.ByteBuffer
-<<<<<<< HEAD
-import java.util.Locale
-import java.util.concurrent.atomic.AtomicBoolean
-=======
 import java.util.concurrent.atomic.AtomicBoolean
 
 import org.apache.hadoop.conf.Configuration
@@ -120,17 +116,6 @@ private[spark] class CoarseGrainedExecutorBackend(
 
     case Shutdown =>
       stopping.set(true)
-<<<<<<< HEAD
-      new Thread("CoarseGrainedExecutorBackend-stop-executor") {
-        override def run(): Unit = {
-          // executor.stop() will call `SparkEnv.stop()` which waits until RpcEnv stops totally.
-          // However, if `executor.stop()` runs in some thread of RpcEnv, RpcEnv won't be able to
-          // stop until `executor.stop()` returns, which becomes a dead-lock (See SPARK-14180).
-          // Therefore, we put this line in a new thread.
-          executor.stop()
-        }
-      }.start()
-=======
       executor.stop()
       stop()
       rpcEnv.shutdown()
@@ -141,10 +126,6 @@ private[spark] class CoarseGrainedExecutorBackend(
     if (stopping.get()) {
       logInfo(s"Driver from $remoteAddress disconnected during shutdown")
     } else if (driver.exists(_.address == remoteAddress)) {
-<<<<<<< HEAD
-      exitExecutor(1, s"Driver $remoteAddress disassociated! Shutting down.", null,
-        notifyDriver = false)
-=======
       logError(s"Driver $remoteAddress disassociated! Shutting down.")
       System.exit(1)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

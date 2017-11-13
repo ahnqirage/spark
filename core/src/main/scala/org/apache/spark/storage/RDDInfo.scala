@@ -18,13 +18,8 @@
 package org.apache.spark.storage
 
 import org.apache.spark.annotation.DeveloperApi
-<<<<<<< HEAD
-import org.apache.spark.rdd.{RDD, RDDOperationScope}
-import org.apache.spark.util.Utils
-=======
 import org.apache.spark.rdd.{RDDOperationScope, RDD}
 import org.apache.spark.util.{CallSite, Utils}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 @DeveloperApi
 class RDDInfo(

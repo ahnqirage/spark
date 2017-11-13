@@ -19,19 +19,12 @@ package org.apache.spark.examples.ml
 
 // scalastyle:off println
 
-<<<<<<< HEAD
-// $example on$
-import org.apache.spark.ml.clustering.KMeans
-// $example off$
-import org.apache.spark.sql.SparkSession
-=======
 import org.apache.spark.{SparkConf, SparkContext}
 // $example on$
 import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.mllib.linalg.Vectors
 // $example off$
 import org.apache.spark.sql.{DataFrame, SQLContext}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * An example demonstrating k-means clustering.
@@ -43,27 +36,6 @@ import org.apache.spark.sql.{DataFrame, SQLContext}
 object KMeansExample {
 
   def main(args: Array[String]): Unit = {
-<<<<<<< HEAD
-    val spark = SparkSession
-      .builder
-      .appName(s"${this.getClass.getSimpleName}")
-      .getOrCreate()
-
-    // $example on$
-    // Loads data.
-    val dataset = spark.read.format("libsvm").load("data/mllib/sample_kmeans_data.txt")
-
-    // Trains a k-means model.
-    val kmeans = new KMeans().setK(2).setSeed(1L)
-    val model = kmeans.fit(dataset)
-
-    // Evaluate clustering by computing Within Set Sum of Squared Errors.
-    val WSSSE = model.computeCost(dataset)
-    println(s"Within Set Sum of Squared Errors = $WSSSE")
-
-    // Shows the result.
-    println("Cluster Centers: ")
-=======
     // Creates a Spark context and a SQL context
     val conf = new SparkConf().setAppName(s"${this.getClass.getSimpleName}")
     val sc = new SparkContext(conf)

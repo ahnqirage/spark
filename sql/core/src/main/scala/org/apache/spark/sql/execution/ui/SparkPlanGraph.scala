@@ -23,10 +23,6 @@ import scala.collection.mutable
 
 import org.apache.commons.lang3.StringEscapeUtils
 
-<<<<<<< HEAD
-import org.apache.spark.sql.execution.{SparkPlanInfo, WholeStageCodegenExec}
-
-=======
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.metric.{SQLMetricParam, SQLMetricValue}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -172,7 +168,6 @@ private[ui] case class SparkPlanGraphNode(
     desc: String,
     metadata: Map[String, String],
     metrics: Seq[SQLPlanMetric]) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   def makeDotNode(metricsValue: Map[Long, String]): String = {
     val builder = new mutable.StringBuilder(name)
@@ -193,42 +188,6 @@ private[ui] case class SparkPlanGraphNode(
     }
 
     s"""  $id [label="${StringEscapeUtils.escapeJava(builder.toString())}"];"""
-<<<<<<< HEAD
-  }
-}
-
-/**
- * Represent a tree of SparkPlan for WholeStageCodegen.
- */
-private[ui] class SparkPlanGraphCluster(
-    id: Long,
-    name: String,
-    desc: String,
-    val nodes: mutable.ArrayBuffer[SparkPlanGraphNode],
-    metrics: Seq[SQLPlanMetric])
-  extends SparkPlanGraphNode(id, name, desc, metrics) {
-
-  override def makeDotNode(metricsValue: Map[Long, String]): String = {
-    val duration = metrics.filter(_.name.startsWith(WholeStageCodegenExec.PIPELINE_DURATION_METRIC))
-    val labelStr = if (duration.nonEmpty) {
-      require(duration.length == 1)
-      val id = duration(0).accumulatorId
-      if (metricsValue.contains(duration(0).accumulatorId)) {
-        name + "\n\n" + metricsValue.get(id).get
-      } else {
-        name
-      }
-    } else {
-      name
-    }
-    s"""
-       |  subgraph cluster${id} {
-       |    label="${StringEscapeUtils.escapeJava(labelStr)}";
-       |    ${nodes.map(_.makeDotNode(metricsValue)).mkString("    \n")}
-       |  }
-     """.stripMargin
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

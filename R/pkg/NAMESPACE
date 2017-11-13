@@ -177,19 +177,9 @@ exportMethods("arrange",
               "withColumn",
               "withColumnRenamed",
               "write.df",
-<<<<<<< HEAD
-              "write.jdbc",
-              "write.json",
-              "write.orc",
-              "write.parquet",
-              "write.stream",
-              "write.text",
-              "write.ml")
-=======
               "write.json",
               "write.parquet",
               "write.text")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 exportClasses("Column")
 
@@ -200,10 +190,6 @@ exportMethods("%<=>%",
               "add_months",
               "alias",
               "approxCountDistinct",
-<<<<<<< HEAD
-              "approxQuantile",
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               "array_contains",
               "asc",
               "ascii",
@@ -232,12 +218,6 @@ exportMethods("%<=>%",
               "count",
               "countDistinct",
               "crc32",
-<<<<<<< HEAD
-              "create_array",
-              "create_map",
-              "hash",
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               "cume_dist",
               "date_add",
               "date_format",
@@ -279,11 +259,6 @@ exportMethods("%<=>%",
               "isNaN",
               "isNotNull",
               "isNull",
-<<<<<<< HEAD
-              "is.nan",
-              "isnan",
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               "kurtosis",
               "lag",
               "last",
@@ -320,10 +295,6 @@ exportMethods("%<=>%",
               "not",
               "ntile",
               "otherwise",
-<<<<<<< HEAD
-              "over",
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               "percent_rank",
               "pmod",
               "posexplode",
@@ -357,11 +328,6 @@ exportMethods("%<=>%",
               "skewness",
               "sort_array",
               "soundex",
-<<<<<<< HEAD
-              "spark_partition_id",
-              "split_string",
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               "stddev",
               "stddev_pop",
               "stddev_samp",
@@ -410,33 +376,6 @@ export("as.DataFrame",
        "dropTempTable",
        "dropTempView",
        "jsonFile",
-<<<<<<< HEAD
-       "listColumns",
-       "listDatabases",
-       "listFunctions",
-       "listTables",
-       "loadDF",
-       "parquetFile",
-       "read.df",
-       "read.jdbc",
-       "read.json",
-       "read.orc",
-       "read.parquet",
-       "read.stream",
-       "read.text",
-       "recoverPartitions",
-       "refreshByPath",
-       "refreshTable",
-       "setCheckpointDir",
-       "setCurrentDatabase",
-       "spark.lapply",
-       "spark.addFile",
-       "spark.getSparkFilesRootDirectory",
-       "spark.getSparkFiles",
-       "sql",
-       "str",
-       "tableToDF",
-=======
        "read.json",
        "loadDF",
        "parquetFile",
@@ -469,42 +408,3 @@ export("structField",
        "structType.jobj",
        "structType.structField",
        "print.structType")
-<<<<<<< HEAD
-
-exportClasses("WindowSpec")
-
-export("partitionBy",
-       "rowsBetween",
-       "rangeBetween")
-
-export("windowPartitionBy",
-       "windowOrderBy")
-
-exportClasses("StreamingQuery")
-
-export("awaitTermination",
-       "isActive",
-       "lastProgress",
-       "queryName",
-       "status",
-       "stopQuery")
-
-
-S3method(print, jobj)
-S3method(print, structField)
-S3method(print, structType)
-S3method(print, summary.GeneralizedLinearRegressionModel)
-S3method(print, summary.KSTest)
-S3method(print, summary.DecisionTreeRegressionModel)
-S3method(print, summary.DecisionTreeClassificationModel)
-S3method(print, summary.RandomForestRegressionModel)
-S3method(print, summary.RandomForestClassificationModel)
-S3method(print, summary.GBTRegressionModel)
-S3method(print, summary.GBTClassificationModel)
-S3method(structField, character)
-S3method(structField, jobj)
-S3method(structType, character)
-S3method(structType, jobj)
-S3method(structType, structField)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

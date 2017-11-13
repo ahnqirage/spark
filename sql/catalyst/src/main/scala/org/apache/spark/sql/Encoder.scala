@@ -17,15 +17,6 @@
 
 package org.apache.spark.sql
 
-<<<<<<< HEAD
-import scala.annotation.implicitNotFound
-import scala.reflect.ClassTag
-
-import org.apache.spark.annotation.{Experimental, InterfaceStability}
-import org.apache.spark.sql.types._
-
-
-=======
 import java.lang.reflect.Modifier
 
 import scala.annotation.implicitNotFound
@@ -36,28 +27,17 @@ import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, encoderFor}
 import org.apache.spark.sql.catalyst.expressions.{DecodeUsingSerializer, BoundReference, EncodeUsingSerializer}
 import org.apache.spark.sql.types._
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 /**
  * :: Experimental ::
  * Used to convert a JVM object of type `T` to and from the internal Spark SQL representation.
  *
  * == Scala ==
-<<<<<<< HEAD
- * Encoders are generally created automatically through implicits from a `SparkSession`, or can be
- * explicitly created by calling static methods on [[Encoders]].
- *
- * {{{
- *   import spark.implicits._
- *
- *   val ds = Seq(1, 2, 3).toDS() // implicitly provided (spark.implicits.newIntEncoder)
-=======
  * Encoders are generally created automatically through implicits from a `SQLContext`.
  *
  * {{{
  *   import sqlContext.implicits._
  *
  *   val ds = Seq(1, 2, 3).toDS() // implicitly provided (sqlContext.implicits.newIntEncoder)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * }}}
  *
  * == Java ==
@@ -89,28 +69,15 @@ import org.apache.spark.sql.types._
  * @since 1.6.0
  */
 @Experimental
-<<<<<<< HEAD
-@InterfaceStability.Evolving
-@implicitNotFound("Unable to find encoder for type stored in a Dataset.  Primitive types " +
-  "(Int, String, etc) and Product types (case classes) are supported by importing " +
-  "spark.implicits._  Support for serializing other types will be added in future " +
-=======
 @implicitNotFound("Unable to find encoder for type stored in a Dataset.  Primitive types " +
   "(Int, String, etc) and Product types (case classes) are supported by importing " +
   "sqlContext.implicits._  Support for serializing other types will be added in future " +
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   "releases.")
 trait Encoder[T] extends Serializable {
 
   /** Returns the schema of encoding this type of object as a Row. */
   def schema: StructType
 
-<<<<<<< HEAD
-  /**
-   * A ClassTag that can be used to construct an Array to contain a collection of `T`.
-   */
-  def clsTag: ClassTag[T]
-=======
   /** A ClassTag that can be used to construct and Array to contain a collection of `T`. */
   def clsTag: ClassTag[T]
 }
@@ -334,5 +301,4 @@ object Encoders {
     ExpressionEncoder.tuple(
       encoderFor(e1), encoderFor(e2), encoderFor(e3), encoderFor(e4), encoderFor(e5))
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

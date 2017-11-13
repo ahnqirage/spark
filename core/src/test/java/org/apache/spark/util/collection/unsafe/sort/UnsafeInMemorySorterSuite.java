@@ -78,9 +78,6 @@ public class UnsafeInMemorySorterSuite {
     final TaskMemoryManager memoryManager = new TaskMemoryManager(
       new TestMemoryManager(new SparkConf().set("spark.memory.offHeap.enabled", "false")), 0);
     final TestMemoryConsumer consumer = new TestMemoryConsumer(memoryManager);
-<<<<<<< HEAD
-    final MemoryBlock dataPage = memoryManager.allocatePage(2048, consumer);
-=======
     final MemoryBlock dataPage = memoryManager.allocatePage(2048, null);
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     final Object baseObject = dataPage.getBaseObject();
@@ -127,12 +124,7 @@ public class UnsafeInMemorySorterSuite {
     position = dataPage.getBaseOffset();
     for (int i = 0; i < dataToSort.length; i++) {
       if (!sorter.hasSpaceForAnotherRecord()) {
-<<<<<<< HEAD
-        sorter.expandPointerArray(
-          consumer.allocateArray(sorter.getMemoryUsage() / 8 * 2));
-=======
         sorter.expandPointerArray(consumer.allocateArray(sorter.numRecords() * 2 * 2));
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       // position now points to the start of a record (which holds its length).
       final int recordLength = Platform.getInt(baseObject, position);

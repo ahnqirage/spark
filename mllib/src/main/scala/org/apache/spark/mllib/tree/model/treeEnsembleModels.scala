@@ -28,7 +28,6 @@ import org.json4s.jackson.JsonMethods._
 import org.apache.spark.SparkContext
 =======
 import org.apache.spark.{Logging, SparkContext}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.annotation.{DeveloperApi, Since}
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.internal.Logging
@@ -410,9 +409,6 @@ private[tree] object TreeEnsembleModel extends Logging {
     case class EnsembleNodeData(treeId: Int, node: NodeData)
 
     def save(sc: SparkContext, path: String, model: TreeEnsembleModel, className: String): Unit = {
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

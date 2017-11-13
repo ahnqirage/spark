@@ -44,59 +44,6 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.util.Utils
 
-<<<<<<< HEAD
-/**
- * Abstract class all optimizers should inherit of, contains the standard batches (extending
- * Optimizers can override this.
- */
-abstract class Optimizer(sessionCatalog: SessionCatalog)
-  extends RuleExecutor[LogicalPlan] {
-
-  // Check for structural integrity of the plan in test mode. Currently we only check if a plan is
-  // still resolved after the execution of each rule.
-  override protected def isPlanIntegral(plan: LogicalPlan): Boolean = {
-    !Utils.isTesting || plan.resolved
-  }
-
-  protected def fixedPoint = FixedPoint(SQLConf.get.optimizerMaxIterations)
-
-  def batches: Seq[Batch] = {
-    Batch("Eliminate Distinct", Once, EliminateDistinct) ::
-    // Technically some of the rules in Finish Analysis are not optimizer rules and belong more
-    // in the analyzer, because they are needed for correctness (e.g. ComputeCurrentTime).
-    // However, because we also use the analyzer to canonicalized queries (for view definition),
-    // we do not eliminate subqueries or compute current time in the analyzer.
-    Batch("Finish Analysis", Once,
-      EliminateSubqueryAliases,
-      EliminateView,
-      ReplaceExpressions,
-      ComputeCurrentTime,
-      GetCurrentDatabase(sessionCatalog),
-      RewriteDistinctAggregates,
-      ReplaceDeduplicateWithAggregate) ::
-    //////////////////////////////////////////////////////////////////////////////////////////
-    // Optimizer rules start here
-    //////////////////////////////////////////////////////////////////////////////////////////
-    // - Do the first call of CombineUnions before starting the major Optimizer rules,
-    //   since it can reduce the number of iteration and the other rules could add/move
-    //   extra operators between two adjacent Union operators.
-    // - Call CombineUnions again in Batch("Operator Optimizations"),
-    //   since the other rules might make two separate Unions operators adjacent.
-    Batch("Union", Once,
-      CombineUnions) ::
-    Batch("Pullup Correlated Expressions", Once,
-      PullupCorrelatedPredicates) ::
-    Batch("Subquery", Once,
-      OptimizeSubqueries) ::
-    Batch("Replace Operators", fixedPoint,
-      ReplaceIntersectWithSemiJoin,
-      ReplaceExceptWithAntiJoin,
-      ReplaceDistinctWithAggregate) ::
-    Batch("Aggregate", fixedPoint,
-      RemoveLiteralFromGroupExpressions,
-      RemoveRepetitionFromGroupExpressions) ::
-    Batch("Operator Optimizations", fixedPoint, Seq(
-=======
 abstract class Optimizer(conf: CatalystConf) extends RuleExecutor[LogicalPlan] {
   val batches =
     // SubQueries are only needed for analysis and can be removed before execution.
@@ -134,13 +81,6 @@ abstract class Optimizer(conf: CatalystConf) extends RuleExecutor[LogicalPlan] {
       ReorderAssociativeOperator,
       LikeSimplification,
       BooleanSimplification,
-<<<<<<< HEAD
-      SimplifyConditionals,
-      RemoveDispensableExpressions,
-      SimplifyBinaryComparison,
-      PruneFilters,
-      EliminateSorts,
-=======
       RemoveDispensableExpressions,
       SimplifyFilters,
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -191,6 +131,18 @@ abstract class Optimizer(conf: CatalystConf) extends RuleExecutor[LogicalPlan] {
    */
   def extendedOperatorOptimizationRules: Seq[Rule[LogicalPlan]] = Nil
 }
+case class DefaultOptimizer(conf: CatalystConf) extends Optimizer(conf)
+
+/**
+ * An optimizer used in test code.
+ *
+ * To ensure extendability, we leave the standard rules in the abstract optimizer rules, while
+ * specific rules go to the subclasses
+ */
+object SimpleTestOptimizer extends SimpleTestOptimizer
+
+class SimpleTestOptimizer extends Optimizer(
+  new SimpleCatalystConf(caseSensitiveAnalysis = true))
 
 /**
  * Remove useless DISTINCT for MAX and MIN.
@@ -493,7 +445,6 @@ object ColumnPruning extends Rule[LogicalPlan] {
     case a @ Aggregate(_, _, e @ Expand(_, _, child))
       if (child.outputSet -- e.references -- a.references).nonEmpty =>
       a.copy(child = e.copy(child = prunedChild(child, e.references ++ a.references)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Prunes the unused columns from child of `DeserializeToObject`
     case d @ DeserializeToObject(_, _, child) if (child.outputSet -- d.references).nonEmpty =>
@@ -871,14 +822,8 @@ object PushDownPredicate extends Rule[LogicalPlan] with PredicateHelper {
     // implies that, for a given input row, the output are determined by the expression's initial
     // state and all the input rows processed before. In another word, the order of input rows
     // matters for non-deterministic expressions, while pushing down predicates changes the order.
-<<<<<<< HEAD
-    // This also applies to Aggregate.
-    case Filter(condition, project @ Project(fields, grandChild))
-      if fields.forall(_.deterministic) && canPushThroughCondition(grandChild, condition) =>
-=======
     case filter @ Filter(condition, project @ Project(fields, grandChild))
       if fields.forall(_.deterministic) =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // Create a map of Aliases to their values from the child projection.
       // e.g., 'SELECT a + b AS c, d ...' produces Map(c -> a + b).
@@ -933,16 +878,6 @@ object PushDownPredicate extends Rule[LogicalPlan] with PredicateHelper {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
 
-<<<<<<< HEAD
-    // Push [[Filter]] operators through [[Window]] operators. Parts of the predicate that can be
-    // pushed beneath must satisfy the following conditions:
-    // 1. All the expressions are part of window partitioning key. The expressions can be compound.
-    // 2. Deterministic.
-    // 3. Placed before any non-deterministic predicates.
-    case filter @ Filter(condition, w: Window)
-      if w.partitionSpec.forall(_.isInstanceOf[AttributeReference]) =>
-      val partitionAttrs = AttributeSet(w.partitionSpec.flatMap(_.references))
-=======
 }
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -959,21 +894,15 @@ object PushDownPredicate extends Rule[LogicalPlan] with PredicateHelper {
       // be pushed below the operator.
       val (pushDown, stayUp) = splitConjunctivePredicates(condition).partition { cond =>
         cond.references subsetOf g.child.outputSet
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
 
       val stayUp = rest ++ containingNonDeterministic
 
       if (pushDown.nonEmpty) {
         val pushDownPredicate = pushDown.reduce(And)
-<<<<<<< HEAD
-        val newWindow = w.copy(child = Filter(pushDownPredicate, w.child))
-        if (stayUp.isEmpty) newWindow else Filter(stayUp.reduce(And), newWindow)
-=======
         val newGenerate = Generate(g.generator, join = g.join, outer = g.outer,
           g.qualifier, g.generatorOutput, Filter(pushDownPredicate, g.child))
         if (stayUp.isEmpty) newGenerate else Filter(stayUp.reduce(And), newGenerate)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       } else {
         filter
       }
@@ -1049,7 +978,6 @@ object PushPredicateThroughAggregate extends Rule[LogicalPlan] with PredicateHel
         // If there is no more filter to stay up, just eliminate the filter.
         // Otherwise, create "Filter(stayUp) <- Aggregate <- Filter(pushDownPredicate)".
         if (stayUp.isEmpty) newAggregate else Filter(stayUp.reduce(And), newAggregate)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       } else {
         filter
       }

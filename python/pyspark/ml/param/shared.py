@@ -297,7 +297,6 @@ class HasCheckpointInterval(Params):
         super(HasCheckpointInterval, self).__init__()
         #: param for set checkpoint interval (>= 1) or disable checkpoint (-1). E.g. 10 means that the cache will get checkpointed every 10 iterations.
         self.checkpointInterval = Param(self, "checkpointInterval", "set checkpoint interval (>= 1) or disable checkpoint (-1). E.g. 10 means that the cache will get checkpointed every 10 iterations.")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def setCheckpointInterval(self, value):
         """
@@ -662,7 +661,6 @@ class DecisionTreeParams(Params):
     minInfoGain = Param(Params._dummy(), "minInfoGain", "Minimum information gain for a split to be considered at a tree node.")
     maxMemoryInMB = Param(Params._dummy(), "maxMemoryInMB", "Maximum memory in MB allocated to histogram aggregation.")
     cacheNodeIds = Param(Params._dummy(), "cacheNodeIds", "If false, the algorithm will pass trees to executors to match instances with nodes. If true, the algorithm will cache node IDs for each instance. Caching can speed up training of deeper trees. Users can set how often should the cache be checkpointed or disable it by setting checkpointInterval.")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     
 
     def __init__(self):

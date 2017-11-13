@@ -21,33 +21,17 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-<<<<<<< HEAD
-import org.apache.spark.ml.util.TestingUtils._
-import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
-import org.apache.spark.mllib.linalg.distributed.RowMatrix
-=======
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.mllib.linalg._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.Row
 
 class PCASuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
-<<<<<<< HEAD
-
-  import testImplicits._
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new PCA)
     val mat = Matrices.dense(2, 2, Array(0.0, 1.0, 2.0, 3.0)).asInstanceOf[DenseMatrix]
-<<<<<<< HEAD
-    val explainedVariance = Vectors.dense(0.5, 0.5).asInstanceOf[DenseVector]
-    val model = new PCAModel("pca", mat, explainedVariance)
-=======
     val model = new PCAModel("pca", mat)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     ParamsSuite.checkParams(model)
   }
 
@@ -91,12 +75,7 @@ class PCASuite extends SparkFunSuite with MLlibTestSparkContext with DefaultRead
 
   test("PCAModel read/write") {
     val instance = new PCAModel("myPCAModel",
-<<<<<<< HEAD
-      Matrices.dense(2, 2, Array(0.0, 1.0, 2.0, 3.0)).asInstanceOf[DenseMatrix],
-      Vectors.dense(0.5, 0.5).asInstanceOf[DenseVector])
-=======
       Matrices.dense(2, 2, Array(0.0, 1.0, 2.0, 3.0)).asInstanceOf[DenseMatrix])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val newInstance = testDefaultReadWrite(instance)
     assert(newInstance.pc === instance.pc)
   }

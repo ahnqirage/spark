@@ -202,8 +202,6 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
     }
 
     def save(sc: SparkContext, path: String, model: DecisionTreeModel): Unit = {
-<<<<<<< HEAD
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       import sqlContext.implicits._
 
@@ -248,7 +246,6 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
 =======
       val datapath = Loader.dataPath(path)
       val sqlContext = SQLContext.getOrCreate(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // Load Parquet data.
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
       val dataPath = Loader.dataPath(path)

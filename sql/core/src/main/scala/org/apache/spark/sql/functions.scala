@@ -72,6 +72,26 @@ private[sql] abstract class LegacyFunctions {
 }
 
 /**
+ * Ensures that java functions signatures for methods that now return a [[TypedColumn]] still have
+ * legacy equivalents in bytecode.  This compatibility is done by forcing the compiler to generate
+ * "bridge" methods due to the use of covariant return types.
+ *
+ * {{{
+ *   // In LegacyFunctions:
+ *   public abstract org.apache.spark.sql.Column avg(java.lang.String);
+ *
+ *   // In functions:
+ *   public static org.apache.spark.sql.TypedColumn<java.lang.Object, java.lang.Object> avg(...);
+ * }}}
+ *
+ * This allows us to use the same functions both in typed [[Dataset]] operations and untyped
+ * [[DataFrame]] operations when the return type for a given function is statically known.
+ */
+private[sql] abstract class LegacyFunctions {
+  def count(columnName: String): Column
+}
+
+/**
  * :: Experimental ::
  * Functions available for [[DataFrame]].
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -263,11 +283,7 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 2.1.0
    */
-<<<<<<< HEAD
-  def approx_count_distinct(e: Column): Column = withAggregateFunction {
-=======
   def approxCountDistinct(e: Column): Column = withAggregateFunction {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     HyperLogLogPlusPlus(e.expr)
   }
 
@@ -287,11 +303,7 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 2.1.0
    */
-<<<<<<< HEAD
-  def approx_count_distinct(e: Column, rsd: Double): Column = withAggregateFunction {
-=======
   def approxCountDistinct(e: Column, rsd: Double): Column = withAggregateFunction {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     HyperLogLogPlusPlus(e.expr, rsd, 0, 0)
   }
 
@@ -326,28 +338,18 @@ object functions extends LegacyFunctions {
   /**
    * Aggregate function: returns a list of objects with duplicates.
    *
-<<<<<<< HEAD
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-  def collect_list(e: Column): Column = withAggregateFunction { CollectList(e.expr) }
-=======
    * For now this is an alias for the collect_list Hive UDAF.
    *
    * @group agg_funcs
    * @since 1.6.0
    */
   def collect_list(e: Column): Column = callUDF("collect_list", e)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Aggregate function: returns a list of objects with duplicates.
    *
-<<<<<<< HEAD
-=======
    * For now this is an alias for the collect_list Hive UDAF.
    *
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * @group agg_funcs
    * @since 1.6.0
    */
@@ -356,28 +358,18 @@ object functions extends LegacyFunctions {
   /**
    * Aggregate function: returns a set of objects with duplicate elements eliminated.
    *
-<<<<<<< HEAD
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-  def collect_set(e: Column): Column = withAggregateFunction { CollectSet(e.expr) }
-=======
    * For now this is an alias for the collect_set Hive UDAF.
    *
    * @group agg_funcs
    * @since 1.6.0
    */
   def collect_set(e: Column): Column = callUDF("collect_set", e)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Aggregate function: returns a set of objects with duplicate elements eliminated.
    *
-<<<<<<< HEAD
-=======
    * For now this is an alias for the collect_set Hive UDAF.
    *
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * @group agg_funcs
    * @since 1.6.0
    */
@@ -424,11 +416,7 @@ object functions extends LegacyFunctions {
    * @since 1.3.0
    */
   def count(columnName: String): TypedColumn[Any, Long] =
-<<<<<<< HEAD
-    count(Column(columnName)).as(ExpressionEncoder[Long]())
-=======
     count(Column(columnName)).as(ExpressionEncoder[Long])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Aggregate function: returns the number of distinct items in a group.
@@ -526,11 +514,7 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 1.3.0
    */
-<<<<<<< HEAD
-  def first(e: Column): Column = first(e, ignoreNulls = false)
-=======
   def first(e: Column): Column = withAggregateFunction { new First(e.expr) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Aggregate function: returns the first value of a column in a group.
@@ -643,8 +627,15 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 1.6.0
    */
+  def kurtosis(e: Column): Column = withAggregateFunction { Kurtosis(e.expr) }
+
+  /**
+   * Aggregate function: returns the kurtosis of the values in a group.
+   *
+   * @group agg_funcs
+   * @since 1.6.0
+   */
   def kurtosis(columnName: String): Column = kurtosis(Column(columnName))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Aggregate function: returns the last value in a group.
@@ -655,11 +646,7 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 1.3.0
    */
-<<<<<<< HEAD
-  def last(e: Column): Column = last(e, ignoreNulls = false)
-=======
   def last(e: Column): Column = withAggregateFunction { new Last(e.expr) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Aggregate function: returns the last value of the column in a group.
@@ -739,17 +726,38 @@ object functions extends LegacyFunctions {
   def skewness(columnName: String): Column = skewness(Column(columnName))
 
   /**
-<<<<<<< HEAD
-   * Aggregate function: alias for `stddev_samp`.
-=======
    * Aggregate function: alias for [[stddev_samp]].
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @group agg_funcs
    * @since 1.6.0
    */
   def stddev(e: Column): Column = withAggregateFunction { StddevSamp(e.expr) }
-<<<<<<< HEAD
+
+  /**
+   * Aggregate function: returns the skewness of the values in a group.
+   *
+   * @group agg_funcs
+   * @since 1.6.0
+   */
+  def stddev(columnName: String): Column = stddev(Column(columnName))
+
+  /**
+   * Aggregate function: returns the sample standard deviation of
+   * the expression in a group.
+   *
+   * @group agg_funcs
+   * @since 1.6.0
+   */
+  def stddev_samp(e: Column): Column = withAggregateFunction { StddevSamp(e.expr) }
+
+  /**
+   * Aggregate function: returns the sample standard deviation of
+   * the expression in a group.
+   *
+   * @group agg_funcs
+   * @since 1.6.0
+   */
+  def stddev_samp(columnName: String): Column = stddev_samp(Column(columnName))
 
   /**
    * Aggregate function: alias for `stddev_samp`.
@@ -757,66 +765,6 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 1.6.0
    */
-  def stddev(columnName: String): Column = stddev(Column(columnName))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  /**
-   * Aggregate function: returns the sample standard deviation of
-   * the expression in a group.
-   *
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-  def stddev_samp(e: Column): Column = withAggregateFunction { StddevSamp(e.expr) }
-
-  /**
-   * Aggregate function: returns the sample standard deviation of
-   * the expression in a group.
-   *
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-<<<<<<< HEAD
-  def stddev_samp(columnName: String): Column = stddev_samp(Column(columnName))
-
-  /**
-   * Aggregate function: returns the population standard deviation of
-=======
-  def stddev(columnName: String): Column = stddev(Column(columnName))
-
-  /**
-   * Aggregate function: returns the sample standard deviation of
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-   * the expression in a group.
-   *
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-<<<<<<< HEAD
-  def stddev_pop(e: Column): Column = withAggregateFunction { StddevPop(e.expr) }
-=======
-  def stddev_samp(e: Column): Column = withAggregateFunction { StddevSamp(e.expr) }
-
-  /**
-   * Aggregate function: returns the sample standard deviation of
-   * the expression in a group.
-   *
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-  def stddev_samp(columnName: String): Column = stddev_samp(Column(columnName))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  /**
-   * Aggregate function: returns the population standard deviation of
-   * the expression in a group.
-   *
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-<<<<<<< HEAD
-=======
   def stddev_pop(e: Column): Column = withAggregateFunction { StddevPop(e.expr) }
 
   /**
@@ -826,24 +774,26 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 1.6.0
    */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def stddev_pop(columnName: String): Column = stddev_pop(Column(columnName))
 
   /**
-   * Aggregate function: returns the sum of all values in the expression.
+   * Aggregate function: returns the sample standard deviation of
+   * the expression in a group.
    *
    * @group agg_funcs
-   * @since 1.3.0
+   * @since 1.6.0
    */
   def sum(e: Column): Column = withAggregateFunction { Sum(e.expr) }
 
   /**
-   * Aggregate function: returns the sum of all values in the given column.
+   * Aggregate function: returns the sample standard deviation of
+   * the expression in a group.
    *
    * @group agg_funcs
-   * @since 1.3.0
+   * @since 1.6.0
    */
-  def sum(columnName: String): Column = sum(Column(columnName))
+<<<<<<< HEAD
+  def stddev_samp(columnName: String): Column = stddev_samp(Column(columnName))
 
   /**
    * Aggregate function: returns the sum of distinct values in the expression.
@@ -854,37 +804,25 @@ object functions extends LegacyFunctions {
   def sumDistinct(e: Column): Column = withAggregateFunction(Sum(e.expr), isDistinct = true)
 
   /**
-   * Aggregate function: returns the sum of distinct values in the expression.
-   *
-   * @group agg_funcs
-   * @since 1.3.0
-   */
-  def sumDistinct(columnName: String): Column = sumDistinct(Column(columnName))
-
-  /**
-   * Aggregate function: alias for `var_samp`.
-   *
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-  def variance(e: Column): Column = withAggregateFunction { VarianceSamp(e.expr) }
-
-  /**
-   * Aggregate function: alias for `var_samp`.
-   *
-   * @group agg_funcs
-   * @since 1.6.0
-   */
-  def variance(columnName: String): Column = variance(Column(columnName))
-
-  /**
-   * Aggregate function: returns the unbiased variance of the values in a group.
+   * Aggregate function: returns the sample standard deviation of
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+   * the expression in a group.
    *
    * @group agg_funcs
    * @since 1.6.0
    */
 <<<<<<< HEAD
+  def stddev_pop(e: Column): Column = withAggregateFunction { StddevPop(e.expr) }
 =======
+  def stddev_samp(e: Column): Column = withAggregateFunction { StddevSamp(e.expr) }
+
+  /**
+   * Aggregate function: returns the sample standard deviation of
+   * the expression in a group.
+   *
+   * @group agg_funcs
+   * @since 1.6.0
+   */
   def variance(e: Column): Column = withAggregateFunction { VarianceSamp(e.expr) }
 
   /**
@@ -901,11 +839,11 @@ object functions extends LegacyFunctions {
    * @group agg_funcs
    * @since 1.6.0
    */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def var_samp(e: Column): Column = withAggregateFunction { VarianceSamp(e.expr) }
 
   /**
-   * Aggregate function: returns the unbiased variance of the values in a group.
+   * Aggregate function: returns the population standard deviation of
+   * the expression in a group.
    *
    * @group agg_funcs
    * @since 1.6.0
@@ -921,7 +859,8 @@ object functions extends LegacyFunctions {
   def var_pop(e: Column): Column = withAggregateFunction { VariancePop(e.expr) }
 
   /**
-   * Aggregate function: returns the population variance of the values in a group.
+   * Aggregate function: returns the population standard deviation of
+   * the expression in a group.
    *
    * @group agg_funcs
    * @since 1.6.0
@@ -960,19 +899,6 @@ object functions extends LegacyFunctions {
   def currentRow(): Column = Column(CurrentRow)
 
   /**
-   * Window function: returns the cumulative distribution of values within a window partition,
-   * i.e. the fraction of rows that are below the current row.
-   *
-   * {{{
-   *   N = total number of rows in the partition
-   *   cumeDist(x) = number of values before (and including) x / N
-   * }}}
-   *
-   * @group window_funcs
-   * @since 1.6.0
-   */
-  def cume_dist(): Column = withExpr { new CumeDist }
-=======
    * @group window_funcs
    * @deprecated As of 1.6.0, replaced by `cume_dist`. This will be removed in Spark 2.0.
    */
@@ -999,7 +925,6 @@ object functions extends LegacyFunctions {
    */
   @deprecated("Use dense_rank. This will be removed in Spark 2.0.", "1.6.0")
   def denseRank(): Column = dense_rank()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Window function: returns the rank of rows within a window partition, without any gaps.
@@ -1007,17 +932,12 @@ object functions extends LegacyFunctions {
    * The difference between rank and dense_rank is that denseRank leaves no gaps in ranking
    * sequence when there are ties. That is, if you were ranking a competition using dense_rank
    * and had three people tie for second place, you would say that all three were in second
-   * place and that the next person came in third. Rank would give me sequential numbers, making
-   * the person that came in third place (after the ties) would register as coming in fifth.
+   * place and that the next person came in third.
    *
    * @group window_funcs
    * @since 1.6.0
    */
-<<<<<<< HEAD
-  def dense_rank(): Column = withExpr { new DenseRank }
-=======
   def dense_rank(): Column = withExpr { UnresolvedWindowFunction("dense_rank", Nil) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Window function: returns the value that is `offset` rows before the current row, and
@@ -1068,9 +988,6 @@ object functions extends LegacyFunctions {
    * @since 1.4.0
    */
   def lag(e: Column, offset: Int, defaultValue: Any): Column = withExpr {
-<<<<<<< HEAD
-    Lag(e.expr, Literal(offset), Literal(defaultValue))
-=======
     UnresolvedWindowFunction("lag", e.expr :: Literal(offset) :: Literal(defaultValue) :: Nil)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
@@ -1124,9 +1041,6 @@ object functions extends LegacyFunctions {
    * @since 1.4.0
    */
   def lead(e: Column, offset: Int, defaultValue: Any): Column = withExpr {
-<<<<<<< HEAD
-    Lead(e.expr, Literal(offset), Literal(defaultValue))
-=======
     UnresolvedWindowFunction("lead", e.expr :: Literal(offset) :: Literal(defaultValue) :: Nil)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
@@ -1141,9 +1055,6 @@ object functions extends LegacyFunctions {
    * @group window_funcs
    * @since 1.4.0
    */
-<<<<<<< HEAD
-  def ntile(n: Int): Column = withExpr { new NTile(Literal(n)) }
-=======
   def ntile(n: Int): Column = withExpr { UnresolvedWindowFunction("ntile", lit(n).expr :: Nil) }
 
   /**
@@ -1152,7 +1063,6 @@ object functions extends LegacyFunctions {
    */
   @deprecated("Use percent_rank. This will be removed in Spark 2.0.", "1.6.0")
   def percentRank(): Column = percent_rank()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Window function: returns the relative rank (i.e. percentile) of rows within a window partition.
@@ -1167,11 +1077,7 @@ object functions extends LegacyFunctions {
    * @group window_funcs
    * @since 1.6.0
    */
-<<<<<<< HEAD
-  def percent_rank(): Column = withExpr { new PercentRank }
-=======
   def percent_rank(): Column = withExpr { UnresolvedWindowFunction("percent_rank", Nil) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Window function: returns the rank of rows within a window partition.
@@ -1187,9 +1093,6 @@ object functions extends LegacyFunctions {
    * @group window_funcs
    * @since 1.4.0
    */
-<<<<<<< HEAD
-  def rank(): Column = withExpr { new Rank }
-=======
   def rank(): Column = withExpr { UnresolvedWindowFunction("rank", Nil) }
 
   /**
@@ -1198,7 +1101,6 @@ object functions extends LegacyFunctions {
    */
   @deprecated("Use row_number. This will be removed in Spark 2.0.", "1.6.0")
   def rowNumber(): Column = row_number()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Window function: returns a sequential number starting at 1 within a window partition.
@@ -1206,11 +1108,7 @@ object functions extends LegacyFunctions {
    * @group window_funcs
    * @since 1.6.0
    */
-<<<<<<< HEAD
-  def row_number(): Column = withExpr { RowNumber() }
-=======
   def row_number(): Column = withExpr { UnresolvedWindowFunction("row_number", Nil) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   // Non-aggregate functions
@@ -1283,8 +1181,6 @@ object functions extends LegacyFunctions {
    */
   @scala.annotation.varargs
   def coalesce(e: Column*): Column = withExpr { Coalesce(e.map(_.expr)) }
-<<<<<<< HEAD
-=======
 
   /**
    * @group normal_funcs
@@ -1292,17 +1188,12 @@ object functions extends LegacyFunctions {
    */
   @deprecated("Use input_file_name. This will be removed in Spark 2.0.", "1.6.0")
   def inputFileName(): Column = input_file_name()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Creates a string column for the file name of the current Spark task.
    *
    * @group normal_funcs
    * @since 1.6.0
-<<<<<<< HEAD
-   */
-  def input_file_name(): Column = withExpr { InputFileName() }
-=======
    */
   def input_file_name(): Column = withExpr { InputFileName() }
 
@@ -1312,14 +1203,12 @@ object functions extends LegacyFunctions {
    */
   @deprecated("Use isnan. This will be removed in Spark 2.0.", "1.6.0")
   def isNaN(e: Column): Column = isnan(e)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Return true iff the column is NaN.
    *
    * @group normal_funcs
    * @since 1.6.0
-<<<<<<< HEAD
    */
   def isnan(e: Column): Column = withExpr { IsNaN(e.expr) }
 
@@ -1329,17 +1218,6 @@ object functions extends LegacyFunctions {
    * @group normal_funcs
    * @since 1.6.0
    */
-=======
-   */
-  def isnan(e: Column): Column = withExpr { IsNaN(e.expr) }
-
-  /**
-   * Return true iff the column is null.
-   *
-   * @group normal_funcs
-   * @since 1.6.0
-   */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def isnull(e: Column): Column = withExpr { IsNull(e.expr) }
 
   /**
@@ -1360,10 +1238,6 @@ object functions extends LegacyFunctions {
    * @group normal_funcs
    * @since 1.4.0
    */
-<<<<<<< HEAD
-  @deprecated("Use monotonically_increasing_id()", "2.0.0")
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def monotonicallyIncreasingId(): Column = monotonically_increasing_id()
 
   /**
@@ -1374,18 +1248,9 @@ object functions extends LegacyFunctions {
    * within each partition in the lower 33 bits. The assumption is that the data frame has
    * less than 1 billion partitions, and each partition has less than 8 billion records.
    *
-<<<<<<< HEAD
-   * As an example, consider a `DataFrame` with two partitions, each with 3 records.
-   * This expression would return the following IDs:
-   *
-   * {{{
-   * 0, 1, 2, 8589934592 (1L << 33), 8589934593, 8589934594.
-   * }}}
-=======
    * As an example, consider a [[DataFrame]] with two partitions, each with 3 records.
    * This expression would return the following IDs:
    * 0, 1, 2, 8589934592 (1L << 33), 8589934593, 8589934594.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @group normal_funcs
    * @since 1.6.0
@@ -1474,9 +1339,6 @@ object functions extends LegacyFunctions {
   def randn(): Column = randn(Utils.random.nextLong)
 
   /**
-<<<<<<< HEAD
-   * Partition ID.
-=======
    * @group normal_funcs
    * @since 1.4.0
    * @deprecated As of 1.6.0, replaced by `spark_partition_id`. This will be removed in Spark 2.0.
@@ -1557,9 +1419,6 @@ object functions extends LegacyFunctions {
    * @since 1.4.0
    */
   def when(condition: Column, value: Any): Column = withExpr {
-<<<<<<< HEAD
-    CaseWhen(Seq((condition.expr, lit(value).expr)))
-=======
     CaseWhen(Seq(condition.expr, lit(value).expr))
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
@@ -1876,9 +1735,6 @@ object functions extends LegacyFunctions {
    * @since 1.5.0
    */
   @scala.annotation.varargs
-<<<<<<< HEAD
-  def greatest(exprs: Column*): Column = withExpr { Greatest(exprs.map(_.expr)) }
-=======
   def greatest(exprs: Column*): Column = withExpr {
     require(exprs.length > 1, "greatest requires at least 2 arguments.")
     Greatest(exprs.map(_.expr))
@@ -1987,9 +1843,6 @@ object functions extends LegacyFunctions {
    * @since 1.5.0
    */
   @scala.annotation.varargs
-<<<<<<< HEAD
-  def least(exprs: Column*): Column = withExpr { Least(exprs.map(_.expr)) }
-=======
   def least(exprs: Column*): Column = withExpr {
     require(exprs.length > 1, "least requires at least 2 arguments.")
     Least(exprs.map(_.expr))
@@ -2196,26 +2049,6 @@ object functions extends LegacyFunctions {
    * @since 1.5.0
    */
   def round(e: Column, scale: Int): Column = withExpr { Round(e.expr, Literal(scale)) }
-<<<<<<< HEAD
-
-  /**
-   * Returns the value of the column `e` rounded to 0 decimal places with HALF_EVEN round mode.
-   *
-   * @group math_funcs
-   * @since 2.0.0
-   */
-  def bround(e: Column): Column = bround(e, 0)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  /**
-   * Round the value of `e` to `scale` decimal places with HALF_EVEN round mode
-   * if `scale` is greater than or equal to 0 or at integral part when `scale` is less than 0.
-   *
-   * @group math_funcs
-   * @since 2.0.0
-   */
-  def bround(e: Column, scale: Int): Column = withExpr { BRound(e.expr, Literal(scale)) }
 
   /**
    * Shift the given value numBits left. If the given value is a long value, this function
@@ -2348,11 +2181,7 @@ object functions extends LegacyFunctions {
    * @group math_funcs
    * @since 2.1.0
    */
-<<<<<<< HEAD
-  def degrees(e: Column): Column = withExpr { ToDegrees(e.expr) }
-=======
   def toDegrees(e: Column): Column = withExpr { ToDegrees(e.expr) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Converts an angle measured in radians to an approximately equivalent angle measured in degrees.
@@ -2382,11 +2211,7 @@ object functions extends LegacyFunctions {
    * @group math_funcs
    * @since 2.1.0
    */
-<<<<<<< HEAD
-  def radians(e: Column): Column = withExpr { ToRadians(e.expr) }
-=======
   def toRadians(e: Column): Column = withExpr { ToRadians(e.expr) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Converts an angle measured in degrees to an approximately equivalent angle measured in radians.
@@ -2442,7 +2267,10 @@ object functions extends LegacyFunctions {
    * @since 1.5.0
    */
   def crc32(e: Column): Column = withExpr { Crc32(e.expr) }
-<<<<<<< HEAD
+
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  // String functions
+  //////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
    * Calculates the hash code of given columns, and returns the result as an int column.
@@ -2643,15 +2471,6 @@ object functions extends LegacyFunctions {
   def ltrim(e: Column): Column = withExpr {StringTrimLeft(e.expr) }
 
   /**
-   * Trim the specified character string from left end for the specified string column.
-   * @group string_funcs
-   * @since 2.3.0
-   */
-  def ltrim(e: Column, trimString: String): Column = withExpr {
-    StringTrimLeft(e.expr, Literal(trimString))
-  }
-
-  /**
    * Extract a specific group matched by a Java regex, from the specified string column.
    * If the regex did not match, or the specified group did not match, an empty string is returned.
    *
@@ -2729,15 +2548,6 @@ object functions extends LegacyFunctions {
   def rtrim(e: Column): Column = withExpr { StringTrimRight(e.expr) }
 
   /**
-   * Trim the specified character string from right end for the specified string column.
-   * @group string_funcs
-   * @since 2.3.0
-   */
-  def rtrim(e: Column, trimString: String): Column = withExpr {
-    StringTrimRight(e.expr, Literal(trimString))
-  }
-
-  /**
    * Returns the soundex code for the specified expression.
    *
    * @group string_funcs
@@ -2803,18 +2613,6 @@ object functions extends LegacyFunctions {
    * @since 1.5.0
    */
   def trim(e: Column): Column = withExpr { StringTrim(e.expr) }
-<<<<<<< HEAD
-
-  /**
-   * Trim the specified character from both ends for the specified string column.
-   * @group string_funcs
-   * @since 2.3.0
-   */
-  def trim(e: Column, trimString: String): Column = withExpr {
-    StringTrim(e.expr, Literal(trimString))
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Converts a string column to upper case.
@@ -3047,31 +2845,7 @@ object functions extends LegacyFunctions {
    * @group datetime_funcs
    * @since 1.5.0
    */
-<<<<<<< HEAD
-  def unix_timestamp(s: Column, p: String): Column = withExpr { UnixTimestamp(s.expr, Literal(p)) }
-
-  /**
-   * Convert time string to a Unix timestamp (in seconds) by casting rules to `TimestampType`.
-   * @group datetime_funcs
-   * @since 2.2.0
-   */
-  def to_timestamp(s: Column): Column = withExpr {
-    new ParseToTimestamp(s.expr)
-  }
-
-  /**
-   * Convert time string to a Unix timestamp (in seconds) with a specified format
-   * (see [http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html])
-   * to Unix timestamp (in seconds), return null if fail.
-   * @group datetime_funcs
-   * @since 2.2.0
-   */
-  def to_timestamp(s: Column, fmt: String): Column = withExpr {
-    new ParseToTimestamp(s.expr, Literal(fmt))
-  }
-=======
   def unix_timestamp(s: Column, p: String): Column = withExpr {UnixTimestamp(s.expr, Literal(p)) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Converts the column into `DateType` by casting rules to `DateType`.
@@ -3079,23 +2853,7 @@ object functions extends LegacyFunctions {
    * @group datetime_funcs
    * @since 1.5.0
    */
-<<<<<<< HEAD
-  def to_date(e: Column): Column = withExpr { new ParseToDate(e.expr) }
-
-  /**
-   * Converts the column into a `DateType` with a specified format
-   * (see [http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html])
-   * return null if fail.
-   *
-   * @group datetime_funcs
-   * @since 2.2.0
-   */
-  def to_date(e: Column, fmt: String): Column = withExpr {
-    new ParseToDate(e.expr, Literal(fmt))
-  }
-=======
   def to_date(e: Column): Column = withExpr { ToDate(e.expr) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Returns date truncated to the unit specified by the format.
@@ -3131,147 +2889,6 @@ object functions extends LegacyFunctions {
   def to_utc_timestamp(ts: Column, tz: String): Column = withExpr {
     ToUTCTimestamp(ts.expr, Literal(tz))
   }
-<<<<<<< HEAD
-
-  /**
-   * Bucketize rows into one or more time windows given a timestamp specifying column. Window
-   * starts are inclusive but the window ends are exclusive, e.g. 12:05 will be in the window
-   * [12:05,12:10) but not in [12:00,12:05). Windows can support microsecond precision. Windows in
-   * the order of months are not supported. The following example takes the average stock price for
-   * a one minute window every 10 seconds starting 5 seconds after the hour:
-   *
-   * {{{
-   *   val df = ... // schema => timestamp: TimestampType, stockId: StringType, price: DoubleType
-   *   df.groupBy(window($"time", "1 minute", "10 seconds", "5 seconds"), $"stockId")
-   *     .agg(mean("price"))
-   * }}}
-   *
-   * The windows will look like:
-   *
-   * {{{
-   *   09:00:05-09:01:05
-   *   09:00:15-09:01:15
-   *   09:00:25-09:01:25 ...
-   * }}}
-   *
-   * For a streaming query, you may use the function `current_timestamp` to generate windows on
-   * processing time.
-   *
-   * @param timeColumn The column or the expression to use as the timestamp for windowing by time.
-   *                   The time column must be of TimestampType.
-   * @param windowDuration A string specifying the width of the window, e.g. `10 minutes`,
-   *                       `1 second`. Check `org.apache.spark.unsafe.types.CalendarInterval` for
-   *                       valid duration identifiers. Note that the duration is a fixed length of
-   *                       time, and does not vary over time according to a calendar. For example,
-   *                       `1 day` always means 86,400,000 milliseconds, not a calendar day.
-   * @param slideDuration A string specifying the sliding interval of the window, e.g. `1 minute`.
-   *                      A new window will be generated every `slideDuration`. Must be less than
-   *                      or equal to the `windowDuration`. Check
-   *                      `org.apache.spark.unsafe.types.CalendarInterval` for valid duration
-   *                      identifiers. This duration is likewise absolute, and does not vary
-    *                     according to a calendar.
-   * @param startTime The offset with respect to 1970-01-01 00:00:00 UTC with which to start
-   *                  window intervals. For example, in order to have hourly tumbling windows that
-   *                  start 15 minutes past the hour, e.g. 12:15-13:15, 13:15-14:15... provide
-   *                  `startTime` as `15 minutes`.
-   *
-   * @group datetime_funcs
-   * @since 2.0.0
-   */
-  def window(
-      timeColumn: Column,
-      windowDuration: String,
-      slideDuration: String,
-      startTime: String): Column = {
-    withExpr {
-      TimeWindow(timeColumn.expr, windowDuration, slideDuration, startTime)
-    }.as("window")
-  }
-
-
-  /**
-   * Bucketize rows into one or more time windows given a timestamp specifying column. Window
-   * starts are inclusive but the window ends are exclusive, e.g. 12:05 will be in the window
-   * [12:05,12:10) but not in [12:00,12:05). Windows can support microsecond precision. Windows in
-   * the order of months are not supported. The windows start beginning at 1970-01-01 00:00:00 UTC.
-   * The following example takes the average stock price for a one minute window every 10 seconds:
-   *
-   * {{{
-   *   val df = ... // schema => timestamp: TimestampType, stockId: StringType, price: DoubleType
-   *   df.groupBy(window($"time", "1 minute", "10 seconds"), $"stockId")
-   *     .agg(mean("price"))
-   * }}}
-   *
-   * The windows will look like:
-   *
-   * {{{
-   *   09:00:00-09:01:00
-   *   09:00:10-09:01:10
-   *   09:00:20-09:01:20 ...
-   * }}}
-   *
-   * For a streaming query, you may use the function `current_timestamp` to generate windows on
-   * processing time.
-   *
-   * @param timeColumn The column or the expression to use as the timestamp for windowing by time.
-   *                   The time column must be of TimestampType.
-   * @param windowDuration A string specifying the width of the window, e.g. `10 minutes`,
-   *                       `1 second`. Check `org.apache.spark.unsafe.types.CalendarInterval` for
-   *                       valid duration identifiers. Note that the duration is a fixed length of
-   *                       time, and does not vary over time according to a calendar. For example,
-   *                       `1 day` always means 86,400,000 milliseconds, not a calendar day.
-   * @param slideDuration A string specifying the sliding interval of the window, e.g. `1 minute`.
-   *                      A new window will be generated every `slideDuration`. Must be less than
-   *                      or equal to the `windowDuration`. Check
-   *                      `org.apache.spark.unsafe.types.CalendarInterval` for valid duration
-   *                      identifiers. This duration is likewise absolute, and does not vary
-   *                     according to a calendar.
-   *
-   * @group datetime_funcs
-   * @since 2.0.0
-   */
-  def window(timeColumn: Column, windowDuration: String, slideDuration: String): Column = {
-    window(timeColumn, windowDuration, slideDuration, "0 second")
-  }
-
-  /**
-   * Generates tumbling time windows given a timestamp specifying column. Window
-   * starts are inclusive but the window ends are exclusive, e.g. 12:05 will be in the window
-   * [12:05,12:10) but not in [12:00,12:05). Windows can support microsecond precision. Windows in
-   * the order of months are not supported. The windows start beginning at 1970-01-01 00:00:00 UTC.
-   * The following example takes the average stock price for a one minute tumbling window:
-   *
-   * {{{
-   *   val df = ... // schema => timestamp: TimestampType, stockId: StringType, price: DoubleType
-   *   df.groupBy(window($"time", "1 minute"), $"stockId")
-   *     .agg(mean("price"))
-   * }}}
-   *
-   * The windows will look like:
-   *
-   * {{{
-   *   09:00:00-09:01:00
-   *   09:01:00-09:02:00
-   *   09:02:00-09:03:00 ...
-   * }}}
-   *
-   * For a streaming query, you may use the function `current_timestamp` to generate windows on
-   * processing time.
-   *
-   * @param timeColumn The column or the expression to use as the timestamp for windowing by time.
-   *                   The time column must be of TimestampType.
-   * @param windowDuration A string specifying the width of the window, e.g. `10 minutes`,
-   *                       `1 second`. Check `org.apache.spark.unsafe.types.CalendarInterval` for
-   *                       valid duration identifiers.
-   *
-   * @group datetime_funcs
-   * @since 2.0.0
-   */
-  def window(timeColumn: Column, windowDuration: String): Column = {
-    window(timeColumn, windowDuration, windowDuration, "0 second")
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   // Collection functions
@@ -3293,8 +2910,6 @@ object functions extends LegacyFunctions {
    * @since 1.3.0
    */
   def explode(e: Column): Column = withExpr { Explode(e.expr) }
-<<<<<<< HEAD
-=======
 
   /**
    * Extracts json object from a json string based on json path specified, and returns json string
@@ -3318,262 +2933,6 @@ object functions extends LegacyFunctions {
     require(fields.nonEmpty, "at least 1 field name should be given.")
     JsonTuple(json.expr +: fields.map(Literal.apply))
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  /**
-   * Creates a new row for each element in the given array or map column.
-   * Unlike explode, if the array/map is null or empty then null is produced.
-   *
-   * @group collection_funcs
-   * @since 2.2.0
-   */
-<<<<<<< HEAD
-  def explode_outer(e: Column): Column = withExpr { GeneratorOuter(Explode(e.expr)) }
-=======
-  def size(e: Column): Column = withExpr { Size(e.expr) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  /**
-   * Creates a new row for each element with position in the given array or map column.
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def posexplode(e: Column): Column = withExpr { PosExplode(e.expr) }
-
-  /**
-   * Creates a new row for each element with position in the given array or map column.
-   * Unlike posexplode, if the array/map is null or empty then the row (null, null) is produced.
-   *
-   * @group collection_funcs
-   * @since 2.2.0
-   */
-<<<<<<< HEAD
-  def posexplode_outer(e: Column): Column = withExpr { GeneratorOuter(PosExplode(e.expr)) }
-=======
-  def sort_array(e: Column, asc: Boolean): Column = withExpr { SortArray(e.expr, lit(asc).expr) }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////////////////////////////////
-
-  // scalastyle:off
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  /**
-   * Extracts json object from a json string based on json path specified, and returns json string
-   * of the extracted json object. It will return null if the input json string is invalid.
-   *
-   * @group collection_funcs
-   * @since 1.6.0
-   */
-  def get_json_object(e: Column, path: String): Column = withExpr {
-    GetJsonObject(e.expr, lit(path).expr)
-  }
-
-<<<<<<< HEAD
-=======
-  (0 to 10).map { x =>
-    val args = (1 to x).map(i => s"arg$i: Column").mkString(", ")
-    val fTypes = Seq.fill(x + 1)("_").mkString(", ")
-    val argsInUDF = (1 to x).map(i => s"arg$i.expr").mkString(", ")
-    println(s"""
-    /**
-     * Call a Scala function of ${x} arguments as user-defined function (UDF). This requires
-     * you to specify the return data type.
-     *
-     * @group udf_funcs
-     * @since 1.3.0
-     * @deprecated As of 1.5.0, since it's redundant with udf()
-     */
-    @deprecated("Use udf", "1.5.0")
-    def callUDF(f: Function$x[$fTypes], returnType: DataType${if (args.length > 0) ", " + args else ""}): Column = withExpr {
-      ScalaUDF(f, returnType, Seq($argsInUDF))
-    }""")
-  }
-  */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-  /**
-   * Creates a new row for a json column according to the given field names.
-   *
-   * @group collection_funcs
-   * @since 1.6.0
-   */
-  @scala.annotation.varargs
-  def json_tuple(json: Column, fields: String*): Column = withExpr {
-    require(fields.nonEmpty, "at least 1 field name should be given.")
-    JsonTuple(json.expr +: fields.map(Literal.apply))
-  }
-
-  /**
-   * (Scala-specific) Parses a column containing a JSON string into a `StructType` with the
-   * specified schema. Returns `null`, in the case of an unparseable string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string
-   * @param options options to control how the json is parsed. Accepts the same options as the
-   *                json data source.
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def from_json(e: Column, schema: StructType, options: Map[String, String]): Column =
-    from_json(e, schema.asInstanceOf[DataType], options)
-
-  /**
-   * (Scala-specific) Parses a column containing a JSON string into a `StructType` or `ArrayType`
-   * of `StructType`s with the specified schema. Returns `null`, in the case of an unparseable
-   * string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string
-   * @param options options to control how the json is parsed. accepts the same options and the
-   *                json data source.
-   *
-   * @group collection_funcs
-   * @since 2.2.0
-   */
-  def from_json(e: Column, schema: DataType, options: Map[String, String]): Column = withExpr {
-    JsonToStructs(schema, options, e.expr)
-  }
-
-  /**
-   * (Java-specific) Parses a column containing a JSON string into a `StructType` with the
-   * specified schema. Returns `null`, in the case of an unparseable string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string
-   * @param options options to control how the json is parsed. accepts the same options and the
-   *                json data source.
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def from_json(e: Column, schema: StructType, options: java.util.Map[String, String]): Column =
-    from_json(e, schema, options.asScala.toMap)
-
-  /**
-   * (Java-specific) Parses a column containing a JSON string into a `StructType` or `ArrayType`
-   * of `StructType`s with the specified schema. Returns `null`, in the case of an unparseable
-   * string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string
-   * @param options options to control how the json is parsed. accepts the same options and the
-   *                json data source.
-   *
-   * @group collection_funcs
-   * @since 2.2.0
-   */
-  def from_json(e: Column, schema: DataType, options: java.util.Map[String, String]): Column =
-    from_json(e, schema, options.asScala.toMap)
-
-  /**
-   * Parses a column containing a JSON string into a `StructType` with the specified schema.
-   * Returns `null`, in the case of an unparseable string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def from_json(e: Column, schema: StructType): Column =
-    from_json(e, schema, Map.empty[String, String])
-
-  /**
-   * Parses a column containing a JSON string into a `StructType` or `ArrayType` of `StructType`s
-   * with the specified schema. Returns `null`, in the case of an unparseable string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string
-   *
-   * @group collection_funcs
-   * @since 2.2.0
-   */
-  def from_json(e: Column, schema: DataType): Column =
-    from_json(e, schema, Map.empty[String, String])
-
-  /**
-   * (Java-specific) Parses a column containing a JSON string into a `StructType` or `ArrayType`
-   * of `StructType`s with the specified schema. Returns `null`, in the case of an unparseable
-   * string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string as a json string. In Spark 2.1,
-   *               the user-provided schema has to be in JSON format. Since Spark 2.2, the DDL
-   *               format is also supported for the schema.
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def from_json(e: Column, schema: String, options: java.util.Map[String, String]): Column = {
-    from_json(e, schema, options.asScala.toMap)
-  }
-
-  /**
-   * (Scala-specific) Parses a column containing a JSON string into a `StructType` or `ArrayType`
-   * of `StructType`s with the specified schema. Returns `null`, in the case of an unparseable
-   * string.
-   *
-   * @param e a string column containing JSON data.
-   * @param schema the schema to use when parsing the json string as a json string, it could be a
-   *               JSON format string or a DDL-formatted string.
-   *
-   * @group collection_funcs
-   * @since 2.3.0
-   */
-  def from_json(e: Column, schema: String, options: Map[String, String]): Column = {
-    val dataType = try {
-      DataType.fromJson(schema)
-    } catch {
-      case NonFatal(_) => StructType.fromDDL(schema)
-    }
-    from_json(e, dataType, options)
-  }
-
-  /**
-   * (Scala-specific) Converts a column containing a `StructType`, `ArrayType` of `StructType`s,
-   * a `MapType` or `ArrayType` of `MapType`s into a JSON string with the specified schema.
-   * Throws an exception, in the case of an unsupported type.
-   *
-   * @param e a column containing a struct or array of the structs.
-   * @param options options to control how the struct column is converted into a json string.
-   *                accepts the same options and the json data source.
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def to_json(e: Column, options: Map[String, String]): Column = withExpr {
-    StructsToJson(options, e.expr)
-  }
-
-  /**
-   * (Java-specific) Converts a column containing a `StructType`, `ArrayType` of `StructType`s,
-   * a `MapType` or `ArrayType` of `MapType`s into a JSON string with the specified schema.
-   * Throws an exception, in the case of an unsupported type.
-   *
-   * @param e a column containing a struct or array of the structs.
-   * @param options options to control how the struct column is converted into a json string.
-   *                accepts the same options and the json data source.
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def to_json(e: Column, options: java.util.Map[String, String]): Column =
-    to_json(e, options.asScala.toMap)
-
-  /**
-   * Converts a column containing a `StructType`, `ArrayType` of `StructType`s,
-   * a `MapType` or `ArrayType` of `MapType`s into a JSON string with the specified schema.
-   * Throws an exception, in the case of an unsupported type.
-   *
-   * @param e a column containing a struct or array of the structs.
-   *
-   * @group collection_funcs
-   * @since 2.1.0
-   */
-  def to_json(e: Column): Column =
-    to_json(e, Map.empty[String, String])
 
   /**
    * Returns length of array or map.
@@ -3600,20 +2959,6 @@ object functions extends LegacyFunctions {
    * @since 1.5.0
    */
   def sort_array(e: Column, asc: Boolean): Column = withExpr { SortArray(e.expr, lit(asc).expr) }
-
-  /**
-   * Returns an unordered array containing the keys of the map.
-   * @group collection_funcs
-   * @since 2.3.0
-   */
-  def map_keys(e: Column): Column = withExpr { MapKeys(e.expr) }
-
-  /**
-   * Returns an unordered array containing the values of the map.
-   * @group collection_funcs
-   * @since 2.3.0
-   */
-  def map_values(e: Column): Column = withExpr { MapValues(e.expr) }
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////
@@ -3644,7 +2989,24 @@ object functions extends LegacyFunctions {
     }""")
   }
 
-<<<<<<< HEAD
+  (0 to 10).map { x =>
+    val args = (1 to x).map(i => s"arg$i: Column").mkString(", ")
+    val fTypes = Seq.fill(x + 1)("_").mkString(", ")
+    val argsInUDF = (1 to x).map(i => s"arg$i.expr").mkString(", ")
+    println(s"""
+    /**
+     * Call a Scala function of ${x} arguments as user-defined function (UDF). This requires
+     * you to specify the return data type.
+     *
+     * @group udf_funcs
+     * @since 1.3.0
+     * @deprecated As of 1.5.0, since it's redundant with udf()
+     */
+    @deprecated("Use udf", "1.5.0")
+    def callUDF(f: Function$x[$fTypes], returnType: DataType${if (args.length > 0) ", " + args else ""}): Column = withExpr {
+      ScalaUDF(f, returnType, Seq($argsInUDF))
+    }""")
+  }
   */
 
   /**

@@ -27,7 +27,6 @@
 =======
     <artifactId>spark-parent_2.10</artifactId>
     <version>1.6.4-SNAPSHOT</version>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     <relativePath>../../pom.xml</relativePath>
   </parent>
 

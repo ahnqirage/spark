@@ -26,7 +26,6 @@ import scala.collection.mutable
 
 import org.apache.xbean.asm5._
 import org.apache.xbean.asm5.Opcodes._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql._
@@ -146,7 +145,6 @@ class SQLMetricsSuite extends SparkFunSuite with SQLMetricsTestUtils with Shared
       0L ->("Project", Map(
         "number of rows" -> 2L)))
     )
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("Filter metrics") {
@@ -159,224 +157,6 @@ class SQLMetricsSuite extends SparkFunSuite with SQLMetricsTestUtils with Shared
     )
   }
 
-<<<<<<< HEAD
-  test("WholeStageCodegen metrics") {
-    // Assume the execution plan is
-    // WholeStageCodegen(nodeId = 0, Range(nodeId = 2) -> Filter(nodeId = 1))
-    // TODO: update metrics in generated operators
-    val ds = spark.range(10).filter('id < 5)
-    testSparkPlanMetrics(ds.toDF(), 1, Map.empty)
-  }
-
-  test("Aggregate metrics") {
-    // Assume the execution plan is
-    // ... -> HashAggregate(nodeId = 2) -> Exchange(nodeId = 1)
-    // -> HashAggregate(nodeId = 0)
-    val df = testData2.groupBy().count() // 2 partitions
-    val expected1 = Seq(
-      Map("number of output rows" -> 2L,
-        "avg hash probe (min, med, max)" -> "\n(1, 1, 1)"),
-      Map("number of output rows" -> 1L,
-        "avg hash probe (min, med, max)" -> "\n(1, 1, 1)"))
-    testSparkPlanMetrics(df, 1, Map(
-      2L -> (("HashAggregate", expected1(0))),
-      0L -> (("HashAggregate", expected1(1))))
-    )
-
-    // 2 partitions and each partition contains 2 keys
-    val df2 = testData2.groupBy('a).count()
-    val expected2 = Seq(
-      Map("number of output rows" -> 4L,
-        "avg hash probe (min, med, max)" -> "\n(1, 1, 1)"),
-      Map("number of output rows" -> 3L,
-        "avg hash probe (min, med, max)" -> "\n(1, 1, 1)"))
-    testSparkPlanMetrics(df2, 1, Map(
-      2L -> (("HashAggregate", expected2(0))),
-      0L -> (("HashAggregate", expected2(1))))
-    )
-  }
-
-  test("Aggregate metrics: track avg probe") {
-    // The executed plan looks like:
-    // HashAggregate(keys=[a#61], functions=[count(1)], output=[a#61, count#71L])
-    // +- Exchange hashpartitioning(a#61, 5)
-    //    +- HashAggregate(keys=[a#61], functions=[partial_count(1)], output=[a#61, count#76L])
-    //       +- Exchange RoundRobinPartitioning(1)
-    //          +- LocalTableScan [a#61]
-    //
-    // Assume the execution plan with node id is:
-    // Wholestage disabled:
-    // HashAggregate(nodeId = 0)
-    //   Exchange(nodeId = 1)
-    //     HashAggregate(nodeId = 2)
-    //       Exchange (nodeId = 3)
-    //         LocalTableScan(nodeId = 4)
-    //
-    // Wholestage enabled:
-    // WholeStageCodegen(nodeId = 0)
-    //   HashAggregate(nodeId = 1)
-    //     Exchange(nodeId = 2)
-    //       WholeStageCodegen(nodeId = 3)
-    //         HashAggregate(nodeId = 4)
-    //           Exchange(nodeId = 5)
-    //             LocalTableScan(nodeId = 6)
-    Seq(true, false).foreach { enableWholeStage =>
-      val df = generateRandomBytesDF().repartition(1).groupBy('a).count()
-      val nodeIds = if (enableWholeStage) {
-        Set(4L, 1L)
-      } else {
-        Set(2L, 0L)
-      }
-      val metrics = getSparkPlanMetrics(df, 1, nodeIds, enableWholeStage).get
-      nodeIds.foreach { nodeId =>
-        val probes = metrics(nodeId)._2("avg hash probe (min, med, max)")
-        probes.toString.stripPrefix("\n(").stripSuffix(")").split(", ").foreach { probe =>
-          assert(probe.toDouble > 1.0)
-        }
-      }
-    }
-  }
-
-  test("ObjectHashAggregate metrics") {
-    // Assume the execution plan is
-    // ... -> ObjectHashAggregate(nodeId = 2) -> Exchange(nodeId = 1)
-    // -> ObjectHashAggregate(nodeId = 0)
-    val df = testData2.groupBy().agg(collect_set('a)) // 2 partitions
-    testSparkPlanMetrics(df, 1, Map(
-      2L -> (("ObjectHashAggregate", Map("number of output rows" -> 2L))),
-      0L -> (("ObjectHashAggregate", Map("number of output rows" -> 1L))))
-    )
-
-    // 2 partitions and each partition contains 2 keys
-    val df2 = testData2.groupBy('a).agg(collect_set('a))
-    testSparkPlanMetrics(df2, 1, Map(
-      2L -> (("ObjectHashAggregate", Map("number of output rows" -> 4L))),
-      0L -> (("ObjectHashAggregate", Map("number of output rows" -> 3L))))
-    )
-  }
-
-  test("Sort metrics") {
-    // Assume the execution plan is
-    // WholeStageCodegen(nodeId = 0, Range(nodeId = 2) -> Sort(nodeId = 1))
-    val ds = spark.range(10).sort('id)
-    testSparkPlanMetrics(ds.toDF(), 2, Map.empty)
-  }
-
-  test("SortMergeJoin metrics") {
-    // Because SortMergeJoin may skip different rows if the number of partitions is different, this
-    // test should use the deterministic number of partitions.
-    val testDataForJoin = testData2.filter('a < 2) // TestData2(1, 1) :: TestData2(1, 2)
-    testDataForJoin.createOrReplaceTempView("testDataForJoin")
-    withTempView("testDataForJoin") {
-      // Assume the execution plan is
-      // ... -> SortMergeJoin(nodeId = 1) -> TungstenProject(nodeId = 0)
-      val df = spark.sql(
-        "SELECT * FROM testData2 JOIN testDataForJoin ON testData2.a = testDataForJoin.a")
-      testSparkPlanMetrics(df, 1, Map(
-        0L -> (("SortMergeJoin", Map(
-          // It's 4 because we only read 3 rows in the first partition and 1 row in the second one
-          "number of output rows" -> 4L))))
-      )
-    }
-  }
-
-  test("SortMergeJoin(outer) metrics") {
-    // Because SortMergeJoin may skip different rows if the number of partitions is different,
-    // this test should use the deterministic number of partitions.
-    val testDataForJoin = testData2.filter('a < 2) // TestData2(1, 1) :: TestData2(1, 2)
-    testDataForJoin.createOrReplaceTempView("testDataForJoin")
-    withTempView("testDataForJoin") {
-      // Assume the execution plan is
-      // ... -> SortMergeJoin(nodeId = 1) -> TungstenProject(nodeId = 0)
-      val df = spark.sql(
-        "SELECT * FROM testData2 left JOIN testDataForJoin ON testData2.a = testDataForJoin.a")
-      testSparkPlanMetrics(df, 1, Map(
-        0L -> (("SortMergeJoin", Map(
-          // It's 4 because we only read 3 rows in the first partition and 1 row in the second one
-          "number of output rows" -> 8L))))
-      )
-
-      val df2 = spark.sql(
-        "SELECT * FROM testDataForJoin right JOIN testData2 ON testData2.a = testDataForJoin.a")
-      testSparkPlanMetrics(df2, 1, Map(
-        0L -> (("SortMergeJoin", Map(
-          // It's 4 because we only read 3 rows in the first partition and 1 row in the second one
-          "number of output rows" -> 8L))))
-      )
-    }
-  }
-
-  test("BroadcastHashJoin metrics") {
-    val df1 = Seq((1, "1"), (2, "2")).toDF("key", "value")
-    val df2 = Seq((1, "1"), (2, "2"), (3, "3"), (4, "4")).toDF("key", "value")
-    // Assume the execution plan is
-    // ... -> BroadcastHashJoin(nodeId = 1) -> TungstenProject(nodeId = 0)
-    val df = df1.join(broadcast(df2), "key")
-    testSparkPlanMetrics(df, 2, Map(
-      1L -> (("BroadcastHashJoin", Map(
-        "number of output rows" -> 2L))))
-    )
-  }
-
-  test("BroadcastHashJoin metrics: track avg probe") {
-    // The executed plan looks like:
-    // Project [a#210, b#211, b#221]
-    // +- BroadcastHashJoin [a#210], [a#220], Inner, BuildRight
-    //    :- Project [_1#207 AS a#210, _2#208 AS b#211]
-    //    :  +- Filter isnotnull(_1#207)
-    //    :     +- LocalTableScan [_1#207, _2#208]
-    //    +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, binary, true]))
-    //       +- Project [_1#217 AS a#220, _2#218 AS b#221]
-    //          +- Filter isnotnull(_1#217)
-    //             +- LocalTableScan [_1#217, _2#218]
-    //
-    // Assume the execution plan with node id is
-    // WholeStageCodegen disabled:
-    // Project(nodeId = 0)
-    //   BroadcastHashJoin(nodeId = 1)
-    //     ...(ignored)
-    //
-    // WholeStageCodegen enabled:
-    // WholeStageCodegen(nodeId = 0)
-    //   Project(nodeId = 1)
-    //     BroadcastHashJoin(nodeId = 2)
-    //       Project(nodeId = 3)
-    //         Filter(nodeId = 4)
-    //           ...(ignored)
-    Seq(true, false).foreach { enableWholeStage =>
-      val df1 = generateRandomBytesDF()
-      val df2 = generateRandomBytesDF()
-      val df = df1.join(broadcast(df2), "a")
-      val nodeIds = if (enableWholeStage) {
-        Set(2L)
-      } else {
-        Set(1L)
-      }
-      val metrics = getSparkPlanMetrics(df, 2, nodeIds, enableWholeStage).get
-      nodeIds.foreach { nodeId =>
-        val probes = metrics(nodeId)._2("avg hash probe (min, med, max)")
-        probes.toString.stripPrefix("\n(").stripSuffix(")").split(", ").foreach { probe =>
-          assert(probe.toDouble > 1.0)
-        }
-      }
-    }
-  }
-
-  test("ShuffledHashJoin metrics") {
-    withSQLConf("spark.sql.autoBroadcastJoinThreshold" -> "40",
-        "spark.sql.shuffle.partitions" -> "2",
-        "spark.sql.join.preferSortMergeJoin" -> "false") {
-      val df1 = Seq((1, "1"), (2, "2")).toDF("key", "value")
-      val df2 = (1 to 10).map(i => (i, i.toString)).toSeq.toDF("key", "value")
-      // Assume the execution plan is
-      // ... -> ShuffledHashJoin(nodeId = 1) -> Project(nodeId = 0)
-      val df = df1.join(df2, "key")
-      val metrics = getSparkPlanMetrics(df, 1, Set(1L))
-      testSparkPlanMetrics(df, 1, Map(
-        1L -> (("ShuffledHashJoin", Map(
-          "number of output rows" -> 2L,
-          "avg hash probe (min, med, max)" -> "\n(1, 1, 1)"))))
-=======
   test("TungstenAggregate metrics") {
     // Assume the execution plan is
     // ... -> TungstenAggregate(nodeId = 2) -> Exchange(nodeId = 1)
@@ -449,69 +229,10 @@ class SQLMetricsSuite extends SparkFunSuite with SQLMetricsTestUtils with Shared
           "number of left rows" -> 2L,
           "number of right rows" -> 6L,
           "number of output rows" -> 8L)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       )
     }
   }
 
-<<<<<<< HEAD
-  test("ShuffledHashJoin metrics: track avg probe") {
-    // The executed plan looks like:
-    // Project [a#308, b#309, b#319]
-    // +- ShuffledHashJoin [a#308], [a#318], Inner, BuildRight
-    //    :- Exchange hashpartitioning(a#308, 2)
-    //    :  +- Project [_1#305 AS a#308, _2#306 AS b#309]
-    //    :     +- Filter isnotnull(_1#305)
-    //    :        +- LocalTableScan [_1#305, _2#306]
-    //    +- Exchange hashpartitioning(a#318, 2)
-    //       +- Project [_1#315 AS a#318, _2#316 AS b#319]
-    //          +- Filter isnotnull(_1#315)
-    //             +- LocalTableScan [_1#315, _2#316]
-    //
-    // Assume the execution plan with node id is
-    // WholeStageCodegen disabled:
-    // Project(nodeId = 0)
-    //   ShuffledHashJoin(nodeId = 1)
-    //     ...(ignored)
-    //
-    // WholeStageCodegen enabled:
-    // WholeStageCodegen(nodeId = 0)
-    //   Project(nodeId = 1)
-    //     ShuffledHashJoin(nodeId = 2)
-    //       ...(ignored)
-    withSQLConf("spark.sql.autoBroadcastJoinThreshold" -> "5000000",
-        "spark.sql.shuffle.partitions" -> "2",
-        "spark.sql.join.preferSortMergeJoin" -> "false") {
-      Seq(true, false).foreach { enableWholeStage =>
-        val df1 = generateRandomBytesDF(65535 * 5)
-        val df2 = generateRandomBytesDF(65535)
-        val df = df1.join(df2, "a")
-        val nodeIds = if (enableWholeStage) {
-          Set(2L)
-        } else {
-          Set(1L)
-        }
-        val metrics = getSparkPlanMetrics(df, 1, nodeIds, enableWholeStage).get
-        nodeIds.foreach { nodeId =>
-          val probes = metrics(nodeId)._2("avg hash probe (min, med, max)")
-          probes.toString.stripPrefix("\n(").stripSuffix(")").split(", ").foreach { probe =>
-            assert(probe.toDouble > 1.0)
-          }
-        }
-      }
-    }
-  }
-
-  test("BroadcastHashJoin(outer) metrics") {
-    val df1 = Seq((1, "a"), (1, "b"), (4, "c")).toDF("key", "value")
-    val df2 = Seq((1, "a"), (1, "b"), (2, "c"), (3, "d")).toDF("key2", "value")
-    // Assume the execution plan is
-    // ... -> BroadcastHashJoin(nodeId = 0)
-    val df = df1.join(broadcast(df2), $"key" === $"key2", "left_outer")
-    testSparkPlanMetrics(df, 2, Map(
-      0L -> (("BroadcastHashJoin", Map(
-        "number of output rows" -> 5L))))
-=======
   test("BroadcastHashJoin metrics") {
     val df1 = Seq((1, "1"), (2, "2")).toDF("key", "value")
     val df2 = Seq((1, "1"), (2, "2"), (3, "3"), (4, "4")).toDF("key", "value")
@@ -537,40 +258,19 @@ class SQLMetricsSuite extends SparkFunSuite with SQLMetricsTestUtils with Shared
         "number of left rows" -> 3L,
         "number of right rows" -> 4L,
         "number of output rows" -> 5L)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     )
 
     val df3 = df1.join(broadcast(df2), $"key" === $"key2", "right_outer")
     testSparkPlanMetrics(df3, 2, Map(
-<<<<<<< HEAD
-      0L -> (("BroadcastHashJoin", Map(
-        "number of output rows" -> 6L))))
-=======
       0L -> ("BroadcastHashOuterJoin", Map(
         "number of left rows" -> 3L,
         "number of right rows" -> 4L,
         "number of output rows" -> 6L)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     )
   }
 
   test("BroadcastNestedLoopJoin metrics") {
     val testDataForJoin = testData2.filter('a < 2) // TestData2(1, 1) :: TestData2(1, 2)
-<<<<<<< HEAD
-    testDataForJoin.createOrReplaceTempView("testDataForJoin")
-    withSQLConf(SQLConf.CROSS_JOINS_ENABLED.key -> "true") {
-      withTempView("testDataForJoin") {
-        // Assume the execution plan is
-        // ... -> BroadcastNestedLoopJoin(nodeId = 1) -> TungstenProject(nodeId = 0)
-        val df = spark.sql(
-          "SELECT * FROM testData2 left JOIN testDataForJoin ON " +
-            "testData2.a * testDataForJoin.a != testData2.a + testDataForJoin.a")
-        testSparkPlanMetrics(df, 3, Map(
-          1L -> (("BroadcastNestedLoopJoin", Map(
-            "number of output rows" -> 12L))))
-        )
-      }
-=======
     testDataForJoin.registerTempTable("testDataForJoin")
     withTempTable("testDataForJoin") {
       // Assume the execution plan is
@@ -584,7 +284,6 @@ class SQLMetricsSuite extends SparkFunSuite with SQLMetricsTestUtils with Shared
           "number of right rows" -> 2L,
           "number of output rows" -> 12L)))
       )
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -592,30 +291,6 @@ class SQLMetricsSuite extends SparkFunSuite with SQLMetricsTestUtils with Shared
     val df1 = Seq((1, "1"), (2, "2")).toDF("key", "value")
     val df2 = Seq((1, "1"), (2, "2"), (3, "3"), (4, "4")).toDF("key2", "value")
     // Assume the execution plan is
-<<<<<<< HEAD
-    // ... -> BroadcastHashJoin(nodeId = 0)
-    val df = df1.join(broadcast(df2), $"key" === $"key2", "leftsemi")
-    testSparkPlanMetrics(df, 2, Map(
-      0L -> (("BroadcastHashJoin", Map(
-        "number of output rows" -> 2L))))
-    )
-  }
-
-  test("CartesianProduct metrics") {
-    withSQLConf(SQLConf.CROSS_JOINS_ENABLED.key -> "true") {
-      val testDataForJoin = testData2.filter('a < 2) // TestData2(1, 1) :: TestData2(1, 2)
-      testDataForJoin.createOrReplaceTempView("testDataForJoin")
-      withTempView("testDataForJoin") {
-        // Assume the execution plan is
-        // ... -> CartesianProduct(nodeId = 1) -> TungstenProject(nodeId = 0)
-        val df = spark.sql(
-          "SELECT * FROM testData2 JOIN testDataForJoin")
-        testSparkPlanMetrics(df, 1, Map(
-          0L -> (("CartesianProduct", Map("number of output rows" -> 12L))))
-        )
-      }
-    }
-=======
     // ... -> BroadcastLeftSemiJoinHash(nodeId = 0)
     val df = df1.join(broadcast(df2), $"key" === $"key2", "leftsemi")
     testSparkPlanMetrics(df, 2, Map(
@@ -654,7 +329,6 @@ class SQLMetricsSuite extends SparkFunSuite with SQLMetricsTestUtils with Shared
         "number of right rows" -> 4L,
         "number of output rows" -> 2L)))
     )
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("SortMergeJoin(left-anti) metrics") {
@@ -815,7 +489,6 @@ private object BoxingFinder {
     // else we can run out of open file handles.
     Utils.copyStream(resourceStream, baos, true)
     new ClassReader(new ByteArrayInputStream(baos.toByteArray))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("writing data out metrics with dynamic partition: parquet") {

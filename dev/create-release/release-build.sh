@@ -74,9 +74,6 @@ GIT_REF=${GIT_REF:-master}
 # Destination directory parent on remote server
 REMOTE_PARENT_DIR=${REMOTE_PARENT_DIR:-/home/$ASF_USERNAME/public_html}
 
-<<<<<<< HEAD
-GPG="gpg -u $GPG_KEY --no-tty --batch"
-=======
 GPG="gpg --no-tty --batch"
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 NEXUS_ROOT=https://repository.apache.org/service/local/staging
@@ -84,19 +81,6 @@ NEXUS_PROFILE=d63f592e7eac0 # Profile for Spark staging uploads
 BASE_DIR=$(pwd)
 
 MVN="build/mvn --force"
-<<<<<<< HEAD
-
-# Hive-specific profiles for some builds
-HIVE_PROFILES="-Phive -Phive-thriftserver"
-# Profiles for publishing snapshots and release to Maven Central
-PUBLISH_PROFILES="-Pmesos -Pyarn -Pflume $HIVE_PROFILES -Pspark-ganglia-lgpl -Pkinesis-asl"
-# Profiles for building binary releases
-BASE_RELEASE_PROFILES="-Pmesos -Pyarn -Pflume -Psparkr"
-# Scala 2.11 only profiles for some builds
-SCALA_2_11_PROFILES="-Pkafka-0-8"
-# Scala 2.12 only profiles for some builds
-SCALA_2_12_PROFILES="-Pscala-2.12"
-=======
 PUBLISH_PROFILES="-Pyarn -Phive -Phive-thriftserver -Phadoop-2.2"
 PUBLISH_PROFILES="$PUBLISH_PROFILES -Pspark-ganglia-lgpl -Pkinesis-asl"
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -149,11 +133,7 @@ DEST_DIR_NAME="spark-$SPARK_PACKAGE_VERSION"
 function LFTP {
   SSH="ssh -o ConnectTimeout=300 -o StrictHostKeyChecking=no -i $ASF_RSA_KEY"
   COMMANDS=$(cat <<EOF
-<<<<<<< HEAD
-     set net:max-retries 2 &&
-=======
      set net:max-retries 1 &&
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
      set sftp:connect-program $SSH &&
      connect -u $ASF_USERNAME,p sftp://home.apache.org &&
      $@
@@ -305,28 +285,14 @@ if [[ "$1" == "package" ]]; then
   dest_dir="$REMOTE_PARENT_DIR/${DEST_DIR_NAME}-bin"
   echo "Copying release tarballs to $dest_dir"
   # Put to new directory:
-<<<<<<< HEAD
-  LFTP mkdir -p $dest_dir || true
-  LFTP mput -O $dest_dir 'spark-*'
-  LFTP mput -O $dest_dir 'pyspark-*'
-  LFTP mput -O $dest_dir 'SparkR_*'
-=======
   LFTP mkdir -p $dest_dir
   LFTP mput -O $dest_dir 'spark-*'
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   # Delete /latest directory and rename new upload to /latest
   LFTP "rm -r -f $REMOTE_PARENT_DIR/latest || exit 0"
   LFTP mv $dest_dir "$REMOTE_PARENT_DIR/latest"
   # Re-upload a second time and leave the files in the timestamped upload directory:
-<<<<<<< HEAD
-  LFTP mkdir -p $dest_dir || true
-  LFTP mput -O $dest_dir 'spark-*'
-  LFTP mput -O $dest_dir 'pyspark-*'
-  LFTP mput -O $dest_dir 'SparkR_*'
-=======
   LFTP mkdir -p $dest_dir
   LFTP mput -O $dest_dir 'spark-*'
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   exit 0
 fi
 
@@ -340,21 +306,13 @@ if [[ "$1" == "docs" ]]; then
   PRODUCTION=1 RELEASE_VERSION="$SPARK_VERSION" jekyll build
   echo "Copying release documentation to $dest_dir"
   # Put to new directory:
-<<<<<<< HEAD
-  LFTP mkdir -p $dest_dir || true
-=======
   LFTP mkdir -p $dest_dir
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   LFTP mirror -R _site $dest_dir
   # Delete /latest directory and rename new upload to /latest
   LFTP "rm -r -f $REMOTE_PARENT_DIR/latest || exit 0"
   LFTP mv $dest_dir "$REMOTE_PARENT_DIR/latest"
   # Re-upload a second time and leave the files in the timestamped upload directory:
-<<<<<<< HEAD
-  LFTP mkdir -p $dest_dir || true
-=======
   LFTP mkdir -p $dest_dir
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   LFTP mirror -R _site $dest_dir
   cd ..
   exit 0
@@ -381,12 +339,6 @@ if [[ "$1" == "publish-snapshot" ]]; then
   # Generate random point for Zinc
   export ZINC_PORT=$(python -S -c "import random; print random.randrange(3030,4030)")
 
-<<<<<<< HEAD
-  $MVN -DzincPort=$ZINC_PORT --settings $tmp_settings -DskipTests $SCALA_2_11_PROFILES $PUBLISH_PROFILES deploy
-  #./dev/change-scala-version.sh 2.12
-  #$MVN -DzincPort=$ZINC_PORT --settings $tmp_settings \
-  #  -DskipTests $SCALA_2_12_PROFILES $PUBLISH_PROFILES clean deploy
-=======
   $MVN -DzincPort=$ZINC_PORT --settings $tmp_settings -DskipTests $PUBLISH_PROFILES deploy
   ./dev/change-scala-version.sh 2.11
   $MVN -DzincPort=$ZINC_PORT -Dscala-2.11 --settings $tmp_settings \
@@ -424,9 +376,6 @@ if [[ "$1" == "publish-release" ]]; then
   # Generate random point for Zinc
   export ZINC_PORT=$(python -S -c "import random; print random.randrange(3030,4030)")
 
-<<<<<<< HEAD
-  $MVN -DzincPort=$ZINC_PORT -Dmaven.repo.local=$tmp_repo -DskipTests $SCALA_2_11_PROFILES $PUBLISH_PROFILES clean install
-=======
   $MVN -DzincPort=$ZINC_PORT -Dmaven.repo.local=$tmp_repo -DskipTests $PUBLISH_PROFILES clean install
 
   ./dev/change-scala-version.sh 2.11

@@ -22,19 +22,12 @@ import java.util.Comparator;
 import org.apache.spark.memory.MemoryConsumer;
 import org.apache.spark.unsafe.Platform;
 import org.apache.spark.unsafe.array.LongArray;
-<<<<<<< HEAD
-import org.apache.spark.unsafe.memory.MemoryBlock;
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.collection.Sorter;
 import org.apache.spark.util.collection.unsafe.sort.RadixSort;
 
 final class ShuffleInMemorySorter {
 
-<<<<<<< HEAD
-=======
   private final Sorter<PackedRecordPointer, LongArray> sorter;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private static final class SortComparator implements Comparator<PackedRecordPointer> {
     @Override
     public int compare(PackedRecordPointer left, PackedRecordPointer right) {
@@ -61,61 +54,13 @@ final class ShuffleInMemorySorter {
    * Whether to use radix sort for sorting in-memory partition ids. Radix sort is much faster
    * but requires additional memory to be reserved memory as pointers are added.
    */
-<<<<<<< HEAD
-  private final boolean useRadixSort;
-=======
   private LongArray array;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * The position in the pointer array where new records can be inserted.
    */
   private int pos = 0;
 
-<<<<<<< HEAD
-  /**
-   * How many records could be inserted, because part of the array should be left for sorting.
-   */
-  private int usableCapacity = 0;
-
-  private int initialSize;
-
-  ShuffleInMemorySorter(MemoryConsumer consumer, int initialSize, boolean useRadixSort) {
-    this.consumer = consumer;
-    assert (initialSize > 0);
-    this.initialSize = initialSize;
-    this.useRadixSort = useRadixSort;
-    this.array = consumer.allocateArray(initialSize);
-    this.usableCapacity = getUsableCapacity();
-  }
-
-  private int getUsableCapacity() {
-    // Radix sort requires same amount of used memory as buffer, Tim sort requires
-    // half of the used memory as buffer.
-    return (int) (array.size() / (useRadixSort ? 2 : 1.5));
-  }
-
-  public void free() {
-    if (array != null) {
-      consumer.freeArray(array);
-      array = null;
-    }
-  }
-
-  public int numRecords() {
-    return pos;
-  }
-
-  public void reset() {
-    if (consumer != null) {
-      consumer.freeArray(array);
-      array = consumer.allocateArray(initialSize);
-      usableCapacity = getUsableCapacity();
-    }
-    pos = 0;
-  }
-
-=======
   private int initialSize;
 
   public ShuffleInMemorySorter(MemoryConsumer consumer, int initialSize) {
@@ -145,7 +90,6 @@ final class ShuffleInMemorySorter {
     pos = 0;
   }
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   public void expandPointerArray(LongArray newArray) {
     assert(newArray.size() > array.size());
     Platform.copyMemory(
@@ -153,21 +97,6 @@ final class ShuffleInMemorySorter {
       array.getBaseOffset(),
       newArray.getBaseObject(),
       newArray.getBaseOffset(),
-<<<<<<< HEAD
-      pos * 8L
-    );
-    consumer.freeArray(array);
-    array = newArray;
-    usableCapacity = getUsableCapacity();
-  }
-
-  public boolean hasSpaceForAnotherRecord() {
-    return pos < usableCapacity;
-  }
-
-  public long getMemoryUsage() {
-    return array.size() * 8;
-=======
       array.size() * 8L
     );
     consumer.freeArray(array);
@@ -180,7 +109,6 @@ final class ShuffleInMemorySorter {
 
   public long getMemoryUsage() {
     return array.size() * 8L;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -207,14 +135,6 @@ final class ShuffleInMemorySorter {
   public static final class ShuffleSorterIterator {
 
     private final LongArray pointerArray;
-<<<<<<< HEAD
-    private final int limit;
-    final PackedRecordPointer packedRecordPointer = new PackedRecordPointer();
-    private int position = 0;
-
-    ShuffleSorterIterator(int numRecords, LongArray pointerArray, int startingPosition) {
-      this.limit = numRecords + startingPosition;
-=======
     private final int numRecords;
     final PackedRecordPointer packedRecordPointer = new PackedRecordPointer();
     private int position = 0;

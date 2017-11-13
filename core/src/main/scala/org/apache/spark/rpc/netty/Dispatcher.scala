@@ -112,13 +112,6 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
     val iter = endpoints.keySet().iterator()
     while (iter.hasNext) {
       val name = iter.next
-<<<<<<< HEAD
-        postMessage(name, message, (e) => { e match {
-          case e: RpcEnvStoppedException => logDebug (s"Message $message dropped. ${e.getMessage}")
-          case e: Throwable => logWarning(s"Message $message dropped. ${e.getMessage}")
-        }}
-      )}
-=======
       postMessage(name, message, (e) => logWarning(s"Message $message dropped.", e))
     }
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -157,9 +150,6 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
       endpointName: String,
       message: InboxMessage,
       callbackIfStopped: (Exception) => Unit): Unit = {
-<<<<<<< HEAD
-    val error = synchronized {
-=======
     val shouldCallOnStop = synchronized {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val data = endpoints.get(endpointName)

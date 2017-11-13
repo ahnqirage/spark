@@ -467,7 +467,6 @@ class ReceiverTracker(ssc: StreamingContext, skipReceiverLaunch: Boolean = false
     private val submitJobThreadPool = ExecutionContext.fromExecutorService(
       ThreadUtils.newDaemonCachedThreadPool("submit-job-thread-pool"))
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     private val walBatchingThreadPool = ExecutionContext.fromExecutorService(
       ThreadUtils.newDaemonCachedThreadPool("wal-batching-thread-pool"))
 
@@ -650,7 +649,6 @@ class ReceiverTracker(ssc: StreamingContext, skipReceiverLaunch: Boolean = false
 <<<<<<< HEAD
 =======
       submitJobThreadPool.shutdownNow()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       active = false
       walBatchingThreadPool.shutdown()
     }

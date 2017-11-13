@@ -54,7 +54,6 @@ import org.apache.spark.util.ParentClassLoader
  * Allows the user to specify if user class path should be first.
  * This class loader delegates getting/finding resources to parent loader,
  * which makes sense until REPL never provide resource dynamically.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 class ExecutorClassLoader(
     conf: SparkConf,
@@ -103,20 +102,6 @@ class ExecutorClassLoader(
     }
   }
 
-<<<<<<< HEAD
-  private def getClassFileInputStreamFromSparkRPC(path: String): InputStream = {
-    val channel = env.rpcEnv.openChannel(s"$classUri/$path")
-    new FilterInputStream(Channels.newInputStream(channel)) {
-
-      override def read(): Int = toClassNotFound(super.read())
-
-      override def read(b: Array[Byte]): Int = toClassNotFound(super.read(b))
-
-      override def read(b: Array[Byte], offset: Int, len: Int) =
-        toClassNotFound(super.read(b, offset, len))
-
-      private def toClassNotFound(fn: => Int): Int = {
-=======
   override def getResource(name: String): URL = {
     parentLoader.getResource(name)
   }

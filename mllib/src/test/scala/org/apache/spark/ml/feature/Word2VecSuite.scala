@@ -21,9 +21,6 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-<<<<<<< HEAD
-import org.apache.spark.ml.util.TestingUtils._
-=======
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.mllib.util.TestingUtils._
@@ -44,10 +41,6 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("Word2Vec") {
 
-<<<<<<< HEAD
-    val spark = this.spark
-    import spark.implicits._
-=======
     val sqlContext = this.sqlContext
     import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -90,10 +83,6 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("getVectors") {
 
-<<<<<<< HEAD
-    val spark = this.spark
-    import spark.implicits._
-=======
     val sqlContext = this.sqlContext
     import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -136,10 +125,6 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("findSynonyms") {
 
-<<<<<<< HEAD
-    val spark = this.spark
-    import spark.implicits._
-=======
     val sqlContext = this.sqlContext
     import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -155,10 +140,6 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
       .setSeed(42L)
       .fit(docDF)
 
-<<<<<<< HEAD
-    val expected = Map(("b", 0.2608488929093532), ("c", -0.8271274846926078))
-    val findSynonymsResult = model.findSynonyms("a", 2).rdd.map {
-=======
     val expectedSimilarity = Array(0.18032623242822343, -0.5717976464798823)
     val (synonyms, similarity) = model.findSynonyms("a", 2).map {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -181,13 +162,58 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
     val doc = sc.parallelize(Seq(sentence, sentence)).map(line => line.split(" "))
     val docDF = doc.zip(doc).toDF("text", "alsotext")
 
-<<<<<<< HEAD
-    val findSynonymsArrayResult = model.findSynonymsArray("a", 2).toMap
-    findSynonymsResult.foreach {
-      case (expectedSynonym, expectedSimilarity) =>
-        assert(findSynonymsArrayResult.contains(expectedSynonym))
-        assert(expectedSimilarity ~== findSynonymsArrayResult.get(expectedSynonym).get absTol 1E-5)
-    }
+    val model = new Word2Vec()
+      .setVectorSize(3)
+      .setWindowSize(2)
+      .setInputCol("text")
+      .setOutputCol("result")
+      .setSeed(42L)
+      .fit(docDF)
+
+    val (synonyms, similarity) = model.findSynonyms("a", 6).map {
+      case Row(w: String, sim: Double) => (w, sim)
+    }.collect().unzip
+
+    // Increase the window size
+    val biggerModel = new Word2Vec()
+      .setVectorSize(3)
+      .setInputCol("text")
+      .setOutputCol("result")
+      .setSeed(42L)
+      .setWindowSize(10)
+      .fit(docDF)
+
+    val (synonymsLarger, similarityLarger) = model.findSynonyms("a", 6).map {
+      case Row(w: String, sim: Double) => (w, sim)
+    }.collect().unzip
+    // The similarity score should be very different with the larger window
+    assert(math.abs(similarity(5) - similarityLarger(5) / similarity(5)) > 1E-5)
+  }
+
+  test("Word2Vec read/write") {
+    val t = new Word2Vec()
+      .setInputCol("myInputCol")
+      .setOutputCol("myOutputCol")
+      .setMaxIter(2)
+      .setMinCount(8)
+      .setNumPartitions(1)
+      .setSeed(42L)
+      .setStepSize(0.01)
+      .setVectorSize(100)
+    testDefaultReadWrite(t)
+  }
+
+  test("Word2VecModel read/write") {
+    val word2VecMap = Map(
+      ("china", Array(0.50f, 0.50f, 0.50f, 0.50f)),
+      ("japan", Array(0.40f, 0.50f, 0.50f, 0.50f)),
+      ("taiwan", Array(0.60f, 0.50f, 0.50f, 0.50f)),
+      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f))
+    )
+    val oldModel = new OldWord2VecModel(word2VecMap)
+    val instance = new Word2VecModel("myWord2VecModel", oldModel)
+    val newInstance = testDefaultReadWrite(instance)
+    assert(newInstance.getVectors.collect() === instance.getVectors.collect())
   }
 
   test("window size") {

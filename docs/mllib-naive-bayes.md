@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Naive Bayes - RDD-based API
-displayTitle: Naive Bayes - RDD-based API
-=======
 title: Naive Bayes - spark.mllib
 displayTitle: Naive Bayes - spark.mllib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 [Naive Bayes](http://en.wikipedia.org/wiki/Naive_Bayes_classifier) is a simple

@@ -42,12 +42,7 @@ import org.apache.spark.streaming.Durations;
  *   <topics> is a list of one or more kafka topics to consume from
  *
  * Example:
-<<<<<<< HEAD
- *    $ bin/run-example streaming.JavaDirectKafkaWordCount broker1-host:port,broker2-host:port \
- *      topic1,topic2
-=======
  *    $ bin/run-example streaming.JavaDirectKafkaWordCount broker1-host:port,broker2-host:port topic1,topic2
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 
 public final class JavaDirectKafkaWordCount {

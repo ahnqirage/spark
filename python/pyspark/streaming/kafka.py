@@ -116,29 +116,6 @@ class KafkaUtils(object):
 
         def funcWithoutMessageHandler(k_v):
             return (keyDecoder(k_v[0]), valueDecoder(k_v[1]))
-<<<<<<< HEAD
-
-        def funcWithMessageHandler(m):
-            m._set_key_decoder(keyDecoder)
-            m._set_value_decoder(valueDecoder)
-            return messageHandler(m)
-
-        helper = KafkaUtils._get_helper(ssc._sc)
-
-        jfromOffsets = dict([(k._jTopicAndPartition(helper),
-                              v) for (k, v) in fromOffsets.items()])
-        if messageHandler is None:
-            ser = PairDeserializer(NoOpSerializer(), NoOpSerializer())
-            func = funcWithoutMessageHandler
-            jstream = helper.createDirectStreamWithoutMessageHandler(
-                ssc._jssc, kafkaParams, set(topics), jfromOffsets)
-        else:
-            ser = AutoBatchedSerializer(PickleSerializer())
-            func = funcWithMessageHandler
-            jstream = helper.createDirectStreamWithMessageHandler(
-                ssc._jssc, kafkaParams, set(topics), jfromOffsets)
-
-=======
 
         def funcWithMessageHandler(m):
             m._set_key_decoder(keyDecoder)
@@ -167,7 +144,6 @@ class KafkaUtils(object):
                 KafkaUtils._printErrorMsg(ssc.sparkContext)
             raise e
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         stream = DStream(jstream, ssc, ser).map(func)
         return KafkaDStream(stream._jdstream, ssc, stream._jrdd_deserializer)
 
@@ -187,12 +163,6 @@ class KafkaUtils(object):
         :param valueDecoder:  A function used to decode value (default is utf8_decoder)
         :param messageHandler: A function used to convert KafkaMessageAndMetadata. You can assess
                                meta using messageHandler (default is None).
-<<<<<<< HEAD
-        :return: An RDD object
-
-        .. note:: Experimental
-        .. note:: Deprecated in 2.3.0
-=======
         :return: A RDD object
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
@@ -211,33 +181,6 @@ class KafkaUtils(object):
             m._set_value_decoder(valueDecoder)
             return messageHandler(m)
 
-<<<<<<< HEAD
-        helper = KafkaUtils._get_helper(sc)
-
-        joffsetRanges = [o._jOffsetRange(helper) for o in offsetRanges]
-        jleaders = dict([(k._jTopicAndPartition(helper),
-                          v._jBroker(helper)) for (k, v) in leaders.items()])
-        if messageHandler is None:
-            jrdd = helper.createRDDWithoutMessageHandler(
-                sc._jsc, kafkaParams, joffsetRanges, jleaders)
-            ser = PairDeserializer(NoOpSerializer(), NoOpSerializer())
-            rdd = RDD(jrdd, sc, ser).map(funcWithoutMessageHandler)
-        else:
-            jrdd = helper.createRDDWithMessageHandler(
-                sc._jsc, kafkaParams, joffsetRanges, jleaders)
-            rdd = RDD(jrdd, sc).map(funcWithMessageHandler)
-
-        return KafkaRDD(rdd._jrdd, sc, rdd._jrdd_deserializer)
-
-    @staticmethod
-    def _get_helper(sc):
-        try:
-            return sc._jvm.org.apache.spark.streaming.kafka.KafkaUtilsPythonHelper()
-        except TypeError as e:
-            if str(e) == "'JavaPackage' object is not callable":
-                KafkaUtils._printErrorMsg(sc)
-            raise
-=======
         try:
             helperClass = sc._jvm.java.lang.Thread.currentThread().getContextClassLoader() \
                 .loadClass("org.apache.spark.streaming.kafka.KafkaUtilsPythonHelper")
@@ -260,7 +203,6 @@ class KafkaUtils(object):
             raise e
 
         return KafkaRDD(rdd._jrdd, sc, rdd._jrdd_deserializer)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     @staticmethod
     def _printErrorMsg(sc):
@@ -464,11 +406,6 @@ class KafkaTransformedDStream(TransformedDStream):
 class KafkaMessageAndMetadata(object):
     """
     Kafka message and metadata information. Including topic, partition, offset and message
-<<<<<<< HEAD
-
-    .. note:: Deprecated in 2.3.0
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     """
 
     def __init__(self, topic, partition, offset, key, message):

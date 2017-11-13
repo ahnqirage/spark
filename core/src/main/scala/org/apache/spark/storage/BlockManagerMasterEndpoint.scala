@@ -19,8 +19,6 @@ package org.apache.spark.storage
 
 import java.util.{HashMap => JHashMap}
 
-<<<<<<< HEAD
-=======
 import scala.collection.mutable
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.collection.JavaConverters._

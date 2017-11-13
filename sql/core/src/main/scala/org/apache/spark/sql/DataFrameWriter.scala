@@ -182,10 +182,7 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
    * predicates on the partitioned columns. In order for partitioning to work well, the number
    * of distinct values in each column should typically be less than tens of thousands.
    *
-   * This is applicable for all file-based data sources (e.g. Parquet, JSON) staring Spark 2.1.0.
-=======
    * This was initially applicable for Parquet but in 1.5+ covers JSON, text, ORC and avro as well.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @since 1.4.0
    */
@@ -285,48 +282,6 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
   }
 
   private def insertInto(tableIdent: TableIdentifier): Unit = {
-<<<<<<< HEAD
-    assertNotBucketed("insertInto")
-
-    if (partitioningColumns.isDefined) {
-      throw new AnalysisException(
-        "insertInto() can't be used together with partitionBy(). " +
-          "Partition columns have already be defined for the table. " +
-          "It is not necessary to use partitionBy()."
-      )
-    }
-
-    runCommand(df.sparkSession, "insertInto") {
-      InsertIntoTable(
-        table = UnresolvedRelation(tableIdent),
-        partition = Map.empty[String, Option[String]],
-        query = df.logicalPlan,
-        overwrite = mode == SaveMode.Overwrite,
-        ifPartitionNotExists = false)
-    }
-  }
-
-  private def getBucketSpec: Option[BucketSpec] = {
-    if (sortColumnNames.isDefined) {
-      require(numBuckets.isDefined, "sortBy must be used together with bucketBy")
-    }
-
-    numBuckets.map { n =>
-      BucketSpec(n, bucketColumnNames.get, sortColumnNames.getOrElse(Nil))
-    }
-  }
-
-  private def assertNotBucketed(operation: String): Unit = {
-    if (numBuckets.isDefined || sortColumnNames.isDefined) {
-      throw new AnalysisException(s"'$operation' does not support bucketing right now")
-    }
-  }
-
-  private def assertNotPartitioned(operation: String): Unit = {
-    if (partitioningColumns.isDefined) {
-      throw new AnalysisException( s"'$operation' does not support partitioning")
-    }
-=======
     val partitions = normalizedParCols.map(_.map(col => col -> (None: Option[String])).toMap)
     val overwrite = mode == SaveMode.Overwrite
 
@@ -348,6 +303,16 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
         overwrite,
         ifNotExists = false)).toRdd
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+  }
+
+  private def normalizedParCols: Option[Seq[String]] = partitioningColumns.map { parCols =>
+    parCols.map { col =>
+      df.logicalPlan.output
+        .map(_.name)
+        .find(df.sqlContext.analyzer.resolver(_, col))
+        .getOrElse(throw new AnalysisException(s"Partition column $col not found in existing " +
+          s"columns (${df.logicalPlan.output.map(_.name).mkString(", ")})"))
+    }
   }
 
   private def normalizedParCols: Option[Seq[String]] = partitioningColumns.map { parCols =>

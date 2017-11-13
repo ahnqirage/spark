@@ -17,11 +17,7 @@
 
 package org.apache.spark.ml.feature
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Since, Experimental}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.UnaryTransformer
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.util._
@@ -43,7 +39,6 @@ class NGram @Since("1.5.0") (@Since("1.5.0") override val uid: String)
 =======
 @Experimental
 class NGram(override val uid: String)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends UnaryTransformer[Seq[String], Seq[String], NGram] with DefaultParamsWritable {
 
   @Since("1.5.0")

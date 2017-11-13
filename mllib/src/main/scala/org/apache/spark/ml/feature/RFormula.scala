@@ -216,11 +216,6 @@ class RFormula @Since("1.5.0") (@Since("1.5.0") override val uid: String)
           encoderStages += new StringIndexer()
             .setInputCol(term)
             .setOutputCol(indexCol)
-<<<<<<< HEAD
-            .setStringOrderType($(stringIndexerOrderType))
-            .setHandleInvalid($(handleInvalid))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           prefixesToRewrite(indexCol + "_") = term + "_"
           (term, indexCol)
         case _ =>
@@ -348,10 +343,6 @@ class RFormulaModel private[feature](
     copyValues(copied, extra)
   }
 
-<<<<<<< HEAD
-  @Since("2.0.0")
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def toString: String = s"RFormulaModel($resolvedFormula) (uid=$uid)"
 
   private def transformLabel(dataset: Dataset[_]): DataFrame = {

@@ -18,14 +18,12 @@
 package org.apache.spark.ml.tuning
 
 import org.apache.spark.SparkFunSuite
-<<<<<<< HEAD
-import org.apache.spark.ml.{Estimator, Model, Pipeline}
-import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel, OneVsRest}
-import org.apache.spark.ml.classification.LogisticRegressionSuite.generateLogisticInput
-import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature.HashingTF
-import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
+import org.apache.spark.ml.{Pipeline, Estimator, Model}
+import org.apache.spark.ml.classification.{LogisticRegressionModel, LogisticRegression}
+import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, RegressionEvaluator}
+import org.apache.spark.ml.param.{ParamPair, ParamMap}
 import org.apache.spark.ml.param.shared.HasInputCol
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
@@ -40,7 +38,6 @@ import org.apache.spark.ml.param.shared.HasInputCol
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.mllib.classification.LogisticRegressionSuite.generateLogisticInput
 import org.apache.spark.mllib.linalg.Vectors
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.{LinearDataGenerator, MLlibTestSparkContext}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
@@ -114,7 +111,6 @@ class CrossValidatorSuite
   test("transformSchema should check estimatorParamMaps") {
 =======
   test("validateParams should check estimatorParamMaps") {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     import CrossValidatorSuite.{MyEstimator, MyEvaluator}
 
     val est = new MyEstimator("est")
@@ -463,6 +459,126 @@ class CrossValidatorSuite
     }
   }
 
+  test("read/write: CrossValidator with simple estimator") {
+    val lr = new LogisticRegression().setMaxIter(3)
+    val evaluator = new BinaryClassificationEvaluator()
+      .setMetricName("areaUnderPR")  // not default metric
+    val paramMaps = new ParamGridBuilder()
+        .addGrid(lr.regParam, Array(0.1, 0.2))
+        .build()
+    val cv = new CrossValidator()
+      .setEstimator(lr)
+      .setEvaluator(evaluator)
+      .setNumFolds(20)
+      .setEstimatorParamMaps(paramMaps)
+
+    val cv2 = testDefaultReadWrite(cv, testParams = false)
+
+    assert(cv.uid === cv2.uid)
+    assert(cv.getNumFolds === cv2.getNumFolds)
+
+    assert(cv2.getEvaluator.isInstanceOf[BinaryClassificationEvaluator])
+    val evaluator2 = cv2.getEvaluator.asInstanceOf[BinaryClassificationEvaluator]
+    assert(evaluator.uid === evaluator2.uid)
+    assert(evaluator.getMetricName === evaluator2.getMetricName)
+
+    cv2.getEstimator match {
+      case lr2: LogisticRegression =>
+        assert(lr.uid === lr2.uid)
+        assert(lr.getMaxIter === lr2.getMaxIter)
+      case other =>
+        throw new AssertionError(s"Loaded CrossValidator expected estimator of type" +
+          s" LogisticRegression but found ${other.getClass.getName}")
+    }
+
+    CrossValidatorSuite.compareParamMaps(cv.getEstimatorParamMaps, cv2.getEstimatorParamMaps)
+  }
+
+  test("read/write: CrossValidator with complex estimator") {
+    // workflow: CrossValidator[Pipeline[HashingTF, CrossValidator[LogisticRegression]]]
+    val lrEvaluator = new BinaryClassificationEvaluator()
+      .setMetricName("areaUnderPR")  // not default metric
+
+    val lr = new LogisticRegression().setMaxIter(3)
+    val lrParamMaps = new ParamGridBuilder()
+      .addGrid(lr.regParam, Array(0.1, 0.2))
+      .build()
+    val lrcv = new CrossValidator()
+      .setEstimator(lr)
+      .setEvaluator(lrEvaluator)
+      .setEstimatorParamMaps(lrParamMaps)
+
+    val hashingTF = new HashingTF()
+    val pipeline = new Pipeline().setStages(Array(hashingTF, lrcv))
+    val paramMaps = new ParamGridBuilder()
+      .addGrid(hashingTF.numFeatures, Array(10, 20))
+      .addGrid(lr.elasticNetParam, Array(0.0, 1.0))
+      .build()
+    val evaluator = new BinaryClassificationEvaluator()
+
+    val cv = new CrossValidator()
+      .setEstimator(pipeline)
+      .setEvaluator(evaluator)
+      .setNumFolds(20)
+      .setEstimatorParamMaps(paramMaps)
+
+    val cv2 = testDefaultReadWrite(cv, testParams = false)
+
+    assert(cv.uid === cv2.uid)
+    assert(cv.getNumFolds === cv2.getNumFolds)
+
+    assert(cv2.getEvaluator.isInstanceOf[BinaryClassificationEvaluator])
+    assert(cv.getEvaluator.uid === cv2.getEvaluator.uid)
+
+    CrossValidatorSuite.compareParamMaps(cv.getEstimatorParamMaps, cv2.getEstimatorParamMaps)
+
+    cv2.getEstimator match {
+      case pipeline2: Pipeline =>
+        assert(pipeline.uid === pipeline2.uid)
+        pipeline2.getStages match {
+          case Array(hashingTF2: HashingTF, lrcv2: CrossValidator) =>
+            assert(hashingTF.uid === hashingTF2.uid)
+            lrcv2.getEstimator match {
+              case lr2: LogisticRegression =>
+                assert(lr.uid === lr2.uid)
+                assert(lr.getMaxIter === lr2.getMaxIter)
+              case other =>
+                throw new AssertionError(s"Loaded internal CrossValidator expected to be" +
+                  s" LogisticRegression but found type ${other.getClass.getName}")
+            }
+            assert(lrcv.uid === lrcv2.uid)
+            assert(lrcv2.getEvaluator.isInstanceOf[BinaryClassificationEvaluator])
+            assert(lrEvaluator.uid === lrcv2.getEvaluator.uid)
+            CrossValidatorSuite.compareParamMaps(lrParamMaps, lrcv2.getEstimatorParamMaps)
+          case other =>
+            throw new AssertionError("Loaded Pipeline expected stages (HashingTF, CrossValidator)" +
+              " but found: " + other.map(_.getClass.getName).mkString(", "))
+        }
+      case other =>
+        throw new AssertionError(s"Loaded CrossValidator expected estimator of type" +
+          s" CrossValidator but found ${other.getClass.getName}")
+    }
+  }
+
+  test("read/write: CrossValidator fails for extraneous Param") {
+    val lr = new LogisticRegression()
+    val lr2 = new LogisticRegression()
+    val evaluator = new BinaryClassificationEvaluator()
+    val paramMaps = new ParamGridBuilder()
+      .addGrid(lr.regParam, Array(0.1, 0.2))
+      .addGrid(lr2.regParam, Array(0.1, 0.2))
+      .build()
+    val cv = new CrossValidator()
+      .setEstimator(lr)
+      .setEvaluator(evaluator)
+      .setEstimatorParamMaps(paramMaps)
+    withClue("CrossValidator.write failed to catch extraneous Param error") {
+      intercept[IllegalArgumentException] {
+        cv.write
+      }
+    }
+  }
+
   test("read/write: CrossValidatorModel") {
     val lr = new LogisticRegression()
       .setThreshold(0.6)
@@ -483,10 +599,6 @@ class CrossValidatorSuite
 
     assert(cv.uid === cv2.uid)
     assert(cv.getNumFolds === cv2.getNumFolds)
-<<<<<<< HEAD
-    assert(cv.getSeed === cv2.getSeed)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     assert(cv2.getEvaluator.isInstanceOf[BinaryClassificationEvaluator])
     val evaluator2 = cv2.getEvaluator.asInstanceOf[BinaryClassificationEvaluator]
@@ -502,12 +614,7 @@ class CrossValidatorSuite
           s" LogisticRegression but found ${other.getClass.getName}")
     }
 
-<<<<<<< HEAD
-   ValidatorParamsSuiteHelpers
-     .compareParamMaps(cv.getEstimatorParamMaps, cv2.getEstimatorParamMaps)
-=======
     CrossValidatorSuite.compareParamMaps(cv.getEstimatorParamMaps, cv2.getEstimatorParamMaps)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     cv2.bestModel match {
       case lrModel2: LogisticRegressionModel =>
@@ -524,8 +631,6 @@ class CrossValidatorSuite
 }
 
 object CrossValidatorSuite extends SparkFunSuite {
-<<<<<<< HEAD
-=======
 
   /**
    * Assert sequences of estimatorParamMaps are identical.
@@ -541,7 +646,6 @@ object CrossValidatorSuite extends SparkFunSuite {
       }
     }
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   abstract class MyModel extends Model[MyModel]
 

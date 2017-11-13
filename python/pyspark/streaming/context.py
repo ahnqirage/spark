@@ -161,7 +161,6 @@ class StreamingContext(object):
             gw.jvm.PythonDStream.updatePythonGatewayPort(jgws, gw._python_proxy_port)
             _py4j_cleaner = Py4jCallbackConnectionCleaner(gw)
             _py4j_cleaner.start()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         # register serializer for TransformFunction
         # it happens before creating SparkContext when loading from checkpointing

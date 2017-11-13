@@ -98,6 +98,5 @@ package object spark {
 =======
   // For package docs only
   val SPARK_VERSION = "1.6.3"
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 

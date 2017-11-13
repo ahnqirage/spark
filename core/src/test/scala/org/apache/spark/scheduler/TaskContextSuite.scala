@@ -17,21 +17,11 @@
 
 package org.apache.spark.scheduler
 
-<<<<<<< HEAD
-import java.util.Properties
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 
 import org.apache.spark._
-<<<<<<< HEAD
-import org.apache.spark.executor.{Executor, TaskMetrics, TaskMetricsSuite}
-import org.apache.spark.memory.TaskMemoryManager
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.metrics.source.JvmSource
 import org.apache.spark.network.util.JavaUtils
 import org.apache.spark.rdd.RDD
@@ -93,12 +83,7 @@ class TaskContextSuite extends SparkFunSuite with BeforeAndAfter with LocalSpark
     val func = (c: TaskContext, i: Iterator[String]) => i.next()
     val taskBinary = sc.broadcast(JavaUtils.bufferToArray(closureSerializer.serialize((rdd, func))))
     val task = new ResultTask[String, String](
-<<<<<<< HEAD
-      0, 0, taskBinary, rdd.partitions(0), Seq.empty, 0, new Properties,
-      closureSerializer.serialize(TaskMetrics.registered).array())
-=======
       0, 0, taskBinary, rdd.partitions(0), Seq.empty, 0, Seq.empty)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     intercept[RuntimeException] {
       task.run(0, 0, null)
     }
@@ -126,21 +111,9 @@ class TaskContextSuite extends SparkFunSuite with BeforeAndAfter with LocalSpark
   test("all TaskFailureListeners should be called even if some fail") {
     val context = TaskContext.empty()
     val listener = mock(classOf[TaskFailureListener])
-<<<<<<< HEAD
-    context.addTaskFailureListener(new TaskFailureListener {
-      override def onTaskFailure(context: TaskContext, error: Throwable): Unit =
-        throw new Exception("exception in listener1")
-    })
-    context.addTaskFailureListener(listener)
-    context.addTaskFailureListener(new TaskFailureListener {
-      override def onTaskFailure(context: TaskContext, error: Throwable): Unit =
-        throw new Exception("exception in listener3")
-    })
-=======
     context.addTaskFailureListener((_, _) => throw new Exception("exception in listener1"))
     context.addTaskFailureListener(listener)
     context.addTaskFailureListener((_, _) => throw new Exception("exception in listener3"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val e = intercept[TaskCompletionListenerException] {
       context.markTaskFailed(new Exception("exception in task"))

@@ -104,6 +104,8 @@ class DecisionTreeRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: S
 =======
   override def setSeed(value: Long): this.type = super.setSeed(value)
 
+  override def setSeed(value: Long): this.type = super.setSeed(value)
+
   override protected def train(dataset: DataFrame): DecisionTreeRegressionModel = {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val categoricalFeatures: Map[Int, Int] =
@@ -115,27 +117,6 @@ class DecisionTreeRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: S
     instr.logParams(params: _*)
 
     val trees = RandomForest.run(oldDataset, strategy, numTrees = 1, featureSubsetStrategy = "all",
-<<<<<<< HEAD
-      seed = $(seed), instr = Some(instr), parentUID = Some(uid))
-
-    val m = trees.head.asInstanceOf[DecisionTreeRegressionModel]
-    instr.logSuccess(m)
-    m
-  }
-
-  /** (private[ml]) Train a decision tree on an RDD */
-  private[ml] def train(data: RDD[LabeledPoint],
-      oldStrategy: OldStrategy): DecisionTreeRegressionModel = {
-    val instr = Instrumentation.create(this, data)
-    instr.logParams(params: _*)
-
-    val trees = RandomForest.run(data, oldStrategy, numTrees = 1, featureSubsetStrategy = "all",
-      seed = $(seed), instr = Some(instr), parentUID = Some(uid))
-
-    val m = trees.head.asInstanceOf[DecisionTreeRegressionModel]
-    instr.logSuccess(m)
-    m
-=======
       seed = $(seed), parentUID = Some(uid))
     trees.head.asInstanceOf[DecisionTreeRegressionModel]
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

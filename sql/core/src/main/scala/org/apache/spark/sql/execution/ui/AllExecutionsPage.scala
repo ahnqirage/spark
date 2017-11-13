@@ -61,38 +61,6 @@ private[ui] class AllExecutionsPage(parent: SQLTab) extends WebUIPage("") with L
           details.parentNode.querySelector('.stage-details').classList.toggle('collapsed')
         }}
       </script>
-<<<<<<< HEAD
-    val summary: NodeSeq =
-      <div>
-        <ul class="unstyled">
-          {
-            if (listener.getRunningExecutions.nonEmpty) {
-              <li>
-                <a href="#running-execution-table"><strong>Running Queries:</strong></a>
-                {listener.getRunningExecutions.size}
-              </li>
-            }
-          }
-          {
-            if (listener.getCompletedExecutions.nonEmpty) {
-              <li>
-                <a href="#completed-execution-table"><strong>Completed Queries:</strong></a>
-                {listener.getCompletedExecutions.size}
-              </li>
-            }
-          }
-          {
-            if (listener.getFailedExecutions.nonEmpty) {
-              <li>
-                <a href="#failed-execution-table"><strong>Failed Queries:</strong></a>
-                {listener.getFailedExecutions.size}
-              </li>
-            }
-          }
-        </ul>
-      </div>
-    UIUtils.headerSparkPage("SQL", summary ++ content, parent, Some(5000))
-=======
     UIUtils.headerSparkPage("SQL", content, parent, Some(5000))
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
@@ -216,11 +184,7 @@ private[ui] class RunningExecutionTable(
     showFailedJobs = true) {
 
   override protected def header: Seq[String] =
-<<<<<<< HEAD
-    baseHeader ++ Seq("Running Job IDs", "Succeeded Job IDs", "Failed Job IDs")
-=======
     baseHeader ++ Seq("Running Jobs", "Succeeded Jobs", "Failed Jobs")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 private[ui] class CompletedExecutionTable(
@@ -238,11 +202,7 @@ private[ui] class CompletedExecutionTable(
     showSucceededJobs = true,
     showFailedJobs = false) {
 
-<<<<<<< HEAD
-  override protected def header: Seq[String] = baseHeader ++ Seq("Job IDs")
-=======
   override protected def header: Seq[String] = baseHeader ++ Seq("Jobs")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 private[ui] class FailedExecutionTable(
@@ -261,9 +221,5 @@ private[ui] class FailedExecutionTable(
     showFailedJobs = true) {
 
   override protected def header: Seq[String] =
-<<<<<<< HEAD
-    baseHeader ++ Seq("Succeeded Job IDs", "Failed Job IDs")
-=======
     baseHeader ++ Seq("Succeeded Jobs", "Failed Jobs")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

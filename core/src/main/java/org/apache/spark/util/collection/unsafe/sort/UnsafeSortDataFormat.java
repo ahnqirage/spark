@@ -19,10 +19,7 @@ package org.apache.spark.util.collection.unsafe.sort;
 
 import org.apache.spark.unsafe.Platform;
 import org.apache.spark.unsafe.array.LongArray;
-<<<<<<< HEAD
-=======
 import org.apache.spark.unsafe.memory.MemoryBlock;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.util.collection.SortDataFormat;
 
 /**
@@ -33,11 +30,7 @@ import org.apache.spark.util.collection.SortDataFormat;
  * index {@code i}, while position {@code 2 * i + 1} in the array holds an 8-byte key prefix.
  */
 public final class UnsafeSortDataFormat
-<<<<<<< HEAD
-  extends SortDataFormat<RecordPointerAndKeyPrefix, LongArray> {
-=======
     extends SortDataFormat<RecordPointerAndKeyPrefix, LongArray> {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private final LongArray buffer;
 
@@ -57,12 +50,7 @@ public final class UnsafeSortDataFormat
   }
 
   @Override
-<<<<<<< HEAD
-  public RecordPointerAndKeyPrefix getKey(LongArray data, int pos,
-                                          RecordPointerAndKeyPrefix reuse) {
-=======
   public RecordPointerAndKeyPrefix getKey(LongArray data, int pos, RecordPointerAndKeyPrefix reuse) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     reuse.recordPointer = data.get(pos * 2);
     reuse.keyPrefix = data.get(pos * 2 + 1);
     return reuse;
@@ -96,15 +84,9 @@ public final class UnsafeSortDataFormat
 
   @Override
   public LongArray allocate(int length) {
-<<<<<<< HEAD
-    assert (length * 2 <= buffer.size()) :
-      "the buffer is smaller than required: " + buffer.size() + " < " + (length * 2);
-    return buffer;
-=======
     assert (length < Integer.MAX_VALUE / 2) : "Length " + length + " is too large";
     // This is used as temporary buffer, it's fine to allocate from JVM heap.
     return new LongArray(MemoryBlock.fromLongArray(new long[length * 2]));
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
 }

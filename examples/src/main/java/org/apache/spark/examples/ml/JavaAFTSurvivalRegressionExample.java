@@ -21,35 +21,6 @@ package org.apache.spark.examples.ml;
 import java.util.Arrays;
 import java.util.List;
 
-<<<<<<< HEAD
-import org.apache.spark.ml.regression.AFTSurvivalRegression;
-import org.apache.spark.ml.regression.AFTSurvivalRegressionModel;
-import org.apache.spark.ml.linalg.VectorUDT;
-import org.apache.spark.ml.linalg.Vectors;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
-// $example off$
-
-/**
- * An example demonstrating AFTSurvivalRegression.
- * Run with
- * <pre>
- * bin/run-example ml.JavaAFTSurvivalRegressionExample
- * </pre>
- */
-public class JavaAFTSurvivalRegressionExample {
-  public static void main(String[] args) {
-    SparkSession spark = SparkSession
-      .builder()
-      .appName("JavaAFTSurvivalRegressionExample")
-      .getOrCreate();
-=======
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.ml.regression.AFTSurvivalRegression;
@@ -67,7 +38,6 @@ public class JavaAFTSurvivalRegressionExample {
     SparkConf conf = new SparkConf().setAppName("JavaAFTSurvivalRegressionExample");
     JavaSparkContext jsc = new JavaSparkContext(conf);
     SQLContext jsql = new SQLContext(jsc);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // $example on$
     List<Row> data = Arrays.asList(
@@ -82,11 +52,7 @@ public class JavaAFTSurvivalRegressionExample {
       new StructField("censor", DataTypes.DoubleType, false, Metadata.empty()),
       new StructField("features", new VectorUDT(), false, Metadata.empty())
     });
-<<<<<<< HEAD
-    Dataset<Row> training = spark.createDataFrame(data, schema);
-=======
     DataFrame training = jsql.createDataFrame(data, schema);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     double[] quantileProbabilities = new double[]{0.3, 0.6};
     AFTSurvivalRegression aft = new AFTSurvivalRegression()
       .setQuantileProbabilities(quantileProbabilities)
@@ -95,21 +61,11 @@ public class JavaAFTSurvivalRegressionExample {
     AFTSurvivalRegressionModel model = aft.fit(training);
 
     // Print the coefficients, intercept and scale parameter for AFT survival regression
-<<<<<<< HEAD
-    System.out.println("Coefficients: " + model.coefficients());
-    System.out.println("Intercept: " + model.intercept());
-    System.out.println("Scale: " + model.scale());
-    model.transform(training).show(false);
-    // $example off$
-
-    spark.stop();
-=======
     System.out.println("Coefficients: " + model.coefficients() + " Intercept: "
       + model.intercept() + " Scale: " + model.scale());
     model.transform(training).show(false);
     // $example off$
 
     jsc.stop();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

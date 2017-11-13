@@ -31,7 +31,6 @@ import org.apache.spark.sql.internal.SQLConf
 =======
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.sql._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 
 
@@ -234,6 +233,25 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
           .read
           .parquet(path)
         checkAnswer(df, copyDf)
+      }
+    }
+  }
+
+  test("SPARK-11500: Not deterministic order of columns when using merging schemas.") {
+    import testImplicits._
+    withSQLConf(SQLConf.PARQUET_SCHEMA_MERGING_ENABLED.key -> "true") {
+      withTempPath { dir =>
+        val pathOne = s"${dir.getCanonicalPath}/part=1"
+        Seq(1, 1).zipWithIndex.toDF("a", "b").write.parquet(pathOne)
+        val pathTwo = s"${dir.getCanonicalPath}/part=2"
+        Seq(1, 1).zipWithIndex.toDF("c", "b").write.parquet(pathTwo)
+        val pathThree = s"${dir.getCanonicalPath}/part=3"
+        Seq(1, 1).zipWithIndex.toDF("d", "b").write.parquet(pathThree)
+
+        // The schema consists of the leading columns of the first part-file
+        // in the lexicographic order.
+        assert(sqlContext.read.parquet(dir.getCanonicalPath).schema.map(_.name)
+          === Seq("a", "b", "c", "d", "part"))
       }
     }
   }

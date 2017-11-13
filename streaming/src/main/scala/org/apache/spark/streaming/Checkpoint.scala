@@ -203,6 +203,8 @@ class CheckpointWriter(
 
   @volatile private var latestCheckpointTime: Time = null
 
+  @volatile private var latestCheckpointTime: Time = null
+
   class CheckpointWriteHandler(
       checkpointTime: Time,
       bytes: Array[Byte],
@@ -211,12 +213,6 @@ class CheckpointWriter(
       if (latestCheckpointTime == null || latestCheckpointTime < checkpointTime) {
         latestCheckpointTime = checkpointTime
       }
-<<<<<<< HEAD
-      if (fs == null) {
-        fs = new Path(checkpointDir).getFileSystem(hadoopConf)
-      }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       var attempts = 0
       val startTime = System.currentTimeMillis()
       val tempFile = new Path(checkpointDir, "temp")
@@ -224,17 +220,10 @@ class CheckpointWriter(
       // time of a batch is greater than the batch interval, checkpointing for completing an old
       // batch may run after checkpointing of a new batch. If this happens, checkpoint of an old
       // batch actually has the latest information, so we want to recovery from it. Therefore, we
-<<<<<<< HEAD
-      // also use the latest checkpoint time as the file name, so that we can recover from the
-      // latest checkpoint file.
-      //
-      // Note: there is only one thread writing the checkpoint files, so we don't need to worry
-=======
       // also use the latest checkpoint time as the file name, so that we can recovery from the
       // latest checkpoint file.
       //
       // Note: there is only one thread writting the checkpoint files, so we don't need to worry
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // about thread-safety.
       val checkpointFile = Checkpoint.checkpointFile(checkpointDir, latestCheckpointTime)
       val backupFile = Checkpoint.checkpointBackupFile(checkpointDir, latestCheckpointTime)
@@ -298,11 +287,7 @@ class CheckpointWriter(
       val bytes = Checkpoint.serialize(checkpoint, conf)
       executor.execute(new CheckpointWriteHandler(
         checkpoint.checkpointTime, bytes, clearCheckpointDataLater))
-<<<<<<< HEAD
-      logInfo(s"Submitted checkpoint of time ${checkpoint.checkpointTime} to writer queue")
-=======
       logInfo("Submitted checkpoint of time " + checkpoint.checkpointTime + " writer queue")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } catch {
       case rej: RejectedExecutionException =>
         logError("Could not submit checkpoint task to the thread pool executor", rej)

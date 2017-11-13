@@ -55,19 +55,6 @@ class TaskCompletionListenerException(
   extends RuntimeException {
 
   override def getMessage: String = {
-<<<<<<< HEAD
-    val listenerErrorMessage =
-      if (errorMessages.size == 1) {
-        errorMessages.head
-      } else {
-        errorMessages.zipWithIndex.map { case (msg, i) => s"Exception $i: $msg" }.mkString("\n")
-      }
-    val previousErrorMessage = previousError.map { e =>
-      "\n\nPrevious exception in task: " + e.getMessage + "\n" +
-        e.getStackTrace.mkString("\t", "\n\t", "")
-    }.getOrElse("")
-    listenerErrorMessage + previousErrorMessage
-=======
     if (errorMessages.size == 1) {
       errorMessages.head
     } else {
@@ -77,6 +64,5 @@ class TaskCompletionListenerException(
       "\n\nPrevious exception in task: " + e.getMessage + "\n" +
         e.getStackTrace.mkString("\t", "\n\t", "")
     }.getOrElse("")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

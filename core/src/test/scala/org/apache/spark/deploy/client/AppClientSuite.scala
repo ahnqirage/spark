@@ -17,46 +17,24 @@
 
 package org.apache.spark.deploy.client
 
-<<<<<<< HEAD
-import java.util.concurrent.ConcurrentLinkedQueue
-
-import scala.concurrent.duration._
-
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.concurrent.{Eventually, ScalaFutures}
-=======
 import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 import scala.concurrent.duration._
 
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.spark._
 import org.apache.spark.deploy.{ApplicationDescription, Command}
 import org.apache.spark.deploy.DeployMessages.{MasterStateResponse, RequestMasterState}
 import org.apache.spark.deploy.master.{ApplicationInfo, Master}
 import org.apache.spark.deploy.worker.Worker
-<<<<<<< HEAD
-import org.apache.spark.internal.Logging
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.rpc.RpcEnv
 import org.apache.spark.util.Utils
 
 /**
  * End-to-end tests for application client in standalone mode.
  */
-<<<<<<< HEAD
-class AppClientSuite
-    extends SparkFunSuite
-    with LocalSparkContext
-    with BeforeAndAfterAll
-    with Eventually
-    with ScalaFutures {
-=======
 class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAndAfterAll {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private val numWorkers = 2
   private val conf = new SparkConf()
   private val securityManager = new SecurityManager(conf)
@@ -85,20 +63,6 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
   }
 
   override def afterAll(): Unit = {
-<<<<<<< HEAD
-    try {
-      workerRpcEnvs.foreach(_.shutdown())
-      masterRpcEnv.shutdown()
-      workers.foreach(_.stop())
-      master.stop()
-      workerRpcEnvs = null
-      masterRpcEnv = null
-      workers = null
-      master = null
-    } finally {
-      super.afterAll()
-    }
-=======
     workerRpcEnvs.foreach(_.shutdown())
     masterRpcEnv.shutdown()
     workers.foreach(_.stop())
@@ -108,7 +72,6 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
     workers = null
     master = null
     super.afterAll()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("interface methods of AppClient using local Master") {
@@ -125,16 +88,7 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
 
     // Send message to Master to request Executors, verify request by change in executor limit
     val numExecutorsRequested = 1
-<<<<<<< HEAD
-    whenReady(
-        ci.client.requestTotalExecutors(numExecutorsRequested),
-        timeout(10.seconds),
-        interval(10.millis)) { acknowledged =>
-      assert(acknowledged)
-    }
-=======
     assert(ci.client.requestTotalExecutors(numExecutorsRequested))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     eventually(timeout(10.seconds), interval(10.millis)) {
       val apps = getApplications()
@@ -142,19 +96,10 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
     }
 
     // Send request to kill executor, verify request was made
-<<<<<<< HEAD
-    val executorId: String = getApplications().head.executors.head._2.fullId
-    whenReady(
-        ci.client.killExecutors(Seq(executorId)),
-        timeout(10.seconds),
-        interval(10.millis)) { acknowledged =>
-      assert(acknowledged)
-=======
     assert {
       val apps = getApplications()
       val executorId: String = apps.head.executors.head._2.fullId
       ci.client.killExecutors(Seq(executorId))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     // Issue stop command for Client to disconnect from Master
@@ -172,13 +117,7 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
     val ci = new AppClientInst(masterRpcEnv.address.toSparkURL)
 
     // requests to master should fail immediately
-<<<<<<< HEAD
-    whenReady(ci.client.requestTotalExecutors(3), timeout(1.seconds)) { success =>
-      assert(success === false)
-    }
-=======
     assert(ci.client.requestTotalExecutors(3) === false)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   // ===============================
@@ -205,11 +144,7 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
     (0 until numWorkers).map { i =>
       val rpcEnv = workerRpcEnvs(i)
       val worker = new Worker(rpcEnv, 0, cores, memory, Array(masterRpcEnv.address),
-<<<<<<< HEAD
-        Worker.ENDPOINT_NAME, null, conf, securityManager)
-=======
         Worker.SYSTEM_NAME + i, Worker.ENDPOINT_NAME, null, conf, securityManager)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       rpcEnv.setupEndpoint(Worker.ENDPOINT_NAME, worker)
       worker
     }
@@ -217,33 +152,15 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
 
   /** Get the Master state */
   private def getMasterState: MasterStateResponse = {
-<<<<<<< HEAD
-    master.self.askSync[MasterStateResponse](RequestMasterState)
-  }
-
-  /** Get the applications that are active from Master */
-=======
     master.self.askWithRetry[MasterStateResponse](RequestMasterState)
   }
 
   /** Get the applictions that are active from Master */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def getApplications(): Seq[ApplicationInfo] = {
     getMasterState.activeApps
   }
 
   /** Application Listener to collect events */
-<<<<<<< HEAD
-  private class AppClientCollector extends StandaloneAppClientListener with Logging {
-    val connectedIdList = new ConcurrentLinkedQueue[String]()
-    @volatile var disconnectedCount: Int = 0
-    val deadReasonList = new ConcurrentLinkedQueue[String]()
-    val execAddedList = new ConcurrentLinkedQueue[String]()
-    val execRemovedList = new ConcurrentLinkedQueue[String]()
-
-    def connected(id: String): Unit = {
-      connectedIdList.add(id)
-=======
   private class AppClientCollector extends AppClientListener with Logging {
     val connectedIdList = new ArrayBuffer[String] with SynchronizedBuffer[String]
     @volatile var disconnectedCount: Int = 0
@@ -253,7 +170,6 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
 
     def connected(id: String): Unit = {
       connectedIdList += id
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     def disconnected(): Unit = {
@@ -263,11 +179,7 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
     }
 
     def dead(reason: String): Unit = {
-<<<<<<< HEAD
-      deadReasonList.add(reason)
-=======
       deadReasonList += reason
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     def executorAdded(
@@ -276,24 +188,12 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
         hostPort: String,
         cores: Int,
         memory: Int): Unit = {
-<<<<<<< HEAD
-      execAddedList.add(id)
-    }
-
-    def executorRemoved(
-        id: String, message: String, exitStatus: Option[Int], workerLost: Boolean): Unit = {
-      execRemovedList.add(id)
-    }
-
-    def workerRemoved(workerId: String, host: String, message: String): Unit = {}
-=======
       execAddedList += id
     }
 
     def executorRemoved(id: String, message: String, exitStatus: Option[Int]): Unit = {
       execRemovedList += id
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /** Create AppClient and supporting objects */
@@ -303,11 +203,7 @@ class AppClientSuite extends SparkFunSuite with LocalSparkContext with BeforeAnd
       List(), Map(), Seq(), Seq(), Seq())
     private val desc = new ApplicationDescription("AppClientSuite", Some(1), 512, cmd, "ignored")
     val listener = new AppClientCollector
-<<<<<<< HEAD
-    val client = new StandaloneAppClient(rpcEnv, Array(masterUrl), desc, listener, new SparkConf)
-=======
     val client = new AppClient(rpcEnv, Array(masterUrl), desc, listener, new SparkConf)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
 }

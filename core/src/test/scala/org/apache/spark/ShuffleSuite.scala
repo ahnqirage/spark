@@ -17,25 +17,13 @@
 
 package org.apache.spark
 
-<<<<<<< HEAD
-import java.util.{Locale, Properties}
-import java.util.concurrent.{Callable, CyclicBarrier, Executors, ExecutorService}
-=======
 import java.util.concurrent.{Callable, Executors, ExecutorService, CyclicBarrier}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.scalatest.Matchers
 
 import org.apache.spark.ShuffleSuite.NonJavaSerializableClass
 import org.apache.spark.memory.TaskMemoryManager
 import org.apache.spark.rdd.{CoGroupedRDD, OrderedRDDFunctions, RDD, ShuffledRDD, SubtractedRDD}
-<<<<<<< HEAD
-import org.apache.spark.scheduler.{MapStatus, MyRDD, SparkListener, SparkListenerTaskEnd}
-import org.apache.spark.serializer.KryoSerializer
-import org.apache.spark.shuffle.ShuffleWriter
-import org.apache.spark.storage.{ShuffleBlockId, ShuffleDataBlockId, ShuffleIndexBlockId}
-import org.apache.spark.util.{MutablePair, Utils}
-=======
 import org.apache.spark.scheduler.{MyRDD, MapStatus, SparkListener, SparkListenerTaskEnd}
 import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.shuffle.ShuffleWriter
@@ -371,31 +359,19 @@ abstract class ShuffleSuite extends SparkFunSuite with Matchers with LocalSparkC
     val shuffleMapRdd = new MyRDD(sc, 1, Nil)
     val shuffleDep = new ShuffleDependency(shuffleMapRdd, new HashPartitioner(1))
     val shuffleHandle = manager.registerShuffle(0, 1, shuffleDep)
-<<<<<<< HEAD
-    mapTrackerMaster.registerShuffle(0, 1)
-
-    // first attempt -- its successful
-    val writer1 = manager.getWriter[Int, Int](shuffleHandle, 0,
-      new TaskContextImpl(0, 0, 0L, 0, taskMemoryManager, new Properties, metricsSystem))
-=======
 
     // first attempt -- its successful
     val writer1 = manager.getWriter[Int, Int](shuffleHandle, 0,
       new TaskContextImpl(0, 0, 0L, 0, taskMemoryManager, metricsSystem,
         InternalAccumulator.create(sc)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val data1 = (1 to 10).map { x => x -> x}
 
     // second attempt -- also successful.  We'll write out different data,
     // just to simulate the fact that the records may get written differently
     // depending on what gets spilled, what gets combined, etc.
     val writer2 = manager.getWriter[Int, Int](shuffleHandle, 0,
-<<<<<<< HEAD
-      new TaskContextImpl(0, 0, 1L, 0, taskMemoryManager, new Properties, metricsSystem))
-=======
       new TaskContextImpl(0, 0, 1L, 0, taskMemoryManager, metricsSystem,
         InternalAccumulator.create(sc)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val data2 = (11 to 20).map { x => x -> x}
 
     // interleave writes of both attempts -- we want to test that both attempts can occur
@@ -419,20 +395,12 @@ abstract class ShuffleSuite extends SparkFunSuite with Matchers with LocalSparkC
 
     // register one of the map outputs -- doesn't matter which one
     mapOutput1.foreach { case mapStatus =>
-<<<<<<< HEAD
-      mapTrackerMaster.registerMapOutput(0, 0, mapStatus)
-    }
-
-    val reader = manager.getReader[Int, Int](shuffleHandle, 0, 1,
-      new TaskContextImpl(1, 0, 2L, 0, taskMemoryManager, new Properties, metricsSystem))
-=======
       mapTrackerMaster.registerMapOutputs(0, Array(mapStatus))
     }
 
     val reader = manager.getReader[Int, Int](shuffleHandle, 0, 1,
       new TaskContextImpl(1, 0, 2L, 0, taskMemoryManager, metricsSystem,
         InternalAccumulator.create(sc)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val readData = reader.read().toIndexedSeq
     assert(readData === data1.toIndexedSeq || readData === data2.toIndexedSeq)
 

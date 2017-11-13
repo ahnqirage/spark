@@ -76,36 +76,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     udaf
   }
 
-<<<<<<< HEAD
-  /**
-   * Registers a user-defined function (UDF), for a UDF that's already defined using the Dataset
-   * API (i.e. of type UserDefinedFunction). To change a UDF to nondeterministic, call the API
-   * `UserDefinedFunction.asNondeterministic()`. To change a UDF to nonNullable, call the API
-   * `UserDefinedFunction.asNonNullable()`.
-   *
-   * Example:
-   * {{{
-   *   val foo = udf(() => Math.random())
-   *   spark.udf.register("random", foo.asNondeterministic())
-   *
-   *   val bar = udf(() => "bar")
-   *   spark.udf.register("stringLit", bar.asNonNullable())
-   * }}}
-   *
-   * @param name the name of the UDF.
-   * @param udf the UDF needs to be registered.
-   * @return the registered UDF.
-   *
-   * @since 2.2.0
-   */
-  def register(name: String, udf: UserDefinedFunction): UserDefinedFunction = {
-    def builder(children: Seq[Expression]) = udf.apply(children.map(Column.apply) : _*).expr
-    functionRegistry.createOrReplaceTempFunction(name, builder)
-    udf
-  }
-
-  // scalastyle:off line.size.limit
-=======
   // scalastyle:off
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -140,7 +110,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
           def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
           functionRegistry.registerFunction(name, builder)
           UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }""")
     }
 
@@ -193,7 +162,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -220,7 +188,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -247,7 +214,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -274,7 +240,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -301,7 +266,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -328,7 +292,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -355,7 +318,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -382,7 +344,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -409,7 +370,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -436,7 +396,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -463,7 +422,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -490,7 +448,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -517,7 +474,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -544,7 +500,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -571,7 +526,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -598,7 +552,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -625,7 +578,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -652,7 +604,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -679,7 +630,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -706,7 +656,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -733,7 +682,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -760,7 +708,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -787,7 +734,6 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
     def builder(e: Seq[Expression]) = ScalaUDF(func, dataType, e, inputTypes)
     functionRegistry.registerFunction(name, builder)
     UserDefinedFunction(func, dataType, inputTypes)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////

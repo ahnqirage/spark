@@ -537,16 +537,10 @@ class Column(object):
         if isinstance(dataType, basestring):
             jc = self._jc.cast(dataType)
         elif isinstance(dataType, DataType):
-<<<<<<< HEAD
-            from pyspark.sql import SparkSession
-            spark = SparkSession.builder.getOrCreate()
-            jdt = spark._jsparkSession.parseDataType(dataType.json())
-=======
             from pyspark.sql import SQLContext
             sc = SparkContext.getOrCreate()
             ctx = SQLContext.getOrCreate(sc)
             jdt = ctx._ssql_ctx.parseDataType(dataType.json())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             jc = self._jc.cast(jdt)
         else:
             raise TypeError("unexpected type: %s" % type(dataType))

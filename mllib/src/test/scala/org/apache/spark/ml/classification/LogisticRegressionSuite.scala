@@ -43,26 +43,14 @@ import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.regression.LabeledPoint
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.util.MLlibTestSparkContext
-import org.apache.spark.sql.{Dataset, Row}
-import org.apache.spark.sql.functions.{col, lit, rand}
-import org.apache.spark.sql.types.LongType
+import org.apache.spark.mllib.util.TestingUtils._
+import org.apache.spark.sql.{DataFrame, Row}
 
 class LogisticRegressionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
 
-<<<<<<< HEAD
-  import testImplicits._
-=======
-class LogisticRegressionSuite
-  extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  private val seed = 42
-  @transient var smallBinaryDataset: Dataset[_] = _
-  @transient var smallMultinomialDataset: Dataset[_] = _
-  @transient var binaryDataset: Dataset[_] = _
-  @transient var multinomialDataset: Dataset[_] = _
-  @transient var multinomialDatasetWithZeroVar: Dataset[_] = _
+  @transient var dataset: DataFrame = _
+  @transient var binaryDataset: DataFrame = _
   private val eps: Double = 1e-5
 
   override def beforeAll(): Unit = {
@@ -2981,7 +2969,6 @@ object LogisticRegressionSuite {
     val lr = new LogisticRegression()
     testEstimatorAndModelReadWrite(lr, dataset, LogisticRegressionSuite.allParamSettings,
       checkModelData)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

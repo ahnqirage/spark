@@ -314,15 +314,9 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
   }
 
   def createCode(
-<<<<<<< HEAD
-      ctx: CodegenContext,
-      expressions: Seq[Expression],
-      useSubexprElimination: Boolean = false): ExprCode = {
-=======
       ctx: CodeGenContext,
       expressions: Seq[Expression],
       useSubexprElimination: Boolean = false): GeneratedExpressionCode = {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val exprEvals = ctx.generateExpressions(expressions, useSubexprElimination)
     val exprTypes = expressions.map(_.dataType)
 
@@ -360,6 +354,9 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
     // Reset the subexpression values for each row.
     val subexprReset = ctx.subExprResetVariables.mkString("\n")
 
+    // Reset the subexpression values for each row.
+    val subexprReset = ctx.subExprResetVariables.mkString("\n")
+
     val code =
       s"""
 <<<<<<< HEAD
@@ -390,13 +387,8 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
     create(canonicalize(expressions), subexpressionEliminationEnabled)
   }
 
-<<<<<<< HEAD
-  protected def create(references: Seq[Expression]): UnsafeProjection = {
-    create(references, subexpressionEliminationEnabled = false)
-=======
   protected def create(expressions: Seq[Expression]): UnsafeProjection = {
     create(expressions, subexpressionEliminationEnabled = false)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private def create(
@@ -406,10 +398,6 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
     val eval = createCode(ctx, expressions, subexpressionEliminationEnabled)
 
     val codeBody = s"""
-<<<<<<< HEAD
-      public java.lang.Object generate(Object[] references) {
-        return new SpecificUnsafeProjection(references);
-=======
       public java.lang.Object generate($exprType[] exprs) {
         return new SpecificUnsafeProjection(exprs);
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -449,12 +437,7 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
       }
       """
 
-<<<<<<< HEAD
-    val code = CodeFormatter.stripOverlappingComments(
-      new CodeAndComment(codeBody, ctx.getPlaceHolderToComments()))
-=======
     val code = new CodeAndComment(codeBody, ctx.getPlaceHolderToComments())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     logDebug(s"code for ${expressions.mkString(",")}:\n${CodeFormatter.format(code)}")
 
     val (clazz, _) = CodeGenerator.compile(code)

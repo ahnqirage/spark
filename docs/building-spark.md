@@ -74,8 +74,6 @@ Examples:
 To enable Hive integration for Spark SQL along with its JDBC server and CLI,
 add the `-Phive` and `Phive-thriftserver` profiles to your existing build options.
 By default Spark will build with Hive 1.2.1 bindings.
-<<<<<<< HEAD
-=======
 {% highlight bash %}
 # Apache Hadoop 2.4.X with Hive 1.2.1 support
 mvn -Pyarn -Phadoop-2.4 -Dhadoop.version=2.4.0 -Phive -Phive-thriftserver -DskipTests clean package
@@ -87,16 +85,6 @@ mvn -Pyarn -Phadoop-2.4 -Dhadoop.version=2.4.0 -Phive -Phive-thriftserver -Dskip
 
 ## Packaging without Hadoop Dependencies for YARN
 
-<<<<<<< HEAD
-The assembly directory produced by `mvn package` will, by default, include all of Spark's
-dependencies, including Hadoop and some of its ecosystem projects. On YARN deployments, this
-causes multiple versions of these to appear on executor classpaths: the version packaged in
-the Spark assembly and the version on each node, included with `yarn.application.classpath`.
-The `hadoop-provided` profile builds the assembly without including Hadoop-ecosystem projects,
-like ZooKeeper and Hadoop itself.
-
-## Building with Mesos support
-=======
 # Spark Tests in Maven
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -200,6 +188,10 @@ Note that tests should not be run as root or an admin user.
 <<<<<<< HEAD
 The following is an example of a command to run the tests:
 =======
+or
+
+    sbt -Pjava8-tests java8-tests/test
+
 or
 
     sbt -Pjava8-tests java8-tests/test

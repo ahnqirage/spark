@@ -38,11 +38,6 @@ import org.apache.spark.sql.{DataFrame, Row}
 
 class LinearRegressionSuite
   extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
-<<<<<<< HEAD
-
-  import testImplicits._
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private val seed: Int = 42
   @transient var datasetWithDenseFeature: DataFrame = _
@@ -995,22 +990,7 @@ class LinearRegressionSuite
     }
     val lr = new LinearRegression()
     testEstimatorAndModelReadWrite(lr, datasetWithWeight, LinearRegressionSuite.allParamSettings,
-<<<<<<< HEAD
-      LinearRegressionSuite.allParamSettings, checkModelData)
-  }
-
-  test("should support all NumericType labels and weights, and not support other types") {
-    for (solver <- Seq("auto", "l-bfgs", "normal")) {
-      val lr = new LinearRegression().setMaxIter(1).setSolver(solver)
-      MLTestingUtils.checkNumericTypes[LinearRegressionModel, LinearRegression](
-        lr, spark, isClassification = false) { (expected, actual) =>
-        assert(expected.intercept === actual.intercept)
-        assert(expected.coefficients === actual.coefficients)
-      }
-    }
-=======
       checkModelData)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

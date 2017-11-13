@@ -39,12 +39,7 @@ __all__ = ['AFTSurvivalRegression', 'AFTSurvivalRegressionModel',
 @inherit_doc
 class LinearRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, HasMaxIter,
                        HasRegParam, HasTol, HasElasticNetParam, HasFitIntercept,
-<<<<<<< HEAD
-                       HasStandardization, HasSolver, HasWeightCol, HasAggregationDepth,
-                       JavaMLWritable, JavaMLReadable):
-=======
                        HasStandardization, HasSolver, HasWeightCol):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     """
     Linear regression.
 
@@ -67,7 +62,6 @@ class LinearRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPrediction
 =======
     >>> from pyspark.mllib.linalg import Vectors
     >>> df = sqlContext.createDataFrame([
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     ...     (1.0, 2.0, Vectors.dense(1.0)),
     ...     (0.0, 2.0, Vectors.sparse(1, [], []))], ["label", "weight", "features"])
     >>> lr = LinearRegression(maxIter=5, regParam=0.0, solver="normal", weightCol="weight")
@@ -110,19 +104,11 @@ class LinearRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPrediction
     @keyword_only
     def __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                  maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True,
-<<<<<<< HEAD
-                 standardization=True, solver="auto", weightCol=None, aggregationDepth=2):
-        """
-        __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
-                 maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True, \
-                 standardization=True, solver="auto", weightCol=None, aggregationDepth=2)
-=======
                  standardization=True, solver="auto", weightCol=None):
         """
         __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                  maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True, \
                  standardization=True, solver="auto", weightCol=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         super(LinearRegression, self).__init__()
         self._java_obj = self._new_java_obj(
@@ -135,19 +121,11 @@ class LinearRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPrediction
     @since("1.4.0")
     def setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                   maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True,
-<<<<<<< HEAD
-                  standardization=True, solver="auto", weightCol=None, aggregationDepth=2):
-        """
-        setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
-                  maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True, \
-                  standardization=True, solver="auto", weightCol=None, aggregationDepth=2)
-=======
                   standardization=True, solver="auto", weightCol=None):
         """
         setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                   maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True, \
                   standardization=True, solver="auto", weightCol=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Sets params for linear regression.
         """
         kwargs = self._input_kwargs
@@ -1001,11 +979,6 @@ class GBTRegressor(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol,
     ...     (1.0, Vectors.dense(1.0)),
     ...     (0.0, Vectors.sparse(1, [], []))], ["label", "features"])
     >>> gbt = GBTRegressor(maxIter=5, maxDepth=2, seed=42)
-<<<<<<< HEAD
-    >>> print(gbt.getImpurity())
-    variance
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     >>> model = gbt.fit(df)
     >>> model.featureImportances
     SparseVector(1, {0: 1.0})
@@ -1051,32 +1024,18 @@ class GBTRegressor(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol,
     def __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                  maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                  maxMemoryInMB=256, cacheNodeIds=False, subsamplingRate=1.0,
-<<<<<<< HEAD
-                 checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None,
-                 impurity="variance"):
-=======
                  checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                  maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0, \
                  maxMemoryInMB=256, cacheNodeIds=False, subsamplingRate=1.0, \
-<<<<<<< HEAD
-                 checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None, \
-                 impurity="variance")
-=======
                  checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         super(GBTRegressor, self).__init__()
         self._java_obj = self._new_java_obj("org.apache.spark.ml.regression.GBTRegressor", self.uid)
         self._setDefault(maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                          maxMemoryInMB=256, cacheNodeIds=False, subsamplingRate=1.0,
                          checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1,
-<<<<<<< HEAD
-                         impurity="variance")
-        kwargs = self._input_kwargs
-=======
                          seed=None)
         kwargs = self.__init__._input_kwargs
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -1087,22 +1046,12 @@ class GBTRegressor(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol,
     def setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                   maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                   maxMemoryInMB=256, cacheNodeIds=False, subsamplingRate=1.0,
-<<<<<<< HEAD
-                  checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None,
-                  impuriy="variance"):
-=======
                   checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                   maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0, \
                   maxMemoryInMB=256, cacheNodeIds=False, subsamplingRate=1.0, \
-<<<<<<< HEAD
-                  checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None, \
-                  impurity="variance")
-=======
                   checkpointInterval=10, lossType="squared", maxIter=20, stepSize=0.1, seed=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Sets params for Gradient Boosted Tree Regression.
         """
         kwargs = self._input_kwargs

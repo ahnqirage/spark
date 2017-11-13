@@ -85,10 +85,6 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
   // Executors we have requested the cluster manager to kill that have not died yet; maps
   // the executor ID to whether it was explicitly killed by the driver (and thus shouldn't
   // be considered an app-related failure).
-<<<<<<< HEAD
-  @GuardedBy("CoarseGrainedSchedulerBackend.this")
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private val executorsPendingToRemove = new HashMap[String, Boolean]
 
   // A map to store hostname with its possible task number running on it
@@ -474,19 +470,9 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
    */
   protected def removeExecutor(executorId: String, reason: ExecutorLossReason): Unit = {
     // Only log the failure since we don't care about the result.
-<<<<<<< HEAD
-    driverEndpoint.ask[Boolean](RemoveExecutor(executorId, reason)).failed.foreach(t =>
-      logError(t.getMessage, t))(ThreadUtils.sameThread)
-  }
-
-  protected def removeWorker(workerId: String, host: String, message: String): Unit = {
-    driverEndpoint.ask[Boolean](RemoveWorker(workerId, host, message)).failed.foreach(t =>
-      logError(t.getMessage, t))(ThreadUtils.sameThread)
-=======
     driverEndpoint.ask[Boolean](RemoveExecutor(executorId, reason)).onFailure { case t =>
       logError(t.getMessage, t)
     }(ThreadUtils.sameThread)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def sufficientResourcesRegistered(): Boolean = true
@@ -639,7 +625,6 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
       executorIds: Seq[String],
       replace: Boolean,
       force: Boolean): Boolean = synchronized {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     logInfo(s"Requesting to kill executor(s) ${executorIds.mkString(", ")}")
 
 <<<<<<< HEAD
@@ -655,50 +640,15 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
       .filter { id => !executorsPendingToRemove.contains(id) }
       .filter { id => force || !scheduler.isExecutorBusy(id) }
     executorsToKill.foreach { id => executorsPendingToRemove(id) = !replace }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
-      // If an executor is already pending to be removed, do not kill it again (SPARK-9795)
-      // If this executor is busy, do not kill it unless we are told to force kill it (SPARK-9552)
-      val executorsToKill = knownExecutors
-        .filter { id => !executorsPendingToRemove.contains(id) }
-        .filter { id => force || !scheduler.isExecutorBusy(id) }
-      executorsToKill.foreach { id => executorsPendingToRemove(id) = !replace }
-
-      logInfo(s"Actual list of executor(s) to be killed is ${executorsToKill.mkString(", ")}")
-
-      // If we do not wish to replace the executors we kill, sync the target number of executors
-      // with the cluster manager to avoid allocating new ones. When computing the new target,
-      // take into account executors that are pending to be added or removed.
-      val adjustTotalExecutors =
-        if (!replace) {
-          requestedTotalExecutors = math.max(requestedTotalExecutors - executorsToKill.size, 0)
-          if (requestedTotalExecutors !=
-              (numExistingExecutors + numPendingExecutors - executorsPendingToRemove.size)) {
-            logDebug(
-              s"""killExecutors($executorIds, $replace, $force): Executor counts do not match:
-                 |requestedTotalExecutors  = $requestedTotalExecutors
-                 |numExistingExecutors     = $numExistingExecutors
-                 |numPendingExecutors      = $numPendingExecutors
-                 |executorsPendingToRemove = ${executorsPendingToRemove.size}""".stripMargin)
-          }
-          doRequestTotalExecutors(requestedTotalExecutors)
-        } else {
-          numPendingExecutors += knownExecutors.size
-          Future.successful(true)
-        }
-
-      val killExecutors: Boolean => Future[Boolean] =
-        if (!executorsToKill.isEmpty) {
-          _ => doKillExecutors(executorsToKill)
-        } else {
-          _ => Future.successful(false)
-        }
-
-      val killResponse = adjustTotalExecutors.flatMap(killExecutors)(ThreadUtils.sameThread)
-
-      killResponse.flatMap(killSuccessful =>
-        Future.successful (if (killSuccessful) executorsToKill else Seq.empty[String])
-      )(ThreadUtils.sameThread)
+    // If we do not wish to replace the executors we kill, sync the target number of executors
+    // with the cluster manager to avoid allocating new ones. When computing the new target,
+    // take into account executors that are pending to be added or removed.
+    if (!replace) {
+      doRequestTotalExecutors(
+        numExistingExecutors + numPendingExecutors - executorsPendingToRemove.size)
+    } else {
+      numPendingExecutors += knownExecutors.size
     }
 
     defaultAskTimeout.awaitResult(response)

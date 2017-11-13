@@ -21,10 +21,6 @@ Unit tests for MLlib Python DataFrame-based APIs.
 """
 import sys
 if sys.version > '3':
-<<<<<<< HEAD
-    xrange = range
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     basestring = str
 
 try:
@@ -356,23 +352,6 @@ class ParamTests(PySparkTestCase):
         testParams = TestParams()
         self.assertTrue(all([testParams.hasParam(p.name) for p in testParams.params]))
         self.assertFalse(testParams.hasParam("notAParameter"))
-<<<<<<< HEAD
-        self.assertTrue(testParams.hasParam(u"maxIter"))
-
-    def test_resolveparam(self):
-        testParams = TestParams()
-        self.assertEqual(testParams._resolveParam(testParams.maxIter), testParams.maxIter)
-        self.assertEqual(testParams._resolveParam("maxIter"), testParams.maxIter)
-
-        self.assertEqual(testParams._resolveParam(u"maxIter"), testParams.maxIter)
-        if sys.version_info[0] >= 3:
-            # In Python 3, it is allowed to get/set attributes with non-ascii characters.
-            e_cls = AttributeError
-        else:
-            e_cls = UnicodeEncodeError
-        self.assertRaises(e_cls, lambda: testParams._resolveParam(u"아"))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def test_params(self):
         testParams = TestParams()

@@ -197,17 +197,10 @@ private[json] trait TestJsonData {
 
   def additionalCorruptRecords: RDD[String] =
     sqlContext.sparkContext.parallelize(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       """{"dummy":"test"}""" ::
       """[1,2,3]""" ::
       """":"test", "a":1}""" ::
       """42""" ::
-<<<<<<< HEAD
-      """     ","ian":"test"}""" :: Nil))(Encoders.STRING)
-
-  def emptyRecords: Dataset[String] =
-    spark.createDataset(spark.sparkContext.parallelize(
-=======
       """     ","ian":"test"}""" :: Nil)
 
   def emptyRecords: RDD[String] =
@@ -218,35 +211,8 @@ private[json] trait TestJsonData {
         """{"a": {}}""" ::
         """{"a": {"b": {}}}""" ::
         """{"b": [{"c": {}}]}""" ::
-        """]""" :: Nil))(Encoders.STRING)
+        """]""" :: Nil)
 
-  def timestampAsLong: Dataset[String] =
-    spark.createDataset(spark.sparkContext.parallelize(
-      """{"ts":1451732645}""" :: Nil))(Encoders.STRING)
-
-  def arrayAndStructRecords: Dataset[String] =
-    spark.createDataset(spark.sparkContext.parallelize(
-      """{"a": {"b": 1}}""" ::
-      """{"a": []}""" :: Nil))(Encoders.STRING)
-
-  def floatingValueRecords: Dataset[String] =
-    spark.createDataset(spark.sparkContext.parallelize(
-      s"""{"a": 0.${"0" * 38}1, "b": 0.01}""" :: Nil))(Encoders.STRING)
-
-  def bigIntegerRecords: Dataset[String] =
-    spark.createDataset(spark.sparkContext.parallelize(
-      s"""{"a": 1${"0" * 38}, "b": 92233720368547758070}""" :: Nil))(Encoders.STRING)
-
-<<<<<<< HEAD
-  def datesRecords: Dataset[String] =
-    spark.createDataset(spark.sparkContext.parallelize(
-      """{"date": "26/08/2015 18:00"}""" ::
-      """{"date": "27/10/2014 18:30"}""" ::
-      """{"date": "28/01/2016 20:00"}""" :: Nil))(Encoders.STRING)
-
-  lazy val singleRow: Dataset[String] =
-    spark.createDataset(spark.sparkContext.parallelize("""{"a":123}""" :: Nil))(Encoders.STRING)
-=======
   lazy val singleRow: RDD[String] = sqlContext.sparkContext.parallelize("""{"a":123}""" :: Nil)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 

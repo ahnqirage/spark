@@ -61,13 +61,6 @@ private[hive] class SparkExecuteStatementOperation(
   private var statementId: String = _
 
   private lazy val resultSchema: TableSchema = {
-<<<<<<< HEAD
-    if (result == null || result.schema.isEmpty) {
-      new TableSchema(Arrays.asList(new FieldSchema("Result", "string", "")))
-    } else {
-      logInfo(s"Result Schema: ${result.schema}")
-      SparkExecuteStatementOperation.getTableSchema(result.schema)
-=======
     if (result == null || result.queryExecution.analyzed.output.size == 0) {
       new TableSchema(Arrays.asList(new FieldSchema("Result", "string", "")))
     } else {
@@ -76,7 +69,6 @@ private[hive] class SparkExecuteStatementOperation(
         new FieldSchema(attr.name, HiveMetastoreTypes.toMetastoreType(attr.dataType), "")
       }
       new TableSchema(schema.asJava)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

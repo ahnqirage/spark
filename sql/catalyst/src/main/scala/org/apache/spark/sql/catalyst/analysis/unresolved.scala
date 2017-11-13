@@ -220,16 +220,6 @@ case class UnresolvedFunction(
   override def nullable: Boolean = throw new UnresolvedException(this, "nullable")
   override lazy val resolved = false
 
-<<<<<<< HEAD
-  override def prettyName: String = name.unquotedString
-  override def toString: String = s"'$name(${children.mkString(", ")})"
-}
-
-object UnresolvedFunction {
-  def apply(name: String, children: Seq[Expression], isDistinct: Boolean): UnresolvedFunction = {
-    UnresolvedFunction(FunctionIdentifier(name, None), children, isDistinct)
-  }
-=======
   override def prettyString: String = {
     s"${name}(${children.map(_.prettyString).mkString(",")})"
   }
@@ -277,11 +267,7 @@ case class UnresolvedStar(target: Option[Seq[String]]) extends Star with Unevalu
     val expandedAttributes =
       if (target.get.size == 1) {
         // If there is a table, pick out attributes that are part of this table.
-<<<<<<< HEAD
-        input.output.filter(_.qualifier.exists(resolver(_, target.get.head)))
-=======
         input.output.filter(_.qualifiers.exists(resolver(_, target.get.head)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       } else {
         List()
       }
@@ -299,9 +285,6 @@ case class UnresolvedStar(target: Option[Seq[String]]) extends Star with Unevalu
             Alias(extract, f.name)()
         }
 
-<<<<<<< HEAD
-        case _ =>
-=======
         case _ => {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           throw new AnalysisException("Can only star expand struct data types. Attribute: `" +

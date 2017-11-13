@@ -37,10 +37,6 @@ import org.apache.spark.util.Utils
  */
 private[spark] class DiskBlockObjectWriter(
     val file: File,
-<<<<<<< HEAD
-    serializerManager: SerializerManager,
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     serializerInstance: SerializerInstance,
     bufferSize: Int,
     syncWrites: Boolean,

@@ -534,7 +534,6 @@ private[hive] class TestHiveSparkSession(
       sessionState.catalog.setCurrentDatabase("default")
 =======
       runSqlHive("USE default")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } catch {
       case e: Exception =>
         logError("FATAL ERROR: Failed to reset TestDB state.", e)

@@ -42,19 +42,11 @@ if [[ -z "$PYSPARK_DRIVER_PYTHON" ]]; then
   PYSPARK_DRIVER_PYTHON="${PYSPARK_PYTHON:-"python"}"
 fi
 
-<<<<<<< HEAD
-WORKS_WITH_IPYTHON=$(python -c 'import sys; print(sys.version_info >= (2, 7, 0))')
-
-# Determine the Python executable to use for the executors:
-if [[ -z "$PYSPARK_PYTHON" ]]; then
-  if [[ $PYSPARK_DRIVER_PYTHON == *ipython* && ! $WORKS_WITH_IPYTHON ]]; then
-=======
 WORKS_WITH_IPYTHON=$($DEFAULT_PYTHON -c 'import sys; print(sys.version_info >= (2, 7, 0))')
 
 # Determine the Python executable to use for the executors:
 if [[ -z "$PYSPARK_PYTHON" ]]; then
   if [[ $PYSPARK_DRIVER_PYTHON == *ipython* && ! WORKS_WITH_IPYTHON ]]; then
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     echo "IPython requires Python 2.7+; please install python2.7 or set PYSPARK_PYTHON" 1>&2
     exit 1
   else

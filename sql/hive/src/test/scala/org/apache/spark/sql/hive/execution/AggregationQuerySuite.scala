@@ -131,10 +131,6 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
   import testImplicits._
 
   override def beforeAll(): Unit = {
-<<<<<<< HEAD
-    super.beforeAll()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val data1 = Seq[(Integer, Integer)](
       (1, 10),
       (null, -60),
@@ -183,9 +179,6 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
       (Seq[Integer](3), null, null)).toDF("key", "value1", "value2")
     data3.write.saveAsTable("agg3")
 
-<<<<<<< HEAD
-    val emptyDF = spark.createDataFrame(
-=======
     val emptyDF = sqlContext.createDataFrame(
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       sparkContext.emptyRDD[Row],
@@ -227,7 +220,6 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
 
   test("group by function") {
     Seq((1, 2)).toDF("a", "b").registerTempTable("data")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     checkAnswer(
       sql("SELECT floor(a) AS a, collect_set(b) FROM data GROUP BY floor(a) ORDER BY a"),
@@ -353,11 +345,7 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
         Row(null, null) :: Nil)
 
     checkAnswer(
-<<<<<<< HEAD
-      spark.sql(
-=======
       sqlContext.sql(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
           |SELECT DISTINCT key
           |FROM agg3
@@ -372,11 +360,7 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
         Row(Seq[Integer](3)) :: Nil)
 
     checkAnswer(
-<<<<<<< HEAD
-      spark.sql(
-=======
       sqlContext.sql(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
           |SELECT value1, key
           |FROM agg3
@@ -614,21 +598,6 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
   }
 
   test("single distinct column set") {
-<<<<<<< HEAD
-    // DISTINCT is not meaningful with Max and Min, so we just ignore the DISTINCT keyword.
-    checkAnswer(
-      spark.sql(
-        """
-          |SELECT
-          |  min(distinct value1),
-          |  sum(distinct value1),
-          |  avg(value1),
-          |  avg(value2),
-          |  max(distinct value1)
-          |FROM agg2
-        """.stripMargin),
-      Row(-60, 70.0, 101.0/9.0, 5.6, 100))
-=======
     Seq(true, false).foreach { specializeSingleDistinctAgg =>
       val conf =
         (SQLConf.SPECIALIZE_SINGLE_DISTINCT_AGG_PLANNING.key,
@@ -703,71 +672,6 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
             Row(3, 4, 4, 3, null) :: Nil)
       }
     }
-  }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-  test("single distinct multiple columns set") {
-    checkAnswer(
-      spark.sql(
-        """
-          |SELECT
-          |  key,
-          |  count(distinct value1, value2)
-          |FROM agg2
-          |GROUP BY key
-        """.stripMargin),
-      Row(null, 3) ::
-        Row(1, 3) ::
-        Row(2, 1) ::
-        Row(3, 0) :: Nil)
-  }
-
-  test("multiple distinct multiple columns sets") {
-    checkAnswer(
-      spark.sql(
-        """
-          |SELECT
-          |  key,
-<<<<<<< HEAD
-          |  mydoubleavg(distinct value1),
-          |  mydoublesum(value2),
-          |  mydoublesum(distinct value1),
-          |  mydoubleavg(distinct value1),
-          |  mydoubleavg(value1)
-          |FROM agg2
-          |GROUP BY key
-        """.stripMargin),
-      Row(1, 120.0, -10.0, 40.0, 120.0, 70.0/3.0 + 100.0) ::
-        Row(2, 100.0, 3.0, 0.0, 100.0, 1.0/3.0 + 100.0) ::
-        Row(3, null, 3.0, null, null, null) ::
-        Row(null, 110.0, 60.0, 30.0, 110.0, 110.0) :: Nil)
-
-    checkAnswer(
-      spark.sql(
-        """
-          |SELECT
-=======
-          |  count(distinct value1),
-          |  sum(distinct value1),
-          |  count(distinct value2),
-          |  sum(distinct value2),
-          |  count(distinct value1, value2),
-          |  longProductSum(distinct value1, value2),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-          |  count(value1),
-          |  sum(value1),
-          |  count(value2),
-          |  sum(value2),
-          |  longProductSum(value1, value2),
-          |  count(*),
-          |  count(1)
-          |FROM agg2
-          |GROUP BY key
-        """.stripMargin),
-      Row(null, 3, 30, 3, 60, 3, -4700, 3, 30, 3, 60, -4700, 4, 4) ::
-        Row(1, 2, 40, 3, -10, 3, -100, 3, 70, 3, -10, -100, 3, 3) ::
-        Row(2, 2, 0, 1, 1, 1, 1, 3, 1, 3, 3, 2, 4, 4) ::
-        Row(3, 0, null, 1, 3, 0, 0, 0, null, 1, 3, 0, 2, 2) :: Nil)
   }
 
   test("single distinct multiple columns set") {
@@ -955,38 +859,6 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
 
     val corr7 = spark.sql("SELECT corr(b, c) FROM covar_tab").collect()(0).getDouble(0)
     assert(math.abs(corr7 - 0.6633880657639323) < 1e-12)
-<<<<<<< HEAD
-  }
-
-  test("covariance: covar_pop and covar_samp") {
-    // non-trivial example. To reproduce in python, use:
-    // >>> import numpy as np
-    // >>> a = np.array(range(20))
-    // >>> b = np.array([x * x - 2 * x + 3.5 for x in range(20)])
-    // >>> np.cov(a, b, bias = 0)[0][1]
-    // 595.0
-    // >>> np.cov(a, b, bias = 1)[0][1]
-    // 565.25
-    val df = Seq.tabulate(20)(x => (1.0 * x, x * x - 2 * x + 3.5)).toDF("a", "b")
-    val cov_samp = df.groupBy().agg(covar_samp("a", "b")).collect()(0).getDouble(0)
-    assert(math.abs(cov_samp - 595.0) < 1e-12)
-
-    val cov_pop = df.groupBy().agg(covar_pop("a", "b")).collect()(0).getDouble(0)
-    assert(math.abs(cov_pop - 565.25) < 1e-12)
-
-    val df2 = Seq.tabulate(20)(x => (1 * x, x * x * x - 2)).toDF("a", "b")
-    val cov_samp2 = df2.groupBy().agg(covar_samp("a", "b")).collect()(0).getDouble(0)
-    assert(math.abs(cov_samp2 - 11564.0) < 1e-12)
-
-    val cov_pop2 = df2.groupBy().agg(covar_pop("a", "b")).collect()(0).getDouble(0)
-    assert(math.abs(cov_pop2 - 10985.799999999999) < 1e-12)
-
-    // one row test
-    val df3 = Seq.tabulate(1)(x => (1 * x, x * x * x - 2)).toDF("a", "b")
-    checkAnswer(df3.groupBy().agg(covar_samp("a", "b")), Row(Double.NaN))
-    checkAnswer(df3.groupBy().agg(covar_pop("a", "b")), Row(0.0))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("no aggregation function (SPARK-11486)") {
@@ -1059,77 +931,6 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
       )
     }
   }
-<<<<<<< HEAD
-
-  test("udaf without specifying inputSchema") {
-    withTempView("noInputSchemaUDAF") {
-      spark.udf.register("noInputSchema", new ScalaAggregateFunctionWithoutInputSchema)
-
-      val data =
-        Row(1, Seq(Row(1), Row(2), Row(3))) ::
-          Row(1, Seq(Row(4), Row(5), Row(6))) ::
-          Row(2, Seq(Row(-10))) :: Nil
-      val schema =
-        StructType(
-          StructField("key", IntegerType) ::
-            StructField("myArray",
-              ArrayType(StructType(StructField("v", IntegerType) :: Nil))) :: Nil)
-      spark.createDataFrame(
-        sparkContext.parallelize(data, 2),
-        schema)
-        .createOrReplaceTempView("noInputSchemaUDAF")
-
-      checkAnswer(
-        spark.sql(
-          """
-            |SELECT key, noInputSchema(myArray)
-            |FROM noInputSchemaUDAF
-            |GROUP BY key
-          """.stripMargin),
-        Row(1, 21) :: Row(2, -10) :: Nil)
-
-      checkAnswer(
-        spark.sql(
-          """
-            |SELECT noInputSchema(myArray)
-            |FROM noInputSchemaUDAF
-          """.stripMargin),
-        Row(11) :: Nil)
-    }
-  }
-
-  test("SPARK-15206: single distinct aggregate function in having clause") {
-    checkAnswer(
-      sql(
-        """
-          |select key, count(distinct value1)
-          |from agg2 group by key
-          |having count(distinct value1) > 0
-        """.stripMargin),
-      Seq(
-        Row(null, 3),
-        Row(1, 2),
-        Row(2, 2)
-      )
-    )
-  }
-
-  test("SPARK-15206: multiple distinct aggregate function in having clause") {
-    checkAnswer(
-      sql(
-        """
-          |select key, count(distinct value1), count(distinct value2)
-          |from agg2 group by key
-          |having count(distinct value1) > 0 and count(distinct value2) = 3
-        """.stripMargin),
-      Seq(
-        Row(null, 3, 3),
-        Row(1, 2, 3)
-      )
-    )
-  }
-}
-=======
 
   test("udaf without specifying inputSchema") {
     withTempTable("noInputSchemaUDAF") {
@@ -1184,48 +985,31 @@ abstract class AggregationQuerySuite extends QueryTest with SQLTestUtils with Te
     )
   }
 }
+=======
+
+  test("udaf without specifying inputSchema") {
+    withTempTable("noInputSchemaUDAF") {
+      sqlContext.udf.register("noInputSchema", new ScalaAggregateFunctionWithoutInputSchema)
+
+      val data =
+        Row(1, Seq(Row(1), Row(2), Row(3))) ::
+          Row(1, Seq(Row(4), Row(5), Row(6))) ::
+          Row(2, Seq(Row(-10))) :: Nil
+      val schema =
+        StructType(
+          StructField("key", IntegerType) ::
+            StructField("myArray",
+              ArrayType(StructType(StructField("v", IntegerType) :: Nil))) :: Nil)
+      sqlContext.createDataFrame(
+        sparkContext.parallelize(data, 2),
+        schema)
+        .registerTempTable("noInputSchemaUDAF")
 
 
 class TungstenAggregationQuerySuite extends AggregationQuerySuite
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 
-<<<<<<< HEAD
-class HashAggregationQuerySuite extends AggregationQuerySuite
-
-
-class HashAggregationQueryWithControlledFallbackSuite extends AggregationQuerySuite {
-
-  override protected def checkAnswer(actual: => DataFrame, expectedAnswer: Seq[Row]): Unit = {
-    Seq("true", "false").foreach { enableTwoLevelMaps =>
-      withSQLConf("spark.sql.codegen.aggregate.map.twolevel.enabled" ->
-        enableTwoLevelMaps) {
-        (1 to 3).foreach { fallbackStartsAt =>
-          withSQLConf("spark.sql.TungstenAggregate.testFallbackStartsAt" ->
-            s"${(fallbackStartsAt - 1).toString}, ${fallbackStartsAt.toString}") {
-            // Create a new df to make sure its physical operator picks up
-            // spark.sql.TungstenAggregate.testFallbackStartsAt.
-            // todo: remove it?
-            val newActual = Dataset.ofRows(spark, actual.logicalPlan)
-
-            QueryTest.checkAnswer(newActual, expectedAnswer) match {
-              case Some(errorMessage) =>
-                val newErrorMessage =
-                  s"""
-                     |The following aggregation query failed when using HashAggregate with
-                     |controlled fallback (it falls back to bytes to bytes map once it has processed
-                     |${fallbackStartsAt - 1} input rows and to sort-based aggregation once it has
-                     |processed $fallbackStartsAt input rows). The query is ${actual.queryExecution}
-                     |
-                    |$errorMessage
-                  """.stripMargin
-
-                fail(newErrorMessage)
-              case None => // Success
-            }
-          }
-=======
   override protected def checkAnswer(actual: => DataFrame, expectedAnswer: Seq[Row]): Unit = {
     (0 to 2).foreach { fallbackStartsAt =>
       withSQLConf("spark.sql.TungstenAggregate.testFallbackStartsAt" -> fallbackStartsAt.toString) {
@@ -1248,7 +1032,6 @@ class HashAggregationQueryWithControlledFallbackSuite extends AggregationQuerySu
 
             fail(newErrorMessage)
           case None =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       }
     }

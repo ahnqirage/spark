@@ -65,8 +65,6 @@ object GenerateMIMAIgnore {
           isPackagePrivate(classSymbol) ||
           isPackagePrivateModule(moduleSymbol) ||
           classSymbol.isPrivate
-<<<<<<< HEAD
-=======
         val developerApi = isDeveloperApi(classSymbol) || isDeveloperApi(moduleSymbol)
         val experimental = isExperimental(classSymbol) || isExperimental(moduleSymbol)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

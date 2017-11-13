@@ -547,15 +547,9 @@ class StreamingContext private[streaming] (
    *
    * Return the current state of the context. The context can be in three possible states -
    *
-<<<<<<< HEAD
-   *  - StreamingContextState.INITIALIZED - The context has been created, but not started yet.
-   *    Input DStreams, transformations and output operations can be created on the context.
-   *  - StreamingContextState.ACTIVE - The context has been started, and not stopped.
-=======
    *  - StreamingContextState.INTIALIZED - The context has been created, but not been started yet.
    *    Input DStreams, transformations and output operations can be created on the context.
    *  - StreamingContextState.ACTIVE - The context has been started, and been not stopped.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *    Input DStreams, transformations and output operations cannot be created on the context.
    *  - StreamingContextState.STOPPED - The context has been stopped and cannot be used any more.
    */
@@ -664,14 +658,9 @@ class StreamingContext private[streaming] (
    */
   def stop(stopSparkContext: Boolean, stopGracefully: Boolean): Unit = {
     var shutdownHookRefToRemove: AnyRef = null
-<<<<<<< HEAD
-    if (LiveListenerBus.withinListenerThread.value) {
-      throw new SparkException(s"Cannot stop StreamingContext within listener bus thread.")
-=======
     if (AsynchronousListenerBus.withinListenerThread.value) {
       throw new SparkException("Cannot stop StreamingContext within listener thread of" +
         " AsynchronousListenerBus")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     synchronized {
       // The state should always be Stopped after calling `stop()`, even if we haven't started yet
@@ -881,11 +870,7 @@ private class StreamingContextPythonHelper {
    */
   def tryRecoverFromCheckpoint(checkpointPath: String): Option[StreamingContext] = {
     val checkpointOption = CheckpointReader.read(
-<<<<<<< HEAD
-      checkpointPath, new SparkConf(), SparkHadoopUtil.get.conf, ignoreReadError = false)
-=======
       checkpointPath, new SparkConf(), SparkHadoopUtil.get.conf, false)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     checkpointOption.map(new StreamingContext(null, _, null))
   }
 }

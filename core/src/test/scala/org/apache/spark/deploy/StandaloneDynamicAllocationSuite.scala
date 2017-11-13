@@ -25,7 +25,6 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito.{mock, verify, when}
 =======
 import org.mockito.Mockito.{mock, when}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.scalatest.{BeforeAndAfterAll, PrivateMethodTester}
 import org.scalatest.concurrent.Eventually._
 
@@ -557,6 +556,42 @@ class StandaloneDynamicAllocationSuite
 
   }
 
+  test("disable force kill for busy executors (SPARK-9552)") {
+    sc = new SparkContext(appConf)
+    val appId = sc.applicationId
+    eventually(timeout(10.seconds), interval(10.millis)) {
+      val apps = getApplications()
+      assert(apps.size === 1)
+      assert(apps.head.id === appId)
+      assert(apps.head.executors.size === 2)
+      assert(apps.head.getExecutorLimit === Int.MaxValue)
+    }
+    var apps = getApplications()
+    // sync executors between the Master and the driver, needed because
+    // the driver refuses to kill executors it does not know about
+    syncExecutors(sc)
+    val executors = getExecutorIds(sc)
+    assert(executors.size === 2)
+
+    // simulate running a task on the executor
+    val getMap =
+      PrivateMethod[mutable.HashMap[String, mutable.HashSet[Long]]]('executorIdToRunningTaskIds)
+    val taskScheduler = sc.taskScheduler.asInstanceOf[TaskSchedulerImpl]
+    val executorIdToRunningTaskIds = taskScheduler invokePrivate getMap()
+    executorIdToRunningTaskIds(executors.head) = mutable.HashSet(1L)
+    // kill the busy executor without force; this should fail
+    assert(killExecutor(sc, executors.head, force = false))
+    apps = getApplications()
+    assert(apps.head.executors.size === 2)
+
+    // force kill busy executor
+    assert(killExecutor(sc, executors.head, force = true))
+    apps = getApplications()
+    // kill executor successfully
+    assert(apps.head.executors.size === 1)
+
+  }
+
   // ===============================
   // | Utility methods for testing |
   // ===============================
@@ -609,11 +644,7 @@ class StandaloneDynamicAllocationSuite
   }
 
   /** Kill the given executor, specifying whether to force kill it. */
-<<<<<<< HEAD
-  private def killExecutor(sc: SparkContext, executorId: String, force: Boolean): Seq[String] = {
-=======
   private def killExecutor(sc: SparkContext, executorId: String, force: Boolean): Boolean = {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     syncExecutors(sc)
     sc.schedulerBackend match {
       case b: CoarseGrainedSchedulerBackend =>
@@ -622,19 +653,6 @@ class StandaloneDynamicAllocationSuite
     }
   }
 
-<<<<<<< HEAD
-  /** Kill the executors on a given host. */
-  private def killExecutorsOnHost(sc: SparkContext, host: String): Boolean = {
-    syncExecutors(sc)
-    sc.schedulerBackend match {
-      case b: CoarseGrainedSchedulerBackend =>
-        b.killExecutorsOnHost(host)
-      case _ => fail("expected coarse grained scheduler")
-    }
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   /**
    * Return a list of executor IDs belonging to this application.
    *

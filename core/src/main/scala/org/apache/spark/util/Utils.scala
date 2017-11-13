@@ -22,20 +22,10 @@ import java.lang.management.{LockInfo, ManagementFactory, MonitorInfo, ThreadInf
 import java.math.{MathContext, RoundingMode}
 import java.net._
 import java.nio.ByteBuffer
-<<<<<<< HEAD
-import java.nio.channels.{Channels, FileChannel}
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
-import java.util.{Locale, Properties, Random, UUID}
-import java.util.concurrent._
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.zip.GZIPInputStream
-=======
 import java.nio.channels.Channels
 import java.nio.charset.StandardCharsets
 import java.util.concurrent._
 import java.util.{Locale, Properties, Random, UUID}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import javax.net.ssl.HttpsURLConnection
 
 import scala.annotation.tailrec
@@ -59,9 +49,6 @@ import org.apache.hadoop.security.UserGroupInformation
 import org.apache.log4j.PropertyConfigurator
 import org.eclipse.jetty.util.MultiException
 import org.json4s._
-<<<<<<< HEAD
-import org.slf4j.Logger
-=======
 import tachyon.TachyonURI
 import tachyon.client.{TachyonFS, TachyonFile}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -465,7 +452,6 @@ private[spark] object Utils extends Logging {
       useCache: Boolean): File = {
 =======
       useCache: Boolean) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val fileName = decodeFileNameInURI(new URI(url))
     val targetFile = new File(targetDir, fileName)
     val fetchCacheEnabled = conf.getBoolean("spark.files.useFetchCache", defaultValue = true)
@@ -1487,6 +1473,53 @@ private[spark] object Utils extends Logging {
     }
   }
 
+  /**
+   * Execute a block of code and call the failure callbacks in the catch block. If exceptions occur
+   * in either the catch or the finally block, they are appended to the list of suppressed
+   * exceptions in original exception which is then rethrown.
+   *
+   * This is primarily an issue with `catch { abort() }` or `finally { out.close() }` blocks,
+   * where the abort/close needs to be called to clean up `out`, but if an exception happened
+   * in `out.write`, it's likely `out` may be corrupted and `abort` or `out.close` will
+   * fail as well. This would then suppress the original/likely more meaningful
+   * exception from the original `out.write` call.
+   */
+  def tryWithSafeFinallyAndFailureCallbacks[T](block: => T)
+      (catchBlock: => Unit = (), finallyBlock: => Unit = ()): T = {
+    var originalThrowable: Throwable = null
+    try {
+      block
+    } catch {
+      case cause: Throwable =>
+        // Purposefully not using NonFatal, because even fatal exceptions
+        // we don't want to have our finallyBlock suppress
+        originalThrowable = cause
+        try {
+          logError("Aborting task", originalThrowable)
+          TaskContext.get().asInstanceOf[TaskContextImpl].markTaskFailed(originalThrowable)
+          catchBlock
+        } catch {
+          case t: Throwable =>
+            originalThrowable.addSuppressed(t)
+            logWarning(s"Suppressing exception in catch: " + t.getMessage, t)
+        }
+        throw originalThrowable
+    } finally {
+      try {
+        finallyBlock
+      } catch {
+        case t: Throwable =>
+          if (originalThrowable != null) {
+            originalThrowable.addSuppressed(t)
+            logWarning(s"Suppressing exception in finally: " + t.getMessage, t)
+            throw originalThrowable
+          } else {
+            throw t
+          }
+      }
+    }
+  }
+
   /** Default filtering function for finding call sites using `getCallSite`. */
   private def sparkInternalExclusionFunction(className: String): Boolean = {
     // A regular expression to match classes of the internal Spark API's
@@ -1995,19 +2028,6 @@ private[spark] object Utils extends Logging {
   def terminateProcess(process: Process, timeoutMs: Long): Option[Int] = {
     // Politely destroy first
     process.destroy()
-<<<<<<< HEAD
-    if (process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
-      // Successful exit
-      Option(process.exitValue())
-    } else {
-      try {
-        process.destroyForcibly()
-      } catch {
-        case NonFatal(e) => logWarning("Exception when attempting to kill process", e)
-      }
-      // Wait, again, although this really should return almost immediately
-      if (process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
-=======
 
     if (waitForProcess(process, timeoutMs)) {
       // Successful exit
@@ -2022,15 +2042,12 @@ private[spark] object Utils extends Logging {
       }
       // Wait, again, although this really should return almost immediately
       if (waitForProcess(process, timeoutMs)) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Option(process.exitValue())
       } else {
         logWarning("Timed out waiting to forcibly kill process")
         None
       }
     }
-<<<<<<< HEAD
-=======
   }
 
   /**
@@ -2064,7 +2081,6 @@ private[spark] object Utils extends Logging {
         }
         true
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -2376,25 +2392,10 @@ private[spark] object Utils extends Logging {
       } catch {
         case e: Exception if isBindCollision(e) =>
           if (offset >= maxRetries) {
-<<<<<<< HEAD
-            val exceptionMessage = if (startPort == 0) {
-              s"${e.getMessage}: Service$serviceString failed after " +
-                s"$maxRetries retries (on a random free port)! " +
-                s"Consider explicitly setting the appropriate binding address for " +
-                s"the service$serviceString (for example spark.driver.bindAddress " +
-                s"for SparkDriver) to the correct binding address."
-            } else {
-              s"${e.getMessage}: Service$serviceString failed after " +
-                s"$maxRetries retries (starting from $startPort)! Consider explicitly setting " +
-                s"the appropriate port for the service$serviceString (for example spark.ui.port " +
-                s"for SparkUI) to an available port or increasing spark.port.maxRetries."
-            }
-=======
             val exceptionMessage = s"${e.getMessage}: Service$serviceString failed after " +
               s"$maxRetries retries! Consider explicitly setting the appropriate port for the " +
               s"service$serviceString (for example spark.ui.port for SparkUI) to an available " +
               "port or increasing spark.port.maxRetries."
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             val exception = new BindException(exceptionMessage)
             // restore original stack trace
             exception.setStackTrace(e.getStackTrace)
@@ -2700,212 +2701,6 @@ private[spark] object Utils extends Logging {
   def tempFileWith(path: File): File = {
     new File(path.getAbsolutePath + "." + UUID.randomUUID())
   }
-<<<<<<< HEAD
-
-  /**
-   * Returns the name of this JVM process. This is OS dependent but typically (OSX, Linux, Windows),
-   * this is formatted as PID@hostname.
-   */
-  def getProcessName(): String = {
-    ManagementFactory.getRuntimeMXBean().getName()
-  }
-
-  /**
-   * Utility function that should be called early in `main()` for daemons to set up some common
-   * diagnostic state.
-   */
-  def initDaemon(log: Logger): Unit = {
-    log.info(s"Started daemon with process name: ${Utils.getProcessName()}")
-    SignalUtils.registerLogger(log)
-  }
-
-  /**
-   * Unions two comma-separated lists of files and filters out empty strings.
-   */
-  def unionFileLists(leftList: Option[String], rightList: Option[String]): Set[String] = {
-    var allFiles = Set.empty[String]
-    leftList.foreach { value => allFiles ++= value.split(",") }
-    rightList.foreach { value => allFiles ++= value.split(",") }
-    allFiles.filter { _.nonEmpty }
-  }
-
-  /**
-   * Return the jar files pointed by the "spark.jars" property. Spark internally will distribute
-   * these jars through file server. In the YARN mode, it will return an empty list, since YARN
-   * has its own mechanism to distribute jars.
-   */
-  def getUserJars(conf: SparkConf): Seq[String] = {
-    val sparkJars = conf.getOption("spark.jars")
-    sparkJars.map(_.split(",")).map(_.filter(_.nonEmpty)).toSeq.flatten
-  }
-
-  /**
-   * Return the local jar files which will be added to REPL's classpath. These jar files are
-   * specified by --jars (spark.jars) or --packages, remote jars will be downloaded to local by
-   * SparkSubmit at first.
-   */
-  def getLocalUserJarsForShell(conf: SparkConf): Seq[String] = {
-    val localJars = conf.getOption("spark.repl.local.jars")
-    localJars.map(_.split(",")).map(_.filter(_.nonEmpty)).toSeq.flatten
-  }
-
-  private[spark] val REDACTION_REPLACEMENT_TEXT = "*********(redacted)"
-
-  /**
-   * Redact the sensitive values in the given map. If a map key matches the redaction pattern then
-   * its value is replaced with a dummy text.
-   */
-  def redact(conf: SparkConf, kvs: Seq[(String, String)]): Seq[(String, String)] = {
-    val redactionPattern = conf.get(SECRET_REDACTION_PATTERN)
-    redact(redactionPattern, kvs)
-  }
-
-  /**
-   * Redact the sensitive information in the given string.
-   */
-  def redact(conf: SparkConf, text: String): String = {
-    if (text == null || text.isEmpty || conf == null || !conf.contains(STRING_REDACTION_PATTERN)) {
-      text
-    } else {
-      val regex = conf.get(STRING_REDACTION_PATTERN).get
-      regex.replaceAllIn(text, REDACTION_REPLACEMENT_TEXT)
-    }
-  }
-
-  private def redact(redactionPattern: Regex, kvs: Seq[(String, String)]): Seq[(String, String)] = {
-    // If the sensitive information regex matches with either the key or the value, redact the value
-    // While the original intent was to only redact the value if the key matched with the regex,
-    // we've found that especially in verbose mode, the value of the property may contain sensitive
-    // information like so:
-    // "sun.java.command":"org.apache.spark.deploy.SparkSubmit ... \
-    // --conf spark.executorEnv.HADOOP_CREDSTORE_PASSWORD=secret_password ...
-    //
-    // And, in such cases, simply searching for the sensitive information regex in the key name is
-    // not sufficient. The values themselves have to be searched as well and redacted if matched.
-    // This does mean we may be accounting more false positives - for example, if the value of an
-    // arbitrary property contained the term 'password', we may redact the value from the UI and
-    // logs. In order to work around it, user would have to make the spark.redaction.regex property
-    // more specific.
-    kvs.map { case (key, value) =>
-      redactionPattern.findFirstIn(key)
-        .orElse(redactionPattern.findFirstIn(value))
-        .map { _ => (key, REDACTION_REPLACEMENT_TEXT) }
-        .getOrElse((key, value))
-    }
-  }
-
-  /**
-   * Looks up the redaction regex from within the key value pairs and uses it to redact the rest
-   * of the key value pairs. No care is taken to make sure the redaction property itself is not
-   * redacted. So theoretically, the property itself could be configured to redact its own value
-   * when printing.
-   */
-  def redact(kvs: Map[String, String]): Seq[(String, String)] = {
-    val redactionPattern = kvs.getOrElse(
-      SECRET_REDACTION_PATTERN.key,
-      SECRET_REDACTION_PATTERN.defaultValueString
-    ).r
-    redact(redactionPattern, kvs.toArray)
-  }
-
-  def stringToSeq(str: String): Seq[String] = {
-    str.split(",").map(_.trim()).filter(_.nonEmpty)
-  }
-}
-
-private[util] object CallerContext extends Logging {
-  val callerContextSupported: Boolean = {
-    SparkHadoopUtil.get.conf.getBoolean("hadoop.caller.context.enabled", false) && {
-      try {
-        Utils.classForName("org.apache.hadoop.ipc.CallerContext")
-        Utils.classForName("org.apache.hadoop.ipc.CallerContext$Builder")
-        true
-      } catch {
-        case _: ClassNotFoundException =>
-          false
-        case NonFatal(e) =>
-          logWarning("Fail to load the CallerContext class", e)
-          false
-      }
-    }
-  }
-}
-
-/**
- * An utility class used to set up Spark caller contexts to HDFS and Yarn. The `context` will be
- * constructed by parameters passed in.
- * When Spark applications run on Yarn and HDFS, its caller contexts will be written into Yarn RM
- * audit log and hdfs-audit.log. That can help users to better diagnose and understand how
- * specific applications impacting parts of the Hadoop system and potential problems they may be
- * creating (e.g. overloading NN). As HDFS mentioned in HDFS-9184, for a given HDFS operation, it's
- * very helpful to track which upper level job issues it.
- *
- * @param from who sets up the caller context (TASK, CLIENT, APPMASTER)
- *
- * The parameters below are optional:
- * @param upstreamCallerContext caller context the upstream application passes in
- * @param appId id of the app this task belongs to
- * @param appAttemptId attempt id of the app this task belongs to
- * @param jobId id of the job this task belongs to
- * @param stageId id of the stage this task belongs to
- * @param stageAttemptId attempt id of the stage this task belongs to
- * @param taskId task id
- * @param taskAttemptNumber task attempt id
- */
-private[spark] class CallerContext(
-  from: String,
-  upstreamCallerContext: Option[String] = None,
-  appId: Option[String] = None,
-  appAttemptId: Option[String] = None,
-  jobId: Option[Int] = None,
-  stageId: Option[Int] = None,
-  stageAttemptId: Option[Int] = None,
-  taskId: Option[Long] = None,
-  taskAttemptNumber: Option[Int] = None) extends Logging {
-
-  private val context = prepareContext("SPARK_" +
-    from +
-    appId.map("_" + _).getOrElse("") +
-    appAttemptId.map("_" + _).getOrElse("") +
-    jobId.map("_JId_" + _).getOrElse("") +
-    stageId.map("_SId_" + _).getOrElse("") +
-    stageAttemptId.map("_" + _).getOrElse("") +
-    taskId.map("_TId_" + _).getOrElse("") +
-    taskAttemptNumber.map("_" + _).getOrElse("") +
-    upstreamCallerContext.map("_" + _).getOrElse(""))
-
-  private def prepareContext(context: String): String = {
-    // The default max size of Hadoop caller context is 128
-    lazy val len = SparkHadoopUtil.get.conf.getInt("hadoop.caller.context.max.size", 128)
-    if (context == null || context.length <= len) {
-      context
-    } else {
-      val finalContext = context.substring(0, len)
-      logWarning(s"Truncated Spark caller context from $context to $finalContext")
-      finalContext
-    }
-  }
-
-  /**
-   * Set up the caller context [[context]] by invoking Hadoop CallerContext API of
-   * [[org.apache.hadoop.ipc.CallerContext]], which was added in hadoop 2.8.
-   */
-  def setCurrentContext(): Unit = {
-    if (CallerContext.callerContextSupported) {
-      try {
-        val callerContext = Utils.classForName("org.apache.hadoop.ipc.CallerContext")
-        val builder = Utils.classForName("org.apache.hadoop.ipc.CallerContext$Builder")
-        val builderInst = builder.getConstructor(classOf[String]).newInstance(context)
-        val hdfsContext = builder.getMethod("build").invoke(builderInst)
-        callerContext.getMethod("setCurrent", callerContext).invoke(null, hdfsContext)
-      } catch {
-        case NonFatal(e) =>
-          logWarning("Fail to set Spark caller context", e)
-      }
-    }
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**

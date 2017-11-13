@@ -120,11 +120,7 @@ sealed abstract class State[S] {
   def isTimingOut(): Boolean
 
   /**
-<<<<<<< HEAD
-   * Get the state as a `scala.Option`. It will be `Some(state)` if it exists, otherwise `None`.
-=======
    * Get the state as an [[scala.Option]]. It will be `Some(state)` if it exists, otherwise `None`.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   @inline final def getOption(): Option[S] = if (exists) Some(get()) else None
 
@@ -182,11 +178,7 @@ private[streaming] class StateImpl[S] extends State[S] {
     removed
   }
 
-<<<<<<< HEAD
-  /** Whether the state has been updated */
-=======
   /** Whether the state has been been updated */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def isUpdated(): Boolean = {
     updated
   }

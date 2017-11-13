@@ -26,20 +26,12 @@ import org.apache.commons.math3.distribution.{BinomialDistribution, PoissonDistr
 import org.apache.hadoop.conf.{Configurable, Configuration}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.mapred._
-<<<<<<< HEAD
-import org.apache.hadoop.mapreduce.{Job => NewJob, JobContext => NewJobContext,
-  OutputCommitter => NewOutputCommitter, OutputFormat => NewOutputFormat,
-  RecordWriter => NewRecordWriter, TaskAttemptContext => NewTaskAttempContext}
-import org.apache.hadoop.util.Progressable
-
-=======
 import org.apache.hadoop.mapreduce.{JobContext => NewJobContext, OutputCommitter => NewOutputCommitter,
 OutputFormat => NewOutputFormat, RecordWriter => NewRecordWriter,
 TaskAttemptContext => NewTaskAttempContext}
 import org.apache.hadoop.util.Progressable
 
 import org.apache.spark.{Partitioner, SharedSparkContext, SparkFunSuite}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark._
 import org.apache.spark.Partitioner
 import org.apache.spark.util.Utils
@@ -553,11 +545,7 @@ class PairRDDFunctionsSuite extends SparkFunSuite with SharedSparkContext {
     val e = intercept[SparkException] {
       pairs.saveAsNewAPIHadoopFile[NewFakeFormatWithCallback]("ignored")
     }
-<<<<<<< HEAD
-    assert(e.getCause.getMessage contains "failed to write")
-=======
     assert(e.getMessage contains "failed to write")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     assert(FakeWriterWithCallback.calledBy === "write,callback,close")
     assert(FakeWriterWithCallback.exception != null, "exception should be captured")
@@ -574,51 +562,13 @@ class PairRDDFunctionsSuite extends SparkFunSuite with SharedSparkContext {
       pairs.saveAsHadoopFile(
         "ignored", pairs.keyClass, pairs.valueClass, classOf[FakeFormatWithCallback], conf)
     }
-<<<<<<< HEAD
-    assert(e.getCause.getMessage contains "failed to write")
-=======
     assert(e.getMessage contains "failed to write")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     assert(FakeWriterWithCallback.calledBy === "write,callback,close")
     assert(FakeWriterWithCallback.exception != null, "exception should be captured")
     assert(FakeWriterWithCallback.exception.getMessage contains "failed to write")
   }
 
-<<<<<<< HEAD
-  test("saveAsNewAPIHadoopDataset should respect empty output directory when " +
-    "there are no files to be committed to an absolute output location") {
-    val pairs = sc.parallelize(Array((new Integer(1), new Integer(2))), 1)
-
-    val job = NewJob.getInstance(new Configuration(sc.hadoopConfiguration))
-    job.setOutputKeyClass(classOf[Integer])
-    job.setOutputValueClass(classOf[Integer])
-    job.setOutputFormatClass(classOf[NewFakeFormat])
-    val jobConfiguration = job.getConfiguration
-
-    // just test that the job does not fail with
-    // java.lang.IllegalArgumentException: Can not create a Path from a null string
-    pairs.saveAsNewAPIHadoopDataset(jobConfiguration)
-  }
-
-  test("saveAsHadoopDataset should respect empty output directory when " +
-    "there are no files to be committed to an absolute output location") {
-    val pairs = sc.parallelize(Array((new Integer(1), new Integer(2))), 1)
-
-    val conf = new JobConf()
-    conf.setOutputKeyClass(classOf[Integer])
-    conf.setOutputValueClass(classOf[Integer])
-    conf.setOutputFormat(classOf[FakeOutputFormat])
-    conf.setOutputCommitter(classOf[FakeOutputCommitter])
-
-    FakeOutputCommitter.ran = false
-    pairs.saveAsHadoopDataset(conf)
-
-    assert(FakeOutputCommitter.ran, "OutputCommitter was never called")
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("lookup") {
     val pairs = sc.parallelize(Array((1, 2), (3, 4), (5, 6), (5, 7)))
 

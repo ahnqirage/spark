@@ -33,7 +33,6 @@ import org.apache.spark.ml._
 import org.apache.spark.ml.attribute.NominalAttribute
 import org.apache.spark.ml.param.{IntParam, _}
 import org.apache.spark.ml.param.shared.{HasInputCol, HasOutputCol, HasSeed}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.util._
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
@@ -42,11 +41,7 @@ import org.apache.spark.sql.types.StructType
  * Params for [[QuantileDiscretizer]].
  */
 private[feature] trait QuantileDiscretizerBase extends Params
-<<<<<<< HEAD
-  with HasHandleInvalid with HasInputCol with HasOutputCol {
-=======
   with HasInputCol with HasOutputCol with HasSeed {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Number of buckets (quantiles, or categories) into which data points are grouped. Must
@@ -123,7 +118,6 @@ final class QuantileDiscretizer @Since("1.6.0") (@Since("1.6.0") override val ui
 =======
 @Experimental
 final class QuantileDiscretizer(override val uid: String)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Estimator[Bucketizer] with QuantileDiscretizerBase with DefaultParamsWritable {
 
   @Since("1.6.0")
@@ -146,15 +140,8 @@ final class QuantileDiscretizer(override val uid: String)
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
   /** @group setParam */
-<<<<<<< HEAD
-  @Since("2.1.0")
-  def setHandleInvalid(value: String): this.type = set(handleInvalid, value)
-
-  @Since("1.6.0")
-=======
   def setSeed(value: Long): this.type = set(seed, value)
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def transformSchema(schema: StructType): StructType = {
     SchemaUtils.checkNumericType(schema, $(inputCol))
     val inputFields = schema.fields
@@ -201,9 +188,6 @@ final class QuantileDiscretizer(override val uid: String)
 
 @Since("1.6.0")
 object QuantileDiscretizer extends DefaultParamsReadable[QuantileDiscretizer] with Logging {
-<<<<<<< HEAD
-
-=======
 
   /**
    * Minimum number of samples required for finding splits, regardless of number of bins.  If
@@ -289,7 +273,6 @@ object QuantileDiscretizer extends DefaultParamsReadable[QuantileDiscretizer] wi
     }
   }
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.6.0")
   override def load(path: String): QuantileDiscretizer = super.load(path)
 }

@@ -131,10 +131,7 @@ object UnsafeProjection {
    */
   def create(exprs: Seq[Expression]): UnsafeProjection = {
     val unsafeExprs = exprs.map(_ transform {
-<<<<<<< HEAD
-=======
       case CreateStruct(children) => CreateStructUnsafe(children)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case CreateNamedStruct(children) => CreateNamedStructUnsafe(children)
     })
     GenerateUnsafeProjection.generate(unsafeExprs)
@@ -151,25 +148,16 @@ object UnsafeProjection {
   }
 
   /**
-<<<<<<< HEAD
-   * Same as other create()'s but allowing enabling/disabling subexpression elimination.
-   * TODO: refactor the plumbing and clean this up.
-   */
-=======
     * Same as other create()'s but allowing enabling/disabling subexpression elimination.
     * TODO: refactor the plumbing and clean this up.
     */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def create(
       exprs: Seq[Expression],
       inputSchema: Seq[Attribute],
       subexpressionEliminationEnabled: Boolean): UnsafeProjection = {
     val e = exprs.map(BindReferences.bindReference(_, inputSchema))
       .map(_ transform {
-<<<<<<< HEAD
-=======
         case CreateStruct(children) => CreateStructUnsafe(children)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         case CreateNamedStruct(children) => CreateNamedStructUnsafe(children)
     })
     GenerateUnsafeProjection.generate(e, subexpressionEliminationEnabled)

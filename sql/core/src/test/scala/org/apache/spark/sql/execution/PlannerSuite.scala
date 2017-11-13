@@ -24,13 +24,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans.{Cross, FullOuter, Inner, LeftOuter, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Repartition}
 import org.apache.spark.sql.catalyst.plans.physical._
-<<<<<<< HEAD
-import org.apache.spark.sql.execution.columnar.InMemoryRelation
-import org.apache.spark.sql.execution.exchange.{EnsureRequirements, ReusedExchangeExec, ReuseExchange, ShuffleExchangeExec}
-import org.apache.spark.sql.execution.joins.{BroadcastHashJoinExec, SortMergeJoinExec}
-=======
 import org.apache.spark.sql.execution.joins.{SortMergeJoin, BroadcastHashJoin}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSQLContext
@@ -50,15 +44,10 @@ class PlannerSuite extends SharedSQLContext {
         fail(s"Could query play aggregation query $query. Is it an aggregation query?"))
     val aggregations = planned.collect { case n if n.nodeName contains "Aggregate" => n }
 
-<<<<<<< HEAD
-    // For the new aggregation code path, there will be four aggregate operator for
-    // distinct aggregations.
-=======
     // For the new aggregation code path, there will be three aggregate operator for
     // distinct aggregations. There used to be four aggregate operators because single
     // distinct aggregate used to trigger DistinctAggregationRewriter rewrite. Now the
     // the rewrite only happens when there are multiple distinct aggregations.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(
       aggregations.size == 2 || aggregations.size == 4,
       s"The plan of query $query does not have partial aggregations.")
@@ -103,7 +92,6 @@ class PlannerSuite extends SharedSQLContext {
 =======
         val broadcastHashJoins = planned.collect { case join: BroadcastHashJoin => join }
         val sortMergeJoins = planned.collect { case join: SortMergeJoin => join }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         assert(broadcastHashJoins.size === 1, "Should use broadcast hash join")
         assert(sortMergeJoins.isEmpty, "Should not use sort merge join")
@@ -167,7 +155,6 @@ class PlannerSuite extends SharedSQLContext {
 
         assert(broadcastHashJoins.size === 1, "Should use broadcast hash join")
         assert(sortMergeJoins.isEmpty, "Should not use sort merge join")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         spark.catalog.clearCache()
       }
@@ -182,6 +169,20 @@ class PlannerSuite extends SharedSQLContext {
       val df = spark.read.parquet(path)
       df.createOrReplaceTempView("testPushed")
 =======
+      val df = sqlContext.read.parquet(path)
+      sqlContext.registerDataFrameAsTable(df, "testPushed")
+
+      withTempTable("testPushed") {
+        val exp = sql("select * from testPushed where key = 15").queryExecution.executedPlan
+        assert(exp.toString.contains("PushedFilters: [EqualTo(key,15)]"))
+      }
+    }
+  }
+
+  test("SPARK-11390 explain should print PushedFilters of PhysicalRDD") {
+    withTempPath { file =>
+      val path = file.getCanonicalPath
+      testData.write.parquet(path)
       val df = sqlContext.read.parquet(path)
       sqlContext.registerDataFrameAsTable(df, "testPushed")
 
@@ -445,10 +446,6 @@ class PlannerSuite extends SharedSQLContext {
 
     val outputPlan = EnsureRequirements(spark.sessionState.conf).apply(inputPlan)
     assertDistributionRequirementsAreSatisfied(outputPlan)
-<<<<<<< HEAD
-    if (outputPlan.collect { case e: ShuffleExchangeExec => true }.size == 2) {
-      fail(s"Topmost Exchange should have been eliminated:\n$outputPlan")
-=======
     if (outputPlan.collect { case s: Sort => true }.isEmpty) {
       fail(s"Sort should have been added:\n$outputPlan")
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -470,10 +467,6 @@ class PlannerSuite extends SharedSQLContext {
 
     val outputPlan = EnsureRequirements(spark.sessionState.conf).apply(inputPlan)
     assertDistributionRequirementsAreSatisfied(outputPlan)
-<<<<<<< HEAD
-    if (outputPlan.collect { case e: ShuffleExchangeExec => true }.size == 1) {
-      fail(s"Topmost Exchange should not have been eliminated:\n$outputPlan")
-=======
     if (outputPlan.collect { case s: Sort => true }.nonEmpty) {
       fail(s"No sorts should have been added:\n$outputPlan")
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -556,55 +549,6 @@ class PlannerSuite extends SharedSQLContext {
     )
     val outputPlan = EnsureRequirements(spark.sessionState.conf).apply(inputPlan)
     assertDistributionRequirementsAreSatisfied(outputPlan)
-<<<<<<< HEAD
-    if (shouldHaveSort) {
-      if (outputPlan.collect { case s: SortExec => true }.isEmpty) {
-        fail(s"Sort should have been added:\n$outputPlan")
-      }
-    } else {
-      if (outputPlan.collect { case s: SortExec => true }.nonEmpty) {
-        fail(s"No sorts should have been added:\n$outputPlan")
-      }
-    }
-  }
-
-  test("EnsureRequirements skips sort when either side of join keys is required after inner SMJ") {
-    Seq(Inner, Cross).foreach { joinType =>
-      val innerSmj = SortMergeJoinExec(exprA :: Nil, exprB :: Nil, joinType, None, planA, planB)
-      // Both left and right keys should be sorted after the SMJ.
-      Seq(orderingA, orderingB).foreach { ordering =>
-        assertSortRequirementsAreSatisfied(
-          childPlan = innerSmj,
-          requiredOrdering = Seq(ordering),
-          shouldHaveSort = false)
-      }
-    }
-  }
-
-  test("EnsureRequirements skips sort when key order of a parent SMJ is propagated from its " +
-    "child SMJ") {
-    Seq(Inner, Cross).foreach { joinType =>
-      val childSmj = SortMergeJoinExec(exprA :: Nil, exprB :: Nil, joinType, None, planA, planB)
-      val parentSmj = SortMergeJoinExec(exprB :: Nil, exprC :: Nil, joinType, None, childSmj, planC)
-      // After the second SMJ, exprA, exprB and exprC should all be sorted.
-      Seq(orderingA, orderingB, orderingC).foreach { ordering =>
-        assertSortRequirementsAreSatisfied(
-          childPlan = parentSmj,
-          requiredOrdering = Seq(ordering),
-          shouldHaveSort = false)
-      }
-    }
-  }
-
-  test("EnsureRequirements for sort operator after left outer sort merge join") {
-    // Only left key is sorted after left outer SMJ (thus doesn't need a sort).
-    val leftSmj = SortMergeJoinExec(exprA :: Nil, exprB :: Nil, LeftOuter, None, planA, planB)
-    Seq((orderingA, false), (orderingB, true)).foreach { case (ordering, needSort) =>
-      assertSortRequirementsAreSatisfied(
-        childPlan = leftSmj,
-        requiredOrdering = Seq(ordering),
-        shouldHaveSort = needSort)
-=======
     if (outputPlan.collect { case s: Sort => true }.isEmpty) {
       fail(s"Sort should have been added:\n$outputPlan")
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -132,10 +132,6 @@ private[spark] object RBackend extends Logging {
       dos.writeInt(boundPort)
       dos.writeInt(listenPort)
       SerDe.writeString(dos, RUtils.rPackages.getOrElse(""))
-<<<<<<< HEAD
-      dos.writeInt(backendConnectionTimeout)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       dos.close()
       f.renameTo(new File(path))
 

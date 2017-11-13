@@ -61,12 +61,6 @@ object DateTimeUtils {
   final val YearZero = -17999
   final val toYearZero = to2001 + 7304850
   final val TimeZoneGMT = TimeZone.getTimeZone("GMT")
-<<<<<<< HEAD
-  final val MonthOf31Days = Set(1, 3, 5, 7, 8, 10, 12)
-
-  val TIMEZONE_OPTION = "timeZone"
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   def defaultTimeZone(): TimeZone = TimeZone.getDefault()
 
@@ -136,17 +130,8 @@ object DateTimeUtils {
 
   // reverse of millisToDays
   def daysToMillis(days: SQLDate): Long = {
-<<<<<<< HEAD
-    daysToMillis(days, defaultTimeZone())
-  }
-
-  def daysToMillis(days: SQLDate, timeZone: TimeZone): Long = {
-    val millisLocal = days.toLong * MILLIS_PER_DAY
-    millisLocal - getOffsetFromLocalMillis(millisLocal, timeZone)
-=======
     val millisLocal = days.toLong * MILLIS_PER_DAY
     millisLocal - getOffsetFromLocalMillis(millisLocal, threadLocalLocalTimeZone.get())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   def dateToString(days: SQLDate): String =
@@ -407,15 +392,6 @@ object DateTimeUtils {
       digitsMilli += 1
     }
 
-<<<<<<< HEAD
-    // We are truncating the nanosecond part, which results in loss of precision
-    while (digitsMilli > 6) {
-      segments(6) /= 10
-      digitsMilli -= 1
-    }
-
-    if (!justTime && isInvalidDate(segments(0), segments(1), segments(2))) {
-=======
     if (!justTime && (segments(0) < 0 || segments(0) > 9999 || segments(1) < 1 ||
         segments(1) > 12 || segments(2) < 1 || segments(2) > 31)) {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -498,9 +474,6 @@ object DateTimeUtils {
       return None
     }
     segments(i) = currentSegmentValue
-<<<<<<< HEAD
-    if (isInvalidDate(segments(0), segments(1), segments(2))) {
-=======
     if (segments(0) < 0 || segments(0) > 9999 || segments(1) < 1 || segments(1) > 12 ||
         segments(2) < 1 || segments(2) > 31) {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -515,28 +488,6 @@ object DateTimeUtils {
   }
 
   /**
-<<<<<<< HEAD
-   * Return true if the date is invalid.
-   */
-  private def isInvalidDate(year: Int, month: Int, day: Int): Boolean = {
-    if (year < 0 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) {
-      return true
-    }
-    if (month == 2) {
-      if (isLeapYear(year) && day > 29) {
-        return true
-      } else if (!isLeapYear(year) && day > 28) {
-        return true
-      }
-    } else if (!MonthOf31Days.contains(month) && day > 30) {
-      return true
-    }
-    false
-  }
-
-  /**
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * Returns the microseconds since year zero (-17999) from microseconds since epoch.
    */
   private def absoluteMicroSecond(microsec: SQLTimestamp): SQLTimestamp = {
@@ -544,76 +495,30 @@ object DateTimeUtils {
   }
 
   private def localTimestamp(microsec: SQLTimestamp): SQLTimestamp = {
-<<<<<<< HEAD
-    localTimestamp(microsec, defaultTimeZone())
-  }
-
-  private def localTimestamp(microsec: SQLTimestamp, timeZone: TimeZone): SQLTimestamp = {
-    absoluteMicroSecond(microsec) + timeZone.getOffset(microsec / 1000) * 1000L
-  }
-
-  /**
-   * Returns the hour value of a given timestamp value. The timestamp is expressed in microseconds.
-   */
-  def getHours(microsec: SQLTimestamp): Int = {
-    ((localTimestamp(microsec) / MICROS_PER_SECOND / 3600) % 24).toInt
-=======
     absoluteMicroSecond(microsec) + defaultTimeZone.getOffset(microsec / 1000) * 1000L
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
    * Returns the hour value of a given timestamp value. The timestamp is expressed in microseconds.
    */
-<<<<<<< HEAD
-  def getHours(microsec: SQLTimestamp, timeZone: TimeZone): Int = {
-    ((localTimestamp(microsec, timeZone) / MICROS_PER_SECOND / 3600) % 24).toInt
-  }
-
-  /**
-   * Returns the minute value of a given timestamp value. The timestamp is expressed in
-   * microseconds.
-   */
-  def getMinutes(microsec: SQLTimestamp): Int = {
-    ((localTimestamp(microsec) / MICROS_PER_SECOND / 60) % 60).toInt
-=======
   def getHours(microsec: SQLTimestamp): Int = {
     ((localTimestamp(microsec) / MICROS_PER_SECOND / 3600) % 24).toInt
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
    * Returns the minute value of a given timestamp value. The timestamp is expressed in
    * microseconds.
    */
-<<<<<<< HEAD
-  def getMinutes(microsec: SQLTimestamp, timeZone: TimeZone): Int = {
-    ((localTimestamp(microsec, timeZone) / MICROS_PER_SECOND / 60) % 60).toInt
-  }
-
-  /**
-   * Returns the second value of a given timestamp value. The timestamp is expressed in
-   * microseconds.
-   */
-  def getSeconds(microsec: SQLTimestamp): Int = {
-    ((localTimestamp(microsec) / MICROS_PER_SECOND) % 60).toInt
-=======
   def getMinutes(microsec: SQLTimestamp): Int = {
     ((localTimestamp(microsec) / MICROS_PER_SECOND / 60) % 60).toInt
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
    * Returns the second value of a given timestamp value. The timestamp is expressed in
    * microseconds.
    */
-<<<<<<< HEAD
-  def getSeconds(microsec: SQLTimestamp, timeZone: TimeZone): Int = {
-    ((localTimestamp(microsec, timeZone) / MICROS_PER_SECOND) % 60).toInt
-=======
   def getSeconds(microsec: SQLTimestamp): Int = {
     ((localTimestamp(microsec) / MICROS_PER_SECOND) % 60).toInt
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private[this] def isLeapYear(year: Int): Boolean = {
@@ -1025,15 +930,8 @@ object DateTimeUtils {
 
   /**
    * Lookup the offset for given millis seconds since 1970-01-01 00:00:00 in given timezone.
-<<<<<<< HEAD
-   * TODO: Improve handling of normalization differences.
-   * TODO: Replace with JSR-310 or similar system - see SPARK-16788
-   */
-  private[sql] def getOffsetFromLocalMillis(millisLocal: Long, tz: TimeZone): Long = {
-=======
    */
   private def getOffsetFromLocalMillis(millisLocal: Long, tz: TimeZone): Long = {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     var guess = tz.getRawOffset
     // the actual offset should be calculated based on milliseconds in UTC
     val offset = tz.getOffset(millisLocal - guess)
@@ -1055,19 +953,11 @@ object DateTimeUtils {
         val hh = seconds / 3600
         val mm = seconds / 60 % 60
         val ss = seconds % 60
-<<<<<<< HEAD
-        val ms = millisOfDay % 1000
-        val calendar = Calendar.getInstance(tz)
-        calendar.set(year, month - 1, day, hh, mm, ss)
-        calendar.set(Calendar.MILLISECOND, ms)
-        guess = (millisLocal - calendar.getTimeInMillis()).toInt
-=======
         val nano = millisOfDay % 1000 * 1000000
 
         // create a Timestamp to get the unix timestamp (in UTC)
         val timestamp = new Timestamp(year - 1900, month - 1, day, hh, mm, ss, nano)
         guess = (millisLocal - timestamp.getTime).toInt
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
     guess
@@ -1082,11 +972,7 @@ object DateTimeUtils {
    */
   def convertTz(ts: SQLTimestamp, fromZone: TimeZone, toZone: TimeZone): SQLTimestamp = {
     // We always use local timezone to parse or format a timestamp
-<<<<<<< HEAD
-    val localZone = defaultTimeZone()
-=======
     val localZone = threadLocalLocalTimeZone.get()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val utcTs = if (fromZone.getID == localZone.getID) {
       ts
     } else {
@@ -1097,15 +983,9 @@ object DateTimeUtils {
     if (toZone.getID == localZone.getID) {
       utcTs
     } else {
-<<<<<<< HEAD
-      val localTs = utcTs + toZone.getOffset(utcTs / 1000L) * 1000L  // in toZone
-      // treat it as local timezone, convert to UTC (we could get the expected human time back)
-      localTs - getOffsetFromLocalMillis(localTs / 1000L, localZone) * 1000L
-=======
       val localTs2 = utcTs + toZone.getOffset(utcTs / 1000L) * 1000L  // in toZone
       // treat it as local timezone, convert to UTC (we could get the expected human time back)
       localTs2 - getOffsetFromLocalMillis(localTs2 / 1000L, localZone) * 1000L
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -1114,11 +994,7 @@ object DateTimeUtils {
    * representation in their timezone.
    */
   def fromUTCTime(time: SQLTimestamp, timeZone: String): SQLTimestamp = {
-<<<<<<< HEAD
-    convertTz(time, TimeZoneGMT, getTimeZone(timeZone))
-=======
     convertTz(time, TimeZoneGMT, TimeZone.getTimeZone(timeZone))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -1126,22 +1002,14 @@ object DateTimeUtils {
    * string representation in their timezone.
    */
   def toUTCTime(time: SQLTimestamp, timeZone: String): SQLTimestamp = {
-<<<<<<< HEAD
-    convertTz(time, getTimeZone(timeZone), TimeZoneGMT)
-=======
     convertTz(time, TimeZone.getTimeZone(timeZone), TimeZoneGMT)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
    * Re-initialize the current thread's thread locals. Exposed for testing.
    */
   private[util] def resetThreadLocals(): Unit = {
-<<<<<<< HEAD
-    threadLocalGmtCalendar.remove()
-=======
     threadLocalLocalTimeZone.remove()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     threadLocalTimestampFormat.remove()
     threadLocalDateFormat.remove()
   }

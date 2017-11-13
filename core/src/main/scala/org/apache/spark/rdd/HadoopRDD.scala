@@ -132,12 +132,8 @@ class HadoopRDD[K, V](
 
   private val shouldCloneJobConf = sparkContext.conf.getBoolean("spark.hadoop.cloneConf", false)
 
-<<<<<<< HEAD
-  private val ignoreCorruptFiles = sparkContext.conf.get(IGNORE_CORRUPT_FILES)
-=======
   private val ignoreCorruptFiles =
     sparkContext.conf.getBoolean("spark.files.ignoreCorruptFiles", true)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   // Returns a JobConf that will be used on slaves to obtain input splits for Hadoop reads.
   protected def getJobConf(): JobConf = {
@@ -233,6 +229,12 @@ class HadoopRDD[K, V](
         case _ => SqlNewHadoopRDDState.unsetInputFileName()
       }
 
+      // Sets the thread local variable for the file's name
+      split.inputSplit.value match {
+        case fs: FileSplit => SqlNewHadoopRDDState.setInputFileName(fs.getPath.toString)
+        case _ => SqlNewHadoopRDDState.unsetInputFileName()
+      }
+
       // Find a function that will return the FileSystem bytes read by this thread. Do this before
       // creating RecordReader, because RecordReader's constructor might read some bytes
       private val getBytesReadCallback: Option[() => Long] = split.inputSplit.value match {
@@ -281,13 +283,7 @@ class HadoopRDD[K, V](
         try {
           finished = !reader.next(key, value)
         } catch {
-<<<<<<< HEAD
-          case e: IOException if ignoreCorruptFiles =>
-            logWarning(s"Skipped the rest content in the corrupted file: ${split.inputSplit}", e)
-            finished = true
-=======
           case _: EOFException if ignoreCorruptFiles => finished = true
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
         if (!finished) {
           inputMetrics.incRecordsRead(1)
@@ -300,9 +296,6 @@ class HadoopRDD[K, V](
 
       override def close(): Unit = {
         if (reader != null) {
-<<<<<<< HEAD
-          InputFileBlockHolder.unset()
-=======
           SqlNewHadoopRDDState.unsetInputFileName()
           // Close the reader and release it. Note: it's very important that we don't close the
           // reader more than once, since that exposes us to MAPREDUCE-5918 when running against

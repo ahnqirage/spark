@@ -19,28 +19,6 @@
 package org.apache.spark.examples.mllib
 
 // $example on$
-<<<<<<< HEAD
-import org.apache.spark.mllib.evaluation.RegressionMetrics
-import org.apache.spark.mllib.linalg.Vector
-import org.apache.spark.mllib.regression.{LabeledPoint, LinearRegressionWithSGD}
-// $example off$
-import org.apache.spark.sql.SparkSession
-
-@deprecated("Use ml.regression.LinearRegression and the resulting model summary for metrics",
-  "2.0.0")
-object RegressionMetricsExample {
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder
-      .appName("RegressionMetricsExample")
-      .getOrCreate()
-    // $example on$
-    // Load the data
-    val data = spark
-      .read.format("libsvm").load("data/mllib/sample_linear_regression_data.txt")
-      .rdd.map(row => LabeledPoint(row.getDouble(0), row.get(1).asInstanceOf[Vector]))
-      .cache()
-=======
 import org.apache.spark.mllib.regression.LinearRegressionWithSGD
 import org.apache.spark.mllib.evaluation.RegressionMetrics
 import org.apache.spark.mllib.util.MLUtils
@@ -56,7 +34,6 @@ object RegressionMetricsExample {
     // $example on$
     // Load the data
     val data = MLUtils.loadLibSVMFile(sc, "data/mllib/sample_linear_regression_data.txt").cache()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Build the model
     val numIterations = 100
@@ -84,11 +61,6 @@ object RegressionMetricsExample {
     // Explained variance
     println(s"Explained variance = ${metrics.explainedVariance}")
     // $example off$
-<<<<<<< HEAD
-
-    spark.stop()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

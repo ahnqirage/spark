@@ -152,9 +152,6 @@ class DataFrameReader(OptionUtils):
         >>> df.dtypes
         [('name', 'string'), ('year', 'int'), ('month', 'int'), ('day', 'int')]
 
-<<<<<<< HEAD
-        >>> df = spark.read.format('json').load(['python/test_support/sql/people.json',
-=======
         >>> df = sqlContext.read.format('json').load(['python/test_support/sql/people.json',
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         ...     'python/test_support/sql/people1.json'])
@@ -293,7 +290,6 @@ class DataFrameReader(OptionUtils):
             return self._df(self._jreader.json(path))
         elif type(path) == list:
             return self._df(self._jreader.json(self._sqlContext._sc._jvm.PythonUtils.toSeq(path)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         elif isinstance(path, RDD):
             def func(iterator):
                 for x in iterator:
@@ -304,11 +300,7 @@ class DataFrameReader(OptionUtils):
                     yield x
             keyed = path.mapPartitions(func)
             keyed._bypass_serializer = True
-<<<<<<< HEAD
-            jrdd = keyed._jrdd.map(self._spark._jvm.BytesToString())
-=======
             jrdd = keyed._jrdd.map(self._sqlContext._jvm.BytesToString())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             return self._df(self._jreader.json(jrdd))
         else:
             raise TypeError("path can be only string, list or RDD")
@@ -344,22 +336,12 @@ class DataFrameReader(OptionUtils):
     @ignore_unicode_prefix
     @since(1.6)
     def text(self, paths):
-<<<<<<< HEAD
-        """
-        Loads text files and returns a :class:`DataFrame` whose schema starts with a
-        string column named "value", and followed by partitioned columns if there
-        are any.
-=======
         """Loads a text file and returns a [[DataFrame]] with a single string column named "value".
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         Each line in the text file is a new row in the resulting DataFrame.
 
         :param paths: string, or list of strings, for input path(s).
 
-<<<<<<< HEAD
-        >>> df = spark.read.text('python/test_support/sql/text-test.txt')
-=======
         >>> df = sqlContext.read.text('python/test_support/sql/text-test.txt')
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         >>> df.collect()
@@ -367,138 +349,7 @@ class DataFrameReader(OptionUtils):
         """
         if isinstance(paths, basestring):
             paths = [paths]
-<<<<<<< HEAD
-        return self._df(self._jreader.text(self._spark._sc._jvm.PythonUtils.toSeq(paths)))
-
-    @since(2.0)
-    def csv(self, path, schema=None, sep=None, encoding=None, quote=None, escape=None,
-            comment=None, header=None, inferSchema=None, ignoreLeadingWhiteSpace=None,
-            ignoreTrailingWhiteSpace=None, nullValue=None, nanValue=None, positiveInf=None,
-            negativeInf=None, dateFormat=None, timestampFormat=None, maxColumns=None,
-            maxCharsPerColumn=None, maxMalformedLogPerPartition=None, mode=None,
-            columnNameOfCorruptRecord=None, multiLine=None):
-        """Loads a CSV file and returns the result as a  :class:`DataFrame`.
-
-        This function will go through the input once to determine the input schema if
-        ``inferSchema`` is enabled. To avoid going through the entire data once, disable
-        ``inferSchema`` option or specify the schema explicitly using ``schema``.
-
-        :param path: string, or list of strings, for input path(s),
-                     or RDD of Strings storing CSV rows.
-        :param schema: an optional :class:`pyspark.sql.types.StructType` for the input schema
-                       or a DDL-formatted string (For example ``col0 INT, col1 DOUBLE``).
-        :param sep: sets the single character as a separator for each field and value.
-                    If None is set, it uses the default value, ``,``.
-        :param encoding: decodes the CSV files by the given encoding type. If None is set,
-                         it uses the default value, ``UTF-8``.
-        :param quote: sets the single character used for escaping quoted values where the
-                      separator can be part of the value. If None is set, it uses the default
-                      value, ``"``. If you would like to turn off quotations, you need to set an
-                      empty string.
-        :param escape: sets the single character used for escaping quotes inside an already
-                       quoted value. If None is set, it uses the default value, ``\``.
-        :param comment: sets the single character used for skipping lines beginning with this
-                        character. By default (None), it is disabled.
-        :param header: uses the first line as names of columns. If None is set, it uses the
-                       default value, ``false``.
-        :param inferSchema: infers the input schema automatically from data. It requires one extra
-                       pass over the data. If None is set, it uses the default value, ``false``.
-        :param ignoreLeadingWhiteSpace: A flag indicating whether or not leading whitespaces from
-                                        values being read should be skipped. If None is set, it
-                                        uses the default value, ``false``.
-        :param ignoreTrailingWhiteSpace: A flag indicating whether or not trailing whitespaces from
-                                         values being read should be skipped. If None is set, it
-                                         uses the default value, ``false``.
-        :param nullValue: sets the string representation of a null value. If None is set, it uses
-                          the default value, empty string. Since 2.0.1, this ``nullValue`` param
-                          applies to all supported types including the string type.
-        :param nanValue: sets the string representation of a non-number value. If None is set, it
-                         uses the default value, ``NaN``.
-        :param positiveInf: sets the string representation of a positive infinity value. If None
-                            is set, it uses the default value, ``Inf``.
-        :param negativeInf: sets the string representation of a negative infinity value. If None
-                            is set, it uses the default value, ``Inf``.
-        :param dateFormat: sets the string that indicates a date format. Custom date formats
-                           follow the formats at ``java.text.SimpleDateFormat``. This
-                           applies to date type. If None is set, it uses the
-                           default value, ``yyyy-MM-dd``.
-        :param timestampFormat: sets the string that indicates a timestamp format. Custom date
-                                formats follow the formats at ``java.text.SimpleDateFormat``.
-                                This applies to timestamp type. If None is set, it uses the
-                                default value, ``yyyy-MM-dd'T'HH:mm:ss.SSSXXX``.
-        :param maxColumns: defines a hard limit of how many columns a record can have. If None is
-                           set, it uses the default value, ``20480``.
-        :param maxCharsPerColumn: defines the maximum number of characters allowed for any given
-                                  value being read. If None is set, it uses the default value,
-                                  ``-1`` meaning unlimited length.
-        :param maxMalformedLogPerPartition: this parameter is no longer used since Spark 2.2.0.
-                                            If specified, it is ignored.
-        :param mode: allows a mode for dealing with corrupt records during parsing. If None is
-                     set, it uses the default value, ``PERMISSIVE``.
-
-                * ``PERMISSIVE`` : sets other fields to ``null`` when it meets a corrupted \
-                  record, and puts the malformed string into a field configured by \
-                  ``columnNameOfCorruptRecord``. To keep corrupt records, an user can set \
-                  a string type field named ``columnNameOfCorruptRecord`` in an \
-                  user-defined schema. If a schema does not have the field, it drops corrupt \
-                  records during parsing. When a length of parsed CSV tokens is shorter than \
-                  an expected length of a schema, it sets `null` for extra fields.
-                * ``DROPMALFORMED`` : ignores the whole corrupted records.
-                * ``FAILFAST`` : throws an exception when it meets corrupted records.
-
-        :param columnNameOfCorruptRecord: allows renaming the new field having malformed string
-                                          created by ``PERMISSIVE`` mode. This overrides
-                                          ``spark.sql.columnNameOfCorruptRecord``. If None is set,
-                                          it uses the value specified in
-                                          ``spark.sql.columnNameOfCorruptRecord``.
-        :param multiLine: parse records, which may span multiple lines. If None is
-                          set, it uses the default value, ``false``.
-
-        >>> df = spark.read.csv('python/test_support/sql/ages.csv')
-        >>> df.dtypes
-        [('_c0', 'string'), ('_c1', 'string')]
-        >>> rdd = sc.textFile('python/test_support/sql/ages.csv')
-        >>> df2 = spark.read.csv(rdd)
-        >>> df2.dtypes
-        [('_c0', 'string'), ('_c1', 'string')]
-        """
-        self._set_opts(
-            schema=schema, sep=sep, encoding=encoding, quote=quote, escape=escape, comment=comment,
-            header=header, inferSchema=inferSchema, ignoreLeadingWhiteSpace=ignoreLeadingWhiteSpace,
-            ignoreTrailingWhiteSpace=ignoreTrailingWhiteSpace, nullValue=nullValue,
-            nanValue=nanValue, positiveInf=positiveInf, negativeInf=negativeInf,
-            dateFormat=dateFormat, timestampFormat=timestampFormat, maxColumns=maxColumns,
-            maxCharsPerColumn=maxCharsPerColumn,
-            maxMalformedLogPerPartition=maxMalformedLogPerPartition, mode=mode,
-            columnNameOfCorruptRecord=columnNameOfCorruptRecord, multiLine=multiLine)
-        if isinstance(path, basestring):
-            path = [path]
-        if type(path) == list:
-            return self._df(self._jreader.csv(self._spark._sc._jvm.PythonUtils.toSeq(path)))
-        elif isinstance(path, RDD):
-            def func(iterator):
-                for x in iterator:
-                    if not isinstance(x, basestring):
-                        x = unicode(x)
-                    if isinstance(x, unicode):
-                        x = x.encode("utf-8")
-                    yield x
-            keyed = path.mapPartitions(func)
-            keyed._bypass_serializer = True
-            jrdd = keyed._jrdd.map(self._spark._jvm.BytesToString())
-            # see SPARK-22112
-            # There aren't any jvm api for creating a dataframe from rdd storing csv.
-            # We can do it through creating a jvm dataset firstly and using the jvm api
-            # for creating a dataframe from dataset storing csv.
-            jdataset = self._spark._ssql_ctx.createDataset(
-                jrdd.rdd(),
-                self._spark._jvm.Encoders.STRING())
-            return self._df(self._jreader.csv(jdataset))
-        else:
-            raise TypeError("path can be only string, list or RDD")
-=======
         return self._df(self._jreader.text(self._sqlContext._sc._jvm.PythonUtils.toSeq(paths)))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     @since(1.5)
     def orc(self, path):
@@ -560,11 +411,7 @@ class DataFrameReader(OptionUtils):
             return self._df(self._jreader.jdbc(url, table, column, int(lowerBound), int(upperBound),
                                                int(numPartitions), jprop))
         if predicates is not None:
-<<<<<<< HEAD
-            gateway = self._spark._sc._gateway
-=======
             gateway = self._sqlContext._sc._gateway
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             jpredicates = utils.toJArray(gateway, gateway.jvm.java.lang.String, predicates)
             return self._df(self._jreader.jdbc(url, table, jpredicates, jprop))
         return self._df(self._jreader.jdbc(url, table, jprop))

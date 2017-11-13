@@ -526,11 +526,7 @@ class DStream(object):
         `invFunc` can be None, then it will reduce all the RDDs in window, could be slower
         than having `invFunc`.
 
-<<<<<<< HEAD
-        @param func:           associative and commutative reduce function
-=======
         @param func:           associative reduce function
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         @param invFunc:        inverse function of `reduceFunc`
         @param windowDuration: width of the window; must be a multiple of this DStream's
                               batching interval
@@ -580,7 +576,6 @@ class DStream(object):
 
         jreduceFunc = TransformFunction(self._sc, reduceFunc, reduced._jrdd_deserializer)
         if invFunc:
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             jinvReduceFunc = TransformFunction(self._sc, invReduceFunc, reduced._jrdd_deserializer)
             if slideDuration is None:
                 slideDuration = self._slideDuration

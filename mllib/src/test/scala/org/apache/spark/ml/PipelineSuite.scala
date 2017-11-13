@@ -26,19 +26,6 @@ import org.scalatest.mockito.MockitoSugar.mock
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.Pipeline.SharedReadWrite
-<<<<<<< HEAD
-import org.apache.spark.ml.feature.{HashingTF, MinMaxScaler}
-import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.ml.param.{IntParam, ParamMap}
-import org.apache.spark.ml.util._
-import org.apache.spark.mllib.util.MLlibTestSparkContext
-import org.apache.spark.sql.{DataFrame, Dataset}
-import org.apache.spark.sql.types.StructType
-
-class PipelineSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
-
-  import testImplicits._
-=======
 import org.apache.spark.ml.feature.HashingTF
 import org.apache.spark.ml.param.{IntParam, ParamMap}
 import org.apache.spark.ml.util._
@@ -47,7 +34,6 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
 
 class PipelineSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   abstract class MyModel extends Model[MyModel]
 
@@ -213,28 +199,6 @@ class PipelineSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
     }
   }
 
-<<<<<<< HEAD
-  test("pipeline validateParams") {
-    val df = Seq(
-      (1, Vectors.dense(0.0, 1.0, 4.0), 1.0),
-      (2, Vectors.dense(1.0, 0.0, 4.0), 2.0),
-      (3, Vectors.dense(1.0, 0.0, 5.0), 3.0),
-      (4, Vectors.dense(0.0, 0.0, 5.0), 4.0)
-    ).toDF("id", "features", "label")
-
-    intercept[IllegalArgumentException] {
-       val scaler = new MinMaxScaler()
-         .setInputCol("features")
-         .setOutputCol("features_scaled")
-         .setMin(10)
-         .setMax(0)
-       val pipeline = new Pipeline().setStages(Array(scaler))
-       pipeline.fit(df)
-    }
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("Pipeline.setStages should handle Java Arrays being non-covariant") {
     val stages0 = Array(new UnWritableStage("b"))
     val stages1 = Array(new WritableStage("a"))
@@ -244,13 +208,7 @@ class PipelineSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 }
 
 
-<<<<<<< HEAD
-/**
- * Used to test [[Pipeline]] with `MLWritable` stages
- */
-=======
 /** Used to test [[Pipeline]] with [[MLWritable]] stages */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class WritableStage(override val uid: String) extends Transformer with MLWritable {
 
   final val intParam: IntParam = new IntParam(this, "intParam", "doc")
@@ -265,11 +223,7 @@ class WritableStage(override val uid: String) extends Transformer with MLWritabl
 
   override def write: MLWriter = new DefaultParamsWriter(this)
 
-<<<<<<< HEAD
-  override def transform(dataset: Dataset[_]): DataFrame = dataset.toDF
-=======
   override def transform(dataset: DataFrame): DataFrame = dataset
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def transformSchema(schema: StructType): StructType = schema
 }
@@ -281,13 +235,7 @@ object WritableStage extends MLReadable[WritableStage] {
   override def load(path: String): WritableStage = super.load(path)
 }
 
-<<<<<<< HEAD
-/**
- * Used to test [[Pipeline]] with non-`MLWritable` stages
- */
-=======
 /** Used to test [[Pipeline]] with non-[[MLWritable]] stages */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 class UnWritableStage(override val uid: String) extends Transformer {
 
   final val intParam: IntParam = new IntParam(this, "intParam", "doc")
@@ -296,11 +244,7 @@ class UnWritableStage(override val uid: String) extends Transformer {
 
   override def copy(extra: ParamMap): UnWritableStage = defaultCopy(extra)
 
-<<<<<<< HEAD
-  override def transform(dataset: Dataset[_]): DataFrame = dataset.toDF
-=======
   override def transform(dataset: DataFrame): DataFrame = dataset
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def transformSchema(schema: StructType): StructType = schema
 }

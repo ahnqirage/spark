@@ -140,7 +140,6 @@ private[joins] final class UnsafeHashedRelation(
   extends HashedRelation
   with KnownSizeEstimation
   with Externalizable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private[joins] def this() = this(0, null)  // Needed for serialization
 
@@ -156,6 +155,14 @@ private[joins] final class UnsafeHashedRelation(
   // re-used in get()/getValue()
   var resultRow = new UnsafeRow(numFields)
 =======
+  override def estimatedSize: Long = {
+    if (binaryMap != null) {
+      binaryMap.getTotalMemoryConsumption
+    } else {
+      SizeEstimator.estimate(hashTable)
+    }
+  }
+
   override def estimatedSize: Long = {
     if (binaryMap != null) {
       binaryMap.getTotalMemoryConsumption

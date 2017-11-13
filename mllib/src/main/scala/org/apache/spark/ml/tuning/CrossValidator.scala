@@ -47,12 +47,12 @@ import org.apache.spark.ml.evaluation.Evaluator
 import org.apache.spark.ml.feature.RFormulaModel
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.util.DefaultParamsReader.Metadata
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.util.ThreadUtils
+
 
 
 /**
@@ -82,16 +82,10 @@ private[ml] trait CrossValidatorParams extends ValidatorParams {
  * test set exactly once.
  */
 @Since("1.2.0")
-<<<<<<< HEAD
-class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
-  extends Estimator[CrossValidatorModel]
-  with CrossValidatorParams with HasParallelism with MLWritable with Logging {
-=======
 @Experimental
 class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
   extends Estimator[CrossValidatorModel]
   with CrossValidatorParams with MLWritable with Logging {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.2.0")
   def this() = this(Identifiable.randomUID("cv"))
@@ -112,23 +106,6 @@ class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
   @Since("1.2.0")
   def setNumFolds(value: Int): this.type = set(numFolds, value)
 
-<<<<<<< HEAD
-  /** @group setParam */
-  @Since("2.0.0")
-  def setSeed(value: Long): this.type = set(seed, value)
-
-  /**
-   * Set the mamixum level of parallelism to evaluate models in parallel.
-   * Default is 1 for serial evaluation
-   *
-   * @group expertSetParam
-   */
-  @Since("2.3.0")
-  def setParallelism(value: Int): this.type = set(parallelism, value)
-
-  @Since("2.0.0")
-  override def fit(dataset: Dataset[_]): CrossValidatorModel = {
-=======
   @Since("1.4.0")
   override def fit(dataset: DataFrame): CrossValidatorModel = {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -193,9 +170,6 @@ class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
   }
 
   @Since("1.4.0")
-<<<<<<< HEAD
-  override def transformSchema(schema: StructType): StructType = transformSchemaImpl(schema)
-=======
   override def transformSchema(schema: StructType): StructType = {
     $(estimator).transformSchema(schema)
   }
@@ -240,17 +214,10 @@ object CrossValidator extends MLReadable[CrossValidator] {
 
   private[CrossValidator] class CrossValidatorWriter(instance: CrossValidator) extends MLWriter {
 
-<<<<<<< HEAD
-    ValidatorParams.validateParams(instance)
-
-    override protected def saveImpl(path: String): Unit =
-      ValidatorParams.saveImpl(path, instance, sc)
-=======
     SharedReadWrite.validateParams(instance)
 
     override protected def saveImpl(path: String): Unit =
       SharedReadWrite.saveImpl(path, instance, sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   private class CrossValidatorReader extends MLReader[CrossValidator] {
@@ -259,19 +226,6 @@ object CrossValidator extends MLReadable[CrossValidator] {
     private val className = classOf[CrossValidator].getName
 
     override def load(path: String): CrossValidator = {
-<<<<<<< HEAD
-      implicit val format = DefaultFormats
-
-      val (metadata, estimator, evaluator, estimatorParamMaps) =
-        ValidatorParams.loadImpl(path, sc, className)
-      val cv = new CrossValidator(metadata.uid)
-        .setEstimator(estimator)
-        .setEvaluator(evaluator)
-        .setEstimatorParamMaps(estimatorParamMaps)
-      DefaultParamsReader.getAndSetParams(cv, metadata,
-        skipParams = Option(List("estimatorParamMaps")))
-      cv
-=======
       val (metadata, estimator, evaluator, estimatorParamMaps, numFolds) =
         SharedReadWrite.load(path, sc, className)
       new CrossValidator(metadata.uid)
@@ -399,7 +353,6 @@ object CrossValidator extends MLReadable[CrossValidator] {
             ParamMap(paramPairs: _*)
         }.toArray
       (metadata, estimator, evaluator, estimatorParamMaps, numFolds)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 }
@@ -411,11 +364,6 @@ object CrossValidator extends MLReadable[CrossValidator] {
  *
  * @param bestModel The best model selected from k-fold cross validation.
  * @param avgMetrics Average cross-validation metrics for each paramMap in
-<<<<<<< HEAD
- *                   `CrossValidator.estimatorParamMaps`, in the corresponding order.
- */
-@Since("1.2.0")
-=======
  *                   [[CrossValidator.estimatorParamMaps]], in the corresponding order.
  */
 @Since("1.2.0")
@@ -427,15 +375,6 @@ class CrossValidatorModel private[ml] (
     @Since("1.5.0") val avgMetrics: Array[Double])
   extends Model[CrossValidatorModel] with CrossValidatorParams with MLWritable {
 
-<<<<<<< HEAD
-  /** A Python-friendly auxiliary constructor. */
-  private[ml] def this(uid: String, bestModel: Model[_], avgMetrics: JList[Double]) = {
-    this(uid, bestModel, avgMetrics.asScala.toArray)
-  }
-
-  @Since("2.0.0")
-  override def transform(dataset: Dataset[_]): DataFrame = {
-=======
   @Since("1.4.0")
   override def validateParams(): Unit = {
     bestModel.validateParams()
@@ -469,11 +408,8 @@ class CrossValidatorModel private[ml] (
 @Since("1.6.0")
 object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
 
-<<<<<<< HEAD
-=======
   import CrossValidator.SharedReadWrite
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.6.0")
   override def read: MLReader[CrossValidatorModel] = new CrossValidatorModelReader
 
@@ -483,20 +419,12 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
   private[CrossValidatorModel]
   class CrossValidatorModelWriter(instance: CrossValidatorModel) extends MLWriter {
 
-<<<<<<< HEAD
-    ValidatorParams.validateParams(instance)
-=======
     SharedReadWrite.validateParams(instance)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     override protected def saveImpl(path: String): Unit = {
       import org.json4s.JsonDSL._
       val extraMetadata = "avgMetrics" -> instance.avgMetrics.toSeq
-<<<<<<< HEAD
-      ValidatorParams.saveImpl(path, instance, sc, Some(extraMetadata))
-=======
       SharedReadWrite.saveImpl(path, instance, sc, Some(extraMetadata))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val bestModelPath = new Path(path, "bestModel").toString
       instance.bestModel.asInstanceOf[MLWritable].save(bestModelPath)
     }
@@ -510,21 +438,6 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
     override def load(path: String): CrossValidatorModel = {
       implicit val format = DefaultFormats
 
-<<<<<<< HEAD
-      val (metadata, estimator, evaluator, estimatorParamMaps) =
-        ValidatorParams.loadImpl(path, sc, className)
-      val bestModelPath = new Path(path, "bestModel").toString
-      val bestModel = DefaultParamsReader.loadParamsInstance[Model[_]](bestModelPath, sc)
-      val avgMetrics = (metadata.metadata \ "avgMetrics").extract[Seq[Double]].toArray
-
-      val model = new CrossValidatorModel(metadata.uid, bestModel, avgMetrics)
-      model.set(model.estimator, estimator)
-        .set(model.evaluator, evaluator)
-        .set(model.estimatorParamMaps, estimatorParamMaps)
-      DefaultParamsReader.getAndSetParams(model, metadata,
-        skipParams = Option(List("estimatorParamMaps")))
-      model
-=======
       val (metadata, estimator, evaluator, estimatorParamMaps, numFolds) =
         SharedReadWrite.load(path, sc, className)
       val bestModelPath = new Path(path, "bestModel").toString
@@ -535,7 +448,6 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
         .set(cv.evaluator, evaluator)
         .set(cv.estimatorParamMaps, estimatorParamMaps)
         .set(cv.numFolds, numFolds)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 }

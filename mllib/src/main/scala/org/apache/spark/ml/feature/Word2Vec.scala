@@ -19,25 +19,16 @@ package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.SparkContext
 import org.apache.spark.annotation.{Experimental, Since}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.{BLAS, Vector, Vectors, VectorUDT}
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.feature
-<<<<<<< HEAD
-import org.apache.spark.mllib.linalg.VectorImplicits._
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
-=======
 import org.apache.spark.mllib.linalg.{BLAS, Vector, VectorUDT, Vectors}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.util.{Utils, VersionUtils}
@@ -62,21 +53,11 @@ private[feature] trait Word2VecBase extends Params
   def getVectorSize: Int = $(vectorSize)
 
   /**
-<<<<<<< HEAD
-   * The window size (context words from [-window, window]).
-   * Default: 5
-   * @group expertParam
-   */
-  final val windowSize = new IntParam(
-    this, "windowSize", "the window size (context words from [-window, window]) (> 0)",
-    ParamValidators.gt(0))
-=======
    * The window size (context words from [-window, window]) default 5.
    * @group expertParam
    */
   final val windowSize = new IntParam(
     this, "windowSize", "the window size (context words from [-window, window])")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   setDefault(windowSize -> 5)
 
   /** @group expertGetParam */
@@ -149,7 +130,6 @@ final class Word2Vec @Since("1.4.0") (
 @Experimental
 final class Word2Vec(override val uid: String) extends Estimator[Word2VecModel] with Word2VecBase
   with DefaultParamsWritable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("w2v"))
@@ -167,10 +147,6 @@ final class Word2Vec(override val uid: String) extends Estimator[Word2VecModel] 
   def setVectorSize(value: Int): this.type = set(vectorSize, value)
 
   /** @group expertSetParam */
-<<<<<<< HEAD
-  @Since("1.6.0")
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def setWindowSize(value: Int): this.type = set(windowSize, value)
 
   /** @group setParam */
@@ -209,10 +185,6 @@ final class Word2Vec(override val uid: String) extends Estimator[Word2VecModel] 
       .setSeed($(seed))
       .setVectorSize($(vectorSize))
       .setWindowSize($(windowSize))
-<<<<<<< HEAD
-      .setMaxSentenceLength($(maxSentenceLength))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .fit(input)
     copyValues(new Word2VecModel(uid, wordVectors).setParent(this))
   }
@@ -242,7 +214,6 @@ class Word2VecModel private[ml] (
     @Since("1.4.0") override val uid: String,
 =======
     override val uid: String,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     @transient private val wordVectors: feature.Word2VecModel)
   extends Model[Word2VecModel] with Word2VecBase with MLWritable {
 
@@ -325,17 +296,10 @@ class Word2VecModel private[ml] (
     val vectors = wordVectors.getVectors
       .mapValues(vv => Vectors.dense(vv.map(_.toDouble)))
       .map(identity) // mapValues doesn't return a serializable map (SI-7005)
-<<<<<<< HEAD
-    val bVectors = dataset.sparkSession.sparkContext.broadcast(vectors)
-    val d = $(vectorSize)
-    val word2Vec = udf { sentence: Seq[String] =>
-      if (sentence.isEmpty) {
-=======
     val bVectors = dataset.sqlContext.sparkContext.broadcast(vectors)
     val d = $(vectorSize)
     val word2Vec = udf { sentence: Seq[String] =>
       if (sentence.size == 0) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Vectors.sparse(d, Array.empty[Int], Array.empty[Double])
       } else {
         val sum = Vectors.zeros(d)
@@ -369,58 +333,6 @@ class Word2VecModel private[ml] (
 @Since("1.6.0")
 object Word2VecModel extends MLReadable[Word2VecModel] {
 
-<<<<<<< HEAD
-  private case class Data(word: String, vector: Array[Float])
-
-  private[Word2VecModel]
-  class Word2VecModelWriter(instance: Word2VecModel) extends MLWriter {
-
-    override protected def saveImpl(path: String): Unit = {
-      DefaultParamsWriter.saveMetadata(instance, path, sc)
-
-      val wordVectors = instance.wordVectors.getVectors
-      val dataPath = new Path(path, "data").toString
-      val bufferSizeInBytes = Utils.byteStringAsBytes(
-        sc.conf.get("spark.kryoserializer.buffer.max", "64m"))
-      val numPartitions = Word2VecModelWriter.calculateNumberOfPartitions(
-        bufferSizeInBytes, instance.wordVectors.wordIndex.size, instance.getVectorSize)
-      val spark = sparkSession
-      import spark.implicits._
-      spark.createDataset[(String, Array[Float])](wordVectors.toSeq)
-        .repartition(numPartitions)
-        .map { case (word, vector) => Data(word, vector) }
-        .toDF()
-        .write
-        .parquet(dataPath)
-    }
-  }
-
-  private[feature]
-  object Word2VecModelWriter {
-    /**
-     * Calculate the number of partitions to use in saving the model.
-     * [SPARK-11994] - We want to partition the model in partitions smaller than
-     * spark.kryoserializer.buffer.max
-     * @param bufferSizeInBytes  Set to spark.kryoserializer.buffer.max
-     * @param numWords  Vocab size
-     * @param vectorSize  Vector length for each word
-     */
-    def calculateNumberOfPartitions(
-        bufferSizeInBytes: Long,
-        numWords: Int,
-        vectorSize: Int): Int = {
-      val floatSize = 4L  // Use Long to help avoid overflow
-      val averageWordSize = 15
-      // Calculate the approximate size of the model.
-      // Assuming an average word size of 15 bytes, the formula is:
-      // (floatSize * vectorSize + 15) * numWords
-      val approximateSizeInBytes = (floatSize * vectorSize + averageWordSize) * numWords
-      val numPartitions = (approximateSizeInBytes / bufferSizeInBytes) + 1
-      require(numPartitions < 10e8, s"Word2VecModel calculated that it needs $numPartitions " +
-        s"partitions to save this model, which is too large.  Try increasing " +
-        s"spark.kryoserializer.buffer.max so that Word2VecModel can use fewer partitions.")
-      numPartitions.toInt
-=======
   private[Word2VecModel]
   class Word2VecModelWriter(instance: Word2VecModel) extends MLWriter {
 
@@ -431,7 +343,6 @@ object Word2VecModel extends MLReadable[Word2VecModel] {
       val data = Data(instance.wordVectors.wordIndex, instance.wordVectors.wordVectors.toSeq)
       val dataPath = new Path(path, "data").toString
       sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -440,31 +351,6 @@ object Word2VecModel extends MLReadable[Word2VecModel] {
     private val className = classOf[Word2VecModel].getName
 
     override def load(path: String): Word2VecModel = {
-<<<<<<< HEAD
-      val spark = sparkSession
-      import spark.implicits._
-
-      val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
-      val (major, minor) = VersionUtils.majorMinorVersion(metadata.sparkVersion)
-
-      val dataPath = new Path(path, "data").toString
-
-      val oldModel = if (major < 2 || (major == 2 && minor < 2)) {
-        val data = spark.read.parquet(dataPath)
-          .select("wordIndex", "wordVectors")
-          .head()
-        val wordIndex = data.getAs[Map[String, Int]](0)
-        val wordVectors = data.getAs[Seq[Float]](1).toArray
-        new feature.Word2VecModel(wordIndex, wordVectors)
-      } else {
-        val wordVectorsMap = spark.read.parquet(dataPath).as[Data]
-          .collect()
-          .map(wordVector => (wordVector.word, wordVector.vector))
-          .toMap
-        new feature.Word2VecModel(wordVectorsMap)
-      }
-
-=======
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
       val data = sqlContext.read.parquet(dataPath)
@@ -473,7 +359,6 @@ object Word2VecModel extends MLReadable[Word2VecModel] {
       val wordIndex = data.getAs[Map[String, Int]](0)
       val wordVectors = data.getAs[Seq[Float]](1).toArray
       val oldModel = new feature.Word2VecModel(wordIndex, wordVectors)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val model = new Word2VecModel(metadata.uid, oldModel)
       DefaultParamsReader.getAndSetParams(model, metadata)
       model

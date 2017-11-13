@@ -56,11 +56,7 @@ public class UnsafeExternalSorterSuite {
 
   final LinkedList<File> spillFilesCreated = new LinkedList<>();
   final TestMemoryManager memoryManager =
-<<<<<<< HEAD
-    new TestMemoryManager(conf.clone().set("spark.memory.offHeap.enabled", "false"));
-=======
     new TestMemoryManager(new SparkConf().set("spark.memory.offHeap.enabled", "false"));
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   final TaskMemoryManager taskMemoryManager = new TaskMemoryManager(memoryManager, 0);
   final SerializerManager serializerManager = new SerializerManager(
     new JavaSerializer(conf),

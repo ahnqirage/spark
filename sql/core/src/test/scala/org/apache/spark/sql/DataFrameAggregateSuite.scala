@@ -311,6 +311,77 @@ class DataFrameAggregateSuite extends QueryTest with SharedSQLContext {
     )
   }
 
+  test("rollup") {
+    checkAnswer(
+      courseSales.rollup("course", "year").sum("earnings"),
+      Row("Java", 2012, 20000.0) ::
+        Row("Java", 2013, 30000.0) ::
+        Row("Java", null, 50000.0) ::
+        Row("dotNET", 2012, 15000.0) ::
+        Row("dotNET", 2013, 48000.0) ::
+        Row("dotNET", null, 63000.0) ::
+        Row(null, null, 113000.0) :: Nil
+    )
+  }
+
+  test("cube") {
+    checkAnswer(
+      courseSales.cube("course", "year").sum("earnings"),
+      Row("Java", 2012, 20000.0) ::
+        Row("Java", 2013, 30000.0) ::
+        Row("Java", null, 50000.0) ::
+        Row("dotNET", 2012, 15000.0) ::
+        Row("dotNET", 2013, 48000.0) ::
+        Row("dotNET", null, 63000.0) ::
+        Row(null, 2012, 35000.0) ::
+        Row(null, 2013, 78000.0) ::
+        Row(null, null, 113000.0) :: Nil
+    )
+
+    val df0 = sqlContext.sparkContext.parallelize(Seq(
+      Fact(20151123, 18, 35, "room1", 18.6),
+      Fact(20151123, 18, 35, "room2", 22.4),
+      Fact(20151123, 18, 36, "room1", 17.4),
+      Fact(20151123, 18, 36, "room2", 25.6))).toDF()
+
+    val cube0 = df0.cube("date", "hour", "minute", "room_name").agg(Map("temp" -> "avg"))
+    assert(cube0.where("date IS NULL").count > 0)
+  }
+
+  test("rollup overlapping columns") {
+    checkAnswer(
+      testData2.rollup($"a" + $"b" as "foo", $"b" as "bar").agg(sum($"a" - $"b") as "foo"),
+      Row(2, 1, 0) :: Row(3, 2, -1) :: Row(3, 1, 1) :: Row(4, 2, 0) :: Row(4, 1, 2) :: Row(5, 2, 1)
+        :: Row(2, null, 0) :: Row(3, null, 0) :: Row(4, null, 2) :: Row(5, null, 1)
+        :: Row(null, null, 3) :: Nil
+    )
+
+    checkAnswer(
+      testData2.rollup("a", "b").agg(sum("b")),
+      Row(1, 1, 1) :: Row(1, 2, 2) :: Row(2, 1, 1) :: Row(2, 2, 2) :: Row(3, 1, 1) :: Row(3, 2, 2)
+        :: Row(1, null, 3) :: Row(2, null, 3) :: Row(3, null, 3)
+        :: Row(null, null, 9) :: Nil
+    )
+  }
+
+  test("cube overlapping columns") {
+    checkAnswer(
+      testData2.cube($"a" + $"b", $"b").agg(sum($"a" - $"b")),
+      Row(2, 1, 0) :: Row(3, 2, -1) :: Row(3, 1, 1) :: Row(4, 2, 0) :: Row(4, 1, 2) :: Row(5, 2, 1)
+        :: Row(2, null, 0) :: Row(3, null, 0) :: Row(4, null, 2) :: Row(5, null, 1)
+        :: Row(null, 1, 3) :: Row(null, 2, 0)
+        :: Row(null, null, 3) :: Nil
+    )
+
+    checkAnswer(
+      testData2.cube("a", "b").agg(sum("b")),
+      Row(1, 1, 1) :: Row(1, 2, 2) :: Row(2, 1, 1) :: Row(2, 2, 2) :: Row(3, 1, 1) :: Row(3, 2, 2)
+        :: Row(1, null, 3) :: Row(2, null, 3) :: Row(3, null, 3)
+        :: Row(null, 1, 3) :: Row(null, 2, 6)
+        :: Row(null, null, 9) :: Nil
+    )
+  }
+
   test("spark.sql.retainGroupColumns config") {
     checkAnswer(
       testData2.groupBy("a").agg(sum($"b")),
@@ -539,175 +610,5 @@ class DataFrameAggregateSuite extends QueryTest with SharedSQLContext {
         expr("skewness(a)"),
         expr("kurtosis(a)")),
       Row(null, null, null, null, null))
-<<<<<<< HEAD
-  }
-
-  test("collect functions") {
-    val df = Seq((1, 2), (2, 2), (3, 4)).toDF("a", "b")
-    checkAnswer(
-      df.select(collect_list($"a"), collect_list($"b")),
-      Seq(Row(Seq(1, 2, 3), Seq(2, 2, 4)))
-    )
-    checkAnswer(
-      df.select(collect_set($"a"), collect_set($"b")),
-      Seq(Row(Seq(1, 2, 3), Seq(2, 4)))
-    )
-
-    checkDataset(
-      df.select(collect_set($"a").as("aSet")).as[Set[Int]],
-      Set(1, 2, 3))
-    checkDataset(
-      df.select(collect_set($"b").as("bSet")).as[Set[Int]],
-      Set(2, 4))
-    checkDataset(
-      df.select(collect_set($"a"), collect_set($"b")).as[(Set[Int], Set[Int])],
-      Seq(Set(1, 2, 3) -> Set(2, 4)): _*)
-  }
-
-  test("collect functions structs") {
-    val df = Seq((1, 2, 2), (2, 2, 2), (3, 4, 1))
-      .toDF("a", "x", "y")
-      .select($"a", struct($"x", $"y").as("b"))
-    checkAnswer(
-      df.select(collect_list($"a"), sort_array(collect_list($"b"))),
-      Seq(Row(Seq(1, 2, 3), Seq(Row(2, 2), Row(2, 2), Row(4, 1))))
-    )
-    checkAnswer(
-      df.select(collect_set($"a"), sort_array(collect_set($"b"))),
-      Seq(Row(Seq(1, 2, 3), Seq(Row(2, 2), Row(4, 1))))
-    )
-  }
-
-  test("collect_set functions cannot have maps") {
-    val df = Seq((1, 3, 0), (2, 3, 0), (3, 4, 1))
-      .toDF("a", "x", "y")
-      .select($"a", map($"x", $"y").as("b"))
-    val error = intercept[AnalysisException] {
-      df.select(collect_set($"a"), collect_set($"b"))
-    }
-    assert(error.message.contains("collect_set() cannot have map type data"))
-  }
-
-  test("SPARK-17641: collect functions should not collect null values") {
-    val df = Seq(("1", 2), (null, 2), ("1", 4)).toDF("a", "b")
-    checkAnswer(
-      df.select(collect_list($"a"), collect_list($"b")),
-      Seq(Row(Seq("1", "1"), Seq(2, 2, 4)))
-    )
-    checkAnswer(
-      df.select(collect_set($"a"), collect_set($"b")),
-      Seq(Row(Seq("1"), Seq(2, 4)))
-    )
-  }
-
-  test("SPARK-14664: Decimal sum/avg over window should work.") {
-    checkAnswer(
-      spark.sql("select sum(a) over () from values 1.0, 2.0, 3.0 T(a)"),
-      Row(6.0) :: Row(6.0) :: Row(6.0) :: Nil)
-    checkAnswer(
-      spark.sql("select avg(a) over () from values 1.0, 2.0, 3.0 T(a)"),
-      Row(2.0) :: Row(2.0) :: Row(2.0) :: Nil)
-  }
-
-  test("SQL decimal test (used for catching certain decimal handling bugs in aggregates)") {
-    checkAnswer(
-      decimalData.groupBy('a cast DecimalType(10, 2)).agg(avg('b cast DecimalType(10, 2))),
-      Seq(Row(new java.math.BigDecimal(1), new java.math.BigDecimal("1.5")),
-        Row(new java.math.BigDecimal(2), new java.math.BigDecimal("1.5")),
-        Row(new java.math.BigDecimal(3), new java.math.BigDecimal("1.5"))))
-  }
-
-  test("SPARK-17616: distinct aggregate combined with a non-partial aggregate") {
-    val df = Seq((1, 3, "a"), (1, 2, "b"), (3, 4, "c"), (3, 4, "c"), (3, 5, "d"))
-      .toDF("x", "y", "z")
-    checkAnswer(
-      df.groupBy($"x").agg(countDistinct($"y"), sort_array(collect_list($"z"))),
-      Seq(Row(1, 2, Seq("a", "b")), Row(3, 2, Seq("c", "c", "d"))))
-  }
-
-  test("SPARK-18004 limit + aggregates") {
-    val df = Seq(("a", 1), ("b", 2), ("c", 1), ("d", 5)).toDF("id", "value")
-    val limit2Df = df.limit(2)
-    checkAnswer(
-      limit2Df.groupBy("id").count().select($"id"),
-      limit2Df.select($"id"))
-  }
-
-  test("SPARK-17237 remove backticks in a pivot result schema") {
-    val df = Seq((2, 3, 4), (3, 4, 5)).toDF("a", "x", "y")
-    withSQLConf(SQLConf.SUPPORT_QUOTED_REGEX_COLUMN_NAME.key -> "false") {
-      checkAnswer(
-        df.groupBy("a").pivot("x").agg(count("y"), avg("y")).na.fill(0),
-        Seq(Row(3, 0, 0.0, 1, 5.0), Row(2, 1, 4.0, 0, 0.0))
-      )
-    }
-  }
-
-  test("aggregate function in GROUP BY") {
-    val e = intercept[AnalysisException] {
-      testData.groupBy(sum($"key")).count()
-    }
-    assert(e.message.contains("aggregate functions are not allowed in GROUP BY"))
-  }
-
-  private def assertNoExceptions(c: Column): Unit = {
-    for ((wholeStage, useObjectHashAgg) <-
-         Seq((true, true), (true, false), (false, true), (false, false))) {
-      withSQLConf(
-        (SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key, wholeStage.toString),
-        (SQLConf.USE_OBJECT_HASH_AGG.key, useObjectHashAgg.toString)) {
-
-        val df = Seq(("1", 1), ("1", 2), ("2", 3), ("2", 4)).toDF("x", "y")
-
-        // test case for HashAggregate
-        val hashAggDF = df.groupBy("x").agg(c, sum("y"))
-        val hashAggPlan = hashAggDF.queryExecution.executedPlan
-        if (wholeStage) {
-          assert(hashAggPlan.find {
-            case WholeStageCodegenExec(_: HashAggregateExec) => true
-            case _ => false
-          }.isDefined)
-        } else {
-          assert(hashAggPlan.isInstanceOf[HashAggregateExec])
-        }
-        hashAggDF.collect()
-
-        // test case for ObjectHashAggregate and SortAggregate
-        val objHashAggOrSortAggDF = df.groupBy("x").agg(c, collect_list("y"))
-        val objHashAggOrSortAggPlan = objHashAggOrSortAggDF.queryExecution.executedPlan
-        if (useObjectHashAgg) {
-          assert(objHashAggOrSortAggPlan.isInstanceOf[ObjectHashAggregateExec])
-        } else {
-          assert(objHashAggOrSortAggPlan.isInstanceOf[SortAggregateExec])
-        }
-        objHashAggOrSortAggDF.collect()
-      }
-    }
-  }
-
-  test("SPARK-19471: AggregationIterator does not initialize the generated result projection" +
-    " before using it") {
-    Seq(
-      monotonically_increasing_id(), spark_partition_id(),
-      rand(Random.nextLong()), randn(Random.nextLong())
-    ).foreach(assertNoExceptions)
-  }
-
-  test("SPARK-21580 ints in aggregation expressions are taken as group-by ordinal.") {
-    checkAnswer(
-      testData2.groupBy(lit(3), lit(4)).agg(lit(6), lit(7), sum("b")),
-      Seq(Row(3, 4, 6, 7, 9)))
-    checkAnswer(
-      testData2.groupBy(lit(3), lit(4)).agg(lit(6), 'b, sum("b")),
-      Seq(Row(3, 4, 6, 1, 3), Row(3, 4, 6, 2, 6)))
-
-    checkAnswer(
-      spark.sql("SELECT 3, 4, SUM(b) FROM testData2 GROUP BY 1, 2"),
-      Seq(Row(3, 4, 9)))
-    checkAnswer(
-      spark.sql("SELECT 3 AS c, 4 AS d, SUM(b) FROM testData2 GROUP BY c, d"),
-      Seq(Row(3, 4, 9)))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

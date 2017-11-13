@@ -19,14 +19,6 @@ package org.apache.spark.sql.hive
 
 import java.io.File
 
-<<<<<<< HEAD
-import org.apache.spark.sql.{AnalysisException, Dataset, QueryTest, SaveMode}
-import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.catalyst.parser.ParseException
-import org.apache.spark.sql.execution.columnar.InMemoryTableScanExec
-import org.apache.spark.sql.execution.datasources.{CatalogFileIndex, HadoopFsRelation, LogicalRelation}
-import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
-=======
 import org.apache.spark.sql.execution.columnar.InMemoryColumnarTableScan
 import org.apache.spark.sql.execution.datasources.parquet.ParquetRelation
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -20,12 +20,7 @@ package org.apache.spark.memory
 import org.mockito.Mockito.when
 
 import org.apache.spark.SparkConf
-<<<<<<< HEAD
-import org.apache.spark.storage.TestBlockId
-import org.apache.spark.storage.memory.MemoryStore
-=======
 import org.apache.spark.storage.{MemoryStore, TestBlockId}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 class StaticMemoryManagerSuite extends MemoryManagerSuite {
   private val conf = new SparkConf().set("spark.storage.unrollFraction", "0.4")
@@ -39,11 +34,7 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     val mm = new StaticMemoryManager(
       conf,
       maxOnHeapExecutionMemory = maxExecutionMem,
-<<<<<<< HEAD
-      maxOnHeapStorageMemory = maxStorageMem,
-=======
       maxStorageMemory = maxStorageMem,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       numCores = 1)
     val ms = makeMemoryStore(mm)
     (mm, ms)
@@ -58,9 +49,6 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
         .set("spark.testing.memory", maxOnHeapExecutionMemory.toString)
         .set("spark.memory.offHeap.size", maxOffHeapExecutionMemory.toString),
       maxOnHeapExecutionMemory = maxOnHeapExecutionMemory,
-<<<<<<< HEAD
-      maxOnHeapStorageMemory = 0,
-=======
       maxStorageMemory = 0,
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       numCores = 1)
@@ -72,23 +60,6 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     val (mm, _) = makeThings(maxExecutionMem, Long.MaxValue)
     val memoryMode = MemoryMode.ON_HEAP
     assert(mm.executionMemoryUsed === 0L)
-<<<<<<< HEAD
-    assert(mm.acquireExecutionMemory(10L, taskAttemptId, memoryMode) === 10L)
-    assert(mm.executionMemoryUsed === 10L)
-    assert(mm.acquireExecutionMemory(100L, taskAttemptId, memoryMode) === 100L)
-    // Acquire up to the max
-    assert(mm.acquireExecutionMemory(1000L, taskAttemptId, memoryMode) === 890L)
-    assert(mm.executionMemoryUsed === maxExecutionMem)
-    assert(mm.acquireExecutionMemory(1L, taskAttemptId, memoryMode) === 0L)
-    assert(mm.executionMemoryUsed === maxExecutionMem)
-    mm.releaseExecutionMemory(800L, taskAttemptId, memoryMode)
-    assert(mm.executionMemoryUsed === 200L)
-    // Acquire after release
-    assert(mm.acquireExecutionMemory(1L, taskAttemptId, memoryMode) === 1L)
-    assert(mm.executionMemoryUsed === 201L)
-    // Release beyond what was acquired
-    mm.releaseExecutionMemory(maxExecutionMem, taskAttemptId, memoryMode)
-=======
     assert(mm.acquireExecutionMemory(10L, taskAttemptId, MemoryMode.ON_HEAP) === 10L)
     assert(mm.executionMemoryUsed === 10L)
     assert(mm.acquireExecutionMemory(100L, taskAttemptId, MemoryMode.ON_HEAP) === 100L)
@@ -104,7 +75,6 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     assert(mm.executionMemoryUsed === 201L)
     // Release beyond what was acquired
     mm.releaseExecutionMemory(maxExecutionMem, taskAttemptId, MemoryMode.ON_HEAP)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(mm.executionMemoryUsed === 0L)
   }
 
@@ -148,7 +118,6 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     assertEvictBlocksToFreeSpaceCalled(ms, 110L)
     assert(mm.storageMemoryUsed === 1000L)
     assert(mm.acquireStorageMemory(dummyBlock, 1L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assertEvictBlocksToFreeSpaceCalled(ms, 1L)
     assert(evictedBlocks.nonEmpty)
     evictedBlocks.clear()
@@ -163,7 +132,6 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     assert(mm.acquireStorageMemory(dummyBlock, 1L, memoryMode))
 =======
     assert(mm.acquireStorageMemory(dummyBlock, 1L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assertEvictBlocksToFreeSpaceNotCalled(ms)
     assert(mm.storageMemoryUsed === 201L)
     mm.releaseAllStorageMemory()
@@ -172,7 +140,6 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     assert(mm.acquireStorageMemory(dummyBlock, 1L, memoryMode))
 =======
     assert(mm.acquireStorageMemory(dummyBlock, 1L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assertEvictBlocksToFreeSpaceNotCalled(ms)
     assert(mm.storageMemoryUsed === 1L)
     // Release beyond what was acquired
@@ -188,16 +155,6 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     val (mm, ms) = makeThings(maxExecutionMem, maxStorageMem)
     val memoryMode = MemoryMode.ON_HEAP
     // Only execution memory should increase
-<<<<<<< HEAD
-    assert(mm.acquireExecutionMemory(100L, taskAttemptId, memoryMode) === 100L)
-    assert(mm.storageMemoryUsed === 0L)
-    assert(mm.executionMemoryUsed === 100L)
-    assert(mm.acquireExecutionMemory(1000L, taskAttemptId, memoryMode) === 100L)
-    assert(mm.storageMemoryUsed === 0L)
-    assert(mm.executionMemoryUsed === 200L)
-    // Only storage memory should increase
-    assert(mm.acquireStorageMemory(dummyBlock, 50L, memoryMode))
-=======
     assert(mm.acquireExecutionMemory(100L, taskAttemptId, MemoryMode.ON_HEAP) === 100L)
     assert(mm.storageMemoryUsed === 0L)
     assert(mm.executionMemoryUsed === 100L)
@@ -206,16 +163,11 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     assert(mm.executionMemoryUsed === 200L)
     // Only storage memory should increase
     assert(mm.acquireStorageMemory(dummyBlock, 50L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assertEvictBlocksToFreeSpaceNotCalled(ms)
     assert(mm.storageMemoryUsed === 50L)
     assert(mm.executionMemoryUsed === 200L)
     // Only execution memory should be released
-<<<<<<< HEAD
-    mm.releaseExecutionMemory(133L, taskAttemptId, memoryMode)
-=======
     mm.releaseExecutionMemory(133L, taskAttemptId, MemoryMode.ON_HEAP)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(mm.storageMemoryUsed === 50L)
     assert(mm.executionMemoryUsed === 67L)
     // Only storage memory should be released
@@ -233,29 +185,20 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     assert(mm.acquireUnrollMemory(dummyBlock, 100L, memoryMode))
 =======
     assert(mm.acquireUnrollMemory(dummyBlock, 100L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     when(ms.currentUnrollMemory).thenReturn(100L)
     assertEvictBlocksToFreeSpaceNotCalled(ms)
     assert(mm.storageMemoryUsed === 100L)
     mm.releaseUnrollMemory(40L, memoryMode)
     assert(mm.storageMemoryUsed === 60L)
     when(ms.currentUnrollMemory).thenReturn(60L)
-<<<<<<< HEAD
-    assert(mm.acquireStorageMemory(dummyBlock, 800L, memoryMode))
-=======
     assert(mm.acquireStorageMemory(dummyBlock, 800L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assertEvictBlocksToFreeSpaceNotCalled(ms)
     assert(mm.storageMemoryUsed === 860L)
     // `spark.storage.unrollFraction` is 0.4, so the max unroll space is 400 bytes.
     // As of this point, cache memory is 800 bytes and current unroll memory is 60 bytes.
     // Requesting 240 more bytes of unroll memory will leave our total unroll memory at
     // 300 bytes, still under the 400-byte limit. Therefore, all 240 bytes are granted.
-<<<<<<< HEAD
-    assert(mm.acquireUnrollMemory(dummyBlock, 240L, memoryMode))
-=======
     assert(mm.acquireUnrollMemory(dummyBlock, 240L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assertEvictBlocksToFreeSpaceCalled(ms, 100L) // 860 + 240 - 1000
     when(ms.currentUnrollMemory).thenReturn(300L) // 60 + 240
     assert(mm.storageMemoryUsed === 1000L)
@@ -263,11 +206,7 @@ class StaticMemoryManagerSuite extends MemoryManagerSuite {
     // We already have 300 bytes of unroll memory, so requesting 150 more will leave us
     // above the 400-byte limit. Since there is not enough free memory, this request will
     // fail even after evicting as much as we can (400 - 300 = 100 bytes).
-<<<<<<< HEAD
-    assert(!mm.acquireUnrollMemory(dummyBlock, 150L, memoryMode))
-=======
     assert(!mm.acquireUnrollMemory(dummyBlock, 150L, evictedBlocks))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assertEvictBlocksToFreeSpaceCalled(ms, 100L)
     assert(mm.storageMemoryUsed === 900L)
     // Release beyond what was acquired

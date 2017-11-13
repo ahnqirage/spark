@@ -17,9 +17,6 @@
 
 package org.apache.spark.sql.expressions
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.InterfaceStability
-=======
 import org.apache.spark.sql.catalyst.expressions.aggregate.{Complete, AggregateExpression}
 import org.apache.spark.sql.execution.aggregate.ScalaUDAF
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

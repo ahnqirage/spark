@@ -18,11 +18,7 @@
 // scalastyle:off println
 package org.apache.spark.examples.mllib
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkConf, SparkContext}
-=======
 import org.apache.spark.{SparkContext, SparkConf}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.mllib.tree.RandomForest
 import org.apache.spark.mllib.tree.model.RandomForestModel
@@ -66,11 +62,6 @@ object RandomForestRegressionExample {
     model.save(sc, "target/tmp/myRandomForestRegressionModel")
     val sameModel = RandomForestModel.load(sc, "target/tmp/myRandomForestRegressionModel")
     // $example off$
-<<<<<<< HEAD
-
-    sc.stop()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

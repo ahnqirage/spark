@@ -29,6 +29,8 @@ import org.apache.spark.internal.Logging
 =======
 import org.apache.commons.lang3.StringEscapeUtils
 
+import org.apache.commons.lang3.StringEscapeUtils
+
 import org.apache.spark.Logging
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.scheduler.StageInfo
@@ -151,7 +153,6 @@ private[ui] object RDDOperationGraph extends Logging {
       // TODO: differentiate between the intention to cache an RDD and whether it's actually cached
       val node = nodes.getOrElseUpdate(rdd.id, RDDOperationNode(
         rdd.id, rdd.name, rdd.storageLevel != StorageLevel.NONE, rdd.callSite))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // TODO: differentiate between the intention to cache an RDD and whether it's actually cached
       val node = nodes.getOrElseUpdate(rdd.id, RDDOperationNode(
@@ -234,16 +235,7 @@ private[ui] object RDDOperationGraph extends Logging {
 
   /** Return the dot representation of a node in an RDDOperationGraph. */
   private def makeDotNode(node: RDDOperationNode): String = {
-<<<<<<< HEAD
-    val isCached = if (node.cached) {
-      " [Cached]"
-    } else {
-      ""
-    }
-    val label = s"${node.name} [${node.id}]$isCached\n${node.callsite}"
-=======
     val label = s"${node.name} [${node.id}]\n${node.callsite}"
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     s"""${node.id} [label="${StringEscapeUtils.escapeJava(label)}"]"""
   }
 

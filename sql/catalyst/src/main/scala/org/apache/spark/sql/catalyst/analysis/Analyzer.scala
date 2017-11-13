@@ -21,28 +21,12 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.sql.AnalysisException
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst._
-import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.encoders.OuterScopes
-import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.SubExprUtils._
-import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.objects.{LambdaVariable, MapObjects, NewInstance, UnresolvedMapObjects}
-import org.apache.spark.sql.catalyst.plans._
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, _}
-import org.apache.spark.sql.catalyst.rules._
-import org.apache.spark.sql.catalyst.trees.TreeNodeRef
-import org.apache.spark.sql.catalyst.util.toPrettySQL
-import org.apache.spark.sql.internal.SQLConf
-=======
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules._
 import org.apache.spark.sql.catalyst.trees.TreeNodeRef
 import org.apache.spark.sql.catalyst.{ScalaReflection, SimpleCatalystConf, CatalystConf}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 
 /**
@@ -129,13 +113,7 @@ class Analyzer(
       LookupFunctions),
     Batch("Substitution", fixedPoint,
       CTESubstitution,
-<<<<<<< HEAD
-      WindowsSubstitution,
-      EliminateUnions,
-      new SubstituteUnresolvedOrdinals(conf)),
-=======
       WindowsSubstitution),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     Batch("Resolution", fixedPoint,
       ResolveTableValuedFunctions ::
       ResolveRelations ::
@@ -146,12 +124,6 @@ class Analyzer(
       ResolveUpCast ::
       ResolveGroupingAnalytics ::
       ResolvePivot ::
-<<<<<<< HEAD
-      ResolveOrdinalInOrderByAndGroupBy ::
-      ResolveAggAliasInGroupBy ::
-      ResolveMissingReferences ::
-      ExtractGenerator ::
-=======
       ResolveUpCast ::
       ResolveSortReferences ::
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -175,20 +147,10 @@ class Analyzer(
     Batch("View", Once,
       AliasViewChild(conf)),
     Batch("Nondeterministic", Once,
-<<<<<<< HEAD
-      PullOutNondeterministic),
-    Batch("UDF", Once,
-      HandleNullInputsForUDF),
-    Batch("FixNullability", Once,
-      FixNullability),
-    Batch("Subquery", Once,
-      UpdateOuterReferences),
-=======
       PullOutNondeterministic,
       ComputeCurrentTime),
     Batch("UDF", Once,
       HandleNullInputsForUDF),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     Batch("Cleanup", fixedPoint,
       CleanupAliases)
   )
@@ -248,10 +210,6 @@ class Analyzer(
     private def assignAliases(exprs: Seq[NamedExpression]) = {
       exprs.zipWithIndex.map {
         case (expr, i) =>
-<<<<<<< HEAD
-          expr.transformUp { case u @ UnresolvedAlias(child, optGenAliasFunc) =>
-            child match {
-=======
           expr transformUp {
             case u @ UnresolvedAlias(child) => child match {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -278,6 +236,10 @@ class Analyzer(
 
       case g: GroupingSets if g.child.resolved && hasUnresolvedAlias(g.aggregations) =>
         g.copy(aggregations = assignAliases(g.aggregations))
+
+      case Pivot(groupByExprs, pivotColumn, pivotValues, aggregates, child)
+        if child.resolved && hasUnresolvedAlias(groupByExprs) =>
+        Pivot(assignAliases(groupByExprs), pivotColumn, pivotValues, aggregates, child)
 
       case Pivot(groupByExprs, pivotColumn, pivotValues, aggregates, child)
         if child.resolved && hasUnresolvedAlias(groupByExprs) =>
@@ -433,7 +395,6 @@ class Analyzer(
             case e =>
               groupByAliases.find(_.child.semanticEquals(e)).map(attributeMap(_)).getOrElse(e)
           }.asInstanceOf[NamedExpression]
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       }
 
@@ -563,91 +524,18 @@ class Analyzer(
         val child = Project(x.child.output ++ groupByAliases, x.child)
         val groupByAttributes = groupByAliases.map(attributeMap(_))
 
+        val child = Project(x.child.output ++ groupByAliases, x.child)
+        val groupByAttributes = groupByAliases.map(attributeMap(_))
+
         Aggregate(
           groupByAttributes :+ VirtualColumn.groupingIdAttribute,
           aggregations,
           Expand(x.bitmasks, groupByAttributes, gid, child))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
   object ResolvePivot extends Rule[LogicalPlan] {
     def apply(plan: LogicalPlan): LogicalPlan = plan transform {
-<<<<<<< HEAD
-      case p: Pivot if !p.childrenResolved | !p.aggregates.forall(_.resolved)
-        | !p.groupByExprs.forall(_.resolved) | !p.pivotColumn.resolved => p
-      case Pivot(groupByExprs, pivotColumn, pivotValues, aggregates, child) =>
-        val singleAgg = aggregates.size == 1
-        def outputName(value: Literal, aggregate: Expression): String = {
-          val utf8Value = Cast(value, StringType, Some(conf.sessionLocalTimeZone)).eval(EmptyRow)
-          val stringValue: String = Option(utf8Value).map(_.toString).getOrElse("null")
-          if (singleAgg) {
-            stringValue
-          } else {
-            val suffix = aggregate match {
-              case n: NamedExpression => n.name
-              case _ => toPrettySQL(aggregate)
-            }
-            stringValue + "_" + suffix
-          }
-        }
-        if (aggregates.forall(a => PivotFirst.supportsDataType(a.dataType))) {
-          // Since evaluating |pivotValues| if statements for each input row can get slow this is an
-          // alternate plan that instead uses two steps of aggregation.
-          val namedAggExps: Seq[NamedExpression] = aggregates.map(a => Alias(a, a.sql)())
-          val namedPivotCol = pivotColumn match {
-            case n: NamedExpression => n
-            case _ => Alias(pivotColumn, "__pivot_col")()
-          }
-          val bigGroup = groupByExprs :+ namedPivotCol
-          val firstAgg = Aggregate(bigGroup, bigGroup ++ namedAggExps, child)
-          val castPivotValues = pivotValues.map(Cast(_, pivotColumn.dataType).eval(EmptyRow))
-          val pivotAggs = namedAggExps.map { a =>
-            Alias(PivotFirst(namedPivotCol.toAttribute, a.toAttribute, castPivotValues)
-              .toAggregateExpression()
-            , "__pivot_" + a.sql)()
-          }
-          val groupByExprsAttr = groupByExprs.map(_.toAttribute)
-          val secondAgg = Aggregate(groupByExprsAttr, groupByExprsAttr ++ pivotAggs, firstAgg)
-          val pivotAggAttribute = pivotAggs.map(_.toAttribute)
-          val pivotOutputs = pivotValues.zipWithIndex.flatMap { case (value, i) =>
-            aggregates.zip(pivotAggAttribute).map { case (aggregate, pivotAtt) =>
-              Alias(ExtractValue(pivotAtt, Literal(i), resolver), outputName(value, aggregate))()
-            }
-          }
-          Project(groupByExprsAttr ++ pivotOutputs, secondAgg)
-        } else {
-          val pivotAggregates: Seq[NamedExpression] = pivotValues.flatMap { value =>
-            def ifExpr(expr: Expression) = {
-              If(EqualNullSafe(pivotColumn, value), expr, Literal(null))
-            }
-            aggregates.map { aggregate =>
-              val filteredAggregate = aggregate.transformDown {
-                // Assumption is the aggregate function ignores nulls. This is true for all current
-                // AggregateFunction's with the exception of First and Last in their default mode
-                // (which we handle) and possibly some Hive UDAF's.
-                case First(expr, _) =>
-                  First(ifExpr(expr), Literal(true))
-                case Last(expr, _) =>
-                  Last(ifExpr(expr), Literal(true))
-                case a: AggregateFunction =>
-                  a.withNewChildren(a.children.map(ifExpr))
-              }.transform {
-                // We are duplicating aggregates that are now computing a different value for each
-                // pivot value.
-                // TODO: Don't construct the physical container until after analysis.
-                case ae: AggregateExpression => ae.copy(resultId = NamedExpression.newExprId)
-              }
-              if (filteredAggregate.fastEquals(aggregate)) {
-                throw new AnalysisException(
-                  s"Aggregate expression required for pivot, found '$aggregate'")
-              }
-              Alias(filteredAggregate, outputName(value, aggregate))()
-            }
-          }
-          Aggregate(groupByExprs, groupByExprs ++ pivotAggregates, child)
-        }
-=======
       case p: Pivot if !p.childrenResolved | !p.aggregates.forall(_.resolved) => p
       case Pivot(groupByExprs, pivotColumn, pivotValues, aggregates, child) =>
         val singleAgg = aggregates.size == 1
@@ -680,7 +568,6 @@ class Analyzer(
           case e => e
         }
         Aggregate(newGroupByExprs, groupByExprs ++ pivotAggregates, child)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -1451,22 +1338,25 @@ class Analyzer(
   /**
    * Replaces unresolved column aliases for a subquery with projections.
    */
-  object ResolveSubqueryColumnAliases extends Rule[LogicalPlan] {
-
-     def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperators {
-      case u @ UnresolvedSubqueryColumnAliases(columnNames, child) if child.resolved =>
-        // Resolves output attributes if a query has alias names in its subquery:
-        // e.g., SELECT * FROM (SELECT 1 AS a, 1 AS b) t(col1, col2)
-        val outputAttrs = child.output
-        // Checks if the number of the aliases equals to the number of output columns
-        // in the subquery.
-        if (columnNames.size != outputAttrs.size) {
-          u.failAnalysis("Number of column aliases does not match number of columns. " +
-            s"Number of column aliases: ${columnNames.size}; " +
-            s"number of columns: ${outputAttrs.size}.")
-        }
-        val aliases = outputAttrs.zip(columnNames).map { case (attr, aliasName) =>
-          Alias(attr, aliasName)()
+  object ResolveFunctions extends Rule[LogicalPlan] {
+    def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {
+      case q: LogicalPlan =>
+        q transformExpressions {
+          case u if !u.childrenResolved => u // Skip until children are resolved.
+          case u @ UnresolvedFunction(name, children, isDistinct) =>
+            withPosition(u) {
+              registry.lookupFunction(name, children) match {
+                // DISTINCT is not meaningful for a Max or a Min.
+                case max: Max if isDistinct =>
+                  AggregateExpression(max, Complete, isDistinct = false)
+                case min: Min if isDistinct =>
+                  AggregateExpression(min, Complete, isDistinct = false)
+                // We get an aggregate function, we need to wrap it in an AggregateExpression.
+                case agg: AggregateFunction => AggregateExpression(agg, Complete, isDistinct)
+                // This function is not an aggregate function, just return the resolved one.
+                case other => other
+              }
+            }
         }
         Project(aliases, child)
     }
@@ -1567,12 +1457,7 @@ class Analyzer(
         // Try resolving the ordering as though it is in the aggregate clause.
         try {
           val unresolvedSortOrders = sortOrder.filter(s => !s.resolved || containsAggregate(s))
-<<<<<<< HEAD
-          val aliasedOrdering =
-            unresolvedSortOrders.map(o => Alias(o.child, "aggOrder")())
-=======
           val aliasedOrdering = unresolvedSortOrders.map(o => Alias(o.child, "aggOrder")())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           val aggregatedOrdering = aggregate.copy(aggregateExpressions = aliasedOrdering)
           val resolvedAggregate: Aggregate = execute(aggregatedOrdering).asInstanceOf[Aggregate]
           val resolvedAliasedOrdering: Seq[Alias] =
@@ -2391,6 +2276,34 @@ class Analyzer(
       }
     }
   }
+
+  /**
+   * Correctly handle null primitive inputs for UDF by adding extra [[If]] expression to do the
+   * null check.  When user defines a UDF with primitive parameters, there is no way to tell if the
+   * primitive parameter is null or not, so here we assume the primitive input is null-propagatable
+   * and we should return null if the input is null.
+   */
+  object HandleNullInputsForUDF extends Rule[LogicalPlan] {
+    override def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {
+      case p if !p.resolved => p // Skip unresolved nodes.
+
+      case p => p transformExpressionsUp {
+
+        case udf @ ScalaUDF(func, _, inputs, _) =>
+          val parameterTypes = ScalaReflection.getParameterTypes(func)
+          assert(parameterTypes.length == inputs.length)
+
+          val inputsNullCheck = parameterTypes.zip(inputs)
+            // TODO: skip null handling for not-nullable primitive inputs after we can completely
+            // trust the `nullable` information.
+            // .filter { case (cls, expr) => cls.isPrimitive && expr.nullable }
+            .filter { case (cls, _) => cls.isPrimitive }
+            .map { case (_, expr) => IsNull(expr) }
+            .reduceLeftOption[Expression]((e1, e2) => Or(e1, e2))
+          inputsNullCheck.map(If(_, Literal.create(null, udf.dataType), udf)).getOrElse(udf)
+      }
+    }
+  }
 }
 
 /**
@@ -2725,6 +2638,62 @@ object ResolveUpCast extends Rule[LogicalPlan] {
           fail(child, to, walkedTypePath)
         case _ => Cast(child, dataType.asNullable)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+      }
+    }
+  }
+}
+
+/**
+ * Computes the current date and time to make sure we return the same result in a single query.
+ */
+object ComputeCurrentTime extends Rule[LogicalPlan] {
+  def apply(plan: LogicalPlan): LogicalPlan = {
+    val dateExpr = CurrentDate()
+    val timeExpr = CurrentTimestamp()
+    val currentDate = Literal.create(dateExpr.eval(EmptyRow), dateExpr.dataType)
+    val currentTime = Literal.create(timeExpr.eval(EmptyRow), timeExpr.dataType)
+
+    plan transformAllExpressions {
+      case CurrentDate() => currentDate
+      case CurrentTimestamp() => currentTime
+    }
+  }
+}
+
+/**
+ * Replace the `UpCast` expression by `Cast`, and throw exceptions if the cast may truncate.
+ */
+object ResolveUpCast extends Rule[LogicalPlan] {
+  private def fail(from: Expression, to: DataType, walkedTypePath: Seq[String]) = {
+    throw new AnalysisException(s"Cannot up cast `${from.prettyString}` from " +
+      s"${from.dataType.simpleString} to ${to.simpleString} as it may truncate\n" +
+      "The type path of the target object is:\n" + walkedTypePath.mkString("", "\n", "\n") +
+      "You can either add an explicit cast to the input data or choose a higher precision " +
+      "type of the field in the target object")
+  }
+
+  private def illegalNumericPrecedence(from: DataType, to: DataType): Boolean = {
+    val fromPrecedence = HiveTypeCoercion.numericPrecedence.indexOf(from)
+    val toPrecedence = HiveTypeCoercion.numericPrecedence.indexOf(to)
+    toPrecedence > 0 && fromPrecedence > toPrecedence
+  }
+
+  def apply(plan: LogicalPlan): LogicalPlan = {
+    plan transformAllExpressions {
+      case u @ UpCast(child, _, _) if !child.resolved => u
+
+      case UpCast(child, dataType, walkedTypePath) => (child.dataType, dataType) match {
+        case (from: NumericType, to: DecimalType) if !to.isWiderThan(from) =>
+          fail(child, to, walkedTypePath)
+        case (from: DecimalType, to: NumericType) if !from.isTighterThan(to) =>
+          fail(child, to, walkedTypePath)
+        case (from, to) if illegalNumericPrecedence(from, to) =>
+          fail(child, to, walkedTypePath)
+        case (TimestampType, DateType) =>
+          fail(child, DateType, walkedTypePath)
+        case (StringType, to: NumericType) =>
+          fail(child, to, walkedTypePath)
+        case _ => Cast(child, dataType.asNullable)
       }
     }
   }

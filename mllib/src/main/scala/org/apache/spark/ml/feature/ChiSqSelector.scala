@@ -19,11 +19,7 @@ package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Experimental, Since}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml._
 import org.apache.spark.ml.attribute.{AttributeGroup, _}
 import org.apache.spark.ml.linalg.{Vector, VectorUDT}
@@ -163,7 +159,6 @@ final class ChiSqSelector @Since("1.6.0") (@Since("1.6.0") override val uid: Str
 =======
 @Experimental
 final class ChiSqSelector(override val uid: String)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Estimator[ChiSqSelectorModel] with ChiSqSelectorParams with DefaultParamsWritable {
 
   @Since("1.6.0")
@@ -259,12 +254,7 @@ final class ChiSqSelectorModel private[ml] (
 
   import ChiSqSelectorModel._
 
-<<<<<<< HEAD
-  /** list of indices to select (filter). */
-  @Since("1.6.0")
-=======
   /** list of indices to select (filter). Must be ordered asc */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   val selectedFeatures: Array[Int] = chiSqSelector.selectedFeatures
 
   /** @group setParam */
@@ -332,11 +322,7 @@ object ChiSqSelectorModel extends MLReadable[ChiSqSelectorModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = Data(instance.selectedFeatures.toSeq)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
-=======
       sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -347,11 +333,7 @@ object ChiSqSelectorModel extends MLReadable[ChiSqSelectorModel] {
     override def load(path: String): ChiSqSelectorModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      val data = sparkSession.read.parquet(dataPath).select("selectedFeatures").head()
-=======
       val data = sqlContext.read.parquet(dataPath).select("selectedFeatures").head()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val selectedFeatures = data.getAs[Seq[Int]](0).toArray
       val oldModel = new feature.ChiSqSelectorModel(selectedFeatures)
       val model = new ChiSqSelectorModel(metadata.uid, oldModel)

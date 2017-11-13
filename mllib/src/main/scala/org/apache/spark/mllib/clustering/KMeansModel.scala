@@ -125,9 +125,6 @@ object KMeansModel extends Loader[KMeansModel] {
     val thisClassName = "org.apache.spark.mllib.clustering.KMeansModel"
 
     def save(sc: SparkContext, model: KMeansModel, path: String): Unit = {
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -142,11 +139,7 @@ object KMeansModel extends Loader[KMeansModel] {
 
     def load(sc: SparkContext, path: String): KMeansModel = {
       implicit val formats = DefaultFormats
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val (className, formatVersion, metadata) = Loader.loadMetadata(sc, path)
       assert(className == thisClassName)
       assert(formatVersion == thisFormatVersion)

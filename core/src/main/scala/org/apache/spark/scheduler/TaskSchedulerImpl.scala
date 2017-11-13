@@ -102,13 +102,6 @@ private[spark] class TaskSchedulerImpl(
 
   // IDs of the tasks running on each executor
   private val executorIdToRunningTaskIds = new HashMap[String, HashSet[Long]]
-<<<<<<< HEAD
-
-  def runningTasksByExecutors: Map[String, Int] = synchronized {
-    executorIdToRunningTaskIds.toMap.mapValues(_.size)
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   // The set of executors we have on each host; this is used to compute hostsAlive, which
   // in turn is used to decide when we can attain data locality on a given host
@@ -292,8 +285,6 @@ private[spark] class TaskSchedulerImpl(
             taskIdToTaskSetManager(tid) = taskSet
             taskIdToExecutorId(tid) = execId
             executorIdToRunningTaskIds(execId).add(tid)
-<<<<<<< HEAD
-=======
             executorsByHost(host) += execId
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             availableCpus(i) -= CPUS_PER_TASK
@@ -409,24 +400,14 @@ private[spark] class TaskSchedulerImpl(
         taskIdToTaskSetManager.get(tid) match {
           case Some(taskSet) =>
             if (state == TaskState.LOST) {
-<<<<<<< HEAD
-              // TaskState.LOST is only used by the deprecated Mesos fine-grained scheduling mode,
-=======
               // TaskState.LOST is only used by the Mesos fine-grained scheduling mode,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
               // where each executor corresponds to a single task, so mark the executor as failed.
               val execId = taskIdToExecutorId.getOrElse(tid, throw new IllegalStateException(
                 "taskIdToTaskSetManager.contains(tid) <=> taskIdToExecutorId.contains(tid)"))
               if (executorIdToRunningTaskIds.contains(execId)) {
-<<<<<<< HEAD
-                reason = Some(
-                  SlaveLost(s"Task $tid was lost, so marking the executor as lost as well."))
-                removeExecutor(execId, reason.get)
-=======
                 val reason =
                   SlaveLost(s"Task $tid was lost, so marking the executor as lost as well.")
                 removeExecutor(execId, reason)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                 failedExecutor = Some(execId)
               }
             }
@@ -584,14 +565,6 @@ private[spark] class TaskSchedulerImpl(
     }
   }
 
-<<<<<<< HEAD
-  override def workerRemoved(workerId: String, host: String, message: String): Unit = {
-    logInfo(s"Handle removed worker $workerId: $message")
-    dagScheduler.workerRemoved(workerId, host, message)
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def logExecutorLoss(
       executorId: String,
       hostPort: String,
@@ -672,17 +645,6 @@ private[spark] class TaskSchedulerImpl(
 
   def isExecutorBusy(execId: String): Boolean = synchronized {
     executorIdToRunningTaskIds.get(execId).exists(_.nonEmpty)
-<<<<<<< HEAD
-  }
-
-  /**
-   * Get a snapshot of the currently blacklisted nodes for the entire application.  This is
-   * thread-safe -- it can be called without a lock on the TaskScheduler.
-   */
-  def nodeBlacklist(): scala.collection.immutable.Set[String] = {
-    blacklistTrackerOpt.map(_.nodeBlacklist()).getOrElse(scala.collection.immutable.Set())
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   // By default, rack is unknown

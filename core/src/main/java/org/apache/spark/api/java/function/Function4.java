@@ -22,10 +22,6 @@ import java.io.Serializable;
 /**
  * A four-argument function that takes arguments of type T1, T2, T3 and T4 and returns an R.
  */
-<<<<<<< HEAD
-@FunctionalInterface
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 public interface Function4<T1, T2, T3, T4, R> extends Serializable {
   R call(T1 v1, T2 v2, T3 v3, T4 v4) throws Exception;
 }

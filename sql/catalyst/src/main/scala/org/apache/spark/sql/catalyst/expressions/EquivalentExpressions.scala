@@ -19,12 +19,6 @@ package org.apache.spark.sql.catalyst.expressions
 
 import scala.collection.mutable
 
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
-import org.apache.spark.sql.catalyst.expressions.objects.LambdaVariable
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 /**
  * This class is used to compute equality of (sub)expression trees. Expressions can be added
  * to this class and they subsequently query for expression equality. Expression trees are
@@ -39,12 +33,7 @@ class EquivalentExpressions {
       case other: Expr => e.semanticEquals(other.e)
       case _ => false
     }
-<<<<<<< HEAD
-
-    override def hashCode: Int = e.semanticHash()
-=======
     override val hashCode: Int = e.semanticHash()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   // For each expression, the set of equivalent expressions.
@@ -74,43 +63,12 @@ class EquivalentExpressions {
   /**
    * Adds the expression to this data structure recursively. Stops if a matching expression
    * is found. That is, if `expr` has already been added, its children are not added.
-<<<<<<< HEAD
-   */
-  def addExprTree(expr: Expression): Unit = {
-    val skip = expr.isInstanceOf[LeafExpression] ||
-      // `LambdaVariable` is usually used as a loop variable, which can't be evaluated ahead of the
-      // loop. So we can't evaluate sub-expressions containing `LambdaVariable` at the beginning.
-      expr.find(_.isInstanceOf[LambdaVariable]).isDefined
-
-    // There are some special expressions that we should not recurse into all of its children.
-    //   1. CodegenFallback: it's children will not be used to generate code (call eval() instead)
-    //   2. If: common subexpressions will always be evaluated at the beginning, but the true and
-    //          false expressions in `If` may not get accessed, according to the predicate
-    //          expression. We should only recurse into the predicate expression.
-    //   3. CaseWhen: like `If`, the children of `CaseWhen` only get accessed in a certain
-    //                condition. We should only recurse into the first condition expression as it
-    //                will always get accessed.
-    //   4. Coalesce: it's also a conditional expression, we should only recurse into the first
-    //                children, because others may not get accessed.
-    def childrenToRecurse: Seq[Expression] = expr match {
-      case _: CodegenFallback => Nil
-      case i: If => i.predicate :: Nil
-      // `CaseWhen` implements `CodegenFallback`, we only need to handle `CaseWhenCodegen` here.
-      case c: CaseWhenCodegen => c.children.head :: Nil
-      case c: Coalesce => c.children.head :: Nil
-      case other => other.children
-    }
-
-    if (!skip && !addExpr(expr)) {
-      childrenToRecurse.foreach(addExprTree)
-=======
    * If ignoreLeaf is true, leaf nodes are ignored.
    */
   def addExprTree(root: Expression, ignoreLeaf: Boolean = true): Unit = {
     val skip = root.isInstanceOf[LeafExpression] && ignoreLeaf
     if (!skip && !addExpr(root)) {
       root.children.foreach(addExprTree(_, ignoreLeaf))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -136,19 +94,11 @@ class EquivalentExpressions {
   def debugString(all: Boolean = false): String = {
     val sb: mutable.StringBuilder = new StringBuilder()
     sb.append("Equivalent expressions:\n")
-<<<<<<< HEAD
-    equivalenceMap.foreach { case (k, v) =>
-      if (all || v.length > 1) {
-        sb.append("  " + v.mkString(", ")).append("\n")
-      }
-    }
-=======
     equivalenceMap.foreach { case (k, v) => {
       if (all || v.length > 1) {
         sb.append("  " + v.mkString(", ")).append("\n")
       }
     }}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     sb.toString()
   }
 }

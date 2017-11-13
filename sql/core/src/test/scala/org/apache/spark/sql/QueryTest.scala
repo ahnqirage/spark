@@ -22,21 +22,6 @@ import java.util.{ArrayDeque, Locale, TimeZone}
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate.ImperativeAggregate
-import org.apache.spark.sql.catalyst.plans._
-import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.catalyst.trees.TreeNode
-import org.apache.spark.sql.catalyst.util._
-import org.apache.spark.sql.execution._
-import org.apache.spark.sql.execution.aggregate.TypedAggregateExpression
-import org.apache.spark.sql.execution.columnar.InMemoryRelation
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.streaming.MemoryPlan
-import org.apache.spark.sql.types.{Metadata, ObjectType}
-
-=======
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.plans._
@@ -47,7 +32,6 @@ import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.{LogicalRDD, Queryable}
 import org.apache.spark.sql.types.Metadata
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 abstract class QueryTest extends PlanTest {
 
@@ -82,9 +66,8 @@ abstract class QueryTest extends PlanTest {
    * Evaluates a dataset to make sure that the result of calling collect matches the given
    * expected answer.
    */
-<<<<<<< HEAD
-  protected def checkDataset[T](
-      ds: => Dataset[T],
+  protected def checkAnswer[T](
+      ds: Dataset[T],
       expectedAnswer: T*): Unit = {
     val result = getResult(ds)
 =======
@@ -94,7 +77,6 @@ abstract class QueryTest extends PlanTest {
     checkAnswer(
       ds.toDF(),
       sqlContext.createDataset(expectedAnswer)(ds.unresolvedTEncoder).toDF().collect().toSeq)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     if (!compare(result.toSeq, expectedAnswer)) {
       fail(
@@ -149,13 +131,8 @@ abstract class QueryTest extends PlanTest {
         fail(
           s"""
              |Exception collecting dataset as objects
-<<<<<<< HEAD
-             |${ds.exprEnc}
-             |${ds.exprEnc.deserializer.treeString}
-=======
              |${ds.resolvedTEncoder}
              |${ds.resolvedTEncoder.fromRowExpression.treeString}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
              |${ds.queryExecution}
            """.stripMargin, e)
     }
@@ -172,6 +149,12 @@ abstract class QueryTest extends PlanTest {
       a.size == b.size && a.zip(b).forall { case (l, r) => compare(l, r)}
     case (a, b) => a == b
 =======
+    // Handle the case where the return type is an array
+    val isArray = decoded.headOption.map(_.getClass.isArray).getOrElse(false)
+    def normalEquality = decoded == expectedAnswer.toSet
+    def expectedAsSeq = expectedAnswer.map(_.asInstanceOf[Array[_]].toSeq).toSet
+    def decodedAsSeq = decoded.map(_.asInstanceOf[Array[_]].toSeq)
+
     // Handle the case where the return type is an array
     val isArray = decoded.headOption.map(_.getClass.isArray).getOrElse(false)
     def normalEquality = decoded == expectedAnswer.toSet
@@ -214,11 +197,7 @@ abstract class QueryTest extends PlanTest {
         }
     }
 
-<<<<<<< HEAD
-    assertEmptyMissingInput(analyzedDF)
-=======
     checkJsonFormat(analyzedDF)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     QueryTest.checkAnswer(analyzedDF, expectedAnswer) match {
       case Some(errorMessage) => fail(errorMessage)
@@ -262,15 +241,9 @@ abstract class QueryTest extends PlanTest {
   }
 
   /**
-<<<<<<< HEAD
-   * Asserts that a given [[Dataset]] will be executed using the given number of cached results.
-   */
-  def assertCached(query: Dataset[_], numCachedTables: Int = 1): Unit = {
-=======
    * Asserts that a given [[Queryable]] will be executed using the given number of cached results.
    */
   def assertCached(query: Queryable, numCachedTables: Int = 1): Unit = {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val planWithCaching = query.queryExecution.withCachedData
     val cachedData = planWithCaching collect {
       case cached: InMemoryRelation => cached
@@ -282,18 +255,6 @@ abstract class QueryTest extends PlanTest {
         planWithCaching)
   }
 
-<<<<<<< HEAD
-  /**
-   * Asserts that a given [[Dataset]] does not have missing inputs in all the analyzed plans.
-   */
-  def assertEmptyMissingInput(query: Dataset[_]): Unit = {
-    assert(query.queryExecution.analyzed.missingInput.isEmpty,
-      s"The analyzed logical plan has missing inputs:\n${query.queryExecution.analyzed}")
-    assert(query.queryExecution.optimizedPlan.missingInput.isEmpty,
-      s"The optimized logical plan has missing inputs:\n${query.queryExecution.optimizedPlan}")
-    assert(query.queryExecution.executedPlan.missingInput.isEmpty,
-      s"The physical plan has missing inputs:\n${query.queryExecution.executedPlan}")
-=======
   private def checkJsonFormat(df: DataFrame): Unit = {
     val logicalPlan = df.queryExecution.analyzed
     // bypass some cases that we can't handle currently.
@@ -391,7 +352,6 @@ abstract class QueryTest extends PlanTest {
            |${sideBySide(logicalPlan.treeString, normalized2.treeString).mkString("\n")}
           """.stripMargin)
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

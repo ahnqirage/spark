@@ -176,9 +176,6 @@ private final object SnappyCompressionCodec {
 }
 
 /**
-<<<<<<< HEAD
- * Wrapper over `SnappyOutputStream` which guards against write-after-close and double-close
-=======
  * Wrapper over [[SnappyOutputStream]] which guards against write-after-close and double-close
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * issues. See SPARK-7660 for more details. This wrapping can be removed if we upgrade to a version

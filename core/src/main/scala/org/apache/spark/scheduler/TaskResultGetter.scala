@@ -137,7 +137,6 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
               reason = serializer.get().deserialize[TaskFailedReason](
 =======
               reason = serializer.get().deserialize[TaskEndReason](
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
                 serializedData, loader)
             }
           } catch {

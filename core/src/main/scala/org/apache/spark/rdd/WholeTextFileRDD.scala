@@ -20,11 +20,6 @@ package org.apache.spark.rdd
 import org.apache.hadoop.conf.{Configurable, Configuration}
 import org.apache.hadoop.io.{Text, Writable}
 import org.apache.hadoop.mapreduce.InputSplit
-<<<<<<< HEAD
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
-import org.apache.hadoop.mapreduce.task.JobContextImpl
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.spark.{Partition, SparkContext}
 import org.apache.spark.input.WholeTextFileInputFormat
@@ -42,27 +37,14 @@ private[spark] class WholeTextFileRDD(
   extends NewHadoopRDD[Text, Text](sc, inputFormatClass, keyClass, valueClass, conf) {
 
   override def getPartitions: Array[Partition] = {
-<<<<<<< HEAD
-    val conf = getConf
-    // setMinPartitions below will call FileInputFormat.listStatus(), which can be quite slow when
-    // traversing a large number of directories and files. Parallelize it.
-    conf.setIfUnset(FileInputFormat.LIST_STATUS_NUM_THREADS,
-      Runtime.getRuntime.availableProcessors().toString)
-    val inputFormat = inputFormatClass.newInstance
-=======
     val inputFormat = inputFormatClass.newInstance
     val conf = getConf
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     inputFormat match {
       case configurable: Configurable =>
         configurable.setConf(conf)
       case _ =>
     }
-<<<<<<< HEAD
-    val jobContext = new JobContextImpl(conf, jobId)
-=======
     val jobContext = newJobContext(conf, jobId)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     inputFormat.setMinPartitions(jobContext, minPartitions)
     val rawSplits = inputFormat.getSplits(jobContext).toArray
     val result = new Array[Partition](rawSplits.size)

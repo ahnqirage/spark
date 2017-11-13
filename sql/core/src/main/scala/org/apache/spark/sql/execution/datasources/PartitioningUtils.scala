@@ -114,7 +114,6 @@ object PartitioningUtils {
     // First, we need to parse every partition's path and see if we can find partition values.
     val (partitionValues, optDiscoveredBasePaths) = paths.map { path =>
       parsePartition(path, defaultPartitionName, typeInference, basePaths)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }.unzip
 
     // We create pairs of (path -> path's partition value) here
@@ -137,20 +136,11 @@ object PartitioningUtils {
       // It will be recognised as conflicting directory structure:
       //   "hdfs://host:9000/invalidPath"
       //   "hdfs://host:9000/path"
-<<<<<<< HEAD
-      // TODO: Selective case sensitivity.
-      val discoveredBasePaths = optDiscoveredBasePaths.flatten.map(_.toString.toLowerCase())
-      assert(
-        discoveredBasePaths.distinct.size == 1,
-        "Conflicting directory structures detected. Suspicious paths:\b" +
-          discoveredBasePaths.distinct.mkString("\n\t", "\n\t", "\n\n") +
-=======
       val disvoeredBasePaths = optDiscoveredBasePaths.flatMap(x => x)
       assert(
         disvoeredBasePaths.distinct.size == 1,
         "Conflicting directory structures detected. Suspicious paths:\b" +
           disvoeredBasePaths.distinct.mkString("\n\t", "\n\t", "\n\n") +
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           "If provided paths are partition directories, please set " +
           "\"basePath\" in the options of the data source to specify the " +
           "root directory of the table. If there are multiple root directories, " +
@@ -208,7 +198,6 @@ object PartitioningUtils {
       defaultPartitionName: String,
       typeInference: Boolean,
       basePaths: Set[Path]): (Option[PartitionValues], Option[Path]) = {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val columns = ArrayBuffer.empty[(String, Literal)]
     // Old Hadoop versions don't have `Path.isRoot`
     var finished = path.getParent == null
@@ -218,11 +207,7 @@ object PartitioningUtils {
     while (!finished) {
       // Sometimes (e.g., when speculative task is enabled), temporary directories may be left
       // uncleaned. Here we simply ignore them.
-<<<<<<< HEAD
-      if (currentPath.getName.toLowerCase(Locale.ROOT) == "_temporary") {
-=======
       if (currentPath.getName.toLowerCase == "_temporary") {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         return (None, None)
       }
 
@@ -233,11 +218,7 @@ object PartitioningUtils {
         // Let's say currentPath is a path of "/table/a=1/", currentPath.getName will give us a=1.
         // Once we get the string, we try to parse it and find the partition column and value.
         val maybeColumn =
-<<<<<<< HEAD
-          parsePartitionColumn(currentPath.getName, typeInference, timeZone)
-=======
           parsePartitionColumn(currentPath.getName, defaultPartitionName, typeInference)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         maybeColumn.foreach(columns += _)
 
         // Now, we determine if we should stop.

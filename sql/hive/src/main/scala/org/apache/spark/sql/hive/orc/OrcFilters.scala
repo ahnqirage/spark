@@ -98,12 +98,6 @@ private[orc] object OrcFilters extends Logging {
         // Pushing one side of AND down is only safe to do at the top level.
         // You can see ParquetRelation's initializeLocalJobFunc method as an example.
         for {
-<<<<<<< HEAD
-          _ <- buildSearchArgument(dataTypeMap, left, newBuilder)
-          _ <- buildSearchArgument(dataTypeMap, right, newBuilder)
-          lhs <- buildSearchArgument(dataTypeMap, left, builder.startAnd())
-          rhs <- buildSearchArgument(dataTypeMap, right, lhs)
-=======
           _ <- buildSearchArgument(left, newBuilder)
           _ <- buildSearchArgument(right, newBuilder)
           lhs <- buildSearchArgument(left, builder.startAnd())

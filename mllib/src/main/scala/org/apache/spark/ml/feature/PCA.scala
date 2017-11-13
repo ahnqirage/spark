@@ -19,26 +19,14 @@ package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Experimental, Since}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml._
 import org.apache.spark.ml.linalg._
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.feature
-<<<<<<< HEAD
-import org.apache.spark.mllib.linalg.{DenseMatrix => OldDenseMatrix, DenseVector => OldDenseVector,
-  Matrices => OldMatrices, Vector => OldVector, Vectors => OldVectors}
-import org.apache.spark.mllib.linalg.MatrixImplicits._
-import org.apache.spark.mllib.linalg.VectorImplicits._
-import org.apache.spark.rdd.RDD
-=======
 import org.apache.spark.mllib.linalg._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -83,7 +71,6 @@ class PCA @Since("1.5.0") (
 @Experimental
 class PCA (override val uid: String) extends Estimator[PCAModel] with PCAParams
   with DefaultParamsWritable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.5.0")
   def this() = this(Identifiable.randomUID("pca"))
@@ -111,11 +98,7 @@ class PCA (override val uid: String) extends Estimator[PCAModel] with PCAParams
     }
     val pca = new feature.PCA(k = $(k))
     val pcaModel = pca.fit(input)
-<<<<<<< HEAD
-    copyValues(new PCAModel(uid, pcaModel.pc, pcaModel.explainedVariance).setParent(this))
-=======
     copyValues(new PCAModel(uid, pcaModel.pc).setParent(this))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   @Since("1.5.0")
@@ -146,7 +129,6 @@ object PCA extends DefaultParamsReadable[PCA] {
  * Model fitted by [[PCA]].
  *
  * @param pc A principal components Matrix. Each column is one principal component.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  */
 @Since("1.5.0")
 class PCAModel private[ml] (
@@ -157,7 +139,6 @@ class PCAModel private[ml] (
 =======
     override val uid: String,
     val pc: DenseMatrix)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Model[PCAModel] with PCAParams with MLWritable {
 
   import PCAModel._
@@ -179,16 +160,6 @@ class PCAModel private[ml] (
   @Since("2.0.0")
   override def transform(dataset: Dataset[_]): DataFrame = {
     transformSchema(dataset.schema, logging = true)
-<<<<<<< HEAD
-    val pcaModel = new feature.PCAModel($(k),
-      OldMatrices.fromML(pc).asInstanceOf[OldDenseMatrix],
-      OldVectors.fromML(explainedVariance).asInstanceOf[OldDenseVector])
-
-    // TODO: Make the transformer natively in ml framework to avoid extra conversion.
-    val transformer: Vector => Vector = v => pcaModel.transform(OldVectors.fromML(v)).asML
-
-    val pcaOp = udf(transformer)
-=======
     val pcaModel = new feature.PCAModel($(k), pc)
     val pcaOp = udf { pcaModel.transform _ }
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -202,11 +173,7 @@ class PCAModel private[ml] (
 
   @Since("1.5.0")
   override def copy(extra: ParamMap): PCAModel = {
-<<<<<<< HEAD
-    val copied = new PCAModel(uid, pc, explainedVariance)
-=======
     val copied = new PCAModel(uid, pc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     copyValues(copied, extra).setParent(parent)
   }
 
@@ -219,15 +186,6 @@ object PCAModel extends MLReadable[PCAModel] {
 
   private[PCAModel] class PCAModelWriter(instance: PCAModel) extends MLWriter {
 
-<<<<<<< HEAD
-    private case class Data(pc: DenseMatrix, explainedVariance: DenseVector)
-
-    override protected def saveImpl(path: String): Unit = {
-      DefaultParamsWriter.saveMetadata(instance, path, sc)
-      val data = Data(instance.pc, instance.explainedVariance)
-      val dataPath = new Path(path, "data").toString
-      sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
-=======
     private case class Data(pc: DenseMatrix)
 
     override protected def saveImpl(path: String): Unit = {
@@ -235,7 +193,6 @@ object PCAModel extends MLReadable[PCAModel] {
       val data = Data(instance.pc)
       val dataPath = new Path(path, "data").toString
       sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -243,34 +200,6 @@ object PCAModel extends MLReadable[PCAModel] {
 
     private val className = classOf[PCAModel].getName
 
-<<<<<<< HEAD
-    /**
-     * Loads a [[PCAModel]] from data located at the input path. Note that the model includes an
-     * `explainedVariance` member that is not recorded by Spark 1.6 and earlier. A model
-     * can be loaded from such older data but will have an empty vector for
-     * `explainedVariance`.
-     *
-     * @param path path to serialized model data
-     * @return a [[PCAModel]]
-     */
-    override def load(path: String): PCAModel = {
-      val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
-
-      val dataPath = new Path(path, "data").toString
-      val model = if (majorVersion(metadata.sparkVersion) >= 2) {
-        val Row(pc: DenseMatrix, explainedVariance: DenseVector) =
-          sparkSession.read.parquet(dataPath)
-            .select("pc", "explainedVariance")
-            .head()
-        new PCAModel(metadata.uid, pc, explainedVariance)
-      } else {
-        // pc field is the old matrix format in Spark <= 1.6
-        // explainedVariance field is not present in Spark <= 1.6
-        val Row(pc: OldDenseMatrix) = sparkSession.read.parquet(dataPath).select("pc").head()
-        new PCAModel(metadata.uid, pc.asML,
-          Vectors.dense(Array.empty[Double]).asInstanceOf[DenseVector])
-      }
-=======
     override def load(path: String): PCAModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
@@ -278,7 +207,6 @@ object PCAModel extends MLReadable[PCAModel] {
         .select("pc")
         .head()
       val model = new PCAModel(metadata.uid, pc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       DefaultParamsReader.getAndSetParams(model, metadata)
       model
     }

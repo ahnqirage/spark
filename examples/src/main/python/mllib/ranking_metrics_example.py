@@ -47,11 +47,7 @@ if __name__ == "__main__":
     # Instantiate regression metrics to compare predicted and actual ratings
     metrics = RegressionMetrics(scoreAndLabels)
 
-<<<<<<< HEAD
-    # Root mean squared error
-=======
     # Root mean sqaured error
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     print("RMSE = %s" % metrics.rootMeanSquaredError)
 
     # R-squared

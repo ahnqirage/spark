@@ -37,9 +37,6 @@ import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
 import org.apache.spark.memory.TaskMemoryManager
 import org.apache.spark.rpc.RpcTimeout
-<<<<<<< HEAD
-import org.apache.spark.scheduler.{DirectTaskResult, IndirectTaskResult, Task, TaskDescription}
-=======
 import org.apache.spark.scheduler.{DirectTaskResult, IndirectTaskResult, Task}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.shuffle.FetchFailedException
@@ -166,11 +163,7 @@ private[spark] class Executor(
   private val HEARTBEAT_MAX_FAILURES = conf.getInt("spark.executor.heartbeat.maxFailures", 60)
 
   /**
-<<<<<<< HEAD
-   * Count the failure times of heartbeat. It should only be accessed in the heartbeat thread. Each
-=======
    * Count the failure times of heartbeat. It should only be acessed in the heartbeat thread. Each
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * successful heartbeat will reset it to 0.
    */
   private var heartbeatFailures = 0
@@ -390,6 +383,17 @@ private[spark] class Executor(
               logError(errMsg)
             }
           }
+
+          if (releasedLocks.nonEmpty) {
+            val errMsg =
+              s"${releasedLocks.size} block locks were not released by TID = $taskId:\n" +
+              releasedLocks.mkString("[", ", ", "]")
+            if (conf.getBoolean("spark.storage.exceptionOnPinLeak", false) && !threwException) {
+              throw new SparkException(errMsg)
+            } else {
+              logError(errMsg)
+            }
+          }
         }
         task.context.fetchFailed.foreach { fetchFailure =>
           // uh-oh.  it appears the user code has caught the fetch-failure without throwing any
@@ -472,25 +476,10 @@ private[spark] class Executor(
           setTaskFinishedAndClearInterruptStatus()
           execBackend.statusUpdate(taskId, TaskState.FAILED, ser.serialize(reason))
 
-        case t: TaskKilledException =>
-          logInfo(s"Executor killed $taskName (TID $taskId), reason: ${t.reason}")
-          setTaskFinishedAndClearInterruptStatus()
-          execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(TaskKilled(t.reason)))
+        case _: TaskKilledException | _: InterruptedException if task.killed =>
+          logInfo(s"Executor killed $taskName (TID $taskId)")
+          execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(TaskKilled))
 
-<<<<<<< HEAD
-        case _: InterruptedException | NonFatal(_) if
-            task != null && task.reasonIfKilled.isDefined =>
-          val killReason = task.reasonIfKilled.getOrElse("unknown reason")
-          logInfo(s"Executor interrupted and killed $taskName (TID $taskId), reason: $killReason")
-          setTaskFinishedAndClearInterruptStatus()
-          execBackend.statusUpdate(
-            taskId, TaskState.KILLED, ser.serialize(TaskKilled(killReason)))
-
-        case CausedBy(cDE: CommitDeniedException) =>
-          val reason = cDE.toTaskCommitDeniedReason
-          setTaskFinishedAndClearInterruptStatus()
-          execBackend.statusUpdate(taskId, TaskState.KILLED, ser.serialize(reason))
-=======
         case CausedBy(cDE: CommitDeniedException) =>
           val reason = cDE.toTaskEndReason
           execBackend.statusUpdate(taskId, TaskState.FAILED, ser.serialize(reason))
@@ -789,11 +778,7 @@ private[spark] class Executor(
 
     val message = Heartbeat(executorId, accumUpdates.toArray, env.blockManager.blockManagerId)
     try {
-<<<<<<< HEAD
-      val response = heartbeatReceiverRef.askSync[HeartbeatResponse](
-=======
       val response = heartbeatReceiverRef.askWithRetry[HeartbeatResponse](
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           message, RpcTimeout(conf, "spark.executor.heartbeatInterval", "10s"))
       if (response.reregisterBlockManager) {
         logInfo("Told to re-register on heartbeat")

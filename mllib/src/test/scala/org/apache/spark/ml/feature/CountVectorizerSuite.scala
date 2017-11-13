@@ -19,10 +19,6 @@ package org.apache.spark.ml.feature
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
-<<<<<<< HEAD
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-import org.apache.spark.ml.util.TestingUtils._
-=======
 import org.apache.spark.ml.util.DefaultReadWriteTest
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -31,11 +27,6 @@ import org.apache.spark.sql.Row
 
 class CountVectorizerSuite extends SparkFunSuite with MLlibTestSparkContext
   with DefaultReadWriteTest {
-<<<<<<< HEAD
-
-  import testImplicits._
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("params") {
     ParamsSuite.checkParams(new CountVectorizer)
@@ -180,39 +171,6 @@ class CountVectorizerSuite extends SparkFunSuite with MLlibTestSparkContext
     }
   }
 
-<<<<<<< HEAD
-  test("CountVectorizerModel and CountVectorizer with binary") {
-    val df = Seq(
-      (0, split("a a a a b b b b c d"),
-      Vectors.sparse(4, Seq((0, 1.0), (1, 1.0), (2, 1.0), (3, 1.0)))),
-      (1, split("c c c"), Vectors.sparse(4, Seq((2, 1.0)))),
-      (2, split("a"), Vectors.sparse(4, Seq((0, 1.0))))
-    ).toDF("id", "words", "expected")
-
-    // CountVectorizer test
-    val cv = new CountVectorizer()
-      .setInputCol("words")
-      .setOutputCol("features")
-      .setBinary(true)
-      .fit(df)
-    cv.transform(df).select("features", "expected").collect().foreach {
-      case Row(features: Vector, expected: Vector) =>
-        assert(features ~== expected absTol 1e-14)
-    }
-
-    // CountVectorizerModel test
-    val cv2 = new CountVectorizerModel(cv.vocabulary)
-      .setInputCol("words")
-      .setOutputCol("features")
-      .setBinary(true)
-    cv2.transform(df).select("features", "expected").collect().foreach {
-      case Row(features: Vector, expected: Vector) =>
-        assert(features ~== expected absTol 1e-14)
-    }
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("CountVectorizer read/write") {
     val t = new CountVectorizer()
       .setInputCol("myInputCol")

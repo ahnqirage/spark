@@ -92,17 +92,11 @@ abstract class UserDefinedType[UserType >: Null] extends DataType with Serializa
 =======
   override private[sql] def acceptsType(dataType: DataType) =
     this.getClass == dataType.getClass
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   override def equals(other: Any): Boolean = other match {
     case that: UserDefinedType[_] => this.acceptsType(that)
     case _ => false
   }
-<<<<<<< HEAD
-
-  override def catalogString: String = sqlType.simpleString
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -130,15 +124,7 @@ private[sql] class PythonUserDefinedType(
   }
 
   override def equals(other: Any): Boolean = other match {
-<<<<<<< HEAD
-    case that: PythonUserDefinedType => pyUDT == that.pyUDT
-    case _ => false
-  }
-
-  override def hashCode(): Int = Objects.hashCode(pyUDT)
-=======
     case that: PythonUserDefinedType => this.pyUDT.equals(that.pyUDT)
     case _ => false
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

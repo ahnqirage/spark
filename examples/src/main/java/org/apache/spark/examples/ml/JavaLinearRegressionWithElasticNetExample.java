@@ -17,39 +17,19 @@
 
 package org.apache.spark.examples.ml;
 
-<<<<<<< HEAD
-=======
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.ml.regression.LinearRegression;
 import org.apache.spark.ml.regression.LinearRegressionModel;
 import org.apache.spark.ml.regression.LinearRegressionTrainingSummary;
-<<<<<<< HEAD
-import org.apache.spark.ml.linalg.Vectors;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-=======
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.SQLContext;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example off$
 
 public class JavaLinearRegressionWithElasticNetExample {
   public static void main(String[] args) {
-<<<<<<< HEAD
-    SparkSession spark = SparkSession
-      .builder()
-      .appName("JavaLinearRegressionWithElasticNetExample")
-      .getOrCreate();
-
-    // $example on$
-    // Load training data.
-    Dataset<Row> training = spark.read().format("libsvm")
-=======
     SparkConf conf = new SparkConf().setAppName("JavaLinearRegressionWithElasticNetExample");
     JavaSparkContext jsc = new JavaSparkContext(conf);
     SQLContext sqlContext = new SQLContext(jsc);
@@ -57,7 +37,6 @@ public class JavaLinearRegressionWithElasticNetExample {
     // $example on$
     // Load training data
     DataFrame training = sqlContext.read().format("libsvm")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .load("data/mllib/sample_linear_regression_data.txt");
 
     LinearRegression lr = new LinearRegression()
@@ -65,16 +44,6 @@ public class JavaLinearRegressionWithElasticNetExample {
       .setRegParam(0.3)
       .setElasticNetParam(0.8);
 
-<<<<<<< HEAD
-    // Fit the model.
-    LinearRegressionModel lrModel = lr.fit(training);
-
-    // Print the coefficients and intercept for linear regression.
-    System.out.println("Coefficients: "
-      + lrModel.coefficients() + " Intercept: " + lrModel.intercept());
-
-    // Summarize the model over the training set and print out some metrics.
-=======
     // Fit the model
     LinearRegressionModel lrModel = lr.fit(training);
 
@@ -83,7 +52,6 @@ public class JavaLinearRegressionWithElasticNetExample {
       + lrModel.coefficients() + " Intercept: " + lrModel.intercept());
 
     // Summarize the model over the training set and print out some metrics
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     LinearRegressionTrainingSummary trainingSummary = lrModel.summary();
     System.out.println("numIterations: " + trainingSummary.totalIterations());
     System.out.println("objectiveHistory: " + Vectors.dense(trainingSummary.objectiveHistory()));
@@ -92,10 +60,6 @@ public class JavaLinearRegressionWithElasticNetExample {
     System.out.println("r2: " + trainingSummary.r2());
     // $example off$
 
-<<<<<<< HEAD
-    spark.stop();
-=======
     jsc.stop();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

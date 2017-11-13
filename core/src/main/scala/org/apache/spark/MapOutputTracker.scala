@@ -528,15 +528,9 @@ private[spark] class MapOutputTrackerMaster(
       fractionThreshold: Double)
     : Option[Array[BlockManagerId]] = {
 
-<<<<<<< HEAD
-    val shuffleStatus = shuffleStatuses.get(shuffleId).orNull
-    if (shuffleStatus != null) {
-      shuffleStatus.withMapStatuses { statuses =>
-=======
     val statuses = mapStatuses.get(shuffleId).orNull
     if (statuses != null) {
       statuses.synchronized {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         if (statuses.nonEmpty) {
           // HashMap to add up sizes of all blocks at the same location
           val locs = new HashMap[BlockManagerId, Long]

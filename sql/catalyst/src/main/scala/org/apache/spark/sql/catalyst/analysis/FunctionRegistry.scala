@@ -30,10 +30,6 @@ import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.expressions.xml._
-import org.apache.spark.sql.types._
-=======
 import org.apache.spark.sql.catalyst.util.StringKeyHashMap
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -397,7 +393,6 @@ object FunctionRegistry {
     expression[ParseToDate]("to_date"),
 =======
     expression[ToDate]("to_date"),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     expression[ToUnixTimestamp]("to_unix_timestamp"),
     expression[ToUTCTimestamp]("to_utc_timestamp"),
     expression[TruncDate]("trunc"),
@@ -429,74 +424,7 @@ object FunctionRegistry {
     expression[Sha2]("sha2"),
     expression[SparkPartitionID]("spark_partition_id"),
     expression[InputFileName]("input_file_name"),
-<<<<<<< HEAD
-    expression[InputFileBlockStart]("input_file_block_start"),
-    expression[InputFileBlockLength]("input_file_block_length"),
-    expression[MonotonicallyIncreasingID]("monotonically_increasing_id"),
-    expression[CurrentDatabase]("current_database"),
-    expression[CallMethodViaReflection]("reflect"),
-    expression[CallMethodViaReflection]("java_method"),
-
-    // grouping sets
-    expression[Cube]("cube"),
-    expression[Rollup]("rollup"),
-    expression[Grouping]("grouping"),
-    expression[GroupingID]("grouping_id"),
-
-    // window functions
-    expression[Lead]("lead"),
-    expression[Lag]("lag"),
-    expression[RowNumber]("row_number"),
-    expression[CumeDist]("cume_dist"),
-    expression[NTile]("ntile"),
-    expression[Rank]("rank"),
-    expression[DenseRank]("dense_rank"),
-    expression[PercentRank]("percent_rank"),
-
-    // predicates
-    expression[And]("and"),
-    expression[In]("in"),
-    expression[Not]("not"),
-    expression[Or]("or"),
-
-    // comparison operators
-    expression[EqualNullSafe]("<=>"),
-    expression[EqualTo]("="),
-    expression[EqualTo]("=="),
-    expression[GreaterThan](">"),
-    expression[GreaterThanOrEqual](">="),
-    expression[LessThan]("<"),
-    expression[LessThanOrEqual]("<="),
-    expression[Not]("!"),
-
-    // bitwise
-    expression[BitwiseAnd]("&"),
-    expression[BitwiseNot]("~"),
-    expression[BitwiseOr]("|"),
-    expression[BitwiseXor]("^"),
-
-    // json
-    expression[StructsToJson]("to_json"),
-    expression[JsonToStructs]("from_json"),
-
-    // cast
-    expression[Cast]("cast"),
-    // Cast aliases (SPARK-16730)
-    castAlias("boolean", BooleanType),
-    castAlias("tinyint", ByteType),
-    castAlias("smallint", ShortType),
-    castAlias("int", IntegerType),
-    castAlias("bigint", LongType),
-    castAlias("float", FloatType),
-    castAlias("double", DoubleType),
-    castAlias("decimal", DecimalType.USER_DEFAULT),
-    castAlias("date", DateType),
-    castAlias("timestamp", TimestampType),
-    castAlias("binary", BinaryType),
-    castAlias("string", StringType)
-=======
     expression[MonotonicallyIncreasingID]("monotonically_increasing_id")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   )
 
   val builtin: SimpleFunctionRegistry = {

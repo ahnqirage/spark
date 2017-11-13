@@ -19,11 +19,7 @@ package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Experimental, Since}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml._
 import org.apache.spark.ml.linalg.{Vector, VectorUDT}
 import org.apache.spark.ml.param._
@@ -76,7 +72,6 @@ final class IDF @Since("1.4.0") (@Since("1.4.0") override val uid: String)
 @Experimental
 final class IDF(override val uid: String) extends Estimator[IDFModel] with IDFBase
   with DefaultParamsWritable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("idf"))
@@ -158,13 +153,8 @@ class IDFModel private[ml] (
   }
 
   /** Returns the IDF vector. */
-<<<<<<< HEAD
-  @Since("2.0.0")
-  def idf: Vector = idfModel.idf.asML
-=======
   @Since("1.6.0")
   def idf: Vector = idfModel.idf
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.6.0")
   override def write: MLWriter = new IDFModelWriter(this)
@@ -181,11 +171,7 @@ object IDFModel extends MLReadable[IDFModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = Data(instance.idf)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
-=======
       sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -196,19 +182,11 @@ object IDFModel extends MLReadable[IDFModel] {
     override def load(path: String): IDFModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      val data = sparkSession.read.parquet(dataPath)
-      val Row(idf: Vector) = MLUtils.convertVectorColumnsToML(data, "idf")
-        .select("idf")
-        .head()
-      val model = new IDFModel(metadata.uid, new feature.IDFModel(OldVectors.fromML(idf)))
-=======
       val data = sqlContext.read.parquet(dataPath)
         .select("idf")
         .head()
       val idf = data.getAs[Vector](0)
       val model = new IDFModel(metadata.uid, new feature.IDFModel(idf))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       DefaultParamsReader.getAndSetParams(model, metadata)
       model
     }

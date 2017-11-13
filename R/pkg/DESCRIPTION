@@ -63,15 +63,6 @@ Collate:
     'serialize.R'
     'sparkR.R'
     'stats.R'
-<<<<<<< HEAD
-    'streaming.R'
-    'types.R'
-    'utils.R'
-    'window.R'
-RoxygenNote: 5.0.1
-VignetteBuilder: knitr
-=======
     'types.R'
     'utils.R'
 RoxygenNote: 5.0.1
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

@@ -17,10 +17,6 @@
 
 package org.apache.spark.sql.execution.datasources.jdbc
 
-<<<<<<< HEAD
-import java.sql.{Connection, Driver, DriverManager, JDBCType, PreparedStatement, ResultSet, ResultSetMetaData, SQLException}
-import java.util.Locale
-=======
 import java.sql.{Connection, Driver, DriverManager, PreparedStatement}
 import java.util.Properties
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -44,7 +40,6 @@ import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcDialects, JdbcType}
 =======
 import org.apache.spark.Logging
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcType, JdbcDialects}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SchemaUtils
 import org.apache.spark.unsafe.types.UTF8String
@@ -57,12 +52,6 @@ object JdbcUtils extends Logging {
   /**
    * Returns a factory for creating connections to the given JDBC URL.
    *
-<<<<<<< HEAD
-   * @param options - JDBC options that contains url, table and other information.
-   */
-  def createConnectionFactory(options: JDBCOptions): () => Connection = {
-    val driverClass: String = options.driverClass
-=======
    * @param url the JDBC url to connect to.
    * @param properties JDBC connection properties.
    */
@@ -75,7 +64,6 @@ object JdbcUtils extends Logging {
     val driverClass: String = userSpecifiedDriverClass.getOrElse {
       DriverManager.getDriver(url).getClass.getCanonicalName
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     () => {
       DriverRegistry.register(driverClass)
       val driver: Driver = DriverManager.getDrivers.asScala.collectFirst {
@@ -85,11 +73,7 @@ object JdbcUtils extends Logging {
         throw new IllegalStateException(
           s"Did not find registered driver with class $driverClass")
       }
-<<<<<<< HEAD
-      driver.connect(options.url, options.asConnectionProperties)
-=======
       driver.connect(url, properties)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -109,7 +93,6 @@ object JdbcUtils extends Logging {
     // the database name. Query used to find table exists can be overriden by the dialects.
     Try {
       val statement = conn.prepareStatement(dialect.getTableExistsQuery(table))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       try {
         statement.executeQuery()
       } finally {
@@ -127,177 +110,6 @@ object JdbcUtils extends Logging {
       statement.executeUpdate(s"DROP TABLE $table")
     } finally {
       statement.close()
-    }
-  }
-
-  /**
-   * Truncates a table from the JDBC database.
-   */
-<<<<<<< HEAD
-  def truncateTable(conn: Connection, table: String): Unit = {
-    val statement = conn.createStatement
-    try {
-      statement.executeUpdate(s"TRUNCATE TABLE $table")
-    } finally {
-      statement.close()
-    }
-  }
-
-  def isCascadingTruncateTable(url: String): Option[Boolean] = {
-    JdbcDialects.get(url).isCascadingTruncateTable()
-  }
-
-  /**
-   * Returns an Insert SQL statement for inserting a row into the target table via JDBC conn.
-   */
-  def getInsertStatement(
-      table: String,
-      rddSchema: StructType,
-      tableSchema: Option[StructType],
-      isCaseSensitive: Boolean,
-      dialect: JdbcDialect): String = {
-    val columns = if (tableSchema.isEmpty) {
-      rddSchema.fields.map(x => dialect.quoteIdentifier(x.name)).mkString(",")
-    } else {
-      val columnNameEquality = if (isCaseSensitive) {
-        org.apache.spark.sql.catalyst.analysis.caseSensitiveResolution
-      } else {
-        org.apache.spark.sql.catalyst.analysis.caseInsensitiveResolution
-      }
-      // The generated insert statement needs to follow rddSchema's column sequence and
-      // tableSchema's column names. When appending data into some case-sensitive DBMSs like
-      // PostgreSQL/Oracle, we need to respect the existing case-sensitive column names instead of
-      // RDD column names for user convenience.
-      val tableColumnNames = tableSchema.get.fieldNames
-      rddSchema.fields.map { col =>
-        val normalizedName = tableColumnNames.find(f => columnNameEquality(f, col.name)).getOrElse {
-          throw new AnalysisException(s"""Column "${col.name}" not found in schema $tableSchema""")
-        }
-        dialect.quoteIdentifier(normalizedName)
-      }.mkString(",")
-    }
-    val placeholders = rddSchema.fields.map(_ => "?").mkString(",")
-    s"INSERT INTO $table ($columns) VALUES ($placeholders)"
-  }
-
-  /**
-   * Retrieve standard jdbc types.
-   *
-   * @param dt The datatype (e.g. [[org.apache.spark.sql.types.StringType]])
-   * @return The default JdbcType for this DataType
-   */
-  def getCommonJDBCType(dt: DataType): Option[JdbcType] = {
-    dt match {
-      case IntegerType => Option(JdbcType("INTEGER", java.sql.Types.INTEGER))
-      case LongType => Option(JdbcType("BIGINT", java.sql.Types.BIGINT))
-      case DoubleType => Option(JdbcType("DOUBLE PRECISION", java.sql.Types.DOUBLE))
-      case FloatType => Option(JdbcType("REAL", java.sql.Types.FLOAT))
-      case ShortType => Option(JdbcType("INTEGER", java.sql.Types.SMALLINT))
-      case ByteType => Option(JdbcType("BYTE", java.sql.Types.TINYINT))
-      case BooleanType => Option(JdbcType("BIT(1)", java.sql.Types.BIT))
-      case StringType => Option(JdbcType("TEXT", java.sql.Types.CLOB))
-      case BinaryType => Option(JdbcType("BLOB", java.sql.Types.BLOB))
-      case TimestampType => Option(JdbcType("TIMESTAMP", java.sql.Types.TIMESTAMP))
-      case DateType => Option(JdbcType("DATE", java.sql.Types.DATE))
-      case t: DecimalType => Option(
-        JdbcType(s"DECIMAL(${t.precision},${t.scale})", java.sql.Types.DECIMAL))
-      case _ => None
-    }
-  }
-
-  private def getJdbcType(dt: DataType, dialect: JdbcDialect): JdbcType = {
-    dialect.getJDBCType(dt).orElse(getCommonJDBCType(dt)).getOrElse(
-      throw new IllegalArgumentException(s"Can't get JDBC type for ${dt.simpleString}"))
-  }
-
-  /**
-   * Maps a JDBC type to a Catalyst type.  This function is called only when
-   * the JdbcDialect class corresponding to your database driver returns null.
-   *
-   * @param sqlType - A field of java.sql.Types
-   * @return The Catalyst type corresponding to sqlType.
-   */
-  private def getCatalystType(
-      sqlType: Int,
-      precision: Int,
-      scale: Int,
-      signed: Boolean): DataType = {
-    val answer = sqlType match {
-      // scalastyle:off
-      case java.sql.Types.ARRAY         => null
-      case java.sql.Types.BIGINT        => if (signed) { LongType } else { DecimalType(20,0) }
-      case java.sql.Types.BINARY        => BinaryType
-      case java.sql.Types.BIT           => BooleanType // @see JdbcDialect for quirks
-      case java.sql.Types.BLOB          => BinaryType
-      case java.sql.Types.BOOLEAN       => BooleanType
-      case java.sql.Types.CHAR          => StringType
-      case java.sql.Types.CLOB          => StringType
-      case java.sql.Types.DATALINK      => null
-      case java.sql.Types.DATE          => DateType
-      case java.sql.Types.DECIMAL
-        if precision != 0 || scale != 0 => DecimalType.bounded(precision, scale)
-      case java.sql.Types.DECIMAL       => DecimalType.SYSTEM_DEFAULT
-      case java.sql.Types.DISTINCT      => null
-      case java.sql.Types.DOUBLE        => DoubleType
-      case java.sql.Types.FLOAT         => FloatType
-      case java.sql.Types.INTEGER       => if (signed) { IntegerType } else { LongType }
-      case java.sql.Types.JAVA_OBJECT   => null
-      case java.sql.Types.LONGNVARCHAR  => StringType
-      case java.sql.Types.LONGVARBINARY => BinaryType
-      case java.sql.Types.LONGVARCHAR   => StringType
-      case java.sql.Types.NCHAR         => StringType
-      case java.sql.Types.NCLOB         => StringType
-      case java.sql.Types.NULL          => null
-      case java.sql.Types.NUMERIC
-        if precision != 0 || scale != 0 => DecimalType.bounded(precision, scale)
-      case java.sql.Types.NUMERIC       => DecimalType.SYSTEM_DEFAULT
-      case java.sql.Types.NVARCHAR      => StringType
-      case java.sql.Types.OTHER         => null
-      case java.sql.Types.REAL          => DoubleType
-      case java.sql.Types.REF           => StringType
-      case java.sql.Types.REF_CURSOR    => null
-      case java.sql.Types.ROWID         => LongType
-      case java.sql.Types.SMALLINT      => IntegerType
-      case java.sql.Types.SQLXML        => StringType
-      case java.sql.Types.STRUCT        => StringType
-      case java.sql.Types.TIME          => TimestampType
-      case java.sql.Types.TIME_WITH_TIMEZONE
-                                        => TimestampType
-      case java.sql.Types.TIMESTAMP     => TimestampType
-      case java.sql.Types.TIMESTAMP_WITH_TIMEZONE
-                                        => TimestampType
-      case -101                         => TimestampType // Value for Timestamp with Time Zone in Oracle
-      case java.sql.Types.TINYINT       => IntegerType
-      case java.sql.Types.VARBINARY     => BinaryType
-      case java.sql.Types.VARCHAR       => StringType
-      case _                            =>
-        throw new SQLException("Unrecognized SQL type " + sqlType)
-      // scalastyle:on
-    }
-
-    if (answer == null) {
-      throw new SQLException("Unsupported type " + JDBCType.valueOf(sqlType).getName)
-    }
-    answer
-  }
-
-  /**
-   * Returns the schema if the table already exists in the JDBC database.
-   */
-  def getSchemaOption(conn: Connection, options: JDBCOptions): Option[StructType] = {
-    val dialect = JdbcDialects.get(options.url)
-
-    try {
-      val statement = conn.prepareStatement(dialect.getSchemaQuery(options.table))
-      try {
-        Some(getSchema(statement.executeQuery(), dialect))
-      } catch {
-        case _: SQLException => None
-      } finally {
-        statement.close()
-      }
-    } catch {
-      case _: SQLException => None
     }
   }
 
@@ -642,7 +454,6 @@ object JdbcUtils extends Logging {
   private def getJdbcType(dt: DataType, dialect: JdbcDialect): JdbcType = {
     dialect.getJDBCType(dt).orElse(getCommonJDBCType(dt)).getOrElse(
       throw new IllegalArgumentException(s"Can't get JDBC type for ${dt.simpleString}"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -710,20 +521,10 @@ object JdbcUtils extends Logging {
         logWarning("Exception while detecting transaction support", e)
         true
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     try {
       if (supportsTransactions) {
         conn.setAutoCommit(false) // Everything in the same db transaction.
-<<<<<<< HEAD
-        conn.setTransactionIsolation(finalIsolationLevel)
-      }
-      val stmt = conn.prepareStatement(insertStmt)
-      val setters = rddSchema.fields.map(f => makeSetter(conn, dialect, f.dataType))
-      val nullTypes = rddSchema.fields.map(f => getJdbcType(f.dataType, dialect).jdbcNullType)
-      val numFields = rddSchema.fields.length
-
-=======
       }
       val stmt = insertStatement(conn, table, rddSchema)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -843,7 +644,6 @@ object JdbcUtils extends Logging {
     df.schema.fields foreach { field => {
       val name = field.name
       val typ: String = getJdbcType(field.dataType, dialect).databaseTypeDefinition
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val nullable = if (field.nullable) "" else "NOT NULL"
       sb.append(s", $name $typ $nullable")
     }
@@ -954,7 +754,6 @@ object JdbcUtils extends Logging {
     val batchSize = properties.getProperty("batchsize", "1000").toInt
     df.foreachPartition { iterator =>
       savePartition(getConnection, table, iterator, rddSchema, nullTypes, batchSize, dialect)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
     repartitionedDF.rdd.foreachPartition(iterator => savePartition(
       getConnection, table, iterator, rddSchema, insertStmt, batchSize, dialect, isolationLevel)

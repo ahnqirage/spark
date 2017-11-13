@@ -34,25 +34,12 @@ import org.apache.spark.annotation.Experimental
 import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.json.{CreateJacksonParser, JacksonParser, JSONOptions}
-import org.apache.spark.sql.execution.command.DDLUtils
-import org.apache.spark.sql.execution.datasources.{DataSource, FailureSafeParser}
-import org.apache.spark.sql.execution.datasources.csv._
-import org.apache.spark.sql.execution.datasources.jdbc._
-import org.apache.spark.sql.execution.datasources.json.TextInputJsonDataSource
-import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
-import org.apache.spark.sql.sources.v2.{DataSourceV2, DataSourceV2Options, ReadSupport, ReadSupportWithSchema}
-import org.apache.spark.sql.types.{StringType, StructType}
-import org.apache.spark.unsafe.types.UTF8String
-=======
 import org.apache.spark.sql.catalyst.SqlParser
 import org.apache.spark.sql.execution.datasources.jdbc.{JDBCPartition, JDBCPartitioningInfo, JDBCRelation}
 import org.apache.spark.sql.execution.datasources.json.JSONRelation
 import org.apache.spark.sql.execution.datasources.parquet.ParquetRelation
 import org.apache.spark.sql.execution.datasources.{LogicalRelation, ResolvedDataSource}
 import org.apache.spark.sql.types.StructType
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Interface used to load a [[Dataset]] from external storage systems (e.g. file systems,
@@ -172,10 +159,6 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    *
    * @since 1.4.0
    */
-<<<<<<< HEAD
-  def load(): DataFrame = {
-    load(Seq.empty: _*) // force invocation of `load(...varargs...)`
-=======
   // TODO: Remove this one in Spark 2.0.
   def load(path: String): DataFrame = {
     option("path", path).load()
@@ -200,50 +183,6 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    */
   @scala.annotation.varargs
   def load(paths: String*): DataFrame = {
-<<<<<<< HEAD
-    if (source.toLowerCase(Locale.ROOT) == DDLUtils.HIVE_PROVIDER) {
-      throw new AnalysisException("Hive data source can only be used with tables, you can not " +
-        "read files of Hive data source directly.")
-    }
-
-    val cls = DataSource.lookupDataSource(source)
-    if (classOf[DataSourceV2].isAssignableFrom(cls)) {
-      val dataSource = cls.newInstance()
-      val options = new DataSourceV2Options(extraOptions.asJava)
-
-      val reader = (cls.newInstance(), userSpecifiedSchema) match {
-        case (ds: ReadSupportWithSchema, Some(schema)) =>
-          ds.createReader(schema, options)
-
-        case (ds: ReadSupport, None) =>
-          ds.createReader(options)
-
-        case (_: ReadSupportWithSchema, None) =>
-          throw new AnalysisException(s"A schema needs to be specified when using $dataSource.")
-
-        case (ds: ReadSupport, Some(schema)) =>
-          val reader = ds.createReader(options)
-          if (reader.readSchema() != schema) {
-            throw new AnalysisException(s"$ds does not allow user-specified schemas.")
-          }
-          reader
-
-        case _ =>
-          throw new AnalysisException(s"$cls does not support data reading.")
-      }
-
-      Dataset.ofRows(sparkSession, DataSourceV2Relation(reader))
-    } else {
-      // Code path for data source v1.
-      sparkSession.baseRelationToDataFrame(
-        DataSource.apply(
-          sparkSession,
-          paths = paths,
-          userSpecifiedSchema = userSpecifiedSchema,
-          className = source,
-          options = extraOptions.toMap).resolveRelation())
-    }
-=======
     option("paths", paths.map(StringUtils.escapeString(_, '\\', ',')).mkString(",")).load()
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
@@ -359,62 +298,13 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * schema in advance, use the version that specifies the schema to avoid the extra scan.
    *
    * You can set the following JSON-specific options to deal with non-standard JSON files:
-<<<<<<< HEAD
-   * <ul>
    * <li>`primitivesAsString` (default `false`): infers all primitive values as a string type</li>
-   * <li>`prefersDecimal` (default `false`): infers all floating-point values as a decimal
-   * type. If the values do not fit in decimal, then it infers them as doubles.</li>
-=======
-   * <li>`primitivesAsString` (default `false`): infers all primitive values as a string type</li>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * <li>`allowComments` (default `false`): ignores Java/C++ style comment in JSON records</li>
    * <li>`allowUnquotedFieldNames` (default `false`): allows unquoted JSON field names</li>
    * <li>`allowSingleQuotes` (default `true`): allows single quotes in addition to double quotes
    * </li>
    * <li>`allowNumericLeadingZeros` (default `false`): allows leading zeros in numbers
    * (e.g. 00012)</li>
-<<<<<<< HEAD
-   * <li>`allowBackslashEscapingAnyCharacter` (default `false`): allows accepting quoting of all
-   * character using backslash quoting mechanism</li>
-   * <li>`allowUnquotedControlChars` (default `false`): allows JSON Strings to contain unquoted
-   * control characters (ASCII characters with value less than 32, including tab and line feed
-   * characters) or not.</li>
-   * <li>`mode` (default `PERMISSIVE`): allows a mode for dealing with corrupt records
-   * during parsing.
-   *   <ul>
-   *     <li>`PERMISSIVE` : sets other fields to `null` when it meets a corrupted record, and puts
-   *     the malformed string into a field configured by `columnNameOfCorruptRecord`. To keep
-   *     corrupt records, an user can set a string type field named `columnNameOfCorruptRecord`
-   *     in an user-defined schema. If a schema does not have the field, it drops corrupt records
-   *     during parsing. When inferring a schema, it implicitly adds a `columnNameOfCorruptRecord`
-   *     field in an output schema.</li>
-   *     <li>`DROPMALFORMED` : ignores the whole corrupted records.</li>
-   *     <li>`FAILFAST` : throws an exception when it meets corrupted records.</li>
-   *   </ul>
-   * </li>
-   * <li>`columnNameOfCorruptRecord` (default is the value specified in
-   * `spark.sql.columnNameOfCorruptRecord`): allows renaming the new field having malformed string
-   * created by `PERMISSIVE` mode. This overrides `spark.sql.columnNameOfCorruptRecord`.</li>
-   * <li>`dateFormat` (default `yyyy-MM-dd`): sets the string that indicates a date format.
-   * Custom date formats follow the formats at `java.text.SimpleDateFormat`. This applies to
-   * date type.</li>
-   * <li>`timestampFormat` (default `yyyy-MM-dd'T'HH:mm:ss.SSSXXX`): sets the string that
-   * indicates a timestamp format. Custom date formats follow the formats at
-   * `java.text.SimpleDateFormat`. This applies to timestamp type.</li>
-   * <li>`multiLine` (default `false`): parse one record, which may span multiple lines,
-   * per file</li>
-   * </ul>
-   *
-   * @since 2.0.0
-   */
-  @scala.annotation.varargs
-  def json(paths: String*): DataFrame = format("json").load(paths : _*)
-
-  /**
-   * Loads a `JavaRDD[String]` storing JSON objects (<a href="http://jsonlines.org/">JSON
-   * Lines text format or newline-delimited JSON</a>) and returns the result as
-   * a `DataFrame`.
-=======
    *
    * @since 1.4.0
    */
@@ -466,9 +356,6 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    */
   @deprecated("Use json(Dataset[String]) instead.", "2.2.0")
   def json(jsonRDD: RDD[String]): DataFrame = {
-<<<<<<< HEAD
-    json(sparkSession.createDataset(jsonRDD)(Encoders.STRING))
-=======
     sqlContext.baseRelationToDataFrame(
       new JSONRelation(
         Some(jsonRDD),
@@ -700,29 +587,6 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * @since 1.4.0
    */
   def table(tableName: String): DataFrame = {
-<<<<<<< HEAD
-    assertNoSpecifiedSchema("table")
-    sparkSession.table(tableName)
-  }
-
-  /**
-   * Loads text files and returns a `DataFrame` whose schema starts with a string column named
-   * "value", and followed by partitioned columns if there are any. See the documentation on
-   * the other overloaded `text()` method for more details.
-   *
-   * @since 2.0.0
-   */
-  def text(path: String): DataFrame = {
-    // This method ensures that calls that explicit need single argument works, see SPARK-16009
-    text(Seq(path): _*)
-  }
-
-  /**
-   * Loads text files and returns a `DataFrame` whose schema starts with a string column named
-   * "value", and followed by partitioned columns if there are any.
-   *
-   * Each line in the text files is a new row in the resulting DataFrame. For example:
-=======
     DataFrame(sqlContext,
       sqlContext.catalog.lookupRelation(SqlParser.parseTableIdentifier(tableName)))
   }
@@ -739,78 +603,11 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    *   spark.read().text("/path/to/spark/README.md")
    * }}}
    *
-<<<<<<< HEAD
-   * @param paths input paths
-=======
    * @param paths input path
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * @since 1.6.0
    */
   @scala.annotation.varargs
   def text(paths: String*): DataFrame = format("text").load(paths : _*)
-<<<<<<< HEAD
-
-  /**
-   * Loads text files and returns a [[Dataset]] of String. See the documentation on the
-   * other overloaded `textFile()` method for more details.
-   * @since 2.0.0
-   */
-  def textFile(path: String): Dataset[String] = {
-    // This method ensures that calls that explicit need single argument works, see SPARK-16009
-    textFile(Seq(path): _*)
-  }
-
-  /**
-   * Loads text files and returns a [[Dataset]] of String. The underlying schema of the Dataset
-   * contains a single string column named "value".
-   *
-   * If the directory structure of the text files contains partitioning information, those are
-   * ignored in the resulting Dataset. To include partitioning information as columns, use `text`.
-   *
-   * Each line in the text files is a new element in the resulting Dataset. For example:
-   * {{{
-   *   // Scala:
-   *   spark.read.textFile("/path/to/spark/README.md")
-   *
-   *   // Java:
-   *   spark.read().textFile("/path/to/spark/README.md")
-   * }}}
-   *
-   * @param paths input path
-   * @since 2.0.0
-   */
-  @scala.annotation.varargs
-  def textFile(paths: String*): Dataset[String] = {
-    assertNoSpecifiedSchema("textFile")
-    text(paths : _*).select("value").as[String](sparkSession.implicits.newStringEncoder)
-  }
-
-  /**
-   * A convenient function for schema validation in APIs.
-   */
-  private def assertNoSpecifiedSchema(operation: String): Unit = {
-    if (userSpecifiedSchema.nonEmpty) {
-      throw new AnalysisException(s"User specified schema not supported with `$operation`")
-    }
-  }
-
-  /**
-   * A convenient function for schema validation in datasources supporting
-   * `columnNameOfCorruptRecord` as an option.
-   */
-  private def verifyColumnNameOfCorruptRecord(
-      schema: StructType,
-      columnNameOfCorruptRecord: String): Unit = {
-    schema.getFieldIndex(columnNameOfCorruptRecord).foreach { corruptFieldIndex =>
-      val f = schema(corruptFieldIndex)
-      if (f.dataType != StringType || !f.nullable) {
-        throw new AnalysisException(
-          "The field for corrupt records must be string type and nullable")
-      }
-    }
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Builder pattern config options

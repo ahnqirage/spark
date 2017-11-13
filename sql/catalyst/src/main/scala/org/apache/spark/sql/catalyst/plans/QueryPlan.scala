@@ -164,7 +164,6 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
   final def expressions: Seq[Expression] = {
 =======
   def expressions: Seq[Expression] = {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // Recursively find all expressions from a traversable.
     def seqToExpressions(seq: Traversable[Any]): Traversable[Expression] = seq.flatMap {
       case e: Expression => e :: Nil
@@ -178,7 +177,6 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
       case s: Some[_] => seqToExpressions(s.toSeq)
 =======
       case Some(e: Expression) => e :: Nil
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       case seq: Traversable[_] => seqToExpressions(seq)
       case other => Nil
     }.toSeq

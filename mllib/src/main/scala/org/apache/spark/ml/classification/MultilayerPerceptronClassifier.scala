@@ -19,18 +19,6 @@ package org.apache.spark.ml.classification
 
 import scala.collection.JavaConverters._
 
-<<<<<<< HEAD
-import org.apache.hadoop.fs.Path
-
-import org.apache.spark.annotation.Since
-import org.apache.spark.ml.ann.{FeedForwardTopology, FeedForwardTrainer}
-import org.apache.spark.ml.feature.LabeledPoint
-import org.apache.spark.ml.linalg.{Vector, Vectors}
-import org.apache.spark.ml.param._
-import org.apache.spark.ml.param.shared._
-import org.apache.spark.ml.util._
-import org.apache.spark.sql.Dataset
-=======
 import org.apache.spark.annotation.{Experimental, Since}
 import org.apache.spark.ml.param.shared.{HasTol, HasMaxIter, HasSeed}
 import org.apache.spark.ml.{PredictorParams, PredictionModel, Predictor}
@@ -151,13 +139,6 @@ private object LabelConverter {
  * Number of outputs has to be equal to the total number of labels.
  */
 @Since("1.5.0")
-<<<<<<< HEAD
-class MultilayerPerceptronClassifier @Since("1.5.0") (
-    @Since("1.5.0") override val uid: String)
-  extends ProbabilisticClassifier[Vector, MultilayerPerceptronClassifier,
-    MultilayerPerceptronClassificationModel]
-  with MultilayerPerceptronParams with DefaultParamsWritable {
-=======
 @Experimental
 class MultilayerPerceptronClassifier @Since("1.5.0") (
     @Since("1.5.0") override val uid: String)
@@ -189,7 +170,6 @@ class MultilayerPerceptronClassifier @Since("1.5.0") (
   def setLayers(value: Array[Int]): this.type = set(layers, value)
 
   /** @group setParam */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.5.0")
   def setBlockSize(value: Int): this.type = set(blockSize, value)
 
@@ -229,26 +209,6 @@ class MultilayerPerceptronClassifier @Since("1.5.0") (
   @Since("1.5.0")
   def setSeed(value: Long): this.type = set(seed, value)
 
-<<<<<<< HEAD
-  /**
-   * Sets the value of param [[initialWeights]].
-   *
-   * @group expertSetParam
-   */
-  @Since("2.0.0")
-  def setInitialWeights(value: Vector): this.type = set(initialWeights, value)
-
-  /**
-   * Sets the value of param [[stepSize]] (applicable only for solver "gd").
-   * Default is 0.03.
-   *
-   * @group setParam
-   */
-  @Since("2.0.0")
-  def setStepSize(value: Double): this.type = set(stepSize, value)
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.5.0")
   override def copy(extra: ParamMap): MultilayerPerceptronClassifier = defaultCopy(extra)
 
@@ -327,14 +287,6 @@ object MultilayerPerceptronClassifier
  * @param weights the weights of layers
  */
 @Since("1.5.0")
-<<<<<<< HEAD
-class MultilayerPerceptronClassificationModel private[ml] (
-    @Since("1.5.0") override val uid: String,
-    @Since("1.5.0") val layers: Array[Int],
-    @Since("2.0.0") val weights: Vector)
-  extends ProbabilisticClassificationModel[Vector, MultilayerPerceptronClassificationModel]
-  with Serializable with MLWritable {
-=======
 @Experimental
 class MultilayerPerceptronClassificationModel private[ml] (
     @Since("1.5.0") override val uid: String,

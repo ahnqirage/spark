@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Linear Methods - RDD-based API
-displayTitle: Linear Methods - RDD-based API
-=======
 title: Linear Methods - spark.mllib
 displayTitle: Linear Methods - spark.mllib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents
@@ -144,10 +139,6 @@ and logistic regression.
 Linear SVMs supports only binary classification, while logistic regression supports both binary and
 multiclass classification problems.
 For both methods, `spark.mllib` supports L1 and L2 regularized variants.
-<<<<<<< HEAD
-The training data set is represented by an RDD of [LabeledPoint](mllib-data-types.html#labeled-point) in MLlib,
-where labels are class indices starting from zero: $0, 1, 2, \ldots$.
-=======
 The training data set is represented by an RDD of [LabeledPoint](mllib-data-types.html) in MLlib,
 where labels are class indices starting from zero: $0, 1, 2, \ldots$.
 Note that, in the mathematical formulation in this guide, a binary label $y$ is denoted as either

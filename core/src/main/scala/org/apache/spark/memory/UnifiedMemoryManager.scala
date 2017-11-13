@@ -22,16 +22,12 @@ import org.apache.spark.SparkConf
 import org.apache.spark.storage.BlockId
 =======
 import org.apache.spark.storage.{BlockStatus, BlockId}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * A [[MemoryManager]] that enforces a soft boundary between execution and storage such that
  * either side can borrow memory from the other.
  *
  * The region shared between execution and storage is a fraction of (the total heap space - 300MB)
-<<<<<<< HEAD
- * configurable through `spark.memory.fraction` (default 0.6). The position of the boundary
-=======
  * configurable through `spark.memory.fraction` (default 0.75). The position of the boundary
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * within this space is further determined by `spark.memory.storageFraction` (default 0.5).
@@ -47,47 +43,19 @@ import org.apache.spark.storage.{BlockStatus, BlockId}
  * up most of the storage space, in which case the new blocks will be evicted immediately
  * according to their respective storage levels.
  *
-<<<<<<< HEAD
- * @param onHeapStorageRegionSize Size of the storage region, in bytes.
-=======
  * @param storageRegionSize Size of the storage region, in bytes.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  *                          This region is not statically reserved; execution can borrow from
  *                          it if necessary. Cached blocks can be evicted only if actual
  *                          storage memory usage exceeds this region.
  */
 private[spark] class UnifiedMemoryManager private[memory] (
     conf: SparkConf,
-<<<<<<< HEAD
-    val maxHeapMemory: Long,
-    onHeapStorageRegionSize: Long,
-=======
     val maxMemory: Long,
     storageRegionSize: Long,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     numCores: Int)
   extends MemoryManager(
     conf,
     numCores,
-<<<<<<< HEAD
-    onHeapStorageRegionSize,
-    maxHeapMemory - onHeapStorageRegionSize) {
-
-  private def assertInvariants(): Unit = {
-    assert(onHeapExecutionMemoryPool.poolSize + onHeapStorageMemoryPool.poolSize == maxHeapMemory)
-    assert(
-      offHeapExecutionMemoryPool.poolSize + offHeapStorageMemoryPool.poolSize == maxOffHeapMemory)
-  }
-
-  assertInvariants()
-
-  override def maxOnHeapStorageMemory: Long = synchronized {
-    maxHeapMemory - onHeapExecutionMemoryPool.memoryUsed
-  }
-
-  override def maxOffHeapStorageMemory: Long = synchronized {
-    maxOffHeapMemory - offHeapExecutionMemoryPool.memoryUsed
-=======
     storageRegionSize,
     maxMemory - storageRegionSize) {
 
@@ -100,7 +68,6 @@ private[spark] class UnifiedMemoryManager private[memory] (
 
   override def maxStorageMemory: Long = synchronized {
     maxMemory - onHeapExecutionMemoryPool.memoryUsed
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -116,68 +83,6 @@ private[spark] class UnifiedMemoryManager private[memory] (
       numBytes: Long,
       taskAttemptId: Long,
       memoryMode: MemoryMode): Long = synchronized {
-<<<<<<< HEAD
-    assertInvariants()
-    assert(numBytes >= 0)
-    val (executionPool, storagePool, storageRegionSize, maxMemory) = memoryMode match {
-      case MemoryMode.ON_HEAP => (
-        onHeapExecutionMemoryPool,
-        onHeapStorageMemoryPool,
-        onHeapStorageRegionSize,
-        maxHeapMemory)
-      case MemoryMode.OFF_HEAP => (
-        offHeapExecutionMemoryPool,
-        offHeapStorageMemoryPool,
-        offHeapStorageMemory,
-        maxOffHeapMemory)
-    }
-
-    /**
-     * Grow the execution pool by evicting cached blocks, thereby shrinking the storage pool.
-     *
-     * When acquiring memory for a task, the execution pool may need to make multiple
-     * attempts. Each attempt must be able to evict storage in case another task jumps in
-     * and caches a large block between the attempts. This is called once per attempt.
-     */
-    def maybeGrowExecutionPool(extraMemoryNeeded: Long): Unit = {
-      if (extraMemoryNeeded > 0) {
-        // There is not enough free memory in the execution pool, so try to reclaim memory from
-        // storage. We can reclaim any free memory from the storage pool. If the storage pool
-        // has grown to become larger than `storageRegionSize`, we can evict blocks and reclaim
-        // the memory that storage has borrowed from execution.
-        val memoryReclaimableFromStorage = math.max(
-          storagePool.memoryFree,
-          storagePool.poolSize - storageRegionSize)
-        if (memoryReclaimableFromStorage > 0) {
-          // Only reclaim as much space as is necessary and available:
-          val spaceToReclaim = storagePool.freeSpaceToShrinkPool(
-            math.min(extraMemoryNeeded, memoryReclaimableFromStorage))
-          storagePool.decrementPoolSize(spaceToReclaim)
-          executionPool.incrementPoolSize(spaceToReclaim)
-        }
-      }
-    }
-
-    /**
-     * The size the execution pool would have after evicting storage memory.
-     *
-     * The execution memory pool divides this quantity among the active tasks evenly to cap
-     * the execution memory allocation for each task. It is important to keep this greater
-     * than the execution pool size, which doesn't take into account potential memory that
-     * could be freed by evicting storage. Otherwise we may hit SPARK-12155.
-     *
-     * Additionally, this quantity should be kept below `maxMemory` to arbitrate fairness
-     * in execution memory allocation across tasks, Otherwise, a task may occupy more than
-     * its fair share of execution memory, mistakenly thinking that other tasks can acquire
-     * the portion of storage memory that cannot be evicted.
-     */
-    def computeMaxExecutionPoolSize(): Long = {
-      maxMemory - math.min(storagePool.memoryUsed, storageRegionSize)
-    }
-
-    executionPool.acquireMemory(
-      numBytes, taskAttemptId, maybeGrowExecutionPool, () => computeMaxExecutionPoolSize)
-=======
     assertInvariant()
     assert(numBytes >= 0)
     memoryMode match {
@@ -233,7 +138,6 @@ private[spark] class UnifiedMemoryManager private[memory] (
         // the storage pool when allocating off-heap memory. This will change in the future, though.
         offHeapExecutionMemoryPool.acquireMemory(numBytes, taskAttemptId)
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def acquireStorageMemory(
@@ -286,19 +190,13 @@ private[spark] class UnifiedMemoryManager private[memory] (
       storageMemoryPool.incrementPoolSize(memoryBorrowedFromExecution)
     }
     storageMemoryPool.acquireMemory(blockId, numBytes, evictedBlocks)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def acquireUnrollMemory(
       blockId: BlockId,
       numBytes: Long,
-<<<<<<< HEAD
-      memoryMode: MemoryMode): Boolean = synchronized {
-    acquireStorageMemory(blockId, numBytes, memoryMode)
-=======
       evictedBlocks: mutable.Buffer[(BlockId, BlockStatus)]): Boolean = synchronized {
     acquireStorageMemory(blockId, numBytes, evictedBlocks)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
@@ -307,24 +205,15 @@ object UnifiedMemoryManager {
   // Set aside a fixed amount of memory for non-storage, non-execution purposes.
   // This serves a function similar to `spark.memory.fraction`, but guarantees that we reserve
   // sufficient memory for the system even for small heaps. E.g. if we have a 1GB JVM, then
-<<<<<<< HEAD
-  // the memory used for execution and storage will be (1024 - 300) * 0.6 = 434MB by default.
-=======
   // the memory used for execution and storage will be (1024 - 300) * 0.75 = 543MB by default.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private val RESERVED_SYSTEM_MEMORY_BYTES = 300 * 1024 * 1024
 
   def apply(conf: SparkConf, numCores: Int): UnifiedMemoryManager = {
     val maxMemory = getMaxMemory(conf)
     new UnifiedMemoryManager(
       conf,
-<<<<<<< HEAD
-      maxHeapMemory = maxMemory,
-      onHeapStorageRegionSize =
-=======
       maxMemory = maxMemory,
       storageRegionSize =
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         (maxMemory * conf.getDouble("spark.memory.storageFraction", 0.5)).toLong,
       numCores = numCores)
   }
@@ -336,25 +225,6 @@ object UnifiedMemoryManager {
     val systemMemory = conf.getLong("spark.testing.memory", Runtime.getRuntime.maxMemory)
     val reservedMemory = conf.getLong("spark.testing.reservedMemory",
       if (conf.contains("spark.testing")) 0 else RESERVED_SYSTEM_MEMORY_BYTES)
-<<<<<<< HEAD
-    val minSystemMemory = (reservedMemory * 1.5).ceil.toLong
-    if (systemMemory < minSystemMemory) {
-      throw new IllegalArgumentException(s"System memory $systemMemory must " +
-        s"be at least $minSystemMemory. Please increase heap size using the --driver-memory " +
-        s"option or spark.driver.memory in Spark configuration.")
-    }
-    // SPARK-12759 Check executor memory to fail fast if memory is insufficient
-    if (conf.contains("spark.executor.memory")) {
-      val executorMemory = conf.getSizeAsBytes("spark.executor.memory")
-      if (executorMemory < minSystemMemory) {
-        throw new IllegalArgumentException(s"Executor memory $executorMemory must be at least " +
-          s"$minSystemMemory. Please increase executor memory using the " +
-          s"--executor-memory option or spark.executor.memory in Spark configuration.")
-      }
-    }
-    val usableMemory = systemMemory - reservedMemory
-    val memoryFraction = conf.getDouble("spark.memory.fraction", 0.6)
-=======
     val minSystemMemory = reservedMemory * 1.5
     if (systemMemory < minSystemMemory) {
       throw new IllegalArgumentException(s"System memory $systemMemory must " +
@@ -362,7 +232,6 @@ object UnifiedMemoryManager {
     }
     val usableMemory = systemMemory - reservedMemory
     val memoryFraction = conf.getDouble("spark.memory.fraction", 0.75)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     (usableMemory * memoryFraction).toLong
   }
 }

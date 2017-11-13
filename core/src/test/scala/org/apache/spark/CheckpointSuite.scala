@@ -21,15 +21,8 @@ import java.io.File
 
 import scala.reflect.ClassTag
 
-<<<<<<< HEAD
-import com.google.common.io.ByteStreams
 import org.apache.hadoop.fs.Path
 
-import org.apache.spark.io.CompressionCodec
-=======
-import org.apache.hadoop.fs.Path
-
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.rdd._
 import org.apache.spark.storage.{BlockId, StorageLevel, TestBlockId}
 import org.apache.spark.util.Utils
@@ -119,11 +112,7 @@ trait RDDCheckpointTester { self: SparkFunSuite =>
    * RDDs partitions. So even if the parent RDD is checkpointed and its partitions changed,
    * the generated RDD will remember the partitions and therefore potentially the whole lineage.
    * This function should be called only those RDD whose partitions refer to parent RDD's
-<<<<<<< HEAD
-   * partitions (i.e., do not call it on simple RDDs).
-=======
    * partitions (i.e., do not call it on simple RDD like MappedRDD).
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @param op an operation to run on the RDD
    * @param reliableCheckpoint if true, use reliable checkpoints, otherwise use local checkpoints
@@ -523,30 +512,6 @@ class CheckpointSuite extends SparkFunSuite with RDDCheckpointTester with LocalS
     assert(rdd.isCheckpointedAndMaterialized === true)
     assert(rdd.partitions.size === 0)
   }
-<<<<<<< HEAD
-
-  runTest("checkpointAllMarkedAncestors") { reliableCheckpoint: Boolean =>
-    testCheckpointAllMarkedAncestors(reliableCheckpoint, checkpointAllMarkedAncestors = true)
-    testCheckpointAllMarkedAncestors(reliableCheckpoint, checkpointAllMarkedAncestors = false)
-  }
-
-  private def testCheckpointAllMarkedAncestors(
-      reliableCheckpoint: Boolean, checkpointAllMarkedAncestors: Boolean): Unit = {
-    sc.setLocalProperty(RDD.CHECKPOINT_ALL_MARKED_ANCESTORS, checkpointAllMarkedAncestors.toString)
-    try {
-      val rdd1 = sc.parallelize(1 to 10)
-      checkpoint(rdd1, reliableCheckpoint)
-      val rdd2 = rdd1.map(_ + 1)
-      checkpoint(rdd2, reliableCheckpoint)
-      rdd2.count()
-      assert(rdd1.isCheckpointed === checkpointAllMarkedAncestors)
-      assert(rdd2.isCheckpointed === true)
-    } finally {
-      sc.setLocalProperty(RDD.CHECKPOINT_ALL_MARKED_ANCESTORS, null)
-    }
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /** RDD partition that has large serialized size. */
@@ -593,46 +558,4 @@ object CheckpointSuite {
       part
     ).asInstanceOf[RDD[(K, Array[Iterable[V]])]]
   }
-<<<<<<< HEAD
-}
-
-class CheckpointCompressionSuite extends SparkFunSuite with LocalSparkContext {
-
-  test("checkpoint compression") {
-    val checkpointDir = Utils.createTempDir()
-    try {
-      val conf = new SparkConf()
-        .set("spark.checkpoint.compress", "true")
-        .set("spark.ui.enabled", "false")
-      sc = new SparkContext("local", "test", conf)
-      sc.setCheckpointDir(checkpointDir.toString)
-      val rdd = sc.makeRDD(1 to 20, numSlices = 1)
-      rdd.checkpoint()
-      assert(rdd.collect().toSeq === (1 to 20))
-
-      // Verify that RDD is checkpointed
-      assert(rdd.firstParent.isInstanceOf[ReliableCheckpointRDD[_]])
-
-      val checkpointPath = new Path(rdd.getCheckpointFile.get)
-      val fs = checkpointPath.getFileSystem(sc.hadoopConfiguration)
-      val checkpointFile =
-        fs.listStatus(checkpointPath).map(_.getPath).find(_.getName.startsWith("part-")).get
-
-      // Verify the checkpoint file is compressed, in other words, can be decompressed
-      val compressedInputStream = CompressionCodec.createCodec(conf)
-        .compressedInputStream(fs.open(checkpointFile))
-      try {
-        ByteStreams.toByteArray(compressedInputStream)
-      } finally {
-        compressedInputStream.close()
-      }
-
-      // Verify that the compressed content can be read back
-      assert(rdd.collect().toSeq === (1 to 20))
-    } finally {
-      Utils.deleteRecursively(checkpointDir)
-    }
-  }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

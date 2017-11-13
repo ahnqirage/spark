@@ -1191,11 +1191,6 @@ private[python] class PythonMLLibAPI extends Serializable {
   def getIndexedRows(indexedRowMatrix: IndexedRowMatrix): DataFrame = {
     // We use DataFrames for serialization of IndexedRows to Python,
     // so return a DataFrame.
-<<<<<<< HEAD
-    val sc = indexedRowMatrix.rows.sparkContext
-    val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-    spark.createDataFrame(indexedRowMatrix.rows)
-=======
     val sqlContext = SQLContext.getOrCreate(indexedRowMatrix.rows.sparkContext)
     sqlContext.createDataFrame(indexedRowMatrix.rows)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -1207,11 +1202,6 @@ private[python] class PythonMLLibAPI extends Serializable {
   def getMatrixEntries(coordinateMatrix: CoordinateMatrix): DataFrame = {
     // We use DataFrames for serialization of MatrixEntry entries to
     // Python, so return a DataFrame.
-<<<<<<< HEAD
-    val sc = coordinateMatrix.entries.sparkContext
-    val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-    spark.createDataFrame(coordinateMatrix.entries)
-=======
     val sqlContext = SQLContext.getOrCreate(coordinateMatrix.entries.sparkContext)
     sqlContext.createDataFrame(coordinateMatrix.entries)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -1223,39 +1213,6 @@ private[python] class PythonMLLibAPI extends Serializable {
   def getMatrixBlocks(blockMatrix: BlockMatrix): DataFrame = {
     // We use DataFrames for serialization of sub-matrix blocks to
     // Python, so return a DataFrame.
-<<<<<<< HEAD
-    val sc = blockMatrix.blocks.sparkContext
-    val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-    spark.createDataFrame(blockMatrix.blocks)
-  }
-
-  /**
-   * Python-friendly version of [[MLUtils.convertVectorColumnsToML()]].
-   */
-  def convertVectorColumnsToML(dataset: DataFrame, cols: JArrayList[String]): DataFrame = {
-    MLUtils.convertVectorColumnsToML(dataset, cols.asScala: _*)
-  }
-
-  /**
-   * Python-friendly version of [[MLUtils.convertVectorColumnsFromML()]]
-   */
-  def convertVectorColumnsFromML(dataset: DataFrame, cols: JArrayList[String]): DataFrame = {
-    MLUtils.convertVectorColumnsFromML(dataset, cols.asScala: _*)
-  }
-
-  /**
-   * Python-friendly version of [[MLUtils.convertMatrixColumnsToML()]].
-   */
-  def convertMatrixColumnsToML(dataset: DataFrame, cols: JArrayList[String]): DataFrame = {
-    MLUtils.convertMatrixColumnsToML(dataset, cols.asScala: _*)
-  }
-
-  /**
-   * Python-friendly version of [[MLUtils.convertMatrixColumnsFromML()]]
-   */
-  def convertMatrixColumnsFromML(dataset: DataFrame, cols: JArrayList[String]): DataFrame = {
-    MLUtils.convertMatrixColumnsFromML(dataset, cols.asScala: _*)
-=======
     val sqlContext = SQLContext.getOrCreate(blockMatrix.blocks.sparkContext)
     sqlContext.createDataFrame(blockMatrix.blocks)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

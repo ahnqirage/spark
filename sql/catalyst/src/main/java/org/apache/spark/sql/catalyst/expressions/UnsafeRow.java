@@ -30,15 +30,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-<<<<<<< HEAD
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.KryoSerializable;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
-
-import org.apache.spark.sql.catalyst.InternalRow;
-import org.apache.spark.sql.types.*;
-=======
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.BinaryType;
@@ -60,7 +51,6 @@ import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.types.TimestampType;
 import org.apache.spark.sql.types.UserDefinedType;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.unsafe.Platform;
 import org.apache.spark.unsafe.array.ByteArrayMethods;
 import org.apache.spark.unsafe.bitset.BitSetMethods;
@@ -227,6 +217,24 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
 
   public void setTotalSize(int sizeInBytes) {
     assert sizeInBytes % 8 == 0 : "sizeInBytes (" + sizeInBytes + ") should be a multiple of 8";
+    this.sizeInBytes = sizeInBytes;
+  }
+
+  public void setNotNullAt(int i) {
+    assertIndexIsValid(i);
+    BitSetMethods.unset(baseObject, baseOffset, i);
+  }
+
+  /**
+   * Updates this UnsafeRow preserving the number of fields.
+   * @param buf byte array to point to
+   * @param sizeInBytes the number of bytes valid in the byte array
+   */
+  public void pointTo(byte[] buf, int sizeInBytes) {
+    pointTo(buf, numFields, sizeInBytes);
+  }
+
+  public void setTotalSize(int sizeInBytes) {
     this.sizeInBytes = sizeInBytes;
   }
 

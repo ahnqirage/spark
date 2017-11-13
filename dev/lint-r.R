@@ -32,7 +32,6 @@ if ("lintr" %in% row.names(installed.packages()) == FALSE) {
 =======
 if ("lintr" %in% row.names(installed.packages())  == FALSE) {
   devtools::install_github("jimhester/lintr@a769c0b")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 library(lintr)

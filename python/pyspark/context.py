@@ -22,10 +22,6 @@ import shutil
 import signal
 import sys
 import threading
-<<<<<<< HEAD
-import warnings
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 from threading import RLock
 from tempfile import NamedTemporaryFile
 
@@ -239,35 +235,6 @@ class SparkContext(object):
         # see http://stackoverflow.com/questions/23206787/
         if isinstance(threading.current_thread(), threading._MainThread):
             signal.signal(signal.SIGINT, signal_handler)
-<<<<<<< HEAD
-
-    def __repr__(self):
-        return "<SparkContext master={master} appName={appName}>".format(
-            master=self.master,
-            appName=self.appName,
-        )
-
-    def _repr_html_(self):
-        return """
-        <div>
-            <p><b>SparkContext</b></p>
-
-            <p><a href="{sc.uiWebUrl}">Spark UI</a></p>
-
-            <dl>
-              <dt>Version</dt>
-                <dd><code>v{sc.version}</code></dd>
-              <dt>Master</dt>
-                <dd><code>{sc.master}</code></dd>
-              <dt>AppName</dt>
-                <dd><code>{sc.appName}</code></dd>
-            </dl>
-        </div>
-        """.format(
-            sc=self
-        )
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     def _initialize_context(self, jconf):
         """

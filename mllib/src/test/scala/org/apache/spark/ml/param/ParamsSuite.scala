@@ -17,19 +17,11 @@
 
 package org.apache.spark.ml.param
 
-<<<<<<< HEAD
-import java.io.{ByteArrayOutputStream, ObjectOutputStream}
-
-import org.apache.spark.SparkFunSuite
-import org.apache.spark.ml.linalg.{Vector, Vectors}
-import org.apache.spark.ml.util.MyParams
-=======
 import java.io.{ByteArrayOutputStream, NotSerializableException, ObjectOutputStream}
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.ml.util.MyParams
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 class ParamsSuite extends SparkFunSuite {
 

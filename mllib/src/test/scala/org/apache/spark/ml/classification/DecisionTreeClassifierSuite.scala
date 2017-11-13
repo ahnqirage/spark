@@ -22,11 +22,6 @@ import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.tree.{CategoricalSplit, InternalNode, LeafNode}
-<<<<<<< HEAD
-import org.apache.spark.ml.tree.impl.TreeTests
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-import org.apache.spark.mllib.regression.{LabeledPoint => OldLabeledPoint}
-=======
 import org.apache.spark.ml.util.MLTestingUtils
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.regression.LabeledPoint
@@ -82,9 +77,6 @@ class DecisionTreeClassifierSuite
       .setMaxDepth(2)
       .setMaxBins(100)
       .setSeed(1)
-<<<<<<< HEAD
-    val categoricalFeatures = Map(0 -> 3, 1 -> 3)
-=======
     val categoricalFeatures = Map(0 -> 3, 1-> 3)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val numClasses = 2
@@ -361,6 +353,40 @@ class DecisionTreeClassifierSuite
     val df: DataFrame = TreeTests.featureImportanceData(sc).toDF()
     val dt = new DecisionTreeClassifier().setMaxDepth(1)
     dt.fit(df)
+  }
+
+  test("Use soft prediction for binary classification with ordered categorical features") {
+    // The following dataset is set up such that the best split is {1} vs. {0, 2}.
+    // If the hard prediction is used to order the categories, then {0} vs. {1, 2} is chosen.
+    val arr = Array(
+      LabeledPoint(0.0, Vectors.dense(0.0)),
+      LabeledPoint(0.0, Vectors.dense(0.0)),
+      LabeledPoint(0.0, Vectors.dense(0.0)),
+      LabeledPoint(1.0, Vectors.dense(0.0)),
+      LabeledPoint(0.0, Vectors.dense(1.0)),
+      LabeledPoint(0.0, Vectors.dense(1.0)),
+      LabeledPoint(0.0, Vectors.dense(1.0)),
+      LabeledPoint(0.0, Vectors.dense(1.0)),
+      LabeledPoint(0.0, Vectors.dense(2.0)),
+      LabeledPoint(0.0, Vectors.dense(2.0)),
+      LabeledPoint(0.0, Vectors.dense(2.0)),
+      LabeledPoint(1.0, Vectors.dense(2.0)))
+    val data = sc.parallelize(arr)
+    val df = TreeTests.setMetadata(data, Map(0 -> 3), 2)
+
+    // Must set maxBins s.t. the feature will be treated as an ordered categorical feature.
+    val dt = new DecisionTreeClassifier()
+      .setImpurity("gini")
+      .setMaxDepth(1)
+      .setMaxBins(3)
+    val model = dt.fit(df)
+    model.rootNode match {
+      case n: InternalNode =>
+        n.split match {
+          case s: CategoricalSplit =>
+            assert(s.leftCategories === Array(1.0))
+        }
+    }
   }
 
   test("Use soft prediction for binary classification with ordered categorical features") {

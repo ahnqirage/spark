@@ -19,10 +19,6 @@ package org.apache.spark.streaming.flume
 
 import java.net.{InetSocketAddress, ServerSocket}
 import java.nio.ByteBuffer
-<<<<<<< HEAD
-import java.nio.charset.StandardCharsets
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.util.{List => JList}
 import java.util.Collections
 

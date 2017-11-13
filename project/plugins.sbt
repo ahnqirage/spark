@@ -48,5 +48,4 @@ libraryDependencies += "org.ow2.asm"  % "asm-commons" % "5.0.3"
 // In the long run, we should try to merge our patch upstream and switch to an upstream version of
 // the plugin; this is tracked at SPARK-14401.
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 addSbtPlugin("org.spark-project" % "sbt-pom-reader" % "1.0.0-spark")

@@ -17,11 +17,7 @@
 
 package org.apache.spark.serializer
 
-<<<<<<< HEAD
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, FileOutputStream}
-=======
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, FileInputStream}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -34,7 +30,6 @@ import com.esotericsoftware.kryo.io.{Input => KryoInput, Output => KryoOutput}
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.{Input => KryoInput, Output => KryoOutput}
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.roaringbitmap.RoaringBitmap
 
 import org.apache.spark.{SharedSparkContext, SparkConf, SparkFunSuite}
@@ -373,6 +368,44 @@ class KryoSerializerSuite extends SparkFunSuite with SharedSparkContext {
     val thrown = intercept[SparkException](ser.serialize(largeObject))
     assert(thrown.getMessage.contains(kryoBufferMaxProperty))
     assert(thrown.getCause.isInstanceOf[KryoException])
+  }
+
+  test("SPARK-12222: deserialize RoaringBitmap throw Buffer underflow exception") {
+    val dir = Utils.createTempDir()
+    val tmpfile = dir.toString + "/RoaringBitmap"
+    val outStream = new FileOutputStream(tmpfile)
+    val output = new KryoOutput(outStream)
+    val bitmap = new RoaringBitmap
+    bitmap.add(1)
+    bitmap.add(3)
+    bitmap.add(5)
+    // Ignore Kryo because it doesn't use writeObject
+    bitmap.serialize(new KryoOutputObjectOutputBridge(null, output))
+    output.flush()
+    output.close()
+
+    val inStream = new FileInputStream(tmpfile)
+    val input = new KryoInput(inStream)
+    val ret = new RoaringBitmap
+    // Ignore Kryo because it doesn't use readObject
+    ret.deserialize(new KryoInputObjectInputBridge(null, input))
+    input.close()
+    assert(ret == bitmap)
+    Utils.deleteRecursively(dir)
+  }
+
+  test("KryoOutputObjectOutputBridge.writeObject and KryoInputObjectInputBridge.readObject") {
+    val kryo = new KryoSerializer(conf).newKryo()
+
+    val bytesOutput = new ByteArrayOutputStream()
+    val objectOutput = new KryoOutputObjectOutputBridge(kryo, new KryoOutput(bytesOutput))
+    objectOutput.writeObject("test")
+    objectOutput.close()
+
+    val bytesInput = new ByteArrayInputStream(bytesOutput.toByteArray)
+    val objectInput = new KryoInputObjectInputBridge(kryo, new KryoInput(bytesInput))
+    assert(objectInput.readObject() === "test")
+    objectInput.close()
   }
 
   test("SPARK-12222: deserialize RoaringBitmap throw Buffer underflow exception") {

@@ -17,21 +17,12 @@
 
 package org.apache.spark.sql.sources
 
-<<<<<<< HEAD
-import java.util.Locale
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.language.existentials
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-<<<<<<< HEAD
-import org.apache.spark.sql.internal.SQLConf
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
@@ -142,9 +133,6 @@ object ColumnsRequired {
 }
 
 class FilteredScanSuite extends DataSourceTest with SharedSQLContext with PredicateHelper {
-<<<<<<< HEAD
-  protected override lazy val sql = spark.sql _
-=======
   protected override lazy val sql = caseInsensitiveContext.sql _
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -307,8 +295,6 @@ class FilteredScanSuite extends DataSourceTest with SharedSQLContext with Predic
     3,
     Set("a", "b"),
     Set(LessThan("b", 16)))
-<<<<<<< HEAD
-=======
 
   def testPushDown(
     sqlString: String,
@@ -316,54 +302,10 @@ class FilteredScanSuite extends DataSourceTest with SharedSQLContext with Predic
     requiredColumnNames: Set[String]): Unit = {
     testPushDown(sqlString, expectedCount, requiredColumnNames, Set.empty[Filter])
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   def testPushDown(
     sqlString: String,
     expectedCount: Int,
-<<<<<<< HEAD
-    requiredColumnNames: Set[String]): Unit = {
-    testPushDown(sqlString, expectedCount, requiredColumnNames, Set.empty[Filter])
-  }
-
-  def testPushDown(
-    sqlString: String,
-    expectedCount: Int,
-    requiredColumnNames: Set[String],
-    expectedUnhandledFilters: Set[Filter]): Unit = {
-
-    test(s"PushDown Returns $expectedCount: $sqlString") {
-      // These tests check a particular plan, disable whole stage codegen.
-      spark.conf.set(SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key, false)
-      try {
-        val queryExecution = sql(sqlString).queryExecution
-        val rawPlan = queryExecution.executedPlan.collect {
-          case p: execution.DataSourceScanExec => p
-        } match {
-          case Seq(p) => p
-          case _ => fail(s"More than one PhysicalRDD found\n$queryExecution")
-        }
-        val rawCount = rawPlan.execute().count()
-        assert(ColumnsRequired.set === requiredColumnNames)
-
-        val table = spark.table("oneToTenFiltered")
-        val relation = table.queryExecution.logical.collectFirst {
-          case LogicalRelation(r, _, _, _) => r
-        }.get
-
-        assert(
-          relation.unhandledFilters(FiltersPushed.list.toArray).toSet === expectedUnhandledFilters)
-
-        if (rawCount != expectedCount) {
-          fail(
-            s"Wrong # of results for pushed filter. Got $rawCount, Expected $expectedCount\n" +
-              s"Filters pushed: ${FiltersPushed.list.mkString(",")}\n" +
-              queryExecution)
-        }
-      } finally {
-        spark.conf.set(SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key,
-          SQLConf.WHOLESTAGE_CODEGEN_ENABLED.defaultValue.get)
-=======
     requiredColumnNames: Set[String],
     expectedUnhandledFilters: Set[Filter]): Unit = {
     test(s"PushDown Returns $expectedCount: $sqlString") {

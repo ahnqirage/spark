@@ -42,7 +42,6 @@ import org.json4s.JsonDSL._
 
 import org.apache.spark.{Logging, Partitioner}
 import org.apache.spark.annotation.{Since, DeveloperApi, Experimental}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.BLAS
 import org.apache.spark.ml.param._
@@ -341,171 +340,11 @@ class ALSModel private[ml] (
 
   @Since("1.6.0")
   override def write: MLWriter = new ALSModel.ALSModelWriter(this)
-<<<<<<< HEAD
-
-  /**
-   * Returns top `numItems` items recommended for each user, for all users.
-   * @param numItems max number of recommendations for each user
-   * @return a DataFrame of (userCol: Int, recommendations), where recommendations are
-   *         stored as an array of (itemCol: Int, rating: Float) Rows.
-   */
-  @Since("2.2.0")
-  def recommendForAllUsers(numItems: Int): DataFrame = {
-    recommendForAll(userFactors, itemFactors, $(userCol), $(itemCol), numItems)
-  }
-
-  /**
-   * Returns top `numItems` items recommended for each user id in the input data set. Note that if
-   * there are duplicate ids in the input dataset, only one set of recommendations per unique id
-   * will be returned.
-   * @param dataset a Dataset containing a column of user ids. The column name must match `userCol`.
-   * @param numItems max number of recommendations for each user.
-   * @return a DataFrame of (userCol: Int, recommendations), where recommendations are
-   *         stored as an array of (itemCol: Int, rating: Float) Rows.
-   */
-  @Since("2.3.0")
-  def recommendForUserSubset(dataset: Dataset[_], numItems: Int): DataFrame = {
-    val srcFactorSubset = getSourceFactorSubset(dataset, userFactors, $(userCol))
-    recommendForAll(srcFactorSubset, itemFactors, $(userCol), $(itemCol), numItems)
-  }
-
-  /**
-   * Returns top `numUsers` users recommended for each item, for all items.
-   * @param numUsers max number of recommendations for each item
-   * @return a DataFrame of (itemCol: Int, recommendations), where recommendations are
-   *         stored as an array of (userCol: Int, rating: Float) Rows.
-   */
-  @Since("2.2.0")
-  def recommendForAllItems(numUsers: Int): DataFrame = {
-    recommendForAll(itemFactors, userFactors, $(itemCol), $(userCol), numUsers)
-  }
-
-  /**
-   * Returns top `numUsers` users recommended for each item id in the input data set. Note that if
-   * there are duplicate ids in the input dataset, only one set of recommendations per unique id
-   * will be returned.
-   * @param dataset a Dataset containing a column of item ids. The column name must match `itemCol`.
-   * @param numUsers max number of recommendations for each item.
-   * @return a DataFrame of (itemCol: Int, recommendations), where recommendations are
-   *         stored as an array of (userCol: Int, rating: Float) Rows.
-   */
-  @Since("2.3.0")
-  def recommendForItemSubset(dataset: Dataset[_], numUsers: Int): DataFrame = {
-    val srcFactorSubset = getSourceFactorSubset(dataset, itemFactors, $(itemCol))
-    recommendForAll(srcFactorSubset, userFactors, $(itemCol), $(userCol), numUsers)
-  }
-
-  /**
-   * Returns a subset of a factor DataFrame limited to only those unique ids contained
-   * in the input dataset.
-   * @param dataset input Dataset containing id column to user to filter factors.
-   * @param factors factor DataFrame to filter.
-   * @param column column name containing the ids in the input dataset.
-   * @return DataFrame containing factors only for those ids present in both the input dataset and
-   *         the factor DataFrame.
-   */
-  private def getSourceFactorSubset(
-      dataset: Dataset[_],
-      factors: DataFrame,
-      column: String): DataFrame = {
-    factors
-      .join(dataset.select(column), factors("id") === dataset(column), joinType = "left_semi")
-      .select(factors("id"), factors("features"))
-  }
-
-  /**
-   * Makes recommendations for all users (or items).
-   *
-   * Note: the previous approach used for computing top-k recommendations
-   * used a cross-join followed by predicting a score for each row of the joined dataset.
-   * However, this results in exploding the size of intermediate data. While Spark SQL makes it
-   * relatively efficient, the approach implemented here is significantly more efficient.
-   *
-   * This approach groups factors into blocks and computes the top-k elements per block,
-   * using dot product and an efficient [[BoundedPriorityQueue]] (instead of gemm).
-   * It then computes the global top-k by aggregating the per block top-k elements with
-   * a [[TopByKeyAggregator]]. This significantly reduces the size of intermediate and shuffle data.
-   * This is the DataFrame equivalent to the approach used in
-   * [[org.apache.spark.mllib.recommendation.MatrixFactorizationModel]].
-   *
-   * @param srcFactors src factors for which to generate recommendations
-   * @param dstFactors dst factors used to make recommendations
-   * @param srcOutputColumn name of the column for the source ID in the output DataFrame
-   * @param dstOutputColumn name of the column for the destination ID in the output DataFrame
-   * @param num max number of recommendations for each record
-   * @return a DataFrame of (srcOutputColumn: Int, recommendations), where recommendations are
-   *         stored as an array of (dstOutputColumn: Int, rating: Float) Rows.
-   */
-  private def recommendForAll(
-      srcFactors: DataFrame,
-      dstFactors: DataFrame,
-      srcOutputColumn: String,
-      dstOutputColumn: String,
-      num: Int): DataFrame = {
-    import srcFactors.sparkSession.implicits._
-
-    val srcFactorsBlocked = blockify(srcFactors.as[(Int, Array[Float])])
-    val dstFactorsBlocked = blockify(dstFactors.as[(Int, Array[Float])])
-    val ratings = srcFactorsBlocked.crossJoin(dstFactorsBlocked)
-      .as[(Seq[(Int, Array[Float])], Seq[(Int, Array[Float])])]
-      .flatMap { case (srcIter, dstIter) =>
-        val m = srcIter.size
-        val n = math.min(dstIter.size, num)
-        val output = new Array[(Int, Int, Float)](m * n)
-        var i = 0
-        val pq = new BoundedPriorityQueue[(Int, Float)](num)(Ordering.by(_._2))
-        srcIter.foreach { case (srcId, srcFactor) =>
-          dstIter.foreach { case (dstId, dstFactor) =>
-            // We use F2jBLAS which is faster than a call to native BLAS for vector dot product
-            val score = BLAS.f2jBLAS.sdot(rank, srcFactor, 1, dstFactor, 1)
-            pq += dstId -> score
-          }
-          pq.foreach { case (dstId, score) =>
-            output(i) = (srcId, dstId, score)
-            i += 1
-          }
-          pq.clear()
-        }
-        output.toSeq
-      }
-    // We'll force the IDs to be Int. Unfortunately this converts IDs to Int in the output.
-    val topKAggregator = new TopByKeyAggregator[Int, Int, Float](num, Ordering.by(_._2))
-    val recs = ratings.as[(Int, Int, Float)].groupByKey(_._1).agg(topKAggregator.toColumn)
-      .toDF("id", "recommendations")
-
-    val arrayType = ArrayType(
-      new StructType()
-        .add(dstOutputColumn, IntegerType)
-        .add("rating", FloatType)
-    )
-    recs.select($"id".as(srcOutputColumn), $"recommendations".cast(arrayType))
-  }
-
-  /**
-   * Blockifies factors to improve the efficiency of cross join
-   * TODO: SPARK-20443 - expose blockSize as a param?
-   */
-  private def blockify(
-      factors: Dataset[(Int, Array[Float])],
-      blockSize: Int = 4096): Dataset[Seq[(Int, Array[Float])]] = {
-    import factors.sparkSession.implicits._
-    factors.mapPartitions(_.grouped(blockSize))
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 @Since("1.6.0")
 object ALSModel extends MLReadable[ALSModel] {
 
-<<<<<<< HEAD
-  private val NaN = "nan"
-  private val Drop = "drop"
-  private[recommendation] final val supportedColdStartStrategies = Array(NaN, Drop)
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   @Since("1.6.0")
   override def read: MLReader[ALSModel] = new ALSModelReader
 
@@ -534,15 +373,9 @@ object ALSModel extends MLReadable[ALSModel] {
       implicit val format = DefaultFormats
       val rank = (metadata.metadata \ "rank").extract[Int]
       val userPath = new Path(path, "userFactors").toString
-<<<<<<< HEAD
-      val userFactors = sparkSession.read.format("parquet").load(userPath)
-      val itemPath = new Path(path, "itemFactors").toString
-      val itemFactors = sparkSession.read.format("parquet").load(itemPath)
-=======
       val userFactors = sqlContext.read.format("parquet").load(userPath)
       val itemPath = new Path(path, "itemFactors").toString
       val itemFactors = sqlContext.read.format("parquet").load(itemPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       val model = new ALSModel(metadata.uid, rank, userFactors, itemFactors)
 
@@ -587,7 +420,6 @@ class ALS(@Since("1.4.0") override val uid: String) extends Estimator[ALSModel] 
 =======
 @Experimental
 class ALS(override val uid: String) extends Estimator[ALSModel] with ALSParams
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   with DefaultParamsWritable {
 
   import org.apache.spark.ml.recommendation.ALS.Rating

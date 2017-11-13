@@ -168,36 +168,13 @@ class DataFrameJoinSuite extends QueryTest with SharedSQLContext {
     broadcast(df1).queryExecution.sparkPlan
 =======
     broadcast(df1).queryExecution.executedPlan
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // SPARK-12275: no physical plan for BroadcastHint in some condition
     withTempPath { path =>
       df1.write.parquet(path.getCanonicalPath)
-<<<<<<< HEAD
-      val pf1 = spark.read.parquet(path.getCanonicalPath)
-      assert(df1.crossJoin(broadcast(pf1)).count() === 4)
-    }
-  }
-
-  test("broadcast join hint using Dataset.hint") {
-    // make sure a giant join is not broadcastable
-    val plan1 =
-      spark.range(10e10.toLong)
-        .join(spark.range(10e10.toLong), "id")
-        .queryExecution.executedPlan
-    assert(plan1.collect { case p: BroadcastHashJoinExec => p }.size == 0)
-
-    // now with a hint it should be broadcasted
-    val plan2 =
-      spark.range(10e10.toLong)
-        .join(spark.range(10e10.toLong).hint("broadcast"), "id")
-        .queryExecution.executedPlan
-    assert(plan2.collect { case p: BroadcastHashJoinExec => p }.size == 1)
-=======
       val pf1 = sqlContext.read.parquet(path.getCanonicalPath)
       assert(df1.join(broadcast(pf1)).count() === 4)
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("join - outer join conversion") {

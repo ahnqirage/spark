@@ -25,11 +25,7 @@ import scala.collection.mutable
 import org.mockito.Mockito
 import org.scalatest.Matchers
 
-<<<<<<< HEAD
-import org.apache.spark._
-=======
 import org.apache.spark.SparkException
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.executor.TaskMetrics
 import org.apache.spark.internal.config.LISTENER_BUS_EVENT_QUEUE_CAPACITY
 import org.apache.spark.metrics.MetricsSystem
@@ -45,33 +41,6 @@ class SparkListenerSuite extends SparkFunSuite with LocalSparkContext with Match
 
   val jobCompletionTime = 1421191296660L
 
-<<<<<<< HEAD
-  private val mockSparkContext: SparkContext = Mockito.mock(classOf[SparkContext])
-  private val mockMetricsSystem: MetricsSystem = Mockito.mock(classOf[MetricsSystem])
-
-  private def numDroppedEvents(bus: LiveListenerBus): Long = {
-    bus.metrics.metricRegistry.counter(s"queue.$SHARED_QUEUE.numDroppedEvents").getCount
-  }
-
-  private def queueSize(bus: LiveListenerBus): Int = {
-    bus.metrics.metricRegistry.getGauges().get(s"queue.$SHARED_QUEUE.size").getValue()
-      .asInstanceOf[Int]
-  }
-
-  private def eventProcessingTimeCount(bus: LiveListenerBus): Long = {
-    bus.metrics.metricRegistry.timer(s"queue.$SHARED_QUEUE.listenerProcessingTime").getCount()
-  }
-
-  test("don't call sc.stop in listener") {
-    sc = new SparkContext("local", "SparkListenerSuite", new SparkConf())
-    val listener = new SparkContextStoppingListener(sc)
-
-    sc.listenerBus.addToSharedQueue(listener)
-    sc.listenerBus.post(SparkListenerJobEnd(0, jobCompletionTime, JobSucceeded))
-    sc.listenerBus.waitUntilEmpty(WAIT_TIMEOUT_MILLIS)
-    sc.stop()
-
-=======
   test("don't call sc.stop in listener") {
     sc = new SparkContext("local", "SparkListenerSuite")
     val listener = new SparkContextStoppingListener(sc)
@@ -84,7 +53,6 @@ class SparkListenerSuite extends SparkFunSuite with LocalSparkContext with Match
     bus.waitUntilEmpty(WAIT_TIMEOUT_MILLIS)
 
     bus.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(listener.sparkExSeen)
   }
 
@@ -368,11 +336,7 @@ class SparkListenerSuite extends SparkFunSuite with LocalSparkContext with Match
   }
 
   test("onTaskGettingResult() called when result fetched remotely") {
-<<<<<<< HEAD
-    val conf = new SparkConf().set("spark.rpc.message.maxSize", "1")
-=======
     val conf = new SparkConf().set("spark.akka.frameSize", "1")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     sc = new SparkContext("local", "SparkListenerSuite", conf)
     val listener = new SaveTaskEvents
     sc.addSparkListener(listener)
@@ -386,7 +350,6 @@ class SparkListenerSuite extends SparkFunSuite with LocalSparkContext with Match
     val akkaFrameSize =
       sc.env.actorSystem.settings.config.getBytes("akka.remote.netty.tcp.maximum-frame-size").toInt
     assert(akkaFrameSize === 1024 * 1024)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val result = sc.parallelize(Seq(1), 1)
       .map { x => 1.to(maxRpcMessageSize).toArray }
       .reduce { case (x, y) => x }

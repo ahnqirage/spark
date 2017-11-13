@@ -124,7 +124,6 @@ if not (ENV['SKIP_API'] == '1')
   puts "Moving to python/docs directory and building sphinx."
   cd("../python/docs")
   system("make html") || raise("Python doc generation failed")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     puts "Moving back into docs dir."
     cd("../../docs")
@@ -151,7 +150,6 @@ if not (ENV['SKIP_API'] == '1')
   puts "Moving to R directory and building roxygen docs."
   cd("R")
   system("./create-docs.sh") || raise("R doc generation failed")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     puts "Making directory api/R"
     mkdir_p "api/R"

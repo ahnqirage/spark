@@ -74,7 +74,6 @@ class RegexTokenizerSuite
     testRegexTokenizer(tokenizer0, dataset0)
 
     val dataset1 = sqlContext.createDataFrame(Seq(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       TokenizerTestData("Test for tokenization.", Array("test", "for", "tokenization")),
       TokenizerTestData("Te,st. punct", Array("punct"))
     ).toDF()
@@ -103,17 +102,10 @@ class RegexTokenizerSuite
       .setInputCol("rawText")
       .setOutputCol("tokens")
       .setToLowercase(false)
-<<<<<<< HEAD
-    val dataset = Seq(
-      TokenizerTestData("JAVA SCALA", Array("JAVA", "SCALA")),
-      TokenizerTestData("java scala", Array("java", "scala"))
-    ).toDF()
-=======
     val dataset = sqlContext.createDataFrame(Seq(
       TokenizerTestData("JAVA SCALA", Array("JAVA", "SCALA")),
       TokenizerTestData("java scala", Array("java", "scala"))
     ))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     testRegexTokenizer(tokenizer, dataset)
   }
 

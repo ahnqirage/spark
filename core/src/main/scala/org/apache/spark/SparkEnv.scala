@@ -65,8 +65,6 @@ class SparkEnv (
     val broadcastManager: BroadcastManager,
     val blockManager: BlockManager,
     val securityManager: SecurityManager,
-<<<<<<< HEAD
-=======
     val sparkFilesDir: String,
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val metricsSystem: MetricsSystem,
@@ -268,7 +266,6 @@ object SparkEnv extends Logging {
           conf,
           securityManager
         )._1
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
 
@@ -383,7 +380,6 @@ object SparkEnv extends Logging {
 
     val cacheManager = new CacheManager(blockManager)
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val metricsSystem = if (isDriver) {
       // Don't start metrics system right now for Driver.
       // We need to wait for the task scheduler to give us an app ID.
@@ -417,8 +413,6 @@ object SparkEnv extends Logging {
       broadcastManager,
       blockManager,
       securityManager,
-<<<<<<< HEAD
-=======
       sparkFilesDir,
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       metricsSystem,

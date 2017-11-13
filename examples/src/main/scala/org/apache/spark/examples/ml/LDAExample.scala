@@ -18,15 +18,6 @@
 package org.apache.spark.examples.ml
 
 // scalastyle:off println
-<<<<<<< HEAD
-// $example on$
-import org.apache.spark.ml.clustering.LDA
-// $example off$
-import org.apache.spark.sql.SparkSession
-
-/**
- * An example demonstrating LDA.
-=======
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.mllib.linalg.{VectorUDT, Vectors}
 // $example on$
@@ -37,47 +28,12 @@ import org.apache.spark.sql.types.{StructField, StructType}
 
 /**
  * An example demonstrating a LDA of ML pipeline.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * Run with
  * {{{
  * bin/run-example ml.LDAExample
  * }}}
  */
 object LDAExample {
-<<<<<<< HEAD
-  def main(args: Array[String]): Unit = {
-    // Creates a SparkSession
-    val spark = SparkSession
-      .builder
-      .appName(s"${this.getClass.getSimpleName}")
-      .getOrCreate()
-
-    // $example on$
-    // Loads data.
-    val dataset = spark.read.format("libsvm")
-      .load("data/mllib/sample_lda_libsvm_data.txt")
-
-    // Trains a LDA model.
-    val lda = new LDA().setK(10).setMaxIter(10)
-    val model = lda.fit(dataset)
-
-    val ll = model.logLikelihood(dataset)
-    val lp = model.logPerplexity(dataset)
-    println(s"The lower bound on the log likelihood of the entire corpus: $ll")
-    println(s"The upper bound on perplexity: $lp")
-
-    // Describe topics.
-    val topics = model.describeTopics(3)
-    println("The topics described by their top-weighted terms:")
-    topics.show(false)
-
-    // Shows the result.
-    val transformed = model.transform(dataset)
-    transformed.show(false)
-    // $example off$
-
-    spark.stop()
-=======
 
   final val FEATURES_COL = "features"
 
@@ -116,7 +72,6 @@ object LDAExample {
 
     // $example off$
     sc.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

@@ -360,10 +360,6 @@ object MatrixFactorizationModel extends Loader[MatrixFactorizationModel] {
      */
     def save(model: MatrixFactorizationModel, path: String): Unit = {
       val sc = model.userFeatures.sparkContext
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-      import spark.implicits._
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       import sqlContext.implicits._
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -376,11 +372,7 @@ object MatrixFactorizationModel extends Loader[MatrixFactorizationModel] {
 
     def load(sc: SparkContext, path: String): MatrixFactorizationModel = {
       implicit val formats = DefaultFormats
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val (className, formatVersion, metadata) = loadMetadata(sc, path)
       assert(className == thisClassName)
       assert(formatVersion == thisFormatVersion)

@@ -62,6 +62,12 @@ sparkR.session.stop <- function() {
       .libPaths(.libPaths()[.libPaths() != libPath])
     }
 
+    # Remove the R package lib path from .libPaths()
+    if (exists(".libPath", envir = env)) {
+      libPath <- get(".libPath", envir = env)
+      .libPaths(.libPaths()[.libPaths() != libPath])
+    }
+
     if (exists(".backendLaunched", envir = env)) {
       callJStatic("SparkRHandler", "stopBackend")
     }
@@ -112,13 +118,7 @@ sparkR.stop <- function() {
 #' @param sparkEnvir Named list of environment variables to set on worker nodes
 #' @param sparkExecutorEnv Named list of environment variables to be used when launching executors
 #' @param sparkJars Character vector of jar files to pass to the worker nodes
-<<<<<<< HEAD
-#' @param sparkPackages Character vector of package coordinates
-#' @seealso \link{sparkR.session}
-#' @rdname sparkR.init-deprecated
-=======
 #' @param sparkPackages Character vector of packages from spark-packages.org
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
@@ -129,12 +129,8 @@ sparkR.stop <- function() {
 #'                  list(spark.executor.memory="4g"),
 #'                  list(LD_LIBRARY_PATH="/directory of JVM libraries (libjvm.so) on workers/"),
 #'                  c("one.jar", "two.jar", "three.jar"),
-<<<<<<< HEAD
-#'                  c("com.databricks:spark-avro_2.11:2.0.1"))
-=======
 #'                  c("com.databricks:spark-avro_2.10:2.0.1",
 #'                    "com.databricks:spark-csv_2.10:1.3.0"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 #' @note sparkR.init since 1.4.0
 sparkR.init <- function(
@@ -173,8 +169,6 @@ sparkR.sparkContext <- function(
 
   jars <- processSparkJars(sparkJars)
   packages <- processSparkPackages(sparkPackages)
-<<<<<<< HEAD
-=======
 
   sparkEnvirMap <- convertNamedListToEnv(sparkEnvir)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -214,10 +208,6 @@ sparkR.sparkContext <- function(
     backendPort <- readInt(f)
     monitorPort <- readInt(f)
     rLibPath <- readString(f)
-<<<<<<< HEAD
-    connectionTimeout <- readInt(f)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     close(f)
     file.remove(path)
     if (length(backendPort) == 0 || backendPort == 0 ||
@@ -250,7 +240,6 @@ sparkR.sparkContext <- function(
 <<<<<<< HEAD
 =======
   sparkExecutorEnvMap <- convertNamedListToEnv(sparkExecutorEnv)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   if (is.null(sparkExecutorEnvMap$LD_LIBRARY_PATH)) {
     sparkExecutorEnvMap[["LD_LIBRARY_PATH"]] <-
       paste0("$LD_LIBRARY_PATH:", Sys.getenv("LD_LIBRARY_PATH"))
@@ -637,39 +626,3 @@ processSparkPackages <- function(packages) {
   }
   splittedPackages
 }
-<<<<<<< HEAD
-
-# Utility function that checks and install Spark to local folder if not found
-#
-# Installation will not be triggered if it's called from sparkR shell
-# or if the master url is not local
-#
-# @param sparkHome directory to find Spark package.
-# @param master the Spark master URL, used to check local or remote mode.
-# @param deployMode whether to deploy your driver on the worker nodes (cluster)
-#        or locally as an external client (client).
-# @return NULL if no need to update sparkHome, and new sparkHome otherwise.
-sparkCheckInstall <- function(sparkHome, master, deployMode) {
-  if (!isSparkRShell()) {
-    if (!is.na(file.info(sparkHome)$isdir)) {
-      message("Spark package found in SPARK_HOME: ", sparkHome)
-      NULL
-    } else {
-      if (interactive() || isMasterLocal(master)) {
-        message("Spark not found in SPARK_HOME: ", sparkHome)
-        packageLocalDir <- install.spark()
-        packageLocalDir
-      } else if (isClientMode(master) || deployMode == "client") {
-        msg <- paste0("Spark not found in SPARK_HOME: ",
-                      sparkHome, "\n", installInstruction("remote"))
-        stop(msg)
-      } else {
-        NULL
-      }
-    }
-  } else {
-    NULL
-  }
-}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

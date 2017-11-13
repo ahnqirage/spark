@@ -17,11 +17,7 @@
 
 package org.apache.spark.ml.feature
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Since, Experimental}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml.Transformer
 import org.apache.spark.ml.attribute.AttributeGroup
 import org.apache.spark.ml.param._
@@ -46,7 +42,6 @@ class HashingTF @Since("1.4.0") (@Since("1.4.0") override val uid: String)
 =======
 @Experimental
 class HashingTF(override val uid: String)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Transformer with HasInputCol with HasOutputCol with DefaultParamsWritable {
 
   @Since("1.2.0")

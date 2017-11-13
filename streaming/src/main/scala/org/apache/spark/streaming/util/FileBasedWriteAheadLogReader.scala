@@ -16,11 +16,7 @@
  */
 package org.apache.spark.streaming.util
 
-<<<<<<< HEAD
-import java.io.{Closeable, EOFException, IOException}
-=======
 import java.io.{IOException, Closeable, EOFException}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.nio.ByteBuffer
 
 import org.apache.hadoop.conf.Configuration

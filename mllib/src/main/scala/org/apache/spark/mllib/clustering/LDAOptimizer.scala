@@ -25,9 +25,6 @@ import breeze.stats.distributions.{Gamma, RandBasis}
 
 import org.apache.spark.annotation.{DeveloperApi, Since}
 import org.apache.spark.graphx._
-<<<<<<< HEAD
-import org.apache.spark.graphx.util.PeriodicGraphCheckpointer
-=======
 import org.apache.spark.mllib.impl.PeriodicGraphCheckpointer
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.linalg.{DenseVector, Matrices, SparseVector, Vector, Vectors}

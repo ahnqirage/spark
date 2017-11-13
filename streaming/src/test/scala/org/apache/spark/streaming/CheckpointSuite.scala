@@ -17,15 +17,9 @@
 
 package org.apache.spark.streaming
 
-<<<<<<< HEAD
-import java.io._
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.ConcurrentLinkedQueue
-=======
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, ObjectOutputStream}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
-import scala.collection.JavaConverters._
+import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 import scala.reflect.ClassTag
 
 import com.google.common.io.Files
@@ -39,29 +33,16 @@ import org.scalatest.concurrent.Eventually._
 import org.scalatest.time.SpanSugar._
 
 import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite, TestUtils}
-<<<<<<< HEAD
-import org.apache.spark.internal.config._
-import org.apache.spark.rdd.RDD
-import org.apache.spark.streaming.dstream._
-import org.apache.spark.streaming.scheduler._
-import org.apache.spark.util.{Clock, ManualClock, MutableURLClassLoader, ResetSystemProperties,
-  Utils}
-=======
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream._
 import org.apache.spark.streaming.scheduler._
 import org.apache.spark.util.{Clock, ManualClock, MutableURLClassLoader, Utils}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * A input stream that records the times of restore() invoked
  */
 private[streaming]
-<<<<<<< HEAD
-class CheckpointInputDStream(_ssc: StreamingContext) extends InputDStream[Int](_ssc) {
-=======
 class CheckpointInputDStream(ssc_ : StreamingContext) extends InputDStream[Int](ssc_) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   protected[streaming] override val checkpointData = new FileInputDStreamCheckpointData
   override def start(): Unit = { }
   override def stop(): Unit = { }
@@ -87,11 +68,7 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
   /**
    * Tests a streaming operation under checkpointing, by restarting the operation
    * from checkpoint file and verifying whether the final output is correct.
-<<<<<<< HEAD
-   * The output is assumed to have come from a reliable queue which a replay
-=======
    * The output is assumed to have come from a reliable queue which an replay
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * data as required.
    *
    * NOTE: This takes into consideration that the last batch processed before
@@ -126,11 +103,7 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
     val operatedStream = operation(inputStream)
     operatedStream.print()
     val outputStream = new TestOutputStreamWithPartitions(operatedStream,
-<<<<<<< HEAD
-      new ConcurrentLinkedQueue[Seq[Seq[V]]])
-=======
       new ArrayBuffer[Seq[Seq[V]]] with SynchronizedBuffer[Seq[Seq[V]]])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     outputStream.register()
     ssc.checkpoint(checkpointDir)
 
@@ -157,20 +130,6 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
     new StreamingContext(SparkContext.getOrCreate(conf), batchDuration)
   }
 
-<<<<<<< HEAD
-  /**
-   * Get the first TestOutputStreamWithPartitions, does not check the provided generic type.
-   */
-  protected def getTestOutputStream[V: ClassTag](streams: Array[DStream[_]]):
-    TestOutputStreamWithPartitions[V] = {
-    streams.collect {
-      case ds: TestOutputStreamWithPartitions[V @unchecked] => ds
-    }.head
-  }
-
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   protected def generateOutput[V: ClassTag](
       ssc: StreamingContext,
       targetBatchTime: Time,
@@ -178,29 +137,19 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
       stopSparkContext: Boolean
     ): Seq[Seq[V]] = {
     try {
-<<<<<<< HEAD
-      val batchCounter = new BatchCounter(ssc)
-      ssc.start()
-      val clock = ssc.scheduler.clock.asInstanceOf[ManualClock]
-=======
       val batchDuration = ssc.graph.batchDuration
       val batchCounter = new BatchCounter(ssc)
       ssc.start()
       val clock = ssc.scheduler.clock.asInstanceOf[ManualClock]
       val currentTime = clock.getTimeMillis()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       logInfo("Manual clock before advancing = " + clock.getTimeMillis())
       clock.setTime(targetBatchTime.milliseconds)
       logInfo("Manual clock after advancing = " + clock.getTimeMillis())
 
-<<<<<<< HEAD
-      val outputStream = getTestOutputStream[V](ssc.graph.getOutputStreams())
-=======
       val outputStream = ssc.graph.getOutputStreams().filter { dstream =>
         dstream.isInstanceOf[TestOutputStreamWithPartitions[V]]
       }.head.asInstanceOf[TestOutputStreamWithPartitions[V]]
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       eventually(timeout(10 seconds)) {
         ssc.awaitTerminationOrTimeout(10)
@@ -209,21 +158,13 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
 
       eventually(timeout(10 seconds)) {
         val checkpointFilesOfLatestTime = Checkpoint.getCheckpointFiles(checkpointDir).filter {
-<<<<<<< HEAD
-          _.getName.contains(clock.getTimeMillis.toString)
-=======
           _.toString.contains(clock.getTimeMillis.toString)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
         // Checkpoint files are written twice for every batch interval. So assert that both
         // are written to make sure that both of them have been written.
         assert(checkpointFilesOfLatestTime.size === 2)
       }
-<<<<<<< HEAD
-      outputStream.output.asScala.map(_.flatten).toSeq
-=======
       outputStream.output.map(_.flatten)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     } finally {
       ssc.stop(stopSparkContext = stopSparkContext)
@@ -254,12 +195,7 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
  * the checkpointing of a DStream's RDDs as well as the checkpointing of
  * the whole DStream graph.
  */
-<<<<<<< HEAD
-class CheckpointSuite extends TestSuiteBase with DStreamCheckpointTester
-  with ResetSystemProperties {
-=======
 class CheckpointSuite extends TestSuiteBase with DStreamCheckpointTester {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   var ssc: StreamingContext = null
 
@@ -877,6 +813,33 @@ class CheckpointSuite extends TestSuiteBase with DStreamCheckpointTester {
     }
   }
 
+  test("DStreamCheckpointData.restore invoking times") {
+    withStreamingContext(new StreamingContext(conf, batchDuration)) { ssc =>
+      ssc.checkpoint(checkpointDir)
+      val inputDStream = new CheckpointInputDStream(ssc)
+      val checkpointData = inputDStream.checkpointData
+      val mappedDStream = inputDStream.map(_ + 100)
+      val outputStream = new TestOutputStreamWithPartitions(mappedDStream)
+      outputStream.register()
+      // do two more times output
+      mappedDStream.foreachRDD(rdd => rdd.count())
+      mappedDStream.foreachRDD(rdd => rdd.count())
+      assert(checkpointData.restoredTimes === 0)
+      val batchDurationMillis = ssc.progressListener.batchDuration
+      generateOutput(ssc, Time(batchDurationMillis * 3), checkpointDir, stopSparkContext = true)
+      assert(checkpointData.restoredTimes === 0)
+    }
+    logInfo("*********** RESTARTING ************")
+    withStreamingContext(new StreamingContext(checkpointDir)) { ssc =>
+      val checkpointData =
+        ssc.graph.getInputStreams().head.asInstanceOf[CheckpointInputDStream].checkpointData
+      assert(checkpointData.restoredTimes === 1)
+      ssc.start()
+      ssc.stop()
+      assert(checkpointData.restoredTimes === 1)
+    }
+  }
+
   // This tests whether spark can deserialize array object
   // refer to SPARK-5569
   test("recovery from checkpoint contains array object") {
@@ -929,78 +892,6 @@ class CheckpointSuite extends TestSuiteBase with DStreamCheckpointTester {
     assert(Files.toByteArray(checkpointFiles(0)) === bytes2)
     assert(Files.toByteArray(checkpointFiles(1)) === bytes1)
     checkpointWriter.stop()
-<<<<<<< HEAD
-  }
-
-  test("SPARK-6847: stack overflow when updateStateByKey is followed by a checkpointed dstream") {
-    // In this test, there are two updateStateByKey operators. The RDD DAG is as follows:
-    //
-    //     batch 1            batch 2            batch 3     ...
-    //
-    // 1) input rdd          input rdd          input rdd
-    //       |                  |                  |
-    //       v                  v                  v
-    // 2) cogroup rdd   ---> cogroup rdd   ---> cogroup rdd  ...
-    //       |         /        |         /        |
-    //       v        /         v        /         v
-    // 3)  map rdd ---        map rdd ---        map rdd     ...
-    //       |                  |                  |
-    //       v                  v                  v
-    // 4) cogroup rdd   ---> cogroup rdd   ---> cogroup rdd  ...
-    //       |         /        |         /        |
-    //       v        /         v        /         v
-    // 5)  map rdd ---        map rdd ---        map rdd     ...
-    //
-    // Every batch depends on its previous batch, so "updateStateByKey" needs to do checkpoint to
-    // break the RDD chain. However, before SPARK-6847, when the state RDD (layer 5) of the second
-    // "updateStateByKey" does checkpoint, it won't checkpoint the state RDD (layer 3) of the first
-    // "updateStateByKey" (Note: "updateStateByKey" has already marked that its state RDD (layer 3)
-    // should be checkpointed). Hence, the connections between layer 2 and layer 3 won't be broken
-    // and the RDD chain will grow infinitely and cause StackOverflow.
-    //
-    // Therefore SPARK-6847 introduces "spark.checkpoint.checkpointAllMarked" to force checkpointing
-    // all marked RDDs in the DAG to resolve this issue. (For the previous example, it will break
-    // connections between layer 2 and layer 3)
-    ssc = new StreamingContext(master, framework, batchDuration)
-    val batchCounter = new BatchCounter(ssc)
-    ssc.checkpoint(checkpointDir)
-    val inputDStream = new CheckpointInputDStream(ssc)
-    val updateFunc = (values: Seq[Int], state: Option[Int]) => {
-      Some(values.sum + state.getOrElse(0))
-    }
-    @volatile var shouldCheckpointAllMarkedRDDs = false
-    @volatile var rddsCheckpointed = false
-    inputDStream.map(i => (i, i))
-      .updateStateByKey(updateFunc).checkpoint(batchDuration)
-      .updateStateByKey(updateFunc).checkpoint(batchDuration)
-      .foreachRDD { rdd =>
-        /**
-         * Find all RDDs that are marked for checkpointing in the specified RDD and its ancestors.
-         */
-        def findAllMarkedRDDs(rdd: RDD[_]): List[RDD[_]] = {
-          val markedRDDs = rdd.dependencies.flatMap(dep => findAllMarkedRDDs(dep.rdd)).toList
-          if (rdd.checkpointData.isDefined) {
-            rdd :: markedRDDs
-          } else {
-            markedRDDs
-          }
-        }
-
-        shouldCheckpointAllMarkedRDDs =
-          Option(rdd.sparkContext.getLocalProperty(RDD.CHECKPOINT_ALL_MARKED_ANCESTORS)).
-            map(_.toBoolean).getOrElse(false)
-
-        val stateRDDs = findAllMarkedRDDs(rdd)
-        rdd.count()
-        // Check the two state RDDs are both checkpointed
-        rddsCheckpointed = stateRDDs.size == 2 && stateRDDs.forall(_.isCheckpointed)
-      }
-    ssc.start()
-    batchCounter.waitUntilBatchesCompleted(1, 10000)
-    assert(shouldCheckpointAllMarkedRDDs === true)
-    assert(rddsCheckpointed === true)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**

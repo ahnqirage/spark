@@ -40,11 +40,7 @@ class TextSuite extends QueryTest with SharedSQLContext {
   }
 
   test("SPARK-12562 verify write.text() can handle column name beyond `value`") {
-<<<<<<< HEAD
-    val df = spark.read.text(testFile).withColumnRenamed("value", "adwrasdf")
-=======
     val df = sqlContext.read.text(testFile).withColumnRenamed("value", "adwrasdf")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val tempFile = Utils.createTempDir()
     tempFile.delete()

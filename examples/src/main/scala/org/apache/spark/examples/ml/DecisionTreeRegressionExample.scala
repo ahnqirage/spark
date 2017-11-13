@@ -17,28 +17,6 @@
 
 // scalastyle:off println
 package org.apache.spark.examples.ml
-<<<<<<< HEAD
-
-// $example on$
-import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.evaluation.RegressionEvaluator
-import org.apache.spark.ml.feature.VectorIndexer
-import org.apache.spark.ml.regression.DecisionTreeRegressionModel
-import org.apache.spark.ml.regression.DecisionTreeRegressor
-// $example off$
-import org.apache.spark.sql.SparkSession
-
-object DecisionTreeRegressionExample {
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder
-      .appName("DecisionTreeRegressionExample")
-      .getOrCreate()
-
-    // $example on$
-    // Load the data stored in LIBSVM format as a DataFrame.
-    val data = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
-=======
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkContext, SparkConf}
 // $example on$
@@ -57,7 +35,6 @@ object DecisionTreeRegressionExample {
     // $example on$
     // Load the data stored in LIBSVM format as a DataFrame.
     val data = sqlContext.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Automatically identify categorical features, and index them.
     // Here, we treat features with > 4 distinct values as continuous.
@@ -67,11 +44,7 @@ object DecisionTreeRegressionExample {
       .setMaxCategories(4)
       .fit(data)
 
-<<<<<<< HEAD
-    // Split the data into training and test sets (30% held out for testing).
-=======
     // Split the data into training and test sets (30% held out for testing)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val Array(trainingData, testData) = data.randomSplit(Array(0.7, 0.3))
 
     // Train a DecisionTree model.
@@ -79,19 +52,11 @@ object DecisionTreeRegressionExample {
       .setLabelCol("label")
       .setFeaturesCol("indexedFeatures")
 
-<<<<<<< HEAD
-    // Chain indexer and tree in a Pipeline.
-    val pipeline = new Pipeline()
-      .setStages(Array(featureIndexer, dt))
-
-    // Train model. This also runs the indexer.
-=======
     // Chain indexer and tree in a Pipeline
     val pipeline = new Pipeline()
       .setStages(Array(featureIndexer, dt))
 
     // Train model.  This also runs the indexer.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val model = pipeline.fit(trainingData)
 
     // Make predictions.
@@ -100,11 +65,7 @@ object DecisionTreeRegressionExample {
     // Select example rows to display.
     predictions.select("prediction", "label", "features").show(5)
 
-<<<<<<< HEAD
-    // Select (prediction, true label) and compute test error.
-=======
     // Select (prediction, true label) and compute test error
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val evaluator = new RegressionEvaluator()
       .setLabelCol("label")
       .setPredictionCol("prediction")
@@ -115,11 +76,6 @@ object DecisionTreeRegressionExample {
     val treeModel = model.stages(1).asInstanceOf[DecisionTreeRegressionModel]
     println("Learned regression tree model:\n" + treeModel.toDebugString)
     // $example off$
-<<<<<<< HEAD
-
-    spark.stop()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

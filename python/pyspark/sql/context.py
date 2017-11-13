@@ -22,7 +22,6 @@ import warnings
 =======
 import json
 from functools import reduce
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 if sys.version >= '3':
     basestring = unicode = str
@@ -189,10 +188,6 @@ class SQLContext(object):
 
         :param name: name of the UDF
         :param f: python function
-<<<<<<< HEAD
-        :param returnType: a :class:`pyspark.sql.types.DataType` object
-        :return: a wrapped :class:`UserDefinedFunction`
-=======
         :param returnType: a :class:`DataType` object
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 

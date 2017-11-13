@@ -17,9 +17,6 @@
 
 package org.apache.spark.sql.execution.datasources.jdbc
 
-<<<<<<< HEAD
-import java.sql.{Connection, PreparedStatement, ResultSet, SQLException}
-=======
 import java.sql.{Connection, Date, ResultSet, ResultSetMetaData, SQLException, Timestamp}
 import java.util.Properties
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -48,9 +45,6 @@ case class JDBCPartition(whereClause: String, idx: Int) extends Partition {
   override def index: Int = idx
 }
 
-<<<<<<< HEAD
-object JDBCRDD extends Logging {
-=======
 private[sql] object JDBCRDD extends Logging {
 
   /**
@@ -130,15 +124,6 @@ private[sql] object JDBCRDD extends Logging {
     val url = options.url
     val table = options.table
     val dialect = JdbcDialects.get(url)
-<<<<<<< HEAD
-    val conn: Connection = JdbcUtils.createConnectionFactory(options)()
-    try {
-      val statement = conn.prepareStatement(dialect.getSchemaQuery(table))
-      try {
-        val rs = statement.executeQuery()
-        try {
-          JdbcUtils.getSchema(rs, dialect, alwaysNullable = true)
-=======
     val conn: Connection = JdbcUtils.createConnectionFactory(url, properties)()
     try {
       val statement = conn.prepareStatement(s"SELECT * FROM $table WHERE 1=0")
@@ -165,7 +150,6 @@ private[sql] object JDBCRDD extends Logging {
             i = i + 1
           }
           return new StructType(fields)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         } finally {
           rs.close()
         }
@@ -186,62 +170,11 @@ private[sql] object JDBCRDD extends Logging {
    * @return A Catalyst schema corresponding to columns in the given order.
    */
   private def pruneSchema(schema: StructType, columns: Array[String]): StructType = {
-<<<<<<< HEAD
-    val fieldMap = Map(schema.fields.map(x => x.name -> x): _*)
-=======
     val fieldMap = Map(schema.fields.map(x => x.metadata.getString("name") -> x): _*)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     new StructType(columns.map(name => fieldMap(name)))
   }
 
   /**
-<<<<<<< HEAD
-   * Turns a single Filter into a String representing a SQL expression.
-   * Returns None for an unhandled filter.
-   */
-  def compileFilter(f: Filter, dialect: JdbcDialect): Option[String] = {
-    def quote(colName: String): String = dialect.quoteIdentifier(colName)
-
-    Option(f match {
-      case EqualTo(attr, value) => s"${quote(attr)} = ${dialect.compileValue(value)}"
-      case EqualNullSafe(attr, value) =>
-        val col = quote(attr)
-        s"(NOT ($col != ${dialect.compileValue(value)} OR $col IS NULL OR " +
-          s"${dialect.compileValue(value)} IS NULL) OR " +
-          s"($col IS NULL AND ${dialect.compileValue(value)} IS NULL))"
-      case LessThan(attr, value) => s"${quote(attr)} < ${dialect.compileValue(value)}"
-      case GreaterThan(attr, value) => s"${quote(attr)} > ${dialect.compileValue(value)}"
-      case LessThanOrEqual(attr, value) => s"${quote(attr)} <= ${dialect.compileValue(value)}"
-      case GreaterThanOrEqual(attr, value) => s"${quote(attr)} >= ${dialect.compileValue(value)}"
-      case IsNull(attr) => s"${quote(attr)} IS NULL"
-      case IsNotNull(attr) => s"${quote(attr)} IS NOT NULL"
-      case StringStartsWith(attr, value) => s"${quote(attr)} LIKE '${value}%'"
-      case StringEndsWith(attr, value) => s"${quote(attr)} LIKE '%${value}'"
-      case StringContains(attr, value) => s"${quote(attr)} LIKE '%${value}%'"
-      case In(attr, value) if value.isEmpty =>
-        s"CASE WHEN ${quote(attr)} IS NULL THEN NULL ELSE FALSE END"
-      case In(attr, value) => s"${quote(attr)} IN (${dialect.compileValue(value)})"
-      case Not(f) => compileFilter(f, dialect).map(p => s"(NOT ($p))").getOrElse(null)
-      case Or(f1, f2) =>
-        // We can't compile Or filter unless both sub-filters are compiled successfully.
-        // It applies too for the following And filter.
-        // If we can make sure compileFilter supports all filters, we can remove this check.
-        val or = Seq(f1, f2).flatMap(compileFilter(_, dialect))
-        if (or.size == 2) {
-          or.map(p => s"($p)").mkString(" OR ")
-        } else {
-          null
-        }
-      case And(f1, f2) =>
-        val and = Seq(f1, f2).flatMap(compileFilter(_, dialect))
-        if (and.size == 2) {
-          and.map(p => s"($p)").mkString(" AND ")
-        } else {
-          null
-        }
-      case _ => null
-    })
-=======
    * Converts value to SQL expression.
    */
   private def compileValue(value: Any): Any = value match {
@@ -268,7 +201,6 @@ private[sql] object JDBCRDD extends Logging {
     case IsNull(attr) => s"$attr IS NULL"
     case IsNotNull(attr) => s"$attr IS NOT NULL"
     case _ => null
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
 
@@ -278,8 +210,6 @@ private[sql] object JDBCRDD extends Logging {
    *
    * @param sc - Your SparkContext.
    * @param schema - The Catalyst schema of the underlying database table.
-<<<<<<< HEAD
-=======
    * @param url - The JDBC url to connect to.
    * @param fqTable - The fully-qualified table name (or paren'd SQL query) to use.
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -294,8 +224,6 @@ private[sql] object JDBCRDD extends Logging {
   def scanTable(
       sc: SparkContext,
       schema: StructType,
-<<<<<<< HEAD
-=======
       url: String,
       properties: Properties,
       fqTable: String,
@@ -309,19 +237,12 @@ private[sql] object JDBCRDD extends Logging {
     val quotedColumns = requiredColumns.map(colName => dialect.quoteIdentifier(colName))
     new JDBCRDD(
       sc,
-<<<<<<< HEAD
-      JdbcUtils.createConnectionFactory(options),
-=======
       JdbcUtils.createConnectionFactory(url, properties),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       pruneSchema(schema, requiredColumns),
       quotedColumns,
       filters,
       parts,
       url,
-<<<<<<< HEAD
-      options)
-=======
       properties)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
@@ -340,9 +261,6 @@ private[jdbc] class JDBCRDD(
     filters: Array[Filter],
     partitions: Array[Partition],
     url: String,
-<<<<<<< HEAD
-    options: JDBCOptions)
-=======
     properties: Properties)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends RDD[InternalRow](sc, Nil) {
@@ -361,11 +279,7 @@ private[jdbc] class JDBCRDD(
 <<<<<<< HEAD
     if (sb.isEmpty) "1" else sb.substring(1)
   }
-=======
-    if (sb.length == 0) "1" else sb.substring(1)
-  }
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * `filters`, but as a WHERE clause suitable for injection into a SQL query.
@@ -598,11 +512,7 @@ private[jdbc] class JDBCRDD(
             try {
               conn.commit()
             } catch {
-<<<<<<< HEAD
-              case NonFatal(e) => logWarning("Exception committing transaction", e)
-=======
               case e: Throwable => logWarning("Exception committing transaction", e)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             }
           }
           conn.close()
@@ -653,6 +563,14 @@ private[jdbc] class JDBCRDD(
 
     CompletionIterator[InternalRow, Iterator[InternalRow]](
       new InterruptibleIterator(context, rowsIterator), close())
+  }
+
+  private def nullSafeConvert[T](input: T, f: T => Any): Any = {
+    if (input == null) {
+      null
+    } else {
+      f(input)
+    }
   }
 
   private def nullSafeConvert[T](input: T, f: T => Any): Any = {

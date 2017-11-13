@@ -26,7 +26,6 @@
 =======
     <artifactId>spark-parent_2.10</artifactId>
     <version>1.6.4-SNAPSHOT</version>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -113,14 +112,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-<<<<<<< HEAD
-      <groupId>org.seleniumhq.selenium</groupId>
-      <artifactId>selenium-htmlunit-driver</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>

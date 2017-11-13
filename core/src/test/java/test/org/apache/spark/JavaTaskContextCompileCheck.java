@@ -52,10 +52,7 @@ public class JavaTaskContextCompileCheck {
       context.isInterrupted();
       context.stageId();
       context.partitionId();
-<<<<<<< HEAD
-=======
       context.isRunningLocally();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       context.addTaskCompletionListener(this);
     }
   }

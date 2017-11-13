@@ -43,7 +43,6 @@ private[spark] object CholeskyDecomposition {
 =======
     val code = info.`val`
     assert(code == 0, s"lapack.dppsv returned $code.")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     bx
   }
 

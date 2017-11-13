@@ -24,16 +24,6 @@ import scala.collection.JavaConverters._
 
 import org.apache.hadoop.fs.Path
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-import org.apache.spark.ml.{Estimator, Model}
-import org.apache.spark.ml.attribute._
-import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, VectorUDT}
-import org.apache.spark.ml.param._
-import org.apache.spark.ml.param.shared._
-import org.apache.spark.ml.util._
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
-=======
 import org.apache.spark.annotation.{Experimental, Since}
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.attribute._
@@ -113,7 +103,6 @@ class VectorIndexer @Since("1.4.0") (
 @Experimental
 class VectorIndexer(override val uid: String) extends Estimator[VectorIndexerModel]
   with VectorIndexerParams with DefaultParamsWritable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("vecIdx"))
@@ -288,7 +277,6 @@ class VectorIndexerModel private[ml] (
     override val uid: String,
     val numFeatures: Int,
     val categoryMaps: Map[Int, Map[Double, Int]])
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Model[VectorIndexerModel] with VectorIndexerParams with MLWritable {
 
   import VectorIndexerModel._
@@ -470,11 +458,7 @@ object VectorIndexerModel extends MLReadable[VectorIndexerModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = Data(instance.numFeatures, instance.categoryMaps)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
-=======
       sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -485,11 +469,7 @@ object VectorIndexerModel extends MLReadable[VectorIndexerModel] {
     override def load(path: String): VectorIndexerModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      val data = sparkSession.read.parquet(dataPath)
-=======
       val data = sqlContext.read.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .select("numFeatures", "categoryMaps")
         .head()
       val numFeatures = data.getAs[Int](0)

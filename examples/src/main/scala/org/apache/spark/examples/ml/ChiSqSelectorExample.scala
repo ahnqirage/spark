@@ -20,19 +20,6 @@ package org.apache.spark.examples.ml
 
 // $example on$
 import org.apache.spark.ml.feature.ChiSqSelector
-<<<<<<< HEAD
-import org.apache.spark.ml.linalg.Vectors
-// $example off$
-import org.apache.spark.sql.SparkSession
-
-object ChiSqSelectorExample {
-  def main(args: Array[String]) {
-    val spark = SparkSession
-      .builder
-      .appName("ChiSqSelectorExample")
-      .getOrCreate()
-    import spark.implicits._
-=======
 import org.apache.spark.mllib.linalg.Vectors
 // $example off$
 import org.apache.spark.sql.SQLContext
@@ -45,7 +32,6 @@ object ChiSqSelectorExample {
 
     val sqlContext = SQLContext.getOrCreate(sc)
     import sqlContext.implicits._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // $example on$
     val data = Seq(
@@ -54,11 +40,7 @@ object ChiSqSelectorExample {
       (9, Vectors.dense(1.0, 0.0, 15.0, 0.1), 0.0)
     )
 
-<<<<<<< HEAD
-    val df = spark.createDataset(data).toDF("id", "features", "clicked")
-=======
     val df = sc.parallelize(data).toDF("id", "features", "clicked")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val selector = new ChiSqSelector()
       .setNumTopFeatures(1)
@@ -67,18 +49,9 @@ object ChiSqSelectorExample {
       .setOutputCol("selectedFeatures")
 
     val result = selector.fit(df).transform(df)
-<<<<<<< HEAD
-
-    println(s"ChiSqSelector output with top ${selector.getNumTopFeatures} features selected")
-    result.show()
-    // $example off$
-
-    spark.stop()
-=======
     result.show()
     // $example off$
     sc.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 // scalastyle:on println

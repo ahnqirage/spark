@@ -20,13 +20,7 @@ package org.apache.spark.ml.clustering
 import scala.util.Random
 
 import org.apache.spark.SparkFunSuite
-<<<<<<< HEAD
-import org.apache.spark.ml.linalg.{Vector, Vectors}
-import org.apache.spark.ml.param.ParamMap
-import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTestingUtils}
-=======
 import org.apache.spark.ml.util.DefaultReadWriteTest
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.clustering.{KMeans => MLlibKMeans}
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
@@ -149,47 +143,21 @@ class KMeansSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultR
     assert(model.getPredictionCol == predictionColName)
   }
 
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("read/write") {
     def checkModelData(model: KMeansModel, model2: KMeansModel): Unit = {
       assert(model.clusterCenters === model2.clusterCenters)
     }
     val kmeans = new KMeans()
-<<<<<<< HEAD
-    testEstimatorAndModelReadWrite(kmeans, dataset, KMeansSuite.allParamSettings,
-      KMeansSuite.allParamSettings, checkModelData)
-=======
     testEstimatorAndModelReadWrite(kmeans, dataset, KMeansSuite.allParamSettings, checkModelData)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 
 object KMeansSuite {
-<<<<<<< HEAD
-  def generateKMeansData(spark: SparkSession, rows: Int, dim: Int, k: Int): DataFrame = {
-    val sc = spark.sparkContext
-    val rdd = sc.parallelize(1 to rows).map(i => Vectors.dense(Array.fill(dim)((i % k).toDouble)))
-      .map(v => new TestRow(v))
-    spark.createDataFrame(rdd)
-  }
-
-  def generateSparseData(spark: SparkSession, rows: Int, dim: Int, seed: Int): DataFrame = {
-    val sc = spark.sparkContext
-    val random = new Random(seed)
-    val nnz = random.nextInt(dim)
-    val rdd = sc.parallelize(1 to rows)
-      .map(i => Vectors.sparse(dim, random.shuffle(0 to dim - 1).slice(0, nnz).sorted.toArray,
-        Array.fill(nnz)(random.nextDouble())))
-      .map(v => new TestRow(v))
-    spark.createDataFrame(rdd)
-=======
   def generateKMeansData(sql: SQLContext, rows: Int, dim: Int, k: Int): DataFrame = {
     val sc = sql.sparkContext
     val rdd = sc.parallelize(1 to rows).map(i => Vectors.dense(Array.fill(dim)((i % k).toDouble)))
       .map(v => new TestRow(v))
     sql.createDataFrame(rdd)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**

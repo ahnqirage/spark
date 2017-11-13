@@ -23,7 +23,6 @@ import org.apache.commons.cli.*;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 // $example on$
 import org.apache.spark.ml.classification.LogisticRegression;
 import org.apache.spark.ml.classification.OneVsRest;
@@ -44,7 +43,6 @@ import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.types.StructField;
 // $example off$
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * An example of Multiclass to Binary Reduction with One Vs Rest,
@@ -123,7 +121,6 @@ public class JavaOneVsRestExample {
 
     // score the model on test data
     DataFrame predictions = ovrModel.transform(test.cache())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       .select("prediction", "label");
 
     // obtain evaluator.
@@ -141,7 +138,6 @@ public class JavaOneVsRestExample {
     System.out.println(confusionMatrix);
     System.out.println();
     System.out.println(results);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // $example off$
 
     spark.stop();

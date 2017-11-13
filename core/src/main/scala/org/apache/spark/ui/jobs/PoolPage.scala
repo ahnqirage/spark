@@ -31,12 +31,7 @@ private[ui] class PoolPage(parent: StagesTab) extends WebUIPage("pool") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
     listener.synchronized {
-<<<<<<< HEAD
-      // stripXSS is called first to remove suspicious characters used in XSS attacks
-      val poolName = Option(UIUtils.stripXSS(request.getParameter("poolname"))).map { poolname =>
-=======
       val poolName = Option(request.getParameter("poolname")).map { poolname =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         UIUtils.decodeURLParameter(poolname)
       }.getOrElse {
         throw new IllegalArgumentException(s"Missing poolname parameter")

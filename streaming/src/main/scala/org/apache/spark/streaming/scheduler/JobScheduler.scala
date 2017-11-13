@@ -113,13 +113,6 @@ class JobScheduler(val ssc: StreamingContext) extends Logging {
       // First, stop receiving
       receiverTracker.stop(processAllReceivedData)
     }
-<<<<<<< HEAD
-
-    if (executorAllocationManager != null) {
-      executorAllocationManager.foreach(_.stop())
-    }
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Second, stop generating jobs. If it has to process all received data,
     // then this will wait for all the processing through JobScheduler to be over.

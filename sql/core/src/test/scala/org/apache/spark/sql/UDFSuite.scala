@@ -17,12 +17,6 @@
 
 package org.apache.spark.sql
 
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.plans.logical.Project
-import org.apache.spark.sql.execution.command.ExplainCommand
-import org.apache.spark.sql.functions.{col, udf}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.SQLTestData._
 import org.apache.spark.sql.types.DataTypes
@@ -230,17 +224,6 @@ class UDFSuite extends QueryTest with SharedSQLContext {
   }
 
   test("udf in different types") {
-<<<<<<< HEAD
-    spark.udf.register("testDataFunc", (n: Int, s: String) => { (n, s) })
-    spark.udf.register("decimalDataFunc",
-      (a: java.math.BigDecimal, b: java.math.BigDecimal) => { (a, b) })
-    spark.udf.register("binaryDataFunc", (a: Array[Byte], b: Int) => { (a, b) })
-    spark.udf.register("arrayDataFunc",
-      (data: Seq[Int], nestedData: Seq[Seq[Int]]) => { (data, nestedData) })
-    spark.udf.register("mapDataFunc",
-      (data: scala.collection.Map[Int, String]) => { data })
-    spark.udf.register("complexDataFunc",
-=======
     sqlContext.udf.register("testDataFunc", (n: Int, s: String) => { (n, s) })
     sqlContext.udf.register("decimalDataFunc",
       (a: java.math.BigDecimal, b: java.math.BigDecimal) => { (a, b) })
@@ -250,7 +233,6 @@ class UDFSuite extends QueryTest with SharedSQLContext {
     sqlContext.udf.register("mapDataFunc",
       (data: scala.collection.Map[Int, String]) => { data })
     sqlContext.udf.register("complexDataFunc",
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       (m: Map[String, Int], a: Seq[Int], b: Boolean) => { (m, a, b) } )
 
     checkAnswer(
@@ -283,11 +265,7 @@ class UDFSuite extends QueryTest with SharedSQLContext {
   }
 
   test("SPARK-11716 UDFRegistration does not include the input data type in returned UDF") {
-<<<<<<< HEAD
-    val myUDF = spark.udf.register("testDataFunc", (n: Int, s: String) => { (n, s.toInt) })
-=======
     val myUDF = sqlContext.udf.register("testDataFunc", (n: Int, s: String) => { (n, s.toInt) })
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Without the fix, this will fail because we fail to cast data type of b to string
     // because myUDF does not know its input data type. With the fix, this query should not
@@ -299,23 +277,5 @@ class UDFSuite extends QueryTest with SharedSQLContext {
     checkAnswer(
       sql("SELECT tmp.t.* FROM (SELECT testDataFunc(a, b) AS t from testData2) tmp").toDF(),
       testData2)
-<<<<<<< HEAD
-  }
-
-  test("SPARK-19338 Provide identical names for UDFs in the EXPLAIN output") {
-    def explainStr(df: DataFrame): String = {
-      val explain = ExplainCommand(df.queryExecution.logical, extended = false)
-      val sparkPlan = spark.sessionState.executePlan(explain).executedPlan
-      sparkPlan.executeCollect().map(_.getString(0).trim).headOption.getOrElse("")
-    }
-    val udf1Name = "myUdf1"
-    val udf2Name = "myUdf2"
-    val udf1 = spark.udf.register(udf1Name, (n: Int) => n + 1)
-    val udf2 = spark.udf.register(udf2Name, (n: Int) => n * 1)
-    assert(explainStr(sql("SELECT myUdf1(myUdf2(1))")).contains(s"UDF:$udf1Name(UDF:$udf2Name(1))"))
-    assert(explainStr(spark.range(1).select(udf1(udf2(functions.lit(1)))))
-      .contains(s"UDF:$udf1Name(UDF:$udf2Name(1))"))
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

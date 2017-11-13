@@ -432,20 +432,12 @@ class ParquetQuerySuite extends QueryTest with ParquetTest with SharedSQLContext
   test("SPARK-11997 parquet with null partition values") {
     withTempPath { dir =>
       val path = dir.getCanonicalPath
-<<<<<<< HEAD
-      spark.range(1, 3)
-=======
       sqlContext.range(1, 3)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .selectExpr("if(id % 2 = 0, null, id) AS n", "id")
         .write.partitionBy("n").parquet(path)
 
       checkAnswer(
-<<<<<<< HEAD
-        spark.read.parquet(path).filter("n is null"),
-=======
         sqlContext.read.parquet(path).filter("n is null"),
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Row(2, null))
     }
   }

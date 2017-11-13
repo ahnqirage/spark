@@ -19,11 +19,7 @@ package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
 
-<<<<<<< HEAD
-import org.apache.spark.annotation.Since
-=======
 import org.apache.spark.annotation.{Experimental, Since}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.ml._
 import org.apache.spark.ml.linalg.{Vector, VectorUDT}
 import org.apache.spark.ml.param._
@@ -45,9 +41,6 @@ private[feature] trait StandardScalerParams extends Params with HasInputCol with
 
   /**
    * Whether to center the data with mean before scaling.
-<<<<<<< HEAD
-   * It will build a dense output, so take care when applying to sparse input.
-=======
    * It will build a dense output, so this does not work on sparse input
    * and will raise an exception.
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -71,18 +64,6 @@ private[feature] trait StandardScalerParams extends Params with HasInputCol with
   /** @group getParam */
   def getWithStd: Boolean = $(withStd)
 
-<<<<<<< HEAD
-  /** Validates and transforms the input schema. */
-  protected def validateAndTransformSchema(schema: StructType): StructType = {
-    SchemaUtils.checkColumnType(schema, $(inputCol), new VectorUDT)
-    require(!schema.fieldNames.contains($(outputCol)),
-      s"Output column ${$(outputCol)} already exists.")
-    val outputFields = schema.fields :+ StructField($(outputCol), new VectorUDT, false)
-    StructType(outputFields)
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   setDefault(withMean -> false, withStd -> true)
 }
 
@@ -104,7 +85,6 @@ class StandardScaler @Since("1.4.0") (
 @Experimental
 class StandardScaler(override val uid: String) extends Estimator[StandardScalerModel]
   with StandardScalerParams with DefaultParamsWritable {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   @Since("1.2.0")
   def this() = this(Identifiable.randomUID("stdScal"))
@@ -168,7 +148,6 @@ class StandardScalerModel private[ml] (
     override val uid: String,
     val std: Vector,
     val mean: Vector)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends Model[StandardScalerModel] with StandardScalerParams with MLWritable {
 
   import StandardScalerModel._
@@ -185,13 +164,6 @@ class StandardScalerModel private[ml] (
   override def transform(dataset: Dataset[_]): DataFrame = {
     transformSchema(dataset.schema, logging = true)
     val scaler = new feature.StandardScalerModel(std, mean, $(withStd), $(withMean))
-<<<<<<< HEAD
-
-    // TODO: Make the transformer natively in ml framework to avoid extra conversion.
-    val transformer: Vector => Vector = v => scaler.transform(OldVectors.fromML(v)).asML
-
-    val scale = udf(transformer)
-=======
     val scale = udf { scaler.transform _ }
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     dataset.withColumn($(outputCol), scale(col($(inputCol))))
@@ -224,11 +196,7 @@ object StandardScalerModel extends MLReadable[StandardScalerModel] {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
       val data = Data(instance.std, instance.mean)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
-=======
       sqlContext.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -239,12 +207,7 @@ object StandardScalerModel extends MLReadable[StandardScalerModel] {
     override def load(path: String): StandardScalerModel = {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
-<<<<<<< HEAD
-      val data = sparkSession.read.parquet(dataPath)
-      val Row(std: Vector, mean: Vector) = MLUtils.convertVectorColumnsToML(data, "std", "mean")
-=======
       val Row(std: Vector, mean: Vector) = sqlContext.read.parquet(dataPath)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         .select("std", "mean")
         .head()
       val model = new StandardScalerModel(metadata.uid, std, mean)

@@ -118,7 +118,6 @@ public final class UnsafeKVExternalSorter {
       // Since we will not grow the array, it's fine to pass `null` as consumer.
       final UnsafeInMemorySorter inMemSorter = new UnsafeInMemorySorter(
         null, taskMemoryManager, recordComparator, prefixComparator, map.getArray());
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       // We cannot use the destructive iterator here because we are reusing the existing memory
       // pages in BytesToBytesMap to hold records during sorting.

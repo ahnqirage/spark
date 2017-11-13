@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Dimensionality Reduction - RDD-based API
-displayTitle: Dimensionality Reduction - RDD-based API
-=======
 title: Dimensionality Reduction - spark.mllib
 displayTitle: Dimensionality Reduction - spark.mllib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents

@@ -17,28 +17,6 @@
 
 from __future__ import print_function
 
-<<<<<<< HEAD
-# $example on$
-from pyspark.ml.regression import AFTSurvivalRegression
-from pyspark.ml.linalg import Vectors
-# $example off$
-from pyspark.sql import SparkSession
-
-"""
-An example demonstrating aft survival regression.
-Run with:
-  bin/spark-submit examples/src/main/python/ml/aft_survival_regression.py
-"""
-
-if __name__ == "__main__":
-    spark = SparkSession \
-        .builder \
-        .appName("AFTSurvivalRegressionExample") \
-        .getOrCreate()
-
-    # $example on$
-    training = spark.createDataFrame([
-=======
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
 # $example on$
@@ -52,7 +30,6 @@ if __name__ == "__main__":
 
     # $example on$
     training = sqlContext.createDataFrame([
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         (1.218, 1.0, Vectors.dense(1.560, -0.605)),
         (2.949, 0.0, Vectors.dense(0.346, 2.158)),
         (3.627, 0.0, Vectors.dense(1.380, 0.231)),
@@ -71,8 +48,4 @@ if __name__ == "__main__":
     model.transform(training).show(truncate=False)
     # $example off$
 
-<<<<<<< HEAD
-    spark.stop()
-=======
     sc.stop()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

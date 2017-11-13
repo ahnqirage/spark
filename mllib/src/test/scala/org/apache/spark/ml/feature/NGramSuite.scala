@@ -28,10 +28,6 @@ import org.apache.spark.sql.{Dataset, Row}
 case class NGramTestData(inputTokens: Array[String], wantedNGrams: Array[String])
 
 class NGramSuite extends SparkFunSuite with MLlibTestSparkContext with DefaultReadWriteTest {
-<<<<<<< HEAD
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   import org.apache.spark.ml.feature.NGramSuite._
   import testImplicits._
 

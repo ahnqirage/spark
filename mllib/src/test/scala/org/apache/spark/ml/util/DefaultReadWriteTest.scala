@@ -22,17 +22,10 @@ import java.io.{File, IOException}
 import org.scalatest.Suite
 
 import org.apache.spark.SparkFunSuite
-<<<<<<< HEAD
-import org.apache.spark.ml.{Estimator, Model}
-import org.apache.spark.ml.param._
-import org.apache.spark.mllib.util.MLlibTestSparkContext
-import org.apache.spark.sql.Dataset
-=======
 import org.apache.spark.ml.{Model, Estimator}
 import org.apache.spark.ml.param._
 import org.apache.spark.mllib.util.MLlibTestSparkContext
 import org.apache.spark.sql.DataFrame
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 trait DefaultReadWriteTest extends TempDirectory { self: Suite =>
 
@@ -40,10 +33,6 @@ trait DefaultReadWriteTest extends TempDirectory { self: Suite =>
    * Checks "overwrite" option and params.
    * This saves to and loads from [[tempDir]], but creates a subdirectory with a random name
    * in order to avoid conflicts from multiple calls to this method.
-<<<<<<< HEAD
-   *
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * @param instance ML instance to test saving/loading
    * @param testParams  If true, then test values of Params.  Otherwise, just test overwrite option.
    * @tparam T ML instance type
@@ -65,10 +54,7 @@ trait DefaultReadWriteTest extends TempDirectory { self: Suite =>
     instance.write.overwrite().save(path)
     val loader = instance.getClass.getMethod("read").invoke(null).asInstanceOf[MLReader[T]]
     val newInstance = loader.load(path)
-<<<<<<< HEAD
-=======
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     assert(newInstance.uid === instance.uid)
     if (testParams) {
       instance.params.foreach { p =>
@@ -94,22 +80,6 @@ trait DefaultReadWriteTest extends TempDirectory { self: Suite =>
   /**
    * Default test for Estimator, Model pairs:
    *  - Explicitly set Params, and train model
-<<<<<<< HEAD
-   *  - Test save/load using `testDefaultReadWrite` on Estimator and Model
-   *  - Check Params on Estimator and Model
-   *  - Compare model data
-   *
-   * This requires that `Model`'s `Param`s should be a subset of `Estimator`'s `Param`s.
-   *
-   * @param estimator  Estimator to test
-   * @param dataset  Dataset to pass to `Estimator.fit()`
-   * @param testEstimatorParams  Set of `Param` values to set in estimator
-   * @param testModelParams Set of `Param` values to set in model
-   * @param checkModelData  Method which takes the original and loaded `Model` and compares their
-   *                        data.  This method does not need to check `Param` values.
-   * @tparam E  Type of `Estimator`
-   * @tparam M  Type of `Model` produced by estimator
-=======
    *  - Test save/load using [[testDefaultReadWrite()]] on Estimator and Model
    *  - Check Params on Estimator and Model
    *
@@ -121,55 +91,32 @@ trait DefaultReadWriteTest extends TempDirectory { self: Suite =>
    *                        data.  This method does not need to check [[Param]] values.
    * @tparam E  Type of [[Estimator]]
    * @tparam M  Type of [[Model]] produced by estimator
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   def testEstimatorAndModelReadWrite[
     E <: Estimator[M] with MLWritable, M <: Model[M] with MLWritable](
       estimator: E,
-<<<<<<< HEAD
-      dataset: Dataset[_],
-      testEstimatorParams: Map[String, Any],
-      testModelParams: Map[String, Any],
-      checkModelData: (M, M) => Unit): Unit = {
-    // Set some Params to make sure set Params are serialized.
-    testEstimatorParams.foreach { case (p, v) =>
-=======
       dataset: DataFrame,
       testParams: Map[String, Any],
       checkModelData: (M, M) => Unit): Unit = {
     // Set some Params to make sure set Params are serialized.
     testParams.foreach { case (p, v) =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       estimator.set(estimator.getParam(p), v)
     }
     val model = estimator.fit(dataset)
 
     // Test Estimator save/load
     val estimator2 = testDefaultReadWrite(estimator)
-<<<<<<< HEAD
-    testEstimatorParams.foreach { case (p, v) =>
-=======
     testParams.foreach { case (p, v) =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val param = estimator.getParam(p)
       assert(estimator.get(param).get === estimator2.get(param).get)
     }
 
     // Test Model save/load
     val model2 = testDefaultReadWrite(model)
-<<<<<<< HEAD
-    testModelParams.foreach { case (p, v) =>
-      val param = model.getParam(p)
-      assert(model.get(param).get === model2.get(param).get)
-    }
-
-    checkModelData(model, model2)
-=======
     testParams.foreach { case (p, v) =>
       val param = model.getParam(p)
       assert(model.get(param).get === model2.get(param).get)
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

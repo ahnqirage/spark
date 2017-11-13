@@ -60,15 +60,8 @@ import pickle
 import struct
 import sys
 import traceback
-<<<<<<< HEAD
-import types
 import weakref
 
-from pyspark.util import _exception_message
-=======
-import weakref
-
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 if sys.version < '3':
     from pickle import Pickler
@@ -537,10 +530,6 @@ class CloudPickler(Pickler):
         save(defaults)
         save(dct)
         save(func.__module__)
-<<<<<<< HEAD
-        save(closure_values)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         write(pickle.TUPLE)
         write(pickle.REDUCE)  # applies _fill_function on the tuple
 
@@ -1033,11 +1022,7 @@ class _empty_cell_value(object):
         return cls.__name__
 
 
-<<<<<<< HEAD
-def _fill_function(func, globals, defaults, dict, module, closure_values):
-=======
 def _fill_function(func, globals, defaults, dict, module):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     """ Fills in the rest of function data into the skeleton function object
         that were created via _make_skel_func().
     """

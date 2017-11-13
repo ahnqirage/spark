@@ -165,10 +165,6 @@ object GaussianMixtureModel extends Loader[GaussianMixtureModel] {
 
     def load(sc: SparkContext, path: String): GaussianMixtureModel = {
       val dataPath = Loader.dataPath(path)
-<<<<<<< HEAD
-      val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-      val dataFrame = spark.read.parquet(dataPath)
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       val dataFrame = sqlContext.read.parquet(dataPath)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

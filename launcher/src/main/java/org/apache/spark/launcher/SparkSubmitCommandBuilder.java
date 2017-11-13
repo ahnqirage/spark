@@ -89,12 +89,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
   }
 
   final List<String> sparkArgs;
-<<<<<<< HEAD
-  private final boolean isAppResourceReq;
-  private final boolean isExample;
-=======
   private final boolean printInfo;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Controls whether mixing spark-submit arguments with app arguments is allowed. This is needed
@@ -111,7 +106,6 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 =======
     this.sparkArgs = new ArrayList<String>();
     this.printInfo = false;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   SparkSubmitCommandBuilder(List<String> args) {
@@ -167,7 +161,6 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
     if (PYSPARK_SHELL_RESOURCE.equals(appResource) && !printInfo) {
       return buildPySparkShellCommand(env);
     } else if (SPARKR_SHELL_RESOURCE.equals(appResource) && !printInfo) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       return buildSparkRCommand(env);
     } else {
       return buildSparkSubmitCommand(env);
@@ -421,54 +414,6 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
   private class OptionParser extends SparkSubmitOptionParser {
 
-<<<<<<< HEAD
-    boolean isAppResourceReq = true;
-
-    @Override
-    protected boolean handle(String opt, String value) {
-      switch (opt) {
-        case MASTER:
-          master = value;
-          break;
-        case DEPLOY_MODE:
-          deployMode = value;
-          break;
-        case PROPERTIES_FILE:
-          propertiesFile = value;
-          break;
-        case DRIVER_MEMORY:
-          conf.put(SparkLauncher.DRIVER_MEMORY, value);
-          break;
-        case DRIVER_JAVA_OPTIONS:
-          conf.put(SparkLauncher.DRIVER_EXTRA_JAVA_OPTIONS, value);
-          break;
-        case DRIVER_LIBRARY_PATH:
-          conf.put(SparkLauncher.DRIVER_EXTRA_LIBRARY_PATH, value);
-          break;
-        case DRIVER_CLASS_PATH:
-          conf.put(SparkLauncher.DRIVER_EXTRA_CLASSPATH, value);
-          break;
-        case CONF:
-          String[] setConf = value.split("=", 2);
-          checkArgument(setConf.length == 2, "Invalid argument to %s: %s", CONF, value);
-          conf.put(setConf[0], setConf[1]);
-          break;
-        case CLASS:
-          // The special classes require some special command line handling, since they allow
-          // mixing spark-submit arguments with arguments that should be propagated to the shell
-          // itself. Note that for this to work, the "--class" argument must come before any
-          // non-spark-submit arguments.
-          mainClass = value;
-          if (specialClasses.containsKey(value)) {
-            allowsMixedArguments = true;
-            appResource = specialClasses.get(value);
-          }
-          break;
-        case KILL_SUBMISSION:
-        case STATUS:
-          isAppResourceReq = false;
-          sparkArgs.add(opt);
-=======
     boolean infoRequested = false;
 
     @Override

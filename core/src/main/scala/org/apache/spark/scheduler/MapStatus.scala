@@ -19,18 +19,8 @@ package org.apache.spark.scheduler
 
 import java.io.{Externalizable, ObjectInput, ObjectOutput}
 
-<<<<<<< HEAD
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-
 import org.roaringbitmap.RoaringBitmap
 
-import org.apache.spark.SparkEnv
-import org.apache.spark.internal.config
-=======
-import org.roaringbitmap.RoaringBitmap
-
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.storage.BlockManagerId
 import org.apache.spark.util.Utils
 
@@ -136,7 +126,6 @@ private[spark] class CompressedMapStatus(
  * than spark.shuffle.accurateBlockThreshold. It stores the average size of other non-empty blocks,
 =======
  * A [[MapStatus]] implementation that only stores the average size of non-empty blocks,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * plus a bitmap for tracking which blocks are empty.
  *
  * @param loc location where the task is being executed
@@ -149,10 +138,6 @@ private[spark] class HighlyCompressedMapStatus private (
     private[this] var loc: BlockManagerId,
     private[this] var numNonEmptyBlocks: Int,
     private[this] var emptyBlocks: RoaringBitmap,
-<<<<<<< HEAD
-    private[this] var avgSize: Long,
-    private var hugeBlockSizes: Map[Int, Byte])
-=======
     private[this] var avgSize: Long)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   extends MapStatus with Externalizable {
@@ -166,10 +151,6 @@ private[spark] class HighlyCompressedMapStatus private (
   override def location: BlockManagerId = loc
 
   override def getSizeForBlock(reduceId: Int): Long = {
-<<<<<<< HEAD
-    assert(hugeBlockSizes != null)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     if (emptyBlocks.contains(reduceId)) {
       0
     } else {
@@ -219,13 +200,6 @@ private[spark] object HighlyCompressedMapStatus {
     // we expect that there will be far fewer of them, so we will perform fewer bitmap insertions.
     val emptyBlocks = new RoaringBitmap()
     val totalNumBlocks = uncompressedSizes.length
-<<<<<<< HEAD
-    val threshold = Option(SparkEnv.get)
-      .map(_.conf.get(config.SHUFFLE_ACCURATE_BLOCK_THRESHOLD))
-      .getOrElse(config.SHUFFLE_ACCURATE_BLOCK_THRESHOLD.defaultValue.get)
-    val hugeBlockSizesArray = ArrayBuffer[Tuple2[Int, Byte]]()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     while (i < totalNumBlocks) {
       val size = uncompressedSizes(i)
       if (size > 0) {
@@ -249,10 +223,6 @@ private[spark] object HighlyCompressedMapStatus {
     }
     emptyBlocks.trim()
     emptyBlocks.runOptimize()
-<<<<<<< HEAD
-    new HighlyCompressedMapStatus(loc, numNonEmptyBlocks, emptyBlocks, avgSize,
-      hugeBlockSizesArray.toMap)
-=======
     new HighlyCompressedMapStatus(loc, numNonEmptyBlocks, emptyBlocks, avgSize)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }

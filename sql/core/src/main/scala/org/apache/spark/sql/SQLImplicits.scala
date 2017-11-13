@@ -17,10 +17,6 @@
 
 package org.apache.spark.sql
 
-<<<<<<< HEAD
-import scala.collection.Map
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
 
@@ -251,17 +247,9 @@ abstract class SQLImplicits {
    */
   def newFloatSeqEncoder: Encoder[Seq[Float]] = ExpressionEncoder()
 
-<<<<<<< HEAD
-  /**
-   * @since 1.6.1
-   * @deprecated use [[newSequenceEncoder]]
-   */
-  def newByteSeqEncoder: Encoder[Seq[Byte]] = ExpressionEncoder()
-=======
   // Do NOT add more implicit conversions for primitive types.
   // They are likely to break source compatibility by making existing implicit conversions
   // ambiguous. In particular, RDD[Double] is dangerous because of [[DoubleRDDFunctions]].
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * @since 1.6.1

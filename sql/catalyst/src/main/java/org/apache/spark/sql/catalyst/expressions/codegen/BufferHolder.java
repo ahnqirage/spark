@@ -22,29 +22,9 @@ import org.apache.spark.unsafe.Platform;
 import org.apache.spark.unsafe.array.ByteArrayMethods;
 
 /**
-<<<<<<< HEAD
- * A helper class to manage the data buffer for an unsafe row.  The data buffer can grow and
- * automatically re-point the unsafe row to it.
- *
- * This class can be used to build a one-pass unsafe row writing program, i.e. data will be written
- * to the data buffer directly and no extra copy is needed.  There should be only one instance of
- * this class per writing program, so that the memory segment/data buffer can be reused.  Note that
- * for each incoming record, we should call `reset` of BufferHolder instance before write the record
- * and reuse the data buffer.
- *
- * Generally we should call `UnsafeRow.setTotalSize` and pass in `BufferHolder.totalSize` to update
- * the size of the result row, after writing a record to the buffer. However, we can skip this step
- * if the fields of row are all fixed-length, as the size of result row is also fixed.
- */
-public class BufferHolder {
-
-  private static final int ARRAY_MAX = ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH;
-
-=======
  * A helper class to manage the row buffer when construct unsafe rows.
  */
 public class BufferHolder {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   public byte[] buffer;
   public int cursor = Platform.BYTE_ARRAY_OFFSET;
   private final UnsafeRow row;
@@ -68,16 +48,6 @@ public class BufferHolder {
     this.row.pointTo(buffer, buffer.length);
   }
 
-  /**
-   * Grows the buffer by at least neededSize and points the row to the buffer.
-   */
-  public void grow(int neededSize) {
-    if (neededSize > ARRAY_MAX - totalSize()) {
-      throw new UnsupportedOperationException(
-        "Cannot grow BufferHolder by size " + neededSize + " because the size after growing " +
-          "exceeds size limitation " + ARRAY_MAX);
-    }
-=======
   public BufferHolder() {
     this(64);
   }
@@ -90,7 +60,6 @@ public class BufferHolder {
    * Grows the buffer to at least neededSize. If row is non-null, points the row to the buffer.
    */
   public void grow(int neededSize, UnsafeRow row) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     final int length = totalSize() + neededSize;
     if (buffer.length < length) {
       // This will not happen frequently, because the buffer is re-used.
@@ -103,13 +72,9 @@ public class BufferHolder {
         Platform.BYTE_ARRAY_OFFSET,
         totalSize());
       buffer = tmp;
-<<<<<<< HEAD
-      row.pointTo(buffer, buffer.length);
-=======
       if (row != null) {
         row.pointTo(buffer, length * 2);
       }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -119,6 +84,10 @@ public class BufferHolder {
 
   public void reset() {
     cursor = Platform.BYTE_ARRAY_OFFSET + fixedSize;
+  }
+  public void resetTo(int offset) {
+    assert(offset <= buffer.length);
+    cursor = Platform.BYTE_ARRAY_OFFSET + offset;
   }
   public void resetTo(int offset) {
     assert(offset <= buffer.length);

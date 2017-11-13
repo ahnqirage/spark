@@ -81,12 +81,7 @@ object GeneratePredicate extends CodeGenerator[Expression, Predicate] {
         ${ctx.declareAddedFunctions()}
       }"""
 
-<<<<<<< HEAD
-    val code = CodeFormatter.stripOverlappingComments(
-      new CodeAndComment(codeBody, ctx.getPlaceHolderToComments()))
-=======
     val code = new CodeAndComment(codeBody, ctx.getPlaceHolderToComments())
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     logDebug(s"Generated predicate '$predicate':\n${CodeFormatter.format(code)}")
 
     val (clazz, _) = CodeGenerator.compile(code)

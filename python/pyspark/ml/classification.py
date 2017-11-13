@@ -71,7 +71,6 @@ class LogisticRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredicti
                          HasRegParam, HasTol, HasProbabilityCol, HasRawPredictionCol,
                          HasElasticNetParam, HasFitIntercept, HasStandardization, HasThresholds,
                          HasWeightCol):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     """
     .. note:: Experimental
 
@@ -83,14 +82,6 @@ class LogisticRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredicti
     >>> from pyspark.sql import Row
     >>> from pyspark.ml.linalg import Vectors
     >>> df = sc.parallelize([
-<<<<<<< HEAD
-    ...     Row(label=1.0, features=Vectors.dense(1.0, 1.0, 1.0)),
-    ...     Row(label=0.0, features=Vectors.dense(1.0, 2.0, 3.0))]).toDF()
-    >>> svm = LinearSVC(maxIter=5, regParam=0.01)
-    >>> model = svm.fit(df)
-    >>> model.coefficients
-    DenseVector([0.0, -0.2792, -0.1833])
-=======
     ...     Row(label=1.0, weight=2.0, features=Vectors.dense(1.0)),
     ...     Row(label=0.0, weight=2.0, features=Vectors.sparse(1, [], []))]).toDF()
     >>> lr = LogisticRegression(maxIter=5, regParam=0.01, weightCol="weight")
@@ -242,21 +233,6 @@ class LogisticRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredicti
     Traceback (most recent call last):
         ...
     TypeError: Method setParams forces keyword arguments.
-<<<<<<< HEAD
-    >>> lr_path = temp_path + "/lr"
-    >>> blor.save(lr_path)
-    >>> lr2 = LogisticRegression.load(lr_path)
-    >>> lr2.getRegParam()
-    0.01
-    >>> model_path = temp_path + "/lr_model"
-    >>> blorModel.save(model_path)
-    >>> model2 = LogisticRegressionModel.load(model_path)
-    >>> blorModel.coefficients[0] == model2.coefficients[0]
-    True
-    >>> blorModel.intercept == model2.intercept
-    True
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.3.0
     """
@@ -308,27 +284,12 @@ class LogisticRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredicti
     def __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                  maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True,
                  threshold=0.5, thresholds=None, probabilityCol="probability",
-<<<<<<< HEAD
-                 rawPredictionCol="rawPrediction", standardization=True, weightCol=None,
-                 aggregationDepth=2, family="auto",
-                 lowerBoundsOnCoefficients=None, upperBoundsOnCoefficients=None,
-                 lowerBoundsOnIntercepts=None, upperBoundsOnIntercepts=None):
-
-=======
                  rawPredictionCol="rawPrediction", standardization=True, weightCol=None):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                  maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True, \
                  threshold=0.5, thresholds=None, probabilityCol="probability", \
-<<<<<<< HEAD
-                 rawPredictionCol="rawPrediction", standardization=True, weightCol=None, \
-                 aggregationDepth=2, family="auto", \
-                 lowerBoundsOnCoefficients=None, upperBoundsOnCoefficients=None, \
-                 lowerBoundsOnIntercepts=None, upperBoundsOnIntercepts=None):
-=======
                  rawPredictionCol="rawPrediction", standardization=True, weightCol=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         If the threshold and thresholds Params are both set, they must be equivalent.
         """
         super(LogisticRegression, self).__init__()
@@ -344,26 +305,12 @@ class LogisticRegression(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredicti
     def setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                   maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True,
                   threshold=0.5, thresholds=None, probabilityCol="probability",
-<<<<<<< HEAD
-                  rawPredictionCol="rawPrediction", standardization=True, weightCol=None,
-                  aggregationDepth=2, family="auto",
-                  lowerBoundsOnCoefficients=None, upperBoundsOnCoefficients=None,
-                  lowerBoundsOnIntercepts=None, upperBoundsOnIntercepts=None):
-=======
                   rawPredictionCol="rawPrediction", standardization=True, weightCol=None):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                   maxIter=100, regParam=0.0, elasticNetParam=0.0, tol=1e-6, fitIntercept=True, \
                   threshold=0.5, thresholds=None, probabilityCol="probability", \
-<<<<<<< HEAD
-                  rawPredictionCol="rawPrediction", standardization=True, weightCol=None, \
-                  aggregationDepth=2, family="auto", \
-                  lowerBoundsOnCoefficients=None, upperBoundsOnCoefficients=None, \
-                  lowerBoundsOnIntercepts=None, upperBoundsOnIntercepts=None):
-=======
                   rawPredictionCol="rawPrediction", standardization=True, weightCol=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Sets params for logistic regression.
         If the threshold and thresholds Params are both set, they must be equivalent.
         """
@@ -523,10 +470,6 @@ class LogisticRegressionModel(JavaModel, JavaClassificationModel, JavaMLWritable
     """
 
     @property
-<<<<<<< HEAD
-    @since("2.0.0")
-    def coefficients(self):
-=======
     @since("1.4.0")
     def weights(self):
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -554,10 +497,6 @@ class LogisticRegressionModel(JavaModel, JavaClassificationModel, JavaMLWritable
         return self._call_java("coefficientMatrix")
 
     @property
-<<<<<<< HEAD
-    @since("2.1.0")
-    def interceptVector(self):
-=======
     @since("1.4.0")
     def intercept(self):
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -988,20 +927,6 @@ class DecisionTreeClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPred
     >>> model.transform(test1).head().prediction
     1.0
 
-<<<<<<< HEAD
-    >>> dtc_path = temp_path + "/dtc"
-    >>> dt.save(dtc_path)
-    >>> dt2 = DecisionTreeClassifier.load(dtc_path)
-    >>> dt2.getMaxDepth()
-    2
-    >>> model_path = temp_path + "/dtc_model"
-    >>> model.save(model_path)
-    >>> model2 = DecisionTreeClassificationModel.load(model_path)
-    >>> model.featureImportances == model2.featureImportances
-    True
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     .. versionadded:: 1.4.0
     """
 
@@ -1118,21 +1043,6 @@ class RandomForestClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPred
     >>> test1 = spark.createDataFrame([(Vectors.sparse(1, [0], [1.0]),)], ["features"])
     >>> model.transform(test1).head().prediction
     1.0
-<<<<<<< HEAD
-    >>> model.trees
-    [DecisionTreeClassificationModel (uid=...) of depth..., DecisionTreeClassificationModel...]
-    >>> rfc_path = temp_path + "/rfc"
-    >>> rf.save(rfc_path)
-    >>> rf2 = RandomForestClassifier.load(rfc_path)
-    >>> rf2.getNumTrees()
-    3
-    >>> model_path = temp_path + "/rfc_model"
-    >>> model.save(model_path)
-    >>> model2 = RandomForestClassificationModel.load(model_path)
-    >>> model.featureImportances == model2.featureImportances
-    True
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.4.0
     """
@@ -1254,27 +1164,6 @@ class GBTClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol
     >>> test1 = spark.createDataFrame([(Vectors.sparse(1, [0], [1.0]),)], ["features"])
     >>> model.transform(test1).head().prediction
     1.0
-<<<<<<< HEAD
-    >>> model.totalNumNodes
-    15
-    >>> print(model.toDebugString)
-    GBTClassificationModel (uid=...)...with 5 trees...
-    >>> gbtc_path = temp_path + "gbtc"
-    >>> gbt.save(gbtc_path)
-    >>> gbt2 = GBTClassifier.load(gbtc_path)
-    >>> gbt2.getMaxDepth()
-    2
-    >>> model_path = temp_path + "gbtc_model"
-    >>> model.save(model_path)
-    >>> model2 = GBTClassificationModel.load(model_path)
-    >>> model.featureImportances == model2.featureImportances
-    True
-    >>> model.treeWeights == model2.treeWeights
-    True
-    >>> model.trees
-    [DecisionTreeRegressionModel (uid=...) of depth..., DecisionTreeRegressionModel...]
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.4.0
     """
@@ -1293,30 +1182,18 @@ class GBTClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol
     def __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                  maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                  maxMemoryInMB=256, cacheNodeIds=False, checkpointInterval=10, lossType="logistic",
-<<<<<<< HEAD
-                 maxIter=20, stepSize=0.1, seed=None, subsamplingRate=1.0):
-=======
                  maxIter=20, stepSize=0.1, seed=None):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         __init__(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                  maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0, \
                  maxMemoryInMB=256, cacheNodeIds=False, checkpointInterval=10, \
-<<<<<<< HEAD
-                 lossType="logistic", maxIter=20, stepSize=0.1, seed=None, subsamplingRate=1.0)
-=======
                  lossType="logistic", maxIter=20, stepSize=0.1, seed=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         super(GBTClassifier, self).__init__()
         self._java_obj = self._new_java_obj(
             "org.apache.spark.ml.classification.GBTClassifier", self.uid)
         self._setDefault(maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                          maxMemoryInMB=256, cacheNodeIds=False, checkpointInterval=10,
-<<<<<<< HEAD
-                         lossType="logistic", maxIter=20, stepSize=0.1, subsamplingRate=1.0)
-        kwargs = self._input_kwargs
-=======
                          lossType="logistic", maxIter=20, stepSize=0.1, seed=None)
         kwargs = self.__init__._input_kwargs
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -1327,20 +1204,12 @@ class GBTClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol
     def setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction",
                   maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0,
                   maxMemoryInMB=256, cacheNodeIds=False, checkpointInterval=10,
-<<<<<<< HEAD
-                  lossType="logistic", maxIter=20, stepSize=0.1, seed=None, subsamplingRate=1.0):
-=======
                   lossType="logistic", maxIter=20, stepSize=0.1, seed=None):
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         """
         setParams(self, featuresCol="features", labelCol="label", predictionCol="prediction", \
                   maxDepth=5, maxBins=32, minInstancesPerNode=1, minInfoGain=0.0, \
                   maxMemoryInMB=256, cacheNodeIds=False, checkpointInterval=10, \
-<<<<<<< HEAD
-                  lossType="logistic", maxIter=20, stepSize=0.1, seed=None, subsamplingRate=1.0)
-=======
                   lossType="logistic", maxIter=20, stepSize=0.1, seed=None)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         Sets params for Gradient Boosted Tree Classification.
         """
         kwargs = self._input_kwargs
@@ -1430,26 +1299,6 @@ class NaiveBayes(JavaEstimator, HasFeaturesCol, HasLabelCol, HasPredictionCol, H
     >>> test1 = sc.parallelize([Row(features=Vectors.sparse(2, [0], [1.0]))]).toDF()
     >>> model.transform(test1).head().prediction
     1.0
-<<<<<<< HEAD
-    >>> nb_path = temp_path + "/nb"
-    >>> nb.save(nb_path)
-    >>> nb2 = NaiveBayes.load(nb_path)
-    >>> nb2.getSmoothing()
-    1.0
-    >>> model_path = temp_path + "/nb_model"
-    >>> model.save(model_path)
-    >>> model2 = NaiveBayesModel.load(model_path)
-    >>> model.pi == model2.pi
-    True
-    >>> model.theta == model2.theta
-    True
-    >>> nb = nb.setThresholds([0.01, 10.00])
-    >>> model3 = nb.fit(df)
-    >>> result = model3.transform(test0).head()
-    >>> result.prediction
-    0.0
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.5.0
     """
@@ -1530,11 +1379,7 @@ class NaiveBayesModel(JavaModel, JavaClassificationModel, JavaMLWritable, JavaML
     """
 
     @property
-<<<<<<< HEAD
-    @since("2.0.0")
-=======
     @since("1.5.0")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def pi(self):
         """
         log of class priors.
@@ -1542,11 +1387,7 @@ class NaiveBayesModel(JavaModel, JavaClassificationModel, JavaMLWritable, JavaML
         return self._call_java("pi")
 
     @property
-<<<<<<< HEAD
-    @since("2.0.0")
-=======
     @since("1.5.0")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def theta(self):
         """
         log of class conditional probabilities.
@@ -1588,27 +1429,6 @@ class MultilayerPerceptronClassifier(JavaEstimator, HasFeaturesCol, HasLabelCol,
     |[0.0,0.0]|       0.0|
     +---------+----------+
     ...
-<<<<<<< HEAD
-    >>> mlp_path = temp_path + "/mlp"
-    >>> mlp.save(mlp_path)
-    >>> mlp2 = MultilayerPerceptronClassifier.load(mlp_path)
-    >>> mlp2.getBlockSize()
-    1
-    >>> model_path = temp_path + "/mlp_model"
-    >>> model.save(model_path)
-    >>> model2 = MultilayerPerceptronClassificationModel.load(model_path)
-    >>> model.layers == model2.layers
-    True
-    >>> model.weights == model2.weights
-    True
-    >>> mlp2 = mlp2.setInitialWeights(list(range(0, 12)))
-    >>> model3 = mlp2.fit(df)
-    >>> model3.weights != model2.weights
-    True
-    >>> model3.layers == model.layers
-    True
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     .. versionadded:: 1.6.0
     """
@@ -1738,11 +1558,7 @@ class MultilayerPerceptronClassificationModel(JavaModel, JavaClassificationModel
         return self._call_java("javaLayers")
 
     @property
-<<<<<<< HEAD
-    @since("2.0.0")
-=======
     @since("1.6.0")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     def weights(self):
         """
         the weights of layers.

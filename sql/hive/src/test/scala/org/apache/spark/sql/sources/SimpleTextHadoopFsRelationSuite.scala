@@ -20,12 +20,6 @@ package org.apache.spark.sql.sources
 import java.io.File
 
 import org.apache.hadoop.fs.Path
-<<<<<<< HEAD
-
-import org.apache.spark.sql.catalyst.catalog.CatalogUtils
-import org.apache.spark.sql.catalyst.expressions.PredicateHelper
-import org.apache.spark.sql.types._
-=======
 
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.deploy.SparkHadoopUtil
@@ -81,28 +75,6 @@ class SimpleTextHadoopFsRelationSuite extends HadoopFsRelationTest with Predicat
     }
   }
 
-<<<<<<< HEAD
-  test("test hadoop conf option propagation") {
-    withTempPath { file =>
-      // Test write side
-      val df = spark.range(10).selectExpr("cast(id as string)")
-      df.write
-        .option("some-random-write-option", "hahah-WRITE")
-        .option("some-null-value-option", null)  // test null robustness
-        .option("dataSchema", df.schema.json)
-        .format(dataSourceName).save(file.getAbsolutePath)
-      assert(SimpleTextRelation.lastHadoopConf.get.get("some-random-write-option") == "hahah-WRITE")
-
-      // Test read side
-      val df1 = spark.read
-        .option("some-random-read-option", "hahah-READ")
-        .option("some-null-value-option", null)  // test null robustness
-        .option("dataSchema", df.schema.json)
-        .format(dataSourceName)
-        .load(file.getAbsolutePath)
-      df1.count()
-      assert(SimpleTextRelation.lastHadoopConf.get.get("some-random-read-option") == "hahah-READ")
-=======
   private var tempPath: File = _
 
   private var partitionedDF: DataFrame = _
@@ -238,7 +210,6 @@ class SimpleTextHadoopFsRelationSuite extends HadoopFsRelationTest with Predicat
       // shouldn't be part of non-pushed filters.
       assert(expectedPartitioningFilters.intersect(nonPushedFilters).isEmpty)
       assert(expectedPartitioningFilters === actualPartitioningFilters)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 

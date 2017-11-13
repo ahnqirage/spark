@@ -23,11 +23,7 @@ import java.nio.charset.Charset
 
 import com.google.common.io.Files
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkConf, SparkContext}
-=======
 import org.apache.spark.{Accumulator, SparkConf, SparkContext}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.{Seconds, StreamingContext, Time}
@@ -58,15 +54,6 @@ object WordBlacklist {
  */
 object DroppedWordsCounter {
 
-<<<<<<< HEAD
-  @volatile private var instance: LongAccumulator = null
-
-  def getInstance(sc: SparkContext): LongAccumulator = {
-    if (instance == null) {
-      synchronized {
-        if (instance == null) {
-          instance = sc.longAccumulator("WordsInBlacklistCounter")
-=======
   @volatile private var instance: Accumulator[Long] = null
 
   def getInstance(sc: SparkContext): Accumulator[Long] = {
@@ -74,7 +61,6 @@ object DroppedWordsCounter {
       synchronized {
         if (instance == null) {
           instance = sc.accumulator(0L, "WordsInBlacklistCounter")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       }
     }
@@ -135,7 +121,6 @@ object RecoverableNetworkWordCount {
 =======
     val wordCounts = words.map(x => (x, 1)).reduceByKey(_ + _)
     wordCounts.foreachRDD((rdd: RDD[(String, Int)], time: Time) => {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       // Get or register the blacklist Broadcast
       val blacklist = WordBlacklist.getInstance(rdd.sparkContext)
       // Get or register the droppedWordsCounter Accumulator
@@ -143,11 +128,7 @@ object RecoverableNetworkWordCount {
       // Use blacklist to drop words and use droppedWordsCounter to count them
       val counts = rdd.filter { case (word, count) =>
         if (blacklist.value.contains(word)) {
-<<<<<<< HEAD
-          droppedWordsCounter.add(count)
-=======
           droppedWordsCounter += count
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           false
         } else {
           true
@@ -158,9 +139,6 @@ object RecoverableNetworkWordCount {
       println("Dropped " + droppedWordsCounter.value + " word(s) totally")
       println("Appending to " + outputFile.getAbsolutePath)
       Files.append(output + "\n", outputFile, Charset.defaultCharset())
-<<<<<<< HEAD
-    }
-=======
     })
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     ssc

@@ -20,12 +20,7 @@ package org.apache.spark.sql.catalyst
 import java.sql.{Date, Timestamp}
 
 import org.apache.spark.SparkFunSuite
-<<<<<<< HEAD
-import org.apache.spark.sql.catalyst.expressions.{BoundReference, Literal, SpecificInternalRow}
-import org.apache.spark.sql.catalyst.expressions.objects.NewInstance
-=======
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, Literal, NewInstance}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -231,13 +226,6 @@ class ScalaReflectionSuite extends SparkFunSuite {
       nullable = true))
   }
 
-<<<<<<< HEAD
-  test("type-aliased data") {
-    assert(schemaFor[GenericData[Int]] == schemaFor[GenericData.IntData])
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("convert PrimitiveData to catalyst") {
     val data = PrimitiveData(1, 1, 1, 1, 1, 1, true)
     val convertedData = InternalRow(1, 1.toLong, 1.toDouble, 1.toFloat, 1.toShort, 1.toByte, true)
@@ -284,71 +272,13 @@ class ScalaReflectionSuite extends SparkFunSuite {
 
   test("SPARK-15062: Get correct serializer for List[_]") {
     val list = List(1, 2, 3)
-<<<<<<< HEAD
-    val serializer = serializerFor[List[Int]](BoundReference(
-=======
     val serializer = extractorsFor[List[Int]](BoundReference(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       0, ObjectType(list.getClass), nullable = false))
     assert(serializer.children.size == 2)
     assert(serializer.children.head.isInstanceOf[Literal])
     assert(serializer.children.head.asInstanceOf[Literal].value === UTF8String.fromString("value"))
     assert(serializer.children.last.isInstanceOf[NewInstance])
     assert(serializer.children.last.asInstanceOf[NewInstance]
-<<<<<<< HEAD
-      .cls.isAssignableFrom(classOf[org.apache.spark.sql.catalyst.util.GenericArrayData]))
-  }
-
-  test("SPARK 16792: Get correct deserializer for List[_]") {
-    val listDeserializer = deserializerFor[List[Int]]
-    assert(listDeserializer.dataType == ObjectType(classOf[List[_]]))
-  }
-
-  test("serialize and deserialize arbitrary sequence types") {
-    import scala.collection.immutable.Queue
-    val queueSerializer = serializerFor[Queue[Int]](BoundReference(
-      0, ObjectType(classOf[Queue[Int]]), nullable = false))
-    assert(queueSerializer.dataType.head.dataType ==
-      ArrayType(IntegerType, containsNull = false))
-    val queueDeserializer = deserializerFor[Queue[Int]]
-    assert(queueDeserializer.dataType == ObjectType(classOf[Queue[_]]))
-
-    import scala.collection.mutable.ArrayBuffer
-    val arrayBufferSerializer = serializerFor[ArrayBuffer[Int]](BoundReference(
-      0, ObjectType(classOf[ArrayBuffer[Int]]), nullable = false))
-    assert(arrayBufferSerializer.dataType.head.dataType ==
-      ArrayType(IntegerType, containsNull = false))
-    val arrayBufferDeserializer = deserializerFor[ArrayBuffer[Int]]
-    assert(arrayBufferDeserializer.dataType == ObjectType(classOf[ArrayBuffer[_]]))
-  }
-
-  test("serialize and deserialize arbitrary map types") {
-    val mapSerializer = serializerFor[Map[Int, Int]](BoundReference(
-      0, ObjectType(classOf[Map[Int, Int]]), nullable = false))
-    assert(mapSerializer.dataType.head.dataType ==
-      MapType(IntegerType, IntegerType, valueContainsNull = false))
-    val mapDeserializer = deserializerFor[Map[Int, Int]]
-    assert(mapDeserializer.dataType == ObjectType(classOf[Map[_, _]]))
-
-    import scala.collection.immutable.HashMap
-    val hashMapSerializer = serializerFor[HashMap[Int, Int]](BoundReference(
-      0, ObjectType(classOf[HashMap[Int, Int]]), nullable = false))
-    assert(hashMapSerializer.dataType.head.dataType ==
-      MapType(IntegerType, IntegerType, valueContainsNull = false))
-    val hashMapDeserializer = deserializerFor[HashMap[Int, Int]]
-    assert(hashMapDeserializer.dataType == ObjectType(classOf[HashMap[_, _]]))
-
-    import scala.collection.mutable.{LinkedHashMap => LHMap}
-    val linkedHashMapSerializer = serializerFor[LHMap[Long, String]](BoundReference(
-      0, ObjectType(classOf[LHMap[Long, String]]), nullable = false))
-    assert(linkedHashMapSerializer.dataType.head.dataType ==
-      MapType(LongType, StringType, valueContainsNull = true))
-    val linkedHashMapDeserializer = deserializerFor[LHMap[Long, String]]
-    assert(linkedHashMapDeserializer.dataType == ObjectType(classOf[LHMap[_, _]]))
-  }
-
-=======
       .cls.isInstanceOf[Class[org.apache.spark.sql.catalyst.util.GenericArrayData]])
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

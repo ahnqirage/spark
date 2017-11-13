@@ -39,7 +39,6 @@ import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaDStream;
@@ -69,19 +68,30 @@ class JavaWordBlacklist {
 }
 
 /**
+ * Use this singleton to get or register a Broadcast variable.
+ */
+class JavaWordBlacklist {
+
+  private static volatile Broadcast<List<String>> instance = null;
+
+  public static Broadcast<List<String>> getInstance(JavaSparkContext jsc) {
+    if (instance == null) {
+      synchronized (JavaWordBlacklist.class) {
+        if (instance == null) {
+          List<String> wordBlacklist = Arrays.asList("a", "b", "c");
+          instance = jsc.broadcast(wordBlacklist);
+        }
+      }
+    }
+    return instance;
+  }
+}
+
+/**
  * Use this singleton to get or register an Accumulator.
  */
 class JavaDroppedWordsCounter {
 
-<<<<<<< HEAD
-  private static volatile LongAccumulator instance = null;
-
-  public static LongAccumulator getInstance(JavaSparkContext jsc) {
-    if (instance == null) {
-      synchronized (JavaDroppedWordsCounter.class) {
-        if (instance == null) {
-          instance = jsc.sc().longAccumulator("WordsInBlacklistCounter");
-=======
   private static volatile Accumulator<Integer> instance = null;
 
   public static Accumulator<Integer> getInstance(JavaSparkContext jsc) {
@@ -89,7 +99,6 @@ class JavaDroppedWordsCounter {
       synchronized (JavaDroppedWordsCounter.class) {
         if (instance == null) {
           instance = jsc.accumulator(0, "WordsInBlacklistCounter");
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         }
       }
     }

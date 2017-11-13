@@ -24,13 +24,8 @@ import org.apache.spark.annotation.Experimental
 import org.apache.spark.rdd.{EmptyRDD, RDD}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming._
-<<<<<<< HEAD
-import org.apache.spark.streaming.dstream.InternalMapWithStateDStream._
-import org.apache.spark.streaming.rdd.{MapWithStateRDD, MapWithStateRDDRecord}
-=======
 import org.apache.spark.streaming.rdd.{MapWithStateRDD, MapWithStateRDDRecord}
 import org.apache.spark.streaming.dstream.InternalMapWithStateDStream._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * :: Experimental ::
@@ -95,11 +90,7 @@ private[streaming] class MapWithStateDStreamImpl[
 }
 
 /**
-<<<<<<< HEAD
- * A DStream that allows per-key state to be maintained, and arbitrary records to be generated
-=======
  * A DStream that allows per-key state to be maintains, and arbitrary records to be generated
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  * based on updates to the state. This is the main DStream that implements the `mapWithState`
  * operation on DStreams.
  *
@@ -137,11 +128,7 @@ class InternalMapWithStateDStream[K: ClassTag, V: ClassTag, S: ClassTag, E: Clas
     super.initialize(time)
   }
 
-<<<<<<< HEAD
-  /** Method that generates an RDD for the given time */
-=======
   /** Method that generates a RDD for the given time */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   override def compute(validTime: Time): Option[RDD[MapWithStateRDDRecord[K, S, E]]] = {
     // Get the previous state or create a new empty state RDD
     val prevStateRDD = getOrCompute(validTime - slideDuration) match {

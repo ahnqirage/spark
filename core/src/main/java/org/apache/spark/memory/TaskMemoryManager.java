@@ -117,11 +117,7 @@ public class TaskMemoryManager {
   /**
    * The amount of memory that is acquired but not used.
    */
-<<<<<<< HEAD
-  private volatile long acquiredButNotUsed = 0L;
-=======
   private long acquiredButNotUsed = 0L;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Construct a new TaskMemoryManager.
@@ -144,11 +140,6 @@ public class TaskMemoryManager {
       MemoryMode mode,
       MemoryConsumer consumer) {
     assert(required >= 0);
-<<<<<<< HEAD
-    assert(consumer != null);
-    MemoryMode mode = consumer.getMode();
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // If we are allocating Tungsten pages off-heap and receive a request to allocate on-heap
     // memory here, then it may not make sense to spill since that would only end up freeing
     // off-heap memory. This is subject to change, though, so it may be risky to make this
@@ -165,37 +156,6 @@ public class TaskMemoryManager {
         // spill files.
         TreeMap<Long, List<MemoryConsumer>> sortedConsumers = new TreeMap<>();
         for (MemoryConsumer c: consumers) {
-<<<<<<< HEAD
-          if (c != consumer && c.getUsed() > 0 && c.getMode() == mode) {
-            long key = c.getUsed();
-            List<MemoryConsumer> list =
-                sortedConsumers.computeIfAbsent(key, k -> new ArrayList<>(1));
-            list.add(c);
-          }
-        }
-        while (!sortedConsumers.isEmpty()) {
-          // Get the consumer using the least memory more than the remaining required memory.
-          Map.Entry<Long, List<MemoryConsumer>> currentEntry =
-            sortedConsumers.ceilingEntry(required - got);
-          // No consumer has used memory more than the remaining required memory.
-          // Get the consumer of largest used memory.
-          if (currentEntry == null) {
-            currentEntry = sortedConsumers.lastEntry();
-          }
-          List<MemoryConsumer> cList = currentEntry.getValue();
-          MemoryConsumer c = cList.remove(cList.size() - 1);
-          if (cList.isEmpty()) {
-            sortedConsumers.remove(currentEntry.getKey());
-          }
-          try {
-            long released = c.spill(required - got, consumer);
-            if (released > 0) {
-              logger.debug("Task {} released {} from {} for {}", taskAttemptId,
-                Utils.bytesToString(released), c, consumer);
-              got += memoryManager.acquireExecutionMemory(required - got, taskAttemptId, mode);
-              if (got >= required) {
-                break;
-=======
           if (c != consumer && c.getUsed() > 0) {
             try {
               long released = c.spill(required - got, consumer);
@@ -225,11 +185,7 @@ public class TaskMemoryManager {
       if (got < required) {
         try {
           long released = consumer.spill(required - got, consumer);
-<<<<<<< HEAD
-          if (released > 0) {
-=======
           if (released > 0 && mode == tungstenMemoryMode) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             logger.debug("Task {} released {} from itself ({})", taskAttemptId,
               Utils.bytesToString(released), consumer);
             got += memoryManager.acquireExecutionMemory(required - got, taskAttemptId, mode);
@@ -245,10 +201,6 @@ public class TaskMemoryManager {
         }
       }
 
-<<<<<<< HEAD
-      consumers.add(consumer);
-      logger.debug("Task {} acquired {} for {}", taskAttemptId, Utils.bytesToString(got), consumer);
-=======
       if (consumer != null) {
         consumers.add(consumer);
       }
@@ -263,11 +215,7 @@ public class TaskMemoryManager {
    */
   public void releaseExecutionMemory(long size, MemoryMode mode, MemoryConsumer consumer) {
     logger.debug("Task {} release {} from {}", taskAttemptId, Utils.bytesToString(size), consumer);
-<<<<<<< HEAD
-    memoryManager.releaseExecutionMemory(size, taskAttemptId, consumer.getMode());
-=======
     memoryManager.releaseExecutionMemory(size, taskAttemptId, mode);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   /**
@@ -339,13 +287,8 @@ public class TaskMemoryManager {
       logger.warn("Failed to allocate a page ({} bytes), try again.", acquired);
       // there is no enough memory actually, it means the actual free memory is smaller than
       // MemoryManager thought, we should keep the acquired memory.
-<<<<<<< HEAD
-      synchronized (this) {
-        acquiredButNotUsed += acquired;
-=======
       acquiredButNotUsed += acquired;
       synchronized (this) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         allocatedPages.clear(pageNumber);
       }
       // this could trigger spilling to free some pages.
@@ -480,10 +423,15 @@ public class TaskMemoryManager {
         memoryManager.tungstenMemoryAllocator().free(page);
       }
     }
+
+    for (MemoryBlock page : pageTable) {
+      if (page != null) {
+        memoryManager.tungstenMemoryAllocator().free(page);
+      }
+    }
     Arrays.fill(pageTable, null);
 
     // release the memory that is not used by any consumer.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     memoryManager.releaseExecutionMemory(acquiredButNotUsed, taskAttemptId, tungstenMemoryMode);
 
     return memoryManager.releaseAllExecutionMemoryForTask(taskAttemptId);

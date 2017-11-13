@@ -34,52 +34,7 @@ getInternalType <- function(x) {
          Date = "date",
          POSIXlt = "timestamp",
          POSIXct = "timestamp",
-<<<<<<< HEAD
-         stop(paste("Unsupported type for SparkDataFrame:", class(x))))
-}
-
-#' Temporary function to reroute old S3 Method call to new
-#' This function is specifically implemented to remove SQLContext from the parameter list.
-#' It determines the target to route the call by checking the parent of this callsite (say 'func').
-#' The target should be called 'func.default'.
-#' We need to check the class of x to ensure it is SQLContext/HiveContext before dispatching.
-#' @param newFuncSig name of the function the user should call instead in the deprecation message
-#' @param x the first parameter of the original call
-#' @param ... the rest of parameter to pass along
-#' @return whatever the target returns
-#' @noRd
-dispatchFunc <- function(newFuncSig, x, ...) {
-  # When called with SparkR::createDataFrame, sys.call()[[1]] returns c(::, SparkR, createDataFrame)
-  callsite <- as.character(sys.call(sys.parent())[[1]])
-  funcName <- callsite[[length(callsite)]]
-  f <- get(paste0(funcName, ".default"))
-  # Strip sqlContext from list of parameters and then pass the rest along.
-  contextNames <- c("org.apache.spark.sql.SQLContext",
-                    "org.apache.spark.sql.hive.HiveContext",
-                    "org.apache.spark.sql.hive.test.TestHiveContext",
-                    "org.apache.spark.sql.SparkSession")
-  if (missing(x) && length(list(...)) == 0) {
-    f()
-  } else if (class(x) == "jobj" &&
-            any(grepl(paste(contextNames, collapse = "|"), getClassName.jobj(x)))) {
-    .Deprecated(newFuncSig, old = paste0(funcName, "(sqlContext...)"))
-    f(...)
-  } else {
-    f(x, ...)
-  }
-}
-
-#' return the SparkSession
-#' @noRd
-getSparkSession <- function() {
-  if (exists(".sparkRsession", envir = .sparkREnv)) {
-    get(".sparkRsession", envir = .sparkREnv)
-  } else {
-    stop("SparkSession not initialized")
-  }
-=======
          stop(paste("Unsupported type for DataFrame:", class(x))))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 #' infer the SQL type
@@ -305,27 +260,6 @@ as.DataFrame.default <- function(data, schema = NULL, samplingRatio = 1.0, numPa
   createDataFrame(data, schema, samplingRatio, numPartitions)
 }
 
-<<<<<<< HEAD
-#' @param ... additional argument(s).
-#' @rdname createDataFrame
-#' @aliases as.DataFrame
-#' @export
-as.DataFrame <- function(data, ...) {
-  dispatchFunc("as.DataFrame(data, schema = NULL)", data, ...)
-}
-
-#' toDF
-#'
-#' Converts an RDD to a SparkDataFrame by infer the types.
-#'
-#' @param x An RDD
-#'
-#' @rdname SparkDataFrame
-#' @noRd
-#' @examples
-#'\dontrun{
-#' sparkR.session()
-=======
 #' toDF
 #'
 #' Converts an RDD to a DataFrame by infer the types.
@@ -338,7 +272,6 @@ as.DataFrame <- function(data, ...) {
 #'\dontrun{
 #' sc <- sparkR.init()
 #' sqlContext <- sparkRSQL.init(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' rdd <- lapply(parallelize(sc, 1:10), function(x) list(a=x, b=as.character(x)))
 #' df <- toDF(rdd)
 #'}
@@ -366,53 +299,11 @@ setMethod("toDF", signature(x = "RDD"),
 #' @return DataFrame
 #' @rdname read.json
 #' @name read.json
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @export
 #' @examples
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
-<<<<<<< HEAD
-#' df <- read.json(path)
-#' df <- read.json(path, multiLine = TRUE)
-#' df <- jsonFile(path)
-#' }
-#' @name read.json
-#' @method read.json default
-#' @note read.json since 1.6.0
-read.json.default <- function(path, ...) {
-  sparkSession <- getSparkSession()
-  options <- varargsToStrEnv(...)
-  # Allow the user to have a more flexible definiton of the text file path
-  paths <- as.list(suppressWarnings(normalizePath(path)))
-  read <- callJMethod(sparkSession, "read")
-  read <- callJMethod(read, "options", options)
-  sdf <- handledCallJMethod(read, "json", paths)
-  dataFrame(sdf)
-}
-
-read.json <- function(x, ...) {
-  dispatchFunc("read.json(path)", x, ...)
-}
-
-#' @rdname read.json
-#' @name jsonFile
-#' @export
-#' @method jsonFile default
-#' @note jsonFile since 1.4.0
-jsonFile.default <- function(path) {
-  .Deprecated("read.json")
-  read.json(path)
-}
-
-jsonFile <- function(x, ...) {
-  dispatchFunc("jsonFile(path)", x, ...)
-}
-
-#' JSON RDD
-#'
-#' Loads an RDD storing one JSON object per string as a SparkDataFrame.
-=======
 #' df <- read.json(sqlContext, path)
 #' df <- jsonFile(sqlContext, path)
 #' }
@@ -436,26 +327,17 @@ jsonFile <- function(sqlContext, path) {
 #' JSON RDD
 #'
 #' Loads an RDD storing one JSON object per string as a DataFrame.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
 #' @param sqlContext SQLContext to use
 #' @param rdd An RDD of JSON string
 #' @param schema A StructType object to use as schema
 #' @param samplingRatio The ratio of simpling used to infer the schema
-<<<<<<< HEAD
-#' @return A SparkDataFrame
-#' @noRd
-#' @examples
-#'\dontrun{
-#' sparkR.session()
-=======
 #' @return A DataFrame
 #' @noRd
 #' @examples
 #'\dontrun{
 #' sc <- sparkR.init()
 #' sqlContext <- sparkRSQL.init(sc)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' rdd <- texFile(sc, "path/to/json")
 #' df <- jsonRDD(sqlContext, rdd)
 #'}
@@ -475,9 +357,6 @@ jsonRDD <- function(sqlContext, rdd, schema = NULL, samplingRatio = 1.0) {
   }
 }
 
-<<<<<<< HEAD
-#' Create a SparkDataFrame from an ORC file.
-=======
 #' Create a DataFrame from a Parquet file.
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'
@@ -685,11 +564,6 @@ read.text <- function(x, ...) {
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
-<<<<<<< HEAD
-#' df <- read.json(path)
-#' createOrReplaceTempView(df, "table")
-#' new_df <- sql("SELECT * FROM table")
-=======
 #' df <- read.json(sqlContext, path)
 #' registerTempTable(df, "table")
 #' cacheTable(sqlContext, "table")
@@ -725,11 +599,6 @@ sql <- function(x, ...) {
 #'\dontrun{
 #' sparkR.session()
 #' path <- "path/to/file.json"
-<<<<<<< HEAD
-#' df <- read.json(path)
-#' createOrReplaceTempView(df, "table")
-#' new_df <- tableToDF("table")
-=======
 #' df <- read.json(sqlContext, path)
 #' registerTempTable(df, "table")
 #' uncacheTable(sqlContext, "table")

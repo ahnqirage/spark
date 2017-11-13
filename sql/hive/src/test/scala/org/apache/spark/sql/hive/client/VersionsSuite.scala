@@ -20,26 +20,11 @@ package org.apache.spark.sql.hive.client
 import java.io.{ByteArrayOutputStream, File, PrintStream}
 import java.net.URI
 
-<<<<<<< HEAD
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-import org.apache.hadoop.hive.serde2.`lazy`.LazySimpleSerDe
-import org.apache.hadoop.mapred.TextInputFormat
-
-import org.apache.spark.SparkFunSuite
-import org.apache.spark.internal.Logging
-import org.apache.spark.sql.{AnalysisException, Row}
-import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
-import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, NoSuchPermanentFunctionException}
-import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, EqualTo, Literal}
-=======
 import org.apache.hadoop.util.VersionInfo
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.hive.HiveContext
 import org.apache.spark.{Logging, SparkFunSuite}
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, EqualTo, Literal, NamedExpression}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.util.quietly
 import org.apache.spark.sql.hive.{HiveExternalCatalog, HiveUtils}
 import org.apache.spark.sql.hive.test.TestHiveVersion
@@ -53,7 +38,6 @@ import org.apache.spark.util.Utils
 import org.apache.spark.sql.test.SQLTestUtils
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * A simple set of tests that call the methods of a [[HiveClient]], loading different version
@@ -65,41 +49,6 @@ import org.apache.spark.sql.hive.test.TestHiveSingleton
 @ExtendedHiveTest
 class VersionsSuite extends SparkFunSuite  with SQLTestUtils with TestHiveSingleton with Logging {
 
-<<<<<<< HEAD
-  import HiveClientBuilder.buildClient
-
-  /**
-   * Creates a temporary directory, which is then passed to `f` and will be deleted after `f`
-   * returns.
-   */
-  protected def withTempDir(f: File => Unit): Unit = {
-    val dir = Utils.createTempDir().getCanonicalFile
-    try f(dir) finally Utils.deleteRecursively(dir)
-  }
-
-  /**
-   * Drops table `tableName` after calling `f`.
-   */
-  protected def withTable(tableNames: String*)(f: => Unit): Unit = {
-    try f finally {
-      tableNames.foreach { name =>
-        versionSpark.sql(s"DROP TABLE IF EXISTS $name")
-      }
-    }
-  }
-
-  test("success sanity check") {
-    val badClient = buildClient(HiveUtils.hiveExecutionVersion, new Configuration())
-    val db = new CatalogDatabase("default", "desc", new URI("loc"), Map())
-    badClient.createDatabase(db, ignoreIfExists = true)
-  }
-
-  test("hadoop configuration preserved") {
-    val hadoopConf = new Configuration()
-    hadoopConf.set("test", "success")
-    val client = buildClient(HiveUtils.hiveExecutionVersion, hadoopConf)
-    assert("success" === client.getConf("test", null))
-=======
   // In order to speed up test execution during development or in Jenkins, you can specify the path
   // of an existing Ivy cache:
   private val ivyPath: Option[String] = {
@@ -170,44 +119,12 @@ class VersionsSuite extends SparkFunSuite  with SQLTestUtils with TestHiveSingle
     test(s"$version: create client") {
       client = null
       System.gc() // Hack to avoid SEGV on some JVM versions.
-<<<<<<< HEAD
-      val hadoopConf = new Configuration()
-      hadoopConf.set("test", "success")
-      // Hive changed the default of datanucleus.schema.autoCreateAll from true to false and
-      // hive.metastore.schema.verification from false to true since 2.0
-      // For details, see the JIRA HIVE-6113 and HIVE-12463
-      if (version == "2.0" || version == "2.1") {
-        hadoopConf.set("datanucleus.schema.autoCreateAll", "true")
-        hadoopConf.set("hive.metastore.schema.verification", "false")
-      }
-      client = buildClient(version, hadoopConf, HiveUtils.formatTimeVarsForHiveClient(hadoopConf))
-      if (versionSpark != null) versionSpark.reset()
-      versionSpark = TestHiveVersion(client)
-      assert(versionSpark.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog].client
-        .version.fullVersion.startsWith(version))
-    }
-
-    def table(database: String, tableName: String): CatalogTable = {
-      CatalogTable(
-        identifier = TableIdentifier(tableName, Some(database)),
-        tableType = CatalogTableType.MANAGED,
-        schema = new StructType().add("key", "int"),
-        storage = CatalogStorageFormat(
-          locationUri = None,
-          inputFormat = Some(classOf[TextInputFormat].getName),
-          outputFormat = Some(classOf[HiveIgnoreKeyTextOutputFormat[_, _]].getName),
-          serde = Some(classOf[LazySimpleSerDe].getName()),
-          compressed = false,
-          properties = Map.empty
-        ))
-=======
       client =
         IsolatedClientLoader.forVersion(
           hiveMetastoreVersion = version,
           hadoopVersion = VersionInfo.getVersion,
           config = buildConf(),
           ivyPath = ivyPath).createClient()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -935,6 +852,36 @@ class VersionsSuite extends SparkFunSuite  with SQLTestUtils with TestHiveSingle
         }
       }
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
+
+    test(s"$version: CREATE TABLE AS SELECT") {
+      withTable("tbl") {
+        sqlContext.sql("CREATE TABLE tbl AS SELECT 1 AS a")
+        assert(sqlContext.table("tbl").collect().toSeq == Seq(Row(1)))
+      }
+    }
+
+    test(s"$version: Delete the temporary staging directory and files after each insert") {
+      withTempDir { tmpDir =>
+        withTable("tab", "tbl") {
+          sqlContext.sql(
+            s"""
+               |CREATE TABLE tab(c1 string)
+               |location '${tmpDir.toURI.toString}'
+             """.stripMargin)
+
+          sqlContext.sql("CREATE TABLE tbl AS SELECT 1 AS a")
+          sqlContext.sql(s"INSERT OVERWRITE TABLE tab SELECT * from tbl ")
+
+          def listFiles(path: File): List[String] = {
+            val dir = path.listFiles()
+            val folders = dir.filter(_.isDirectory).toList
+            val filePaths = dir.map(_.getName).toList
+            folders.flatMap(listFiles) ++: filePaths
+          }
+          val expectedFiles = ".part-00000.crc" :: "part-00000" :: Nil
+          assert(listFiles(tmpDir).sorted == expectedFiles)
+        }
+      }
+    }
   }
 }

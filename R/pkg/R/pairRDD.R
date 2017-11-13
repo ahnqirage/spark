@@ -85,11 +85,7 @@ setMethod("countByKey",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list(list(1, 2), list(3, 4)))
-<<<<<<< HEAD
-#' collectRDD(keys(rdd)) # list(1, 3)
-=======
 #' collect(keys(rdd)) # list(1, 3)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname keys
@@ -112,11 +108,7 @@ setMethod("keys",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list(list(1, 2), list(3, 4)))
-<<<<<<< HEAD
-#' collectRDD(values(rdd)) # list(2, 4)
-=======
 #' collect(values(rdd)) # list(2, 4)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname values
@@ -143,11 +135,7 @@ setMethod("values",
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, 1:10)
 #' makePairs <- lapply(rdd, function(x) { list(x, x) })
-<<<<<<< HEAD
-#' collectRDD(mapValues(makePairs, function(x) { x * 2) })
-=======
 #' collect(mapValues(makePairs, function(x) { x * 2) })
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' Output: list(list(1,2), list(2,4), list(3,6), ...)
 #'}
 #' @rdname mapValues
@@ -174,11 +162,7 @@ setMethod("mapValues",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list(list(1, c(1,2)), list(2, c(3,4))))
-<<<<<<< HEAD
-#' collectRDD(flatMapValues(rdd, function(x) { x }))
-=======
 #' collect(flatMapValues(rdd, function(x) { x }))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' Output: list(list(1,1), list(1,2), list(2,3), list(2,4))
 #'}
 #' @rdname flatMapValues
@@ -214,27 +198,15 @@ setMethod("flatMapValues",
 #' sc <- sparkR.init()
 #' pairs <- list(list(1, 2), list(1.1, 3), list(1, 4))
 #' rdd <- parallelize(sc, pairs)
-<<<<<<< HEAD
-#' parts <- partitionByRDD(rdd, 2L)
-=======
 #' parts <- partitionBy(rdd, 2L)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' collectPartition(parts, 0L) # First partition should contain list(1, 2) and list(1, 4)
 #'}
 #' @rdname partitionBy
 #' @aliases partitionBy,RDD,integer-method
 #' @noRd
-<<<<<<< HEAD
-setMethod("partitionByRDD",
-          signature(x = "RDD"),
-          function(x, numPartitions, partitionFunc = hashCode) {
-            stopifnot(is.numeric(numPartitions))
-
-=======
 setMethod("partitionBy",
           signature(x = "RDD", numPartitions = "numeric"),
           function(x, numPartitions, partitionFunc = hashCode) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             partitionFunc <- cleanClosure(partitionFunc)
             serializedHashFuncBytes <- serialize(partitionFunc, connection = NULL)
 
@@ -287,11 +259,7 @@ setMethod("partitionBy",
 #' pairs <- list(list(1, 2), list(1.1, 3), list(1, 4))
 #' rdd <- parallelize(sc, pairs)
 #' parts <- groupByKey(rdd, 2L)
-<<<<<<< HEAD
-#' grouped <- collectRDD(parts)
-=======
 #' grouped <- collect(parts)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' grouped[[1]] # Should be a list(1, list(2, 4))
 #'}
 #' @rdname groupByKey
@@ -337,19 +305,11 @@ setMethod("groupByKey",
 #'  Merge values by key
 #'
 #' This function operates on RDDs where every element is of the form list(K, V) or c(K, V).
-<<<<<<< HEAD
-#' and merges the values for each key using an associative and commutative reduce function.
-#'
-#' @param x The RDD to reduce by key. Should be an RDD where each element is
-#'             list(K, V) or c(K, V).
-#' @param combineFunc The associative and commutative reduce function to use.
-=======
 #' and merges the values for each key using an associative reduce function.
 #'
 #' @param x The RDD to reduce by key. Should be an RDD where each element is
 #'             list(K, V) or c(K, V).
 #' @param combineFunc The associative reduce function to use.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @param numPartitions Number of partitions to create.
 #' @return An RDD where each element is list(K, V') where V' is the merged
 #'         value
@@ -359,11 +319,7 @@ setMethod("groupByKey",
 #' pairs <- list(list(1, 2), list(1.1, 3), list(1, 4))
 #' rdd <- parallelize(sc, pairs)
 #' parts <- reduceByKey(rdd, "+", 2L)
-<<<<<<< HEAD
-#' reduced <- collectRDD(parts)
-=======
 #' reduced <- collect(parts)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' reduced[[1]] # Should be a list(1, 6)
 #'}
 #' @rdname reduceByKey
@@ -391,21 +347,12 @@ setMethod("reduceByKey",
 #' Merge values by key locally
 #'
 #' This function operates on RDDs where every element is of the form list(K, V) or c(K, V).
-<<<<<<< HEAD
-#' and merges the values for each key using an associative and commutative reduce function, but
-#' return the results immediately to the driver as an R list.
-#'
-#' @param x The RDD to reduce by key. Should be an RDD where each element is
-#'             list(K, V) or c(K, V).
-#' @param combineFunc The associative and commutative reduce function to use.
-=======
 #' and merges the values for each key using an associative reduce function, but return the
 #' results immediately to the driver as an R list.
 #'
 #' @param x The RDD to reduce by key. Should be an RDD where each element is
 #'             list(K, V) or c(K, V).
 #' @param combineFunc The associative reduce function to use.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' @return A list of elements of type list(K, V') where V' is the merged value for each key
 #' @seealso reduceByKey
 #' @examples
@@ -481,11 +428,7 @@ setMethod("reduceByKeyLocally",
 #' pairs <- list(list(1, 2), list(1.1, 3), list(1, 4))
 #' rdd <- parallelize(sc, pairs)
 #' parts <- combineByKey(rdd, function(x) { x }, "+", "+", 2L)
-<<<<<<< HEAD
-#' combined <- collectRDD(parts)
-=======
 #' combined <- collect(parts)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' combined[[1]] # Should be a list(1, 6)
 #'}
 # nolint end
@@ -618,19 +561,12 @@ setMethod("foldByKey",
 #' sc <- sparkR.init()
 #' rdd1 <- parallelize(sc, list(list(1, 1), list(2, 4)))
 #' rdd2 <- parallelize(sc, list(list(1, 2), list(1, 3)))
-<<<<<<< HEAD
-#' joinRDD(rdd1, rdd2, 2L) # list(list(1, list(1, 2)), list(1, list(1, 3))
-=======
 #' join(rdd1, rdd2, 2L) # list(list(1, list(1, 2)), list(1, list(1, 3))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname join-methods
 #' @aliases join,RDD,RDD-method
 #' @noRd
-<<<<<<< HEAD
-setMethod("joinRDD",
-=======
 setMethod("join",
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           signature(x = "RDD", y = "RDD"),
@@ -835,11 +771,7 @@ setMethod("cogroup",
 #'\dontrun{
 #' sc <- sparkR.init()
 #' rdd <- parallelize(sc, list(list(3, 1), list(2, 2), list(1, 3)))
-<<<<<<< HEAD
-#' collectRDD(sortByKey(rdd)) # list (list(1, 3), list(2, 2), list(3, 1))
-=======
 #' collect(sortByKey(rdd)) # list (list(1, 3), list(2, 2), list(3, 1))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #'}
 # nolint end
 #' @rdname sortByKey
@@ -847,11 +779,7 @@ setMethod("cogroup",
 #' @noRd
 setMethod("sortByKey",
           signature(x = "RDD"),
-<<<<<<< HEAD
-          function(x, ascending = TRUE, numPartitions = SparkR:::getNumPartitionsRDD(x)) {
-=======
           function(x, ascending = TRUE, numPartitions = SparkR:::getNumPartitions(x)) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             rangeBounds <- list()
 
             if (numPartitions > 1) {
@@ -912,11 +840,7 @@ setMethod("sortByKey",
 #' rdd1 <- parallelize(sc, list(list("a", 1), list("b", 4),
 #'                              list("b", 5), list("a", 2)))
 #' rdd2 <- parallelize(sc, list(list("a", 3), list("c", 1)))
-<<<<<<< HEAD
-#' collectRDD(subtractByKey(rdd1, rdd2))
-=======
 #' collect(subtractByKey(rdd1, rdd2))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 #' # list(list("b", 4), list("b", 5))
 #'}
 # nolint end
@@ -925,11 +849,7 @@ setMethod("sortByKey",
 #' @noRd
 setMethod("subtractByKey",
           signature(x = "RDD", other = "RDD"),
-<<<<<<< HEAD
-          function(x, other, numPartitions = SparkR:::getNumPartitionsRDD(x)) {
-=======
           function(x, other, numPartitions = SparkR:::getNumPartitions(x)) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             filterFunction <- function(elem) {
               iters <- elem[[2]]
               (length(iters[[1]]) > 0) && (length(iters[[2]]) == 0)

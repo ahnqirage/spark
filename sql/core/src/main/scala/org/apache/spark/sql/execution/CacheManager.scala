@@ -34,7 +34,6 @@ import org.apache.spark.sql.execution.datasources.{HadoopFsRelation, LogicalRela
 import org.apache.spark.Logging
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK
 
@@ -87,21 +86,12 @@ class CacheManager extends Logging {
   }
 
   /**
-<<<<<<< HEAD
-   * Caches the data produced by the logical representation of the given [[Dataset]].
-   * Unlike `RDD.cache()`, the default storage level is set to be `MEMORY_AND_DISK` because
-   * recomputing the in-memory columnar representation of the underlying table is expensive.
-   */
-  def cacheQuery(
-      query: Dataset[_],
-=======
    * Caches the data produced by the logical representation of the given [[Queryable]].
    * Unlike `RDD.cache()`, the default storage level is set to be `MEMORY_AND_DISK` because
    * recomputing the in-memory columnar representation of the underlying table is expensive.
    */
   private[sql] def cacheQuery(
       query: Queryable,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       tableName: Option[String] = None,
       storageLevel: StorageLevel = MEMORY_AND_DISK): Unit = writeLock {
     val planToCache = query.logicalPlan
@@ -214,10 +204,6 @@ class CacheManager extends Logging {
     lookupCachedData(query.logicalPlan)
   }
 
-  /** Optionally returns cached data for the given [[LogicalPlan]]. */
-  def lookupCachedData(plan: LogicalPlan): Option[CachedData] = readLock {
-    cachedData.asScala.find(cd => plan.sameResult(cd.plan))
-=======
   /** Optionally returns cached data for the given [[Queryable]] */
   private[sql] def lookupCachedData(query: Queryable): Option[CachedData] = readLock {
     lookupCachedData(query.queryExecution.analyzed)

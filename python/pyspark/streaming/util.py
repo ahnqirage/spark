@@ -93,10 +93,6 @@ class TransformFunctionSerializer(object):
         self.ctx = ctx
         self.serializer = serializer
         self.gateway = gateway or self.ctx._gateway
-<<<<<<< HEAD
-        self.gateway.jvm.PythonDStream.registerSerializer(self)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         self.failure = None
 
     def dumps(self, id):

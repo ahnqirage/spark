@@ -29,7 +29,6 @@ import org.apache.spark.SparkFunSuite
 import org.apache.spark.network.client.{TransportClient, TransportResponseHandler}
 =======
 import org.apache.spark.network.client.{TransportResponseHandler, TransportClient}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.network.server.StreamManager
 import org.apache.spark.rpc._
 
@@ -38,11 +37,7 @@ class NettyRpcHandlerSuite extends SparkFunSuite {
   val env = mock(classOf[NettyRpcEnv])
   val sm = mock(classOf[StreamManager])
   when(env.deserialize(any(classOf[TransportClient]), any(classOf[ByteBuffer]))(any()))
-<<<<<<< HEAD
-    .thenReturn(new RequestMessage(RpcAddress("localhost", 12345), null, null))
-=======
     .thenReturn(RequestMessage(RpcAddress("localhost", 12345), null, null))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   test("receive") {
     val dispatcher = mock(classOf[Dispatcher])

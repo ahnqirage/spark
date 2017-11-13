@@ -59,7 +59,6 @@ class StorageListener(storageStatusListener: StorageStatusListener) extends Bloc
     StorageUtils.updateRddInfo(rddInfosToUpdate, activeStorageStatusList)
 =======
     StorageUtils.updateRddInfo(rddInfosToUpdate, storageStatusList)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   override def onStageSubmitted(stageSubmitted: SparkListenerStageSubmitted): Unit = synchronized {
@@ -85,12 +84,8 @@ class StorageListener(storageStatusListener: StorageStatusListener) extends Bloc
     val storageLevel = blockUpdated.blockUpdatedInfo.storageLevel
     val memSize = blockUpdated.blockUpdatedInfo.memSize
     val diskSize = blockUpdated.blockUpdatedInfo.diskSize
-<<<<<<< HEAD
-    val blockStatus = BlockStatus(storageLevel, memSize, diskSize)
-=======
     val externalSize = blockUpdated.blockUpdatedInfo.externalBlockStoreSize
     val blockStatus = BlockStatus(storageLevel, memSize, diskSize, externalSize)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     updateRDDInfo(Seq((blockId, blockStatus)))
   }
 }

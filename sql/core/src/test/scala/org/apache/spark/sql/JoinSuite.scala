@@ -53,13 +53,6 @@ class JoinSuite extends QueryTest with SharedSQLContext {
     val df = sql(sqlString)
     val physical = df.queryExecution.sparkPlan
     val operators = physical.collect {
-<<<<<<< HEAD
-      case j: BroadcastHashJoinExec => j
-      case j: ShuffledHashJoinExec => j
-      case j: CartesianProductExec => j
-      case j: BroadcastNestedLoopJoinExec => j
-      case j: SortMergeJoinExec => j
-=======
       case j: LeftSemiJoinHash => j
       case j: BroadcastHashJoin => j
       case j: BroadcastHashOuterJoin => j
@@ -155,7 +148,6 @@ class JoinSuite extends QueryTest with SharedSQLContext {
       ("SELECT * FROM testData full JOIN testData2 ON (key * a != key + a)",
         classOf[BroadcastNestedLoopJoin])
     ).foreach { case (query, joinClass) => assertJoin(query, joinClass) }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
 //  ignore("SortMergeJoin shouldn't work on unsortable columns") {
@@ -169,14 +161,6 @@ class JoinSuite extends QueryTest with SharedSQLContext {
     sql("CACHE TABLE testData")
     Seq(
       ("SELECT * FROM testData join testData2 ON key = a",
-<<<<<<< HEAD
-        classOf[BroadcastHashJoinExec]),
-      ("SELECT * FROM testData join testData2 ON key = a and key = 2",
-        classOf[BroadcastHashJoinExec]),
-      ("SELECT * FROM testData join testData2 ON key = a where key = 2",
-        classOf[BroadcastHashJoinExec])
-    ).foreach(assertJoin)
-=======
         classOf[BroadcastHashJoin]),
       ("SELECT * FROM testData join testData2 ON key = a and key = 2",
         classOf[BroadcastHashJoin]),
@@ -190,17 +174,6 @@ class JoinSuite extends QueryTest with SharedSQLContext {
   test("broadcasted hash outer join operator selection") {
     spark.sharedState.cacheManager.clearCache()
     sql("CACHE TABLE testData")
-<<<<<<< HEAD
-    sql("CACHE TABLE testData2")
-    Seq(
-      ("SELECT * FROM testData LEFT JOIN testData2 ON key = a",
-        classOf[BroadcastHashJoinExec]),
-      ("SELECT * FROM testData RIGHT JOIN testData2 ON key = a where key = 2",
-        classOf[BroadcastHashJoinExec]),
-      ("SELECT * FROM testData right join testData2 ON key = a and key = 2",
-        classOf[BroadcastHashJoinExec])
-    ).foreach(assertJoin)
-=======
     Seq(
       ("SELECT * FROM testData LEFT JOIN testData2 ON key = a",
         classOf[SortMergeOuterJoin]),
@@ -392,7 +365,6 @@ class JoinSuite extends QueryTest with SharedSQLContext {
       Row(4, 1) ::
       Row(5, 1) ::
       Row(6, 1) :: Nil)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
       checkAnswer(
         sql(

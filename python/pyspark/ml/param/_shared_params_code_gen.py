@@ -192,12 +192,7 @@ if __name__ == "__main__":
         ("cacheNodeIds", "If false, the algorithm will pass trees to executors to match " +
          "instances with nodes. If true, the algorithm will cache node IDs for each instance. " +
          "Caching can speed up training of deeper trees. Users can set how often should the " +
-<<<<<<< HEAD
-         "cache be checkpointed or disable it by setting checkpointInterval.",
-         "TypeConverters.toBoolean")]
-=======
          "cache be checkpointed or disable it by setting checkpointInterval.")]
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     decisionTreeCode = '''class DecisionTreeParams(Params):
     """

@@ -62,60 +62,8 @@ class UIUtilsSuite extends SparkFunSuite {
     )
   }
 
-<<<<<<< HEAD
-  test("makeDescription(plainText = true)") {
-    verify(
-      """test <a href="/link"> text </a>""",
-      Text("test  text "),
-      "Correctly formatted text with only anchors and relative links should generate a string " +
-      "without any html tags",
-      plainText = true
-    )
-
-    verify(
-      """test <a href="/link"> text1 </a> <a href="/link"> text2 </a>""",
-      Text("test  text1   text2 "),
-      "Correctly formatted text with multiple anchors and relative links should generate a " +
-      "string without any html tags",
-      plainText = true
-    )
-
-    verify(
-      """test <a href="/link"><span> text </span></a>""",
-      Text("test  text "),
-      "Correctly formatted text with nested anchors and relative links and/or spans should " +
-      "generate a string without any html tags",
-      plainText = true
-    )
-
-    verify(
-      """test <a href="/link" text </a>""",
-      Text("""test <a href="/link" text </a>"""),
-      "Badly formatted text should make the description be as the same as the original text",
-      plainText = true
-    )
-
-    verify(
-      """test <a href="link"> text </a>""",
-      Text("""test <a href="link"> text </a>"""),
-      "Non-relative links should make the description be as the same as the original text",
-      plainText = true
-    )
-
-    verify(
-      """test<a><img></img></a>""",
-      Text("""test<a><img></img></a>"""),
-      "Non-anchor elements should make the description be as the same as the original text",
-      plainText = true
-    )
-  }
-
-  test("SPARK-11906: Progress bar should not overflow because of speculative tasks") {
-    val generated = makeProgressBar(2, 3, 0, 0, Map.empty, 4).head.child.filter(_.label == "div")
-=======
   test("SPARK-11906: Progress bar should not overflow because of speculative tasks") {
     val generated = makeProgressBar(2, 3, 0, 0, 4).head.child.filter(_.label == "div")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val expected = Seq(
       <div class="bar bar-completed" style="width: 75.0%"></div>,
       <div class="bar bar-running" style="width: 25.0%"></div>
@@ -138,48 +86,6 @@ class UIUtilsSuite extends SparkFunSuite {
     assert(decoded2 === decodeURLParameter(decoded2))
   }
 
-<<<<<<< HEAD
-  test("SPARK-20393: Prevent newline characters in parameters.") {
-    val encoding = "Encoding:base64%0d%0a%0d%0aPGh0bWw%2bjcmlwdD48L2h0bWw%2b"
-    val stripEncoding = "Encoding:base64PGh0bWw%2bjcmlwdD48L2h0bWw%2b"
-
-    assert(stripEncoding === stripXSS(encoding))
-  }
-
-  test("SPARK-20393: Prevent script from parameters running on page.") {
-    val scriptAlert = """>"'><script>alert(401)<%2Fscript>"""
-    val stripScriptAlert = "&gt;&quot;&gt;&lt;script&gt;alert(401)&lt;%2Fscript&gt;"
-
-    assert(stripScriptAlert === stripXSS(scriptAlert))
-  }
-
-  test("SPARK-20393: Prevent javascript from parameters running on page.") {
-    val javascriptAlert =
-      """app-20161208133404-0002<iframe+src%3Djavascript%3Aalert(1705)>"""
-    val stripJavascriptAlert =
-      "app-20161208133404-0002&lt;iframe+src%3Djavascript%3Aalert(1705)&gt;"
-
-    assert(stripJavascriptAlert === stripXSS(javascriptAlert))
-  }
-
-  test("SPARK-20393: Prevent links from parameters on page.") {
-    val link =
-      """stdout'"><iframe+id%3D1131+src%3Dhttp%3A%2F%2Fdemo.test.net%2Fphishing.html>"""
-    val stripLink =
-      "stdout&quot;&gt;&lt;iframe+id%3D1131+src%3Dhttp%3A%2F%2Fdemo.test.net%2Fphishing.html&gt;"
-
-    assert(stripLink === stripXSS(link))
-  }
-
-  test("SPARK-20393: Prevent popups from parameters on page.") {
-    val popup = """stdout'%2Balert(60)%2B'"""
-    val stripPopup = "stdout%2Balert(60)%2B"
-
-    assert(stripPopup === stripXSS(popup))
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def verify(
       desc: String,
       expected: Node,

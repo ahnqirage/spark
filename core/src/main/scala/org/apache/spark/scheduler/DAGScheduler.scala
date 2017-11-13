@@ -619,11 +619,7 @@ class DAGScheduler(
    * @param resultHandler callback to pass each result to
    * @param properties scheduler properties to attach to this job, e.g. fair scheduler pool name
    *
-<<<<<<< HEAD
-   * @note Throws `Exception` when the job fails
-=======
    * @throws Exception when the job fails
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    */
   def runJob[T, U](
       rdd: RDD[T],
@@ -976,7 +972,6 @@ class DAGScheduler(
       stage.resetInternalAccumulators()
     }
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     // Use the scheduling pool, job group, description, etc. from an ActiveJob associated
     // with this Stage
     val properties = jobIdToActiveJob(jobId).properties
@@ -1091,8 +1086,6 @@ class DAGScheduler(
         s"tasks are for partitions ${tasks.take(15).map(_.partitionId)})")
       taskScheduler.submitTasks(new TaskSet(
         tasks.toArray, stage.id, stage.latestInfo.attemptId, jobId, properties))
-<<<<<<< HEAD
-=======
       stage.latestInfo.submissionTime = Some(clock.getTimeMillis())
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } else {
@@ -1427,11 +1420,7 @@ class DAGScheduler(
       case TaskResultLost =>
         // Do nothing here; the TaskScheduler handles these failures and resubmits the task.
 
-<<<<<<< HEAD
-      case _: ExecutorLostFailure | _: TaskKilled | UnknownReason =>
-=======
       case _: ExecutorLostFailure | TaskKilled | UnknownReason =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         // Unrecognized failure - also do nothing. If the task fails repeatedly, the TaskScheduler
         // will abort the job.
     }

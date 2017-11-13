@@ -23,18 +23,12 @@ import java.util.Map;
 
 import scala.Tuple2;
 
-<<<<<<< HEAD
-import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
-=======
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.tree.RandomForest;
 import org.apache.spark.mllib.tree.model.RandomForestModel;
@@ -57,17 +51,6 @@ public class JavaRandomForestRegressionExample {
 
     // Set parameters.
     // Empty categoricalFeaturesInfo indicates all features are continuous.
-<<<<<<< HEAD
-    Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<>();
-    int numTrees = 3; // Use more in practice.
-    String featureSubsetStrategy = "auto"; // Let the algorithm choose.
-    String impurity = "variance";
-    int maxDepth = 4;
-    int maxBins = 32;
-    int seed = 12345;
-    // Train a RandomForest model.
-    RandomForestModel model = RandomForest.trainRegressor(trainingData,
-=======
     Map<Integer, Integer> categoricalFeaturesInfo = new HashMap<Integer, Integer>();
     Integer numTrees = 3; // Use more in practice.
     String featureSubsetStrategy = "auto"; // Let the algorithm choose.
@@ -77,18 +60,10 @@ public class JavaRandomForestRegressionExample {
     Integer seed = 12345;
     // Train a RandomForest model.
     final RandomForestModel model = RandomForest.trainRegressor(trainingData,
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       categoricalFeaturesInfo, numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins, seed);
 
     // Evaluate model on test instances and compute test error
     JavaPairRDD<Double, Double> predictionAndLabel =
-<<<<<<< HEAD
-      testData.mapToPair(p -> new Tuple2<>(model.predict(p.features()), p.label()));
-    double testMSE = predictionAndLabel.mapToDouble(pl -> {
-      double diff = pl._1() - pl._2();
-      return diff * diff;
-    }).mean();
-=======
       testData.mapToPair(new PairFunction<LabeledPoint, Double, Double>() {
         @Override
         public Tuple2<Double, Double> call(LabeledPoint p) {
@@ -108,7 +83,6 @@ public class JavaRandomForestRegressionExample {
           return a + b;
         }
       }) / testData.count();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     System.out.println("Test Mean Squared Error: " + testMSE);
     System.out.println("Learned regression forest model:\n" + model.toDebugString());
 
@@ -117,10 +91,5 @@ public class JavaRandomForestRegressionExample {
     RandomForestModel sameModel = RandomForestModel.load(jsc.sc(),
       "target/tmp/myRandomForestRegressionModel");
     // $example off$
-<<<<<<< HEAD
-
-    jsc.stop();
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

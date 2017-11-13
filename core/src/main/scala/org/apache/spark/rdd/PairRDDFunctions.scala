@@ -55,11 +55,6 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * Generic function to combine the elements for each key using a custom set of aggregation
    * functions. Turns an RDD[(K, V)] into a result of type RDD[(K, C)], for a "combined type" C
    *
-<<<<<<< HEAD
-   * Users provide three functions:
-   *
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *  - `createCombiner`, which turns a V into a C (e.g., creates a one-element list)
    *  - `mergeValue`, to merge a V into a C (e.g., adds it to the end of a list)
    *  - `mergeCombiners`, to combine two C's into a single one.

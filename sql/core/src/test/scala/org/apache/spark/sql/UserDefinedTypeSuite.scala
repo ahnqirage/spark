@@ -26,13 +26,10 @@ import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
 =======
 import org.apache.spark.sql.catalyst.CatalystTypeConverters
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.execution.datasources.parquet.ParquetTest
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types._
-<<<<<<< HEAD
-=======
 import org.apache.spark.util.collection.OpenHashSet
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -157,7 +154,6 @@ private[spark] class ExampleSubTypeUDT extends UserDefinedType[IExampleSubType] 
     case _: MyDenseVectorUDT => true
     case _ => false
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetTest {
@@ -233,7 +229,6 @@ class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetT
     df.take(1)(0).getAs[MyDenseVector](1)
     df.limit(1).groupBy('int).agg(first('vec)).collect()(0).getAs[MyDenseVector](0)
     df.orderBy('int).limit(1).groupBy('int).agg(first('vec)).collect()(0).getAs[MyDenseVector](0)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("UDTs with JSON") {
@@ -281,7 +276,6 @@ class UserDefinedTypeSuite extends QueryTest with SharedSQLContext with ParquetT
     assert(new UDT.MyDenseVectorUDT().typeName === "mydensevector")
 =======
     assert(new MyDenseVectorUDT().typeName === "mydensevector")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("Catalyst type converter null handling for UDTs") {

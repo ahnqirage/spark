@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Extracting, transforming and selecting features
-displayTitle: Extracting, transforming and selecting features
-=======
 title: Extracting, transforming and selecting features - spark.ml
 displayTitle: Extracting, transforming and selecting features - spark.ml
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 This section covers algorithms for working with features, roughly divided into these groups:
@@ -118,7 +113,6 @@ transforms each document into a vector using the average of all words in the doc
 can then be used as features for prediction, document similarity calculations, etc.
 =======
 can then be used for as features for prediction, document similarity calculations, etc.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 Please refer to the [MLlib user guide on Word2Vec](mllib-feature-extraction.html#word2vec) for more
 details.
 
@@ -580,17 +574,6 @@ Refer to the [DCT Java docs](api/java/org/apache/spark/ml/feature/DCT.html)
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaDCTExample.java %}
-<<<<<<< HEAD
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [DCT Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.DCT)
-for more details on the API.
-
-{% include_example python/ml/dct_example.py %}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>
 
@@ -603,7 +586,6 @@ The unseen labels will be put at index numLabels if user chooses to keep them.
 =======
 The indices are in `[0, numLabels)`, ordered by label frequencies.
 So the most frequent label gets index `0`.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 If the input column is numeric, we cast it to string and index the string
 values. When downstream pipeline components such as `Estimator` or
 `Transformer` make use of this string-indexed label, you must set the input
@@ -643,20 +625,12 @@ column, we should get the following:
 "a" gets index `0` because it is the most frequent, followed by "c" with index `1` and "b" with
 index `2`.
 
-<<<<<<< HEAD
-Additionally, there are three strategies regarding how `StringIndexer` will handle
-=======
 Additionaly, there are two strategies regarding how `StringIndexer` will handle
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 unseen labels when you have fit a `StringIndexer` on one dataset and then use it
 to transform another:
 
 - throw an exception (which is the default)
 - skip the row containing the unseen label entirely
-<<<<<<< HEAD
-- put unseen labels in a special additional bucket, at index numLabels
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 **Examples**
 
@@ -670,10 +644,6 @@ Let's go back to our previous example but this time reuse our previously defined
  1  | b
  2  | c
  3  | d
-<<<<<<< HEAD
- 4  | e
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ~~~~
 
 If you've not set how `StringIndexer` handles unseen labels or set it to
@@ -689,26 +659,7 @@ will be generated:
  2  | c        | 1.0
 ~~~~
 
-<<<<<<< HEAD
-Notice that the rows containing "d" or "e" do not appear.
-
-If you call `setHandleInvalid("keep")`, the following dataset
-will be generated:
-
-~~~~
- id | category | categoryIndex
-----|----------|---------------
- 0  | a        | 0.0
- 1  | b        | 2.0
- 2  | c        | 1.0
- 3  | d        | 3.0
- 4  | e        | 3.0
-~~~~
-
-Notice that the rows containing "d" or "e" are mapped to index "3.0"
-=======
 Notice that the row containing "d" does not appear.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div class="codetabs">
 
@@ -741,11 +692,7 @@ for more details on the API.
 ## IndexToString
 
 Symmetrically to `StringIndexer`, `IndexToString` maps a column of label indices
-<<<<<<< HEAD
-back to a column containing the original labels as strings. A common use case
-=======
 back to a column containing the original labels as strings. The common use case
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 is to produce indices from labels with `StringIndexer`, train a model with those
 indices and retrieve the original labels from the column of predicted indices
 with `IndexToString`. However, you are free to supply your own labels.
@@ -788,42 +735,6 @@ Refer to the [IndexToString Scala docs](api/scala/index.html#org.apache.spark.ml
 for more details on the API.
 
 {% include_example scala/org/apache/spark/examples/ml/IndexToStringExample.scala %}
-<<<<<<< HEAD
-
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [IndexToString Java docs](api/java/org/apache/spark/ml/feature/IndexToString.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaIndexToStringExample.java %}
-
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [IndexToString Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.IndexToString)
-for more details on the API.
-
-{% include_example python/ml/index_to_string_example.py %}
-
-</div>
-</div>
-
-## OneHotEncoder
-
-[One-hot encoding](http://en.wikipedia.org/wiki/One-hot) maps a column of label indices to a column of binary vectors, with at most a single one-value. This encoding allows algorithms which expect continuous features, such as Logistic Regression, to use categorical features.
-
-**Examples**
-
-<div class="codetabs">
-<div data-lang="scala" markdown="1">
-
-Refer to the [OneHotEncoder Scala docs](api/scala/index.html#org.apache.spark.ml.feature.OneHotEncoder)
-for more details on the API.
-
-=======
 
 </div>
 
@@ -856,7 +767,6 @@ for more details on the API.
 Refer to the [OneHotEncoder Scala docs](api/scala/index.html#org.apache.spark.ml.feature.OneHotEncoder)
 for more details on the API.
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 {% include_example scala/org/apache/spark/examples/ml/OneHotEncoderExample.scala %}
 </div>
 
@@ -960,26 +870,10 @@ then `interactedCol` as the output column contains:
 Refer to the [Interaction Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Interaction)
 for more details on the API.
 
-<<<<<<< HEAD
-{% include_example scala/org/apache/spark/examples/ml/InteractionExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [Interaction Java docs](api/java/org/apache/spark/ml/feature/Interaction.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaInteractionExample.java %}
-</div>
-</div>
-
-## Normalizer
-=======
 {% include_example scala/org/apache/spark/examples/ml/NormalizerExample.scala %}
 </div>
 
 <div data-lang="java" markdown="1">
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 `Normalizer` is a `Transformer` which transforms a dataset of `Vector` rows, normalizing each `Vector` to have unit norm.  It takes parameter `p`, which specifies the [p-norm](http://en.wikipedia.org/wiki/Norm_%28mathematics%29#p-norm) used for normalization.  ($p = 2$ by default.)  This normalization can help standardize your input data and improve the behavior of learning algorithms.
 
@@ -988,37 +882,14 @@ for more details on the API.
 
 The following example demonstrates how to load a dataset in libsvm format and then normalize each row to have unit $L^1$ norm and unit $L^\infty$ norm.
 
-<div class="codetabs">
-<div data-lang="scala" markdown="1">
-
-Refer to the [Normalizer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Normalizer)
-for more details on the API.
-
-{% include_example scala/org/apache/spark/examples/ml/NormalizerExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-=======
 {% include_example java/org/apache/spark/examples/ml/JavaNormalizerExample.java %}
 </div>
 
 <div data-lang="python" markdown="1">
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Refer to the [Normalizer Java docs](api/java/org/apache/spark/ml/feature/Normalizer.html)
 for more details on the API.
 
-<<<<<<< HEAD
-{% include_example java/org/apache/spark/examples/ml/JavaNormalizerExample.java %}
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [Normalizer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.Normalizer)
-for more details on the API.
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 {% include_example python/ml/normalizer_example.py %}
 </div>
 </div>
@@ -1103,18 +974,6 @@ and the [MinMaxScalerModel Java docs](api/java/org/apache/spark/ml/feature/MinMa
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaMinMaxScalerExample.java %}
-<<<<<<< HEAD
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [MinMaxScaler Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.MinMaxScaler)
-and the [MinMaxScalerModel Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.MinMaxScalerModel)
-for more details on the API.
-
-{% include_example python/ml/min_max_scaler_example.py %}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>
 
@@ -1139,55 +998,19 @@ Refer to the [MaxAbsScaler Scala docs](api/scala/index.html#org.apache.spark.ml.
 and the [MaxAbsScalerModel Scala docs](api/scala/index.html#org.apache.spark.ml.feature.MaxAbsScalerModel)
 for more details on the API.
 
-<<<<<<< HEAD
-{% include_example scala/org/apache/spark/examples/ml/MaxAbsScalerExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [MaxAbsScaler Java docs](api/java/org/apache/spark/ml/feature/MaxAbsScaler.html)
-and the [MaxAbsScalerModel Java docs](api/java/org/apache/spark/ml/feature/MaxAbsScalerModel.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaMaxAbsScalerExample.java %}
-</div>
-
-<div data-lang="python" markdown="1">
-=======
 {% include_example scala/org/apache/spark/examples/ml/BucketizerExample.scala %}
 </div>
 
 <div data-lang="java" markdown="1">
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 Refer to the [MaxAbsScaler Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.MaxAbsScaler)
 and the [MaxAbsScalerModel Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.MaxAbsScalerModel)
 for more details on the API.
 
-<<<<<<< HEAD
-{% include_example python/ml/max_abs_scaler_example.py %}
-</div>
-</div>
-
-## Bucketizer
-
-`Bucketizer` transforms a column of continuous features to a column of feature buckets, where the buckets are specified by users. It takes a parameter:
-
-* `splits`: Parameter for mapping continuous features into buckets. With n+1 splits, there are n buckets. A bucket defined by splits x,y holds values in the range [x,y) except the last bucket, which also includes y. Splits should be strictly increasing. Values at -inf, inf must be explicitly provided to cover all Double values; Otherwise, values outside the splits specified will be treated as errors. Two examples of `splits` are `Array(Double.NegativeInfinity, 0.0, 1.0, Double.PositiveInfinity)` and `Array(0.0, 1.0, 2.0)`.
-
-Note that if you have no idea of the upper and lower bounds of the targeted column, you should add `Double.NegativeInfinity` and `Double.PositiveInfinity` as the bounds of your splits to prevent a potential out of Bucketizer bounds exception.
-
-Note also that the splits that you provided have to be in strictly increasing order, i.e. `s0 < s1 < s2 < ... < sn`.
-
-More details can be found in the API docs for [Bucketizer](api/scala/index.html#org.apache.spark.ml.feature.Bucketizer).
-
-**Examples**
-=======
 {% include_example java/org/apache/spark/examples/ml/JavaBucketizerExample.java %}
 </div>
 
 <div data-lang="python" markdown="1">
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 The following example demonstrates how to bucketize a column of `Double`s into another index-wised column.
 
@@ -1197,25 +1020,6 @@ The following example demonstrates how to bucketize a column of `Double`s into a
 Refer to the [Bucketizer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Bucketizer)
 for more details on the API.
 
-<<<<<<< HEAD
-{% include_example scala/org/apache/spark/examples/ml/BucketizerExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [Bucketizer Java docs](api/java/org/apache/spark/ml/feature/Bucketizer.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaBucketizerExample.java %}
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [Bucketizer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.Bucketizer)
-for more details on the API.
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 {% include_example python/ml/bucketizer_example.py %}
 </div>
 </div>
@@ -1269,43 +1073,6 @@ for more details on the API.
 {% include_example python/ml/elementwise_product_example.py %}
 </div>
 </div>
-<<<<<<< HEAD
-
-## SQLTransformer
-
-`SQLTransformer` implements the transformations which are defined by SQL statement.
-Currently we only support SQL syntax like `"SELECT ... FROM __THIS__ ..."`
-where `"__THIS__"` represents the underlying table of the input dataset.
-The select clause specifies the fields, constants, and expressions to display in
-the output, and can be any select clause that Spark SQL supports. Users can also
-use Spark SQL built-in function and UDFs to operate on these selected columns.
-For example, `SQLTransformer` supports statements like:
-
-* `SELECT a, a + b AS a_b FROM __THIS__`
-* `SELECT a, SQRT(b) AS b_sqrt FROM __THIS__ where a > 5`
-* `SELECT a, b, SUM(c) AS c_sum FROM __THIS__ GROUP BY a, b`
-
-**Examples**
-
-Assume that we have the following DataFrame with columns `id`, `v1` and `v2`:
-
-~~~~
- id |  v1 |  v2
-----|-----|-----
- 0  | 1.0 | 3.0  
- 2  | 2.0 | 5.0
-~~~~
-
-This is the output of the `SQLTransformer` with statement `"SELECT *, (v1 + v2) AS v3, (v1 * v2) AS v4 FROM __THIS__"`:
-
-~~~~
- id |  v1 |  v2 |  v3 |  v4
-----|-----|-----|-----|-----
- 0  | 1.0 | 3.0 | 4.0 | 3.0
- 2  | 2.0 | 5.0 | 7.0 |10.0
-~~~~
-
-=======
 
 ## SQLTransformer
 
@@ -1341,7 +1108,6 @@ This is the output of the `SQLTransformer` with statement `"SELECT *, (v1 + v2) 
  2  | 2.0 | 5.0 | 7.0 |10.0
 ~~~~
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 <div class="codetabs">
 <div data-lang="scala" markdown="1">
 
@@ -1349,7 +1115,6 @@ Refer to the [SQLTransformer Scala docs](api/scala/index.html#org.apache.spark.m
 for more details on the API.
 
 {% include_example scala/org/apache/spark/examples/ml/SQLTransformerExample.scala %}
-<<<<<<< HEAD
 </div>
 
 <div data-lang="java" markdown="1">
@@ -1360,18 +1125,6 @@ for more details on the API.
 {% include_example java/org/apache/spark/examples/ml/JavaSQLTransformerExample.java %}
 </div>
 
-=======
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [SQLTransformer Java docs](api/java/org/apache/spark/ml/feature/SQLTransformer.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaSQLTransformerExample.java %}
-</div>
-
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 <div data-lang="python" markdown="1">
 
 Refer to the [SQLTransformer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.SQLTransformer) for more details on the API.
@@ -1431,7 +1184,6 @@ for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaVectorAssemblerExample.java %}
 </div>
-<<<<<<< HEAD
 
 <div data-lang="python" markdown="1">
 
@@ -1444,138 +1196,6 @@ for more details on the API.
 
 ## QuantileDiscretizer
 
-`QuantileDiscretizer` takes a column with continuous features and outputs a column with binned
-categorical features. The number of bins is set by the `numBuckets` parameter. It is possible
-that the number of buckets used will be smaller than this value, for example, if there are too few
-distinct values of the input to create enough distinct quantiles.
-
-NaN values:
-NaN values will be removed from the column during `QuantileDiscretizer` fitting. This will produce
-a `Bucketizer` model for making predictions. During the transformation, `Bucketizer`
-will raise an error when it finds NaN values in the dataset, but the user can also choose to either
-keep or remove NaN values within the dataset by setting `handleInvalid`. If the user chooses to keep
-NaN values, they will be handled specially and placed into their own bucket, for example, if 4 buckets
-are used, then non-NaN data will be put into buckets[0-3], but NaNs will be counted in a special bucket[4].
-
-Algorithm: The bin ranges are chosen using an approximate algorithm (see the documentation for
-[approxQuantile](api/scala/index.html#org.apache.spark.sql.DataFrameStatFunctions) for a
-detailed description). The precision of the approximation can be controlled with the
-`relativeError` parameter. When set to zero, exact quantiles are calculated
-(**Note:** Computing exact quantiles is an expensive operation). The lower and upper bin bounds
-will be `-Infinity` and `+Infinity` covering all real values.
-
-**Examples**
-
-Assume that we have a DataFrame with the columns `id`, `hour`:
-
-~~~
- id | hour
-----|------
- 0  | 18.0
-----|------
- 1  | 19.0
-----|------
- 2  | 8.0
-----|------
- 3  | 5.0
-----|------
- 4  | 2.2
-~~~
-
-`hour` is a continuous feature with `Double` type. We want to turn the continuous feature into
-a categorical one. Given `numBuckets = 3`, we should get the following DataFrame:
-
-~~~
- id | hour | result
-----|------|------
- 0  | 18.0 | 2.0
-----|------|------
- 1  | 19.0 | 2.0
-----|------|------
- 2  | 8.0  | 1.0
-----|------|------
- 3  | 5.0  | 1.0
-----|------|------
- 4  | 2.2  | 0.0
-~~~
-
-<div class="codetabs">
-<div data-lang="scala" markdown="1">
-
-Refer to the [QuantileDiscretizer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.QuantileDiscretizer)
-for more details on the API.
-
-{% include_example scala/org/apache/spark/examples/ml/QuantileDiscretizerExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [QuantileDiscretizer Java docs](api/java/org/apache/spark/ml/feature/QuantileDiscretizer.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaQuantileDiscretizerExample.java %}
-=======
-
-<div data-lang="python" markdown="1">
-
-Refer to the [VectorAssembler Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.VectorAssembler)
-for more details on the API.
-
-{% include_example python/ml/vector_assembler_example.py %}
-</div>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-</div>
-
-## QuantileDiscretizer
-
-<<<<<<< HEAD
-Refer to the [QuantileDiscretizer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.QuantileDiscretizer)
-for more details on the API.
-
-{% include_example python/ml/quantile_discretizer_example.py %}
-</div>
-
-</div>
-
-
-## Imputer
-
-The `Imputer` transformer completes missing values in a dataset, either using the mean or the 
-median of the columns in which the missing values are located. The input columns should be of
-`DoubleType` or `FloatType`. Currently `Imputer` does not support categorical features and possibly
-creates incorrect values for columns containing categorical features.
-
-**Note** all `null` values in the input columns are treated as missing, and so are also imputed.
-
-**Examples**
-
-Suppose that we have a DataFrame with the columns `a` and `b`:
-
-~~~
-      a     |      b      
-------------|-----------
-     1.0    | Double.NaN
-     2.0    | Double.NaN
- Double.NaN |     3.0   
-     4.0    |     4.0   
-     5.0    |     5.0   
-~~~
-
-In this example, Imputer will replace all occurrences of `Double.NaN` (the default for the missing value)
-with the mean (the default imputation strategy) computed from the other values in the corresponding columns.
-In this example, the surrogate values for columns `a` and `b` are 3.0 and 4.0 respectively. After
-transformation, the missing values in the output columns will be replaced by the surrogate value for
-the relevant column.
-
-~~~
-      a     |      b     | out_a | out_b   
-------------|------------|-------|-------
-     1.0    | Double.NaN |  1.0  |  4.0 
-     2.0    | Double.NaN |  2.0  |  4.0 
- Double.NaN |     3.0    |  3.0  |  3.0 
-     4.0    |     4.0    |  4.0  |  4.0
-     5.0    |     5.0    |  5.0  |  5.0 
-=======
 `QuantileDiscretizer` takes a column with continuous features and outputs a column with binned
 categorical features.
 The bin ranges are chosen by taking a sample of the data and dividing it into roughly equal parts.
@@ -1619,34 +1239,11 @@ categorical one. Given `numBuckets = 3`, we should get the following DataFrame:
  3  | 5.0  | 1.0
 ----|------|------
  4  | 2.2  | 0.0
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ~~~
 
 <div class="codetabs">
 <div data-lang="scala" markdown="1">
 
-<<<<<<< HEAD
-Refer to the [Imputer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.Imputer)
-for more details on the API.
-
-{% include_example scala/org/apache/spark/examples/ml/ImputerExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [Imputer Java docs](api/java/org/apache/spark/ml/feature/Imputer.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaImputerExample.java %}
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [Imputer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.Imputer)
-for more details on the API.
-
-{% include_example python/ml/imputer_example.py %}
-=======
 Refer to the [QuantileDiscretizer Scala docs](api/scala/index.html#org.apache.spark.ml.feature.QuantileDiscretizer)
 for more details on the API.
 
@@ -1659,7 +1256,6 @@ Refer to the [QuantileDiscretizer Java docs](api/java/org/apache/spark/ml/featur
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaQuantileDiscretizerExample.java %}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>
 
@@ -1674,16 +1270,11 @@ sub-array of the original features. It is useful for extracting features from a 
 `VectorSlicer` accepts a vector column with specified indices, then outputs a new vector column
 =======
 `VectorSlicer` accepts a vector column with a specified indices, then outputs a new vector column
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 whose values are selected via those indices. There are two types of indices,
 
  1. Integer indices that represent the indices into the vector, `setIndices()`.
 
-<<<<<<< HEAD
- 2. String indices that represent the names of features into the vector, `setNames()`.
-=======
  2. String indices that represents the names of features into the vector, `setNames()`.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
  *This requires the vector column to have an `AttributeGroup` since the implementation matches on
  the name field of an `Attribute`.*
 
@@ -1716,11 +1307,7 @@ column named `features`:
  [0.0, 10.0, 0.5] | [10.0, 0.5]
 ~~~
 
-<<<<<<< HEAD
-Suppose also that we have potential input attributes for the `userFeatures`, i.e.
-=======
 Suppose also that we have a potential input attributes for the `userFeatures`, i.e.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 `["f1", "f2", "f3"]`, then we can use `setNames("f2", "f3")` to select them.
 
 ~~~
@@ -1746,31 +1333,6 @@ for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaVectorSlicerExample.java %}
 </div>
-<<<<<<< HEAD
-
-<div data-lang="python" markdown="1">
-
-Refer to the [VectorSlicer Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.VectorSlicer)
-for more details on the API.
-
-{% include_example python/ml/vector_slicer_example.py %}
-</div>
-</div>
-
-## RFormula
-
-`RFormula` selects columns specified by an [R model formula](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html). 
-Currently we support a limited subset of the R operators, including '~', '.', ':', '+', and '-'.
-The basic operators are:
-
-* `~` separate target and terms
-* `+` concat terms, "+ 0" means removing intercept
-* `-` remove a term, "- 1" means removing intercept
-* `:` interaction (multiplication for numeric values, or binarized categorical values)
-* `.` all columns except target
-
-Suppose `a` and `b` are double columns, we use the following simple examples to illustrate the effect of `RFormula`:
-=======
 </div>
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
@@ -1834,23 +1396,10 @@ for more details on the API.
 ## ChiSqSelector
 
 `ChiSqSelector` stands for Chi-Squared feature selection. It operates on labeled data with
-<<<<<<< HEAD
-categorical features. ChiSqSelector uses the
-[Chi-Squared test of independence](https://en.wikipedia.org/wiki/Chi-squared_test) to decide which
-features to choose. It supports five selection methods: `numTopFeatures`, `percentile`, `fpr`, `fdr`, `fwe`:
-* `numTopFeatures` chooses a fixed number of top features according to a chi-squared test. This is akin to yielding the features with the most predictive power.
-* `percentile` is similar to `numTopFeatures` but chooses a fraction of all features instead of a fixed number.
-* `fpr` chooses all features whose p-values are below a threshold, thus controlling the false positive rate of selection.
-* `fdr` uses the [Benjamini-Hochberg procedure](https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini.E2.80.93Hochberg_procedure) to choose all features whose false discovery rate is below a threshold.
-* `fwe` chooses all features whose p-values are below a threshold. The threshold is scaled by 1/numFeatures, thus controlling the family-wise error rate of selection.
-By default, the selection method is `numTopFeatures`, with the default number of top features set to 50.
-The user can choose a selection method using `setSelectorType`.
-=======
 categorical features. ChiSqSelector orders features based on a
 [Chi-Squared test of independence](https://en.wikipedia.org/wiki/Chi-squared_test)
 from the class, and then filters (selects) the top features which the class label depends on the
 most. This is akin to yielding the features with the most predictive power.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 **Examples**
 
@@ -1865,13 +1414,8 @@ id | features              | clicked
  9 | [1.0, 0.0, 15.0, 0.1] | 0.0
 ~~~
 
-<<<<<<< HEAD
-If we use `ChiSqSelector` with `numTopFeatures = 1`, then according to our label `clicked` the
-last column in our `features` is chosen as the most useful feature:
-=======
 If we use `ChiSqSelector` with a `numTopFeatures = 1`, then according to our label `clicked` the
 last column in our `features` chosen as the most useful feature:
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 ~~~
 id | features              | clicked | selectedFeatures
@@ -1896,143 +1440,5 @@ Refer to the [ChiSqSelector Java docs](api/java/org/apache/spark/ml/feature/ChiS
 for more details on the API.
 
 {% include_example java/org/apache/spark/examples/ml/JavaChiSqSelectorExample.java %}
-<<<<<<< HEAD
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [ChiSqSelector Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.ChiSqSelector)
-for more details on the API.
-
-{% include_example python/ml/chisq_selector_example.py %}
-</div>
-</div>
-
-# Locality Sensitive Hashing
-[Locality Sensitive Hashing (LSH)](https://en.wikipedia.org/wiki/Locality-sensitive_hashing) is an important class of hashing techniques, which is commonly used in clustering, approximate nearest neighbor search and outlier detection with large datasets.
-
-The general idea of LSH is to use a family of functions ("LSH families") to hash data points into buckets, so that the data points which are close to each other are in the same buckets with high probability, while data points that are far away from each other are very likely in different buckets. An LSH family is formally defined as follows.
-
-In a metric space `(M, d)`, where `M` is a set and `d` is a distance function on `M`, an LSH family is a family of functions `h` that satisfy the following properties:
-`\[
-\forall p, q \in M,\\
-d(p,q) \leq r1 \Rightarrow Pr(h(p)=h(q)) \geq p1\\
-d(p,q) \geq r2 \Rightarrow Pr(h(p)=h(q)) \leq p2
-\]`
-This LSH family is called `(r1, r2, p1, p2)`-sensitive.
-
-In Spark, different LSH families are implemented in separate classes (e.g., `MinHash`), and APIs for feature transformation, approximate similarity join and approximate nearest neighbor are provided in each class.
-
-In LSH, we define a false positive as a pair of distant input features (with `$d(p,q) \geq r2$`) which are hashed into the same bucket, and we define a false negative as a pair of nearby features (with `$d(p,q) \leq r1$`) which are hashed into different buckets.
-
-## LSH Operations
-
-We describe the major types of operations which LSH can be used for.  A fitted LSH model has methods for each of these operations.
-
-### Feature Transformation
-Feature transformation is the basic functionality to add hashed values as a new column. This can be useful for dimensionality reduction. Users can specify input and output column names by setting `inputCol` and `outputCol`.
-
-LSH also supports multiple LSH hash tables. Users can specify the number of hash tables by setting `numHashTables`. This is also used for [OR-amplification](https://en.wikipedia.org/wiki/Locality-sensitive_hashing#Amplification) in approximate similarity join and approximate nearest neighbor. Increasing the number of hash tables will increase the accuracy but will also increase communication cost and running time.
-
-The type of `outputCol` is `Seq[Vector]` where the dimension of the array equals `numHashTables`, and the dimensions of the vectors are currently set to 1. In future releases, we will implement AND-amplification so that users can specify the dimensions of these vectors.
-
-### Approximate Similarity Join
-Approximate similarity join takes two datasets and approximately returns pairs of rows in the datasets whose distance is smaller than a user-defined threshold. Approximate similarity join supports both joining two different datasets and self-joining. Self-joining will produce some duplicate pairs.
-
-Approximate similarity join accepts both transformed and untransformed datasets as input. If an untransformed dataset is used, it will be transformed automatically. In this case, the hash signature will be created as `outputCol`.
-
-In the joined dataset, the origin datasets can be queried in `datasetA` and `datasetB`. A distance column will be added to the output dataset to show the true distance between each pair of rows returned.
-
-### Approximate Nearest Neighbor Search
-Approximate nearest neighbor search takes a dataset (of feature vectors) and a key (a single feature vector), and it approximately returns a specified number of rows in the dataset that are closest to the vector.
-
-Approximate nearest neighbor search accepts both transformed and untransformed datasets as input. If an untransformed dataset is used, it will be transformed automatically. In this case, the hash signature will be created as `outputCol`.
-
-A distance column will be added to the output dataset to show the true distance between each output row and the searched key.
-
-**Note:** Approximate nearest neighbor search will return fewer than `k` rows when there are not enough candidates in the hash bucket.
-
-## LSH Algorithms
-
-### Bucketed Random Projection for Euclidean Distance
-
-[Bucketed Random Projection](https://en.wikipedia.org/wiki/Locality-sensitive_hashing#Stable_distributions) is an LSH family for Euclidean distance. The Euclidean distance is defined as follows:
-`\[
-d(\mathbf{x}, \mathbf{y}) = \sqrt{\sum_i (x_i - y_i)^2}
-\]`
-Its LSH family projects feature vectors `$\mathbf{x}$` onto a random unit vector `$\mathbf{v}$` and portions the projected results into hash buckets:
-`\[
-h(\mathbf{x}) = \Big\lfloor \frac{\mathbf{x} \cdot \mathbf{v}}{r} \Big\rfloor
-\]`
-where `r` is a user-defined bucket length. The bucket length can be used to control the average size of hash buckets (and thus the number of buckets). A larger bucket length (i.e., fewer buckets) increases the probability of features being hashed to the same bucket (increasing the numbers of true and false positives).
-
-Bucketed Random Projection accepts arbitrary vectors as input features, and supports both sparse and dense vectors.
-
-<div class="codetabs">
-<div data-lang="scala" markdown="1">
-
-Refer to the [BucketedRandomProjectionLSH Scala docs](api/scala/index.html#org.apache.spark.ml.feature.BucketedRandomProjectionLSH)
-for more details on the API.
-
-{% include_example scala/org/apache/spark/examples/ml/BucketedRandomProjectionLSHExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [BucketedRandomProjectionLSH Java docs](api/java/org/apache/spark/ml/feature/BucketedRandomProjectionLSH.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaBucketedRandomProjectionLSHExample.java %}
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [BucketedRandomProjectionLSH Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.BucketedRandomProjectionLSH)
-for more details on the API.
-
-{% include_example python/ml/bucketed_random_projection_lsh_example.py %}
-</div>
-
-</div>
-
-### MinHash for Jaccard Distance
-[MinHash](https://en.wikipedia.org/wiki/MinHash) is an LSH family for Jaccard distance where input features are sets of natural numbers. Jaccard distance of two sets is defined by the cardinality of their intersection and union:
-`\[
-d(\mathbf{A}, \mathbf{B}) = 1 - \frac{|\mathbf{A} \cap \mathbf{B}|}{|\mathbf{A} \cup \mathbf{B}|}
-\]`
-MinHash applies a random hash function `g` to each element in the set and take the minimum of all hashed values:
-`\[
-h(\mathbf{A}) = \min_{a \in \mathbf{A}}(g(a))
-\]`
-
-The input sets for MinHash are represented as binary vectors, where the vector indices represent the elements themselves and the non-zero values in the vector represent the presence of that element in the set. While both dense and sparse vectors are supported, typically sparse vectors are recommended for efficiency. For example, `Vectors.sparse(10, Array[(2, 1.0), (3, 1.0), (5, 1.0)])` means there are 10 elements in the space. This set contains elem 2, elem 3 and elem 5. All non-zero values are treated as binary "1" values.
-
-**Note:** Empty sets cannot be transformed by MinHash, which means any input vector must have at least 1 non-zero entry.
-
-<div class="codetabs">
-<div data-lang="scala" markdown="1">
-
-Refer to the [MinHashLSH Scala docs](api/scala/index.html#org.apache.spark.ml.feature.MinHashLSH)
-for more details on the API.
-
-{% include_example scala/org/apache/spark/examples/ml/MinHashLSHExample.scala %}
-</div>
-
-<div data-lang="java" markdown="1">
-
-Refer to the [MinHashLSH Java docs](api/java/org/apache/spark/ml/feature/MinHashLSH.html)
-for more details on the API.
-
-{% include_example java/org/apache/spark/examples/ml/JavaMinHashLSHExample.java %}
-</div>
-
-<div data-lang="python" markdown="1">
-
-Refer to the [MinHashLSH Python docs](api/python/pyspark.ml.html#pyspark.ml.feature.MinHashLSH)
-for more details on the API.
-
-{% include_example python/ml/min_hash_lsh_example.py %}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </div>
 </div>

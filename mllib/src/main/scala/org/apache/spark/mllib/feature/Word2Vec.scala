@@ -151,11 +151,6 @@ class Word2Vec extends Serializable with Logging {
    */
   @Since("1.6.0")
   def setWindowSize(window: Int): this.type = {
-<<<<<<< HEAD
-    require(window > 0,
-      s"Window of words must be positive but got ${window}")
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     this.window = window
     this
   }
@@ -183,12 +178,6 @@ class Word2Vec extends Serializable with Logging {
   private var vocabSize = 0
   @transient private var vocab: Array[VocabWord] = null
   @transient private var vocabHash = mutable.HashMap.empty[String, Int]
-<<<<<<< HEAD
-
-  private def learnVocab[S <: Iterable[String]](dataset: RDD[S]): Unit = {
-    val words = dataset.flatMap(x => x)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     vocab = words.map(w => (w, 1))
       .reduceByKey(_ + _)
@@ -371,11 +360,7 @@ class Word2Vec extends Serializable with Logging {
         val random = new XORShiftRandom(seed ^ ((idx + 1) << 16) ^ ((-k - 1) << 8))
         val syn0Modify = new Array[Int](vocabSize)
         val syn1Modify = new Array[Int](vocabSize)
-<<<<<<< HEAD
-        val model = iter.foldLeft((bcSyn0Global.value, bcSyn1Global.value, 0L, 0L)) {
-=======
         val model = iter.foldLeft((syn0Global, syn1Global, 0L, 0L)) {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           case ((syn0, syn1, lastWordCount, wordCount), sentence) =>
             var lwc = lastWordCount
             var wc = wordCount
@@ -704,9 +689,6 @@ object Word2VecModel extends Loader[Word2VecModel] {
     def save(sc: SparkContext, path: String, model: Map[String, Array[Float]]): Unit = {
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
 
-<<<<<<< HEAD
-      val vectorSize = model.values.head.length
-=======
       val sqlContext = SQLContext.getOrCreate(sc)
       import sqlContext.implicits._
 

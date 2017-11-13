@@ -127,7 +127,6 @@ abstract class Expression extends TreeNode[Expression] {
       ve.code = genCode(ctx, ve)
       // Add `this` in the comment.
       ve.copy(code = s"${ctx.registerComment(this.toString)}\n" + ve.code.trim)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -236,6 +235,30 @@ abstract class Expression extends TreeNode[Expression] {
   }
 
   /**
+   * Returns the hash for this expression. Expressions that compute the same result, even if
+   * they differ cosmetically should return the same hash.
+   */
+  def semanticHash() : Int = {
+    def computeHash(e: Seq[Any]): Int = {
+      // See http://stackoverflow.com/questions/113511/hash-code-implementation
+      var hash: Int = 17
+      e.foreach(i => {
+        val h: Int = i match {
+          case e: Expression => e.semanticHash()
+          case Some(e: Expression) => e.semanticHash()
+          case t: Traversable[_] => computeHash(t.toSeq)
+          case null => 0
+          case other => other.hashCode()
+        }
+        hash = hash * 37 + h
+      })
+      hash
+    }
+
+    computeHash(this.productIterator.toSeq)
+  }
+
+  /**
    * Checks the input data types, returns `TypeCheckResult.success` if it's valid,
    * or returns a `TypeCheckResult` with an error message if invalid.
    * Note: it's not valid to call this method until `childrenResolved == true`.
@@ -268,25 +291,6 @@ abstract class Expression extends TreeNode[Expression] {
     case single => single :: Nil
   }
 
-<<<<<<< HEAD
-  // Marks this as final, Expression.verboseString should never be called, and thus shouldn't be
-  // overridden by concrete classes.
-  final override def verboseString: String = simpleString
-
-  override def simpleString: String = toString
-
-  override def toString: String = prettyName + Utils.truncatedString(
-    flatArguments.toSeq, "(", ", ", ")")
-
-  /**
-   * Returns SQL representation of this expression.  For expressions extending [[NonSQLExpression]],
-   * this method may return an arbitrary user facing string.
-   */
-  def sql: String = {
-    val childrenSQL = children.map(_.sql).mkString(", ")
-    s"$prettyName($childrenSQL)"
-  }
-=======
   override def simpleString: String = toString
 
   override def toString: String = prettyName + flatArguments.mkString("(", ",", ")")

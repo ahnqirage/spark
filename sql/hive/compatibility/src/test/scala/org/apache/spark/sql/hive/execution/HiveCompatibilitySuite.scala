@@ -25,10 +25,6 @@ import org.scalatest.BeforeAndAfter
 import org.apache.spark.sql.catalyst.rules.RuleExecutor
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.hive.test.TestHive
-<<<<<<< HEAD
-import org.apache.spark.sql.internal.SQLConf
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /**
  * Runs the test cases that are included in the hive distribution.

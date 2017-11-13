@@ -19,12 +19,8 @@ package org.apache.spark.sql.jdbc
 
 import java.sql.Types
 
-<<<<<<< HEAD
-import org.apache.spark.sql.types.{BooleanType, DataType, LongType, MetadataBuilder}
-=======
 import org.apache.spark.sql.types.{BooleanType, LongType, DataType, MetadataBuilder}
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 private case object MySQLDialect extends JdbcDialect {
 
@@ -49,9 +45,4 @@ private case object MySQLDialect extends JdbcDialect {
   override def getTableExistsQuery(table: String): String = {
     s"SELECT 1 FROM $table LIMIT 1"
   }
-<<<<<<< HEAD
-
-  override def isCascadingTruncateTable(): Option[Boolean] = Some(false)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

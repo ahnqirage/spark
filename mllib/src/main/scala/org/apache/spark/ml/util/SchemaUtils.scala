@@ -44,17 +44,10 @@ private[spark] object SchemaUtils {
   }
 
   /**
-<<<<<<< HEAD
-   * Check whether the given schema contains a column of one of the require data types.
-   * @param colName  column name
-   * @param dataTypes  required column data types
-   */
-=======
     * Check whether the given schema contains a column of one of the require data types.
     * @param colName  column name
     * @param dataTypes  required column data types
     */
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def checkColumnTypes(
       schema: StructType,
       colName: String,
@@ -68,23 +61,6 @@ private[spark] object SchemaUtils {
   }
 
   /**
-<<<<<<< HEAD
-   * Check whether the given schema contains a column of the numeric data type.
-   * @param colName  column name
-   */
-  def checkNumericType(
-      schema: StructType,
-      colName: String,
-      msg: String = ""): Unit = {
-    val actualDataType = schema(colName).dataType
-    val message = if (msg != null && msg.trim.length > 0) " " + msg else ""
-    require(actualDataType.isInstanceOf[NumericType], s"Column $colName must be of type " +
-      s"NumericType but was actually of type $actualDataType.$message")
-  }
-
-  /**
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    * Appends a new column to the input schema. This fails if the given output column already exists.
    * @param schema input schema
    * @param colName new column name. If this column name is an empty string "", this method returns

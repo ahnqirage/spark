@@ -17,11 +17,7 @@
 
 package org.apache.spark.sql.jdbc
 
-<<<<<<< HEAD
-import java.sql.{Connection, Date, Timestamp}
-=======
 import java.sql.Connection
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import org.apache.commons.lang3.StringUtils
 
@@ -60,10 +56,6 @@ case class JdbcType(databaseTypeDefinition : String, jdbcNullType : Int)
  * for the given Catalyst type.
  */
 @DeveloperApi
-<<<<<<< HEAD
-@InterfaceStability.Evolving
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 abstract class JdbcDialect extends Serializable {
   /**
    * Check if this dialect instance can handle a certain jdbc url.
@@ -111,59 +103,6 @@ abstract class JdbcDialect extends Serializable {
   }
 
   /**
-<<<<<<< HEAD
-   * The SQL query that should be used to discover the schema of a table. It only needs to
-   * ensure that the result set has the same schema as the table, such as by calling
-   * "SELECT * ...". Dialects can override this method to return a query that works best in a
-   * particular database.
-   * @param table The name of the table.
-   * @return The SQL query to use for discovering the schema.
-   */
-  @Since("2.1.0")
-  def getSchemaQuery(table: String): String = {
-    s"SELECT * FROM $table WHERE 1=0"
-  }
-
-  /**
-   * Override connection specific properties to run before a select is made.  This is in place to
-   * allow dialects that need special treatment to optimize behavior.
-   * @param connection The connection object
-   * @param properties The connection properties.  This is passed through from the relation.
-   */
-  def beforeFetch(connection: Connection, properties: Map[String, String]): Unit = {
-  }
-
-  /**
-   * Escape special characters in SQL string literals.
-   * @param value The string to be escaped.
-   * @return Escaped string.
-   */
-  @Since("2.3.0")
-  protected[jdbc] def escapeSql(value: String): String =
-    if (value == null) null else StringUtils.replace(value, "'", "''")
-
-  /**
-   * Converts value to SQL expression.
-   * @param value The value to be converted.
-   * @return Converted value.
-   */
-  @Since("2.3.0")
-  def compileValue(value: Any): Any = value match {
-    case stringValue: String => s"'${escapeSql(stringValue)}'"
-    case timestampValue: Timestamp => "'" + timestampValue + "'"
-    case dateValue: Date => "'" + dateValue + "'"
-    case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
-    case _ => value
-  }
-
-  /**
-   * Return Some[true] iff `TRUNCATE TABLE` causes cascading default.
-   * Some[true] : TRUNCATE TABLE causes cascading.
-   * Some[false] : TRUNCATE TABLE does not cause cascading.
-   * None: The behavior of TRUNCATE TABLE is unknown (default).
-   */
-  def isCascadingTruncateTable(): Option[Boolean] = None
-=======
     * Override connection specific properties to run before a select is made.  This is in place to
     * allow dialects that need special treatment to optimize behavior.
     * @param connection The connection object
@@ -172,7 +111,6 @@ abstract class JdbcDialect extends Serializable {
   def beforeFetch(connection: Connection, properties: Map[String, String]): Unit = {
   }
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }
 
 /**
@@ -197,7 +135,6 @@ object JdbcDialects {
 =======
    * Register a dialect for use on all new matching jdbc [[org.apache.spark.sql.DataFrame]].
    * Readding an existing dialect will cause a move-to-front.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
    *
    * @param dialect The new dialect.
    */
@@ -222,10 +159,6 @@ object JdbcDialects {
   registerDialect(MsSqlServerDialect)
   registerDialect(DerbyDialect)
   registerDialect(OracleDialect)
-<<<<<<< HEAD
-  registerDialect(TeradataDialect)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /**
    * Fetch the JdbcDialect class corresponding to a given database url.

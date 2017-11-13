@@ -321,9 +321,6 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with SharedSQLContext
     spark.table("testData").queryExecution.withCachedData.collect {
       case cached: InMemoryRelation =>
         val actualSizeInBytes = (1 to 100).map(i => 4 + i.toString.length + 4).sum
-<<<<<<< HEAD
-        assert(cached.stats.sizeInBytes === actualSizeInBytes)
-=======
         assert(cached.statistics.sizeInBytes === actualSizeInBytes)
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
@@ -454,24 +451,15 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with SharedSQLContext
 =======
     sqlContext.uncacheTable("orderedTable")
     sqlContext.dropTempTable("orderedTable")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Set up two tables distributed in the same way. Try this with the data distributed into
     // different number of partitions.
     for (numPartitions <- 1 until 10 by 4) {
-<<<<<<< HEAD
-      withTempView("t1", "t2") {
-        testData.repartition(numPartitions, $"key").createOrReplaceTempView("t1")
-        testData2.repartition(numPartitions, $"a").createOrReplaceTempView("t2")
-        spark.catalog.cacheTable("t1")
-        spark.catalog.cacheTable("t2")
-=======
       withTempTable("t1", "t2") {
         testData.repartition(numPartitions, $"key").registerTempTable("t1")
         testData2.repartition(numPartitions, $"a").registerTempTable("t2")
         sqlContext.cacheTable("t1")
         sqlContext.cacheTable("t2")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
         // Joining them should result in no exchanges.
         verifyNumExchanges(sql("SELECT * FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a"), 0)
@@ -483,85 +471,15 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with SharedSQLContext
         checkAnswer(sql("SELECT count(*) FROM t1 GROUP BY key"),
           sql("SELECT count(*) FROM testData GROUP BY key"))
 
-<<<<<<< HEAD
-        spark.catalog.uncacheTable("t1")
-        spark.catalog.uncacheTable("t2")
-=======
         sqlContext.uncacheTable("t1")
         sqlContext.uncacheTable("t2")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
     }
 
     // Distribute the tables into non-matching number of partitions. Need to shuffle one side.
-<<<<<<< HEAD
-    withTempView("t1", "t2") {
-      testData.repartition(6, $"key").createOrReplaceTempView("t1")
-      testData2.repartition(3, $"a").createOrReplaceTempView("t2")
-      spark.catalog.cacheTable("t1")
-      spark.catalog.cacheTable("t2")
-=======
     withTempTable("t1", "t2") {
       testData.repartition(6, $"key").registerTempTable("t1")
       testData2.repartition(3, $"a").registerTempTable("t2")
-      sqlContext.cacheTable("t1")
-      sqlContext.cacheTable("t2")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-      val query = sql("SELECT key, value, a, b FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a")
-      verifyNumExchanges(query, 1)
-      assert(query.queryExecution.executedPlan.outputPartitioning.numPartitions === 6)
-      checkAnswer(
-        query,
-        testData.join(testData2, $"key" === $"a").select($"key", $"value", $"a", $"b"))
-<<<<<<< HEAD
-      spark.catalog.uncacheTable("t1")
-      spark.catalog.uncacheTable("t2")
-    }
-
-    // One side of join is not partitioned in the desired way. Need to shuffle one side.
-    withTempView("t1", "t2") {
-      testData.repartition(6, $"value").createOrReplaceTempView("t1")
-      testData2.repartition(6, $"a").createOrReplaceTempView("t2")
-      spark.catalog.cacheTable("t1")
-      spark.catalog.cacheTable("t2")
-=======
-      sqlContext.uncacheTable("t1")
-      sqlContext.uncacheTable("t2")
-    }
-
-    // One side of join is not partitioned in the desired way. Need to shuffle one side.
-    withTempTable("t1", "t2") {
-      testData.repartition(6, $"value").registerTempTable("t1")
-      testData2.repartition(6, $"a").registerTempTable("t2")
-      sqlContext.cacheTable("t1")
-      sqlContext.cacheTable("t2")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-
-      val query = sql("SELECT key, value, a, b FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a")
-      verifyNumExchanges(query, 1)
-      assert(query.queryExecution.executedPlan.outputPartitioning.numPartitions === 6)
-      checkAnswer(
-        query,
-        testData.join(testData2, $"key" === $"a").select($"key", $"value", $"a", $"b"))
-<<<<<<< HEAD
-      spark.catalog.uncacheTable("t1")
-      spark.catalog.uncacheTable("t2")
-    }
-
-    withTempView("t1", "t2") {
-      testData.repartition(6, $"value").createOrReplaceTempView("t1")
-      testData2.repartition(12, $"a").createOrReplaceTempView("t2")
-      spark.catalog.cacheTable("t1")
-      spark.catalog.cacheTable("t2")
-=======
-      sqlContext.uncacheTable("t1")
-      sqlContext.uncacheTable("t2")
-    }
-
-    withTempTable("t1", "t2") {
-      testData.repartition(6, $"value").registerTempTable("t1")
-      testData2.repartition(12, $"a").registerTempTable("t2")
       sqlContext.cacheTable("t1")
       sqlContext.cacheTable("t2")
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -694,196 +612,105 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with SharedSQLContext
     assert(getNumInMemoryRelations(localRelation) == 1)
   }
 
-  test("SPARK-19093 Caching in side subquery") {
-    withTempView("t1") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      spark.catalog.cacheTable("t1")
-      val ds =
-        sql(
-          """
-            |SELECT * FROM t1
-            |WHERE
-            |NOT EXISTS (SELECT * FROM t1)
-          """.stripMargin)
-      assert(getNumInMemoryRelations(ds) == 2)
+      val query = sql("SELECT key, value, a, b FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a")
+      verifyNumExchanges(query, 1)
+      assert(query.queryExecution.executedPlan.outputPartitioning.numPartitions === 6)
+      checkAnswer(
+        query,
+        testData.join(testData2, $"key" === $"a").select($"key", $"value", $"a", $"b"))
+      sqlContext.uncacheTable("t1")
+      sqlContext.uncacheTable("t2")
+    }
+
+    // One side of join is not partitioned in the desired way. Need to shuffle one side.
+    withTempTable("t1", "t2") {
+      testData.repartition(6, $"value").registerTempTable("t1")
+      testData2.repartition(6, $"a").registerTempTable("t2")
+      sqlContext.cacheTable("t1")
+      sqlContext.cacheTable("t2")
+
+      val query = sql("SELECT key, value, a, b FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a")
+      verifyNumExchanges(query, 1)
+      assert(query.queryExecution.executedPlan.outputPartitioning.numPartitions === 6)
+      checkAnswer(
+        query,
+        testData.join(testData2, $"key" === $"a").select($"key", $"value", $"a", $"b"))
+      sqlContext.uncacheTable("t1")
+      sqlContext.uncacheTable("t2")
     }
   }
 
-  test("SPARK-19093 scalar and nested predicate query") {
-    withTempView("t1", "t2", "t3", "t4") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(2).toDF("c1").createOrReplaceTempView("t2")
-      Seq(1).toDF("c1").createOrReplaceTempView("t3")
-      Seq(1).toDF("c1").createOrReplaceTempView("t4")
-      spark.catalog.cacheTable("t1")
-      spark.catalog.cacheTable("t2")
-      spark.catalog.cacheTable("t3")
-      spark.catalog.cacheTable("t4")
+  test("SPARK-15915 Logical plans should use subqueries eliminated plan when override sameResult") {
+    val localRelation = sqlContext.createDataset(Seq(1, 2, 3)).toDF()
+    localRelation.registerTempTable("localRelation")
 
-      // Nested predicate subquery
-      val ds =
-        sql(
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |c1 IN (SELECT c1 FROM t2 WHERE c1 IN (SELECT c1 FROM t3 WHERE c1 = 1))
-        """.stripMargin)
-      assert(getNumInMemoryRelations(ds) == 3)
+    withTempTable("t1", "t2") {
+      testData.repartition(6, $"value").registerTempTable("t1")
+      testData2.repartition(12, $"a").registerTempTable("t2")
+      sqlContext.cacheTable("t1")
+      sqlContext.cacheTable("t2")
 
-      // Scalar subquery and predicate subquery
-      val ds2 =
-        sql(
-          """
-            |SELECT * FROM (SELECT c1, max(c1) FROM t1 GROUP BY c1)
-            |WHERE
-            |c1 = (SELECT max(c1) FROM t2 GROUP BY c1)
-            |OR
-            |EXISTS (SELECT c1 FROM t3)
-            |OR
-            |c1 IN (SELECT c1 FROM t4)
-          """.stripMargin)
-      assert(getNumInMemoryRelations(ds2) == 4)
+      val query = sql("SELECT key, value, a, b FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a")
+      verifyNumExchanges(query, 1)
+      assert(query.queryExecution.executedPlan.outputPartitioning.numPartitions === 12)
+      checkAnswer(
+        query,
+        testData.join(testData2, $"key" === $"a").select($"key", $"value", $"a", $"b"))
+      sqlContext.uncacheTable("t1")
+      sqlContext.uncacheTable("t2")
     }
-  }
 
-  test("SPARK-19765: UNCACHE TABLE should un-cache all cached plans that refer to this table") {
-    withTable("t") {
-      withTempPath { path =>
-        Seq(1 -> "a").toDF("i", "j").write.parquet(path.getCanonicalPath)
-        sql(s"CREATE TABLE t USING parquet LOCATION '${path.toURI}'")
-        spark.catalog.cacheTable("t")
-        spark.table("t").select($"i").cache()
-        checkAnswer(spark.table("t").select($"i"), Row(1))
-        assertCached(spark.table("t").select($"i"))
+    // One side of join is not partitioned in the desired way. Since the number of partitions of
+    // the side that has already partitioned is smaller than the side that is not partitioned,
+    // we shuffle both side.
+    withTempTable("t1", "t2") {
+      testData.repartition(6, $"value").registerTempTable("t1")
+      testData2.repartition(3, $"a").registerTempTable("t2")
+      sqlContext.cacheTable("t1")
+      sqlContext.cacheTable("t2")
 
-        Utils.deleteRecursively(path)
-        spark.sessionState.catalog.refreshTable(TableIdentifier("t"))
-        spark.catalog.uncacheTable("t")
-        assert(spark.table("t").select($"i").count() == 0)
-        assert(getNumInMemoryRelations(spark.table("t").select($"i")) == 0)
-      }
+      val query = sql("SELECT key, value, a, b FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a")
+      verifyNumExchanges(query, 2)
+      checkAnswer(
+        query,
+        testData.join(testData2, $"key" === $"a").select($"key", $"value", $"a", $"b"))
+      sqlContext.uncacheTable("t1")
+      sqlContext.uncacheTable("t2")
     }
-  }
 
-  test("refreshByPath should refresh all cached plans with the specified path") {
-    withTempDir { dir =>
-      val path = dir.getCanonicalPath()
+    // repartition's column ordering is different from group by column ordering.
+    // But they use the same set of columns.
+    withTempTable("t1") {
+      testData.repartition(6, $"value", $"key").registerTempTable("t1")
+      sqlContext.cacheTable("t1")
 
-      spark.range(10).write.mode("overwrite").parquet(path)
-      spark.read.parquet(path).cache()
-      spark.read.parquet(path).filter($"id" > 4).cache()
-      assert(spark.read.parquet(path).filter($"id" > 4).count() == 5)
-
-      spark.range(20).write.mode("overwrite").parquet(path)
-      spark.catalog.refreshByPath(path)
-      assert(spark.read.parquet(path).count() == 20)
-      assert(spark.read.parquet(path).filter($"id" > 4).count() == 15)
+      val query = sql("SELECT value, key from t1 group by key, value")
+      verifyNumExchanges(query, 0)
+      checkAnswer(
+        query,
+        testData.distinct().select($"value", $"key"))
+      sqlContext.uncacheTable("t1")
     }
-  }
 
-  test("SPARK-19993 simple subquery caching") {
-    withTempView("t1", "t2") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(2).toDF("c1").createOrReplaceTempView("t2")
+    // repartition's column ordering is different from join condition's column ordering.
+    // We will still shuffle because hashcodes of a row depend on the column ordering.
+    // If we do not shuffle, we may actually partition two tables in totally two different way.
+    // See PartitioningSuite for more details.
+    withTempTable("t1", "t2") {
+      val df1 = testData
+      df1.repartition(6, $"value", $"key").registerTempTable("t1")
+      val df2 = testData2.select($"a", $"b".cast("string"))
+      df2.repartition(6, $"a", $"b").registerTempTable("t2")
+      sqlContext.cacheTable("t1")
+      sqlContext.cacheTable("t2")
 
-      val sql1 =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |NOT EXISTS (SELECT * FROM t2)
-        """.stripMargin
-      sql(sql1).cache()
-
-      val cachedDs = sql(sql1)
-      assert(getNumInMemoryRelations(cachedDs) == 1)
-
-      // Additional predicate in the subquery plan should cause a cache miss
-      val cachedMissDs =
-      sql(
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |NOT EXISTS (SELECT * FROM t2 where c1 = 0)
-        """.stripMargin)
-      assert(getNumInMemoryRelations(cachedMissDs) == 0)
-    }
-  }
-
-  test("SPARK-19993 subquery caching with correlated predicates") {
-    withTempView("t1", "t2") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(1).toDF("c1").createOrReplaceTempView("t2")
-
-      // Simple correlated predicate in subquery
-      val sqlText =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |t1.c1 in (SELECT t2.c1 FROM t2 where t1.c1 = t2.c1)
-        """.stripMargin
-      sql(sqlText).cache()
-
-      val cachedDs = sql(sqlText)
-      assert(getNumInMemoryRelations(cachedDs) == 1)
-    }
-  }
-
-  test("SPARK-19993 subquery with cached underlying relation") {
-    withTempView("t1") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      spark.catalog.cacheTable("t1")
-
-      // underlying table t1 is cached as well as the query that refers to it.
-      val sqlText =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |NOT EXISTS (SELECT * FROM t1)
-        """.stripMargin
-      val ds = sql(sqlText)
-      assert(getNumInMemoryRelations(ds) == 2)
-
-      val cachedDs = sql(sqlText).cache()
-      assert(getNumInMemoryTablesRecursively(cachedDs.queryExecution.sparkPlan) == 3)
-    }
-  }
-
-  test("SPARK-19993 nested subquery caching and scalar + predicate subqueris") {
-    withTempView("t1", "t2", "t3", "t4") {
-      Seq(1).toDF("c1").createOrReplaceTempView("t1")
-      Seq(2).toDF("c1").createOrReplaceTempView("t2")
-      Seq(1).toDF("c1").createOrReplaceTempView("t3")
-      Seq(1).toDF("c1").createOrReplaceTempView("t4")
-
-      // Nested predicate subquery
-      val sql1 =
-        """
-          |SELECT * FROM t1
-          |WHERE
-          |c1 IN (SELECT c1 FROM t2 WHERE c1 IN (SELECT c1 FROM t3 WHERE c1 = 1))
-        """.stripMargin
-      sql(sql1).cache()
-
-      val cachedDs = sql(sql1)
-      assert(getNumInMemoryRelations(cachedDs) == 1)
-
-      // Scalar subquery and predicate subquery
-      val sql2 =
-        """
-          |SELECT * FROM (SELECT c1, max(c1) FROM t1 GROUP BY c1)
-          |WHERE
-          |c1 = (SELECT max(c1) FROM t2 GROUP BY c1)
-          |OR
-          |EXISTS (SELECT c1 FROM t3)
-          |OR
-          |c1 IN (SELECT c1 FROM t4)
-        """.stripMargin
-      sql(sql2).cache()
-
-      val cachedDs2 = sql(sql2)
-      assert(getNumInMemoryRelations(cachedDs2) == 1)
-    }
-=======
+      val query =
+        sql("SELECT key, value, a, b FROM t1 t1 JOIN t2 t2 ON t1.key = t2.a and t1.value = t2.b")
+      verifyNumExchanges(query, 1)
+      assert(query.queryExecution.executedPlan.outputPartitioning.numPartitions === 6)
+      checkAnswer(
+        query,
+        df1.join(df2, $"key" === $"a" && $"value" === $"b").select($"key", $"value", $"a", $"b"))
       sqlContext.uncacheTable("t1")
       sqlContext.uncacheTable("t2")
     }
@@ -898,6 +725,5 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with SharedSQLContext
       localRelation.queryExecution.withCachedData.collect {
         case i: InMemoryRelation => i
       }.size == 1)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

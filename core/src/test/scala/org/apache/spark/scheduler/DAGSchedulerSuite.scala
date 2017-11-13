@@ -18,12 +18,6 @@
 package org.apache.spark.scheduler
 
 import java.util.Properties
-<<<<<<< HEAD
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-
-import scala.annotation.meta.param
-import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet, Map}
-=======
 
 import scala.collection.mutable.{ArrayBuffer, HashSet, HashMap, Map}
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
@@ -1335,11 +1329,7 @@ class DAGSchedulerSuite extends SparkFunSuite with LocalSparkContext with TimeLi
     // SPARK-9809 -- this stage is submitted without a task for each partition (because some of
     // the shuffle map output is still available from stage 0); make sure we've still got internal
     // accumulators setup
-<<<<<<< HEAD
-    assert(scheduler.stageIdToStage(2).latestInfo.taskMetrics != null)
-=======
     assert(scheduler.stageIdToStage(2).internalAccumulators.nonEmpty)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     completeShuffleMapStageSuccessfully(2, 0, 2)
     completeNextResultStageWithSuccess(3, 1, idx => idx + 1234)
     assert(results === Map(0 -> 1234, 1 -> 1235))
@@ -1653,15 +1643,6 @@ class DAGSchedulerSuite extends SparkFunSuite with LocalSparkContext with TimeLi
     assertDataStructuresEmpty()
   }
 
-<<<<<<< HEAD
-  /**
-   * In this test, we run a map stage where one of the executors fails but we still receive a
-   * "zombie" complete message from a task that ran on that executor. We want to make sure the
-   * stage is resubmitted so that the task that ran on the failed executor is re-executed, and
-   * that the stage is only marked as finished once that task completes.
-   */
-  test("run trivial shuffle with out-of-band executor failure and retry") {
-=======
   test("run trivial shuffle with out-of-band failure and retry") {
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     val shuffleMapRdd = new MyRDD(sc, 2, Nil)

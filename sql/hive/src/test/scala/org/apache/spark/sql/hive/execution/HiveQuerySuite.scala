@@ -18,10 +18,6 @@
 package org.apache.spark.sql.hive.execution
 
 import java.io.File
-<<<<<<< HEAD
-import java.net.URI
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.sql.Timestamp
 import java.util.{Locale, TimeZone}
 
@@ -30,29 +26,15 @@ import scala.util.Try
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars
 import org.scalatest.BeforeAndAfter
 
-<<<<<<< HEAD
-import org.apache.spark.{SparkFiles, TestUtils}
-import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SparkSession}
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.sql.catalyst.expressions.Cast
 import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.catalyst.plans.logical.Project
-<<<<<<< HEAD
-import org.apache.spark.sql.execution.joins.BroadcastNestedLoopJoinExec
-import org.apache.spark.sql.hive._
-import org.apache.spark.sql.hive.test.TestHive
-import org.apache.spark.sql.hive.test.TestHive._
-import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.test.SQLTestUtils
-=======
 import org.apache.spark.sql.execution.joins.BroadcastNestedLoopJoin
 import org.apache.spark.sql.hive._
 import org.apache.spark.sql.hive.test.TestHive._
 import org.apache.spark.sql.hive.test.{TestHive, TestHiveContext}
 import org.apache.spark.sql.{AnalysisException, DataFrame, Row}
 import org.apache.spark.{SparkException, SparkFiles}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 case class TestData(a: Int, b: String)
 
@@ -234,8 +216,6 @@ class HiveQuerySuite extends HiveComparisonTest with SQLTestUtils with BeforeAnd
       .collect().head
     assert(new Timestamp(1000) == r1.getTimestamp(0))
   }
-<<<<<<< HEAD
-=======
 
   createQueryTest("constant array",
   """
@@ -881,7 +861,6 @@ class HiveQuerySuite extends HiveComparisonTest with SQLTestUtils with BeforeAnd
 =======
     val funcJar = TestHive.getHiveFile("TestUDTF.jar").getCanonicalPath
     val jarURL = s"file://$funcJar"
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     sql(s"ADD JAR $jarURL")
     sql(
       """CREATE TEMPORARY FUNCTION udtf_count2 AS
@@ -1115,46 +1094,18 @@ class HiveQuerySuite extends HiveComparisonTest with SQLTestUtils with BeforeAnd
 
   }
 
-<<<<<<< HEAD
-  test("use database") {
-    val currentDatabase = sql("select current_database()").first().getString(0)
-
-    sql("CREATE DATABASE hive_test_db")
-    sql("USE hive_test_db")
-    assert("hive_test_db" == sql("select current_database()").first().getString(0))
-
-    intercept[AnalysisException] {
-      sql("USE not_existing_db")
-    }
-
-    sql(s"USE $currentDatabase")
-    assert(currentDatabase == sql("select current_database()").first().getString(0))
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   test("lookup hive UDF in another thread") {
     val e = intercept[AnalysisException] {
       range(1).selectExpr("not_a_udf()")
     }
-<<<<<<< HEAD
-    assert(e.getMessage.contains("Undefined function"))
-    assert(e.getMessage.contains("not_a_udf"))
-=======
     assert(e.getMessage.contains("undefined function not_a_udf"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     var success = false
     val t = new Thread("test") {
       override def run(): Unit = {
         val e = intercept[AnalysisException] {
           range(1).selectExpr("not_a_udf()")
         }
-<<<<<<< HEAD
-        assert(e.getMessage.contains("Undefined function"))
-        assert(e.getMessage.contains("not_a_udf"))
-=======
         assert(e.getMessage.contains("undefined function not_a_udf"))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
         success = true
       }
     }

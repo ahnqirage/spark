@@ -101,16 +101,11 @@ class QueryExecution(val sqlContext: SQLContext, val logical: LogicalPlan) {
   lazy val sparkPlan: SparkPlan = {
     SQLContext.setActive(sqlContext)
     sqlContext.planner.plan(optimizedPlan).next()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   // executedPlan should not be used to initialize any SparkPlan. It should be
   // only used for execution.
-<<<<<<< HEAD
-  lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)
-=======
   lazy val executedPlan: SparkPlan = sqlContext.prepareForExecution.execute(sparkPlan)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   /** Internal version of the RDD. Avoids copies and has no schema */
   lazy val toRdd: RDD[InternalRow] = executedPlan.execute()
@@ -169,59 +164,6 @@ class QueryExecution(val sqlContext: SQLContext, val logical: LogicalPlan) {
     val primitiveTypes = Seq(StringType, IntegerType, LongType, DoubleType, FloatType,
       BooleanType, ByteType, ShortType, DateType, TimestampType, BinaryType)
 
-    def formatDecimal(d: java.math.BigDecimal): String = {
-      if (d.compareTo(java.math.BigDecimal.ZERO) == 0) {
-        java.math.BigDecimal.ZERO.toPlainString
-      } else {
-        d.stripTrailingZeros().toPlainString
-      }
-    }
-
-    /** Hive outputs fields of structs slightly differently than top level attributes. */
-    def toHiveStructString(a: (Any, DataType)): String = a match {
-      case (struct: Row, StructType(fields)) =>
-        struct.toSeq.zip(fields).map {
-          case (v, t) => s""""${t.name}":${toHiveStructString((v, t.dataType))}"""
-        }.mkString("{", ",", "}")
-      case (seq: Seq[_], ArrayType(typ, _)) =>
-        seq.map(v => (v, typ)).map(toHiveStructString).mkString("[", ",", "]")
-      case (map: Map[_, _], MapType(kType, vType, _)) =>
-        map.map {
-          case (key, value) =>
-            toHiveStructString((key, kType)) + ":" + toHiveStructString((value, vType))
-        }.toSeq.sorted.mkString("{", ",", "}")
-      case (null, _) => "null"
-      case (s: String, StringType) => "\"" + s + "\""
-      case (decimal, DecimalType()) => decimal.toString
-      case (other, tpe) if primitiveTypes contains tpe => other.toString
-    }
-
-    a match {
-      case (struct: Row, StructType(fields)) =>
-        struct.toSeq.zip(fields).map {
-          case (v, t) => s""""${t.name}":${toHiveStructString((v, t.dataType))}"""
-        }.mkString("{", ",", "}")
-      case (seq: Seq[_], ArrayType(typ, _)) =>
-        seq.map(v => (v, typ)).map(toHiveStructString).mkString("[", ",", "]")
-      case (map: Map[_, _], MapType(kType, vType, _)) =>
-        map.map {
-          case (key, value) =>
-            toHiveStructString((key, kType)) + ":" + toHiveStructString((value, vType))
-        }.toSeq.sorted.mkString("{", ",", "}")
-      case (null, _) => "NULL"
-      case (d: Date, DateType) =>
-        DateTimeUtils.dateToString(DateTimeUtils.fromJavaDate(d))
-      case (t: Timestamp, TimestampType) =>
-        DateTimeUtils.timestampToString(DateTimeUtils.fromJavaTimestamp(t),
-          DateTimeUtils.getTimeZone(sparkSession.sessionState.conf.sessionLocalTimeZone))
-      case (bin: Array[Byte], BinaryType) => new String(bin, StandardCharsets.UTF_8)
-      case (decimal: java.math.BigDecimal, DecimalType()) => formatDecimal(decimal)
-      case (other, tpe) if primitiveTypes.contains(tpe) => other.toString
-    }
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   def simpleString: String = {
     s"""== Physical Plan ==
        |${stringOrError(executedPlan.treeString(verbose = false))}
@@ -247,19 +189,6 @@ class QueryExecution(val sqlContext: SQLContext, val logical: LogicalPlan) {
        |${stringOrError(executedPlan.treeString(verbose = true))}
 =======
        |${stringOrError(executedPlan)}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-    """.stripMargin.trim
-  }
-
-  def stringWithStats: String = {
-    // trigger to compute stats for logical plans
-    optimizedPlan.stats
-
-    // only show optimized logical plan and physical plan
-    s"""== Optimized Logical Plan ==
-        |${stringOrError(optimizedPlan.treeString(verbose = true, addSuffix = true))}
-        |== Physical Plan ==
-        |${stringOrError(executedPlan.treeString(verbose = true))}
     """.stripMargin.trim
   }
 

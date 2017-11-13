@@ -30,10 +30,6 @@ import org.scalatest.concurrent.Eventually._
 import org.scalatest.time.SpanSugar._
 
 import org.apache.spark.SparkException
-<<<<<<< HEAD
-import org.apache.spark.internal.Logging
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.receiver.Receiver
@@ -223,30 +219,6 @@ class StreamingListenerSuite extends TestSuiteBase with Matchers {
     assert(failureReasons(1).contains("This is another failed job"))
   }
 
-<<<<<<< HEAD
-  test("StreamingListener receives no events after stopping StreamingListenerBus") {
-    val streamingListener = mock(classOf[StreamingListener])
-
-    ssc = new StreamingContext("local[2]", "test", Milliseconds(1000))
-    ssc.addStreamingListener(streamingListener)
-    val inputStream = ssc.receiverStream(new StreamingListenerSuiteReceiver)
-    inputStream.foreachRDD(_.count)
-    ssc.start()
-    ssc.stop()
-
-    // Because "streamingListener" has already received some events, let's clear that.
-    reset(streamingListener)
-
-    // Post a Streaming event after stopping StreamingContext
-    val receiverInfoStopped = ReceiverInfo(0, "test", false, "localhost", "0")
-    ssc.scheduler.listenerBus.post(StreamingListenerReceiverStopped(receiverInfoStopped))
-    ssc.sparkContext.listenerBus.waitUntilEmpty(1000)
-    // The StreamingListener should not receive any event
-    verifyNoMoreInteractions(streamingListener)
-  }
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   private def startStreamingContextAndCallStop(_ssc: StreamingContext): Unit = {
     val contextStoppingCollector = new StreamingContextStoppingCollector(_ssc)
     _ssc.addStreamingListener(contextStoppingCollector)
@@ -371,6 +343,29 @@ class FailureReasonsCollector extends StreamingListener {
       failureReasons.synchronized
       {
         failureReasons(outputOperationCompleted.outputOperationInfo.id) = f
+      }
+    }
+  }
+}
+/**
+ * A StreamingListener that calls StreamingContext.stop().
+ */
+class StreamingContextStoppingCollector(val ssc: StreamingContext) extends StreamingListener {
+  @volatile var sparkExSeen = false
+
+  private var isFirstBatch = true
+
+  override def onBatchCompleted(batchCompleted: StreamingListenerBatchCompleted) {
+    if (isFirstBatch) {
+      // We should only call `ssc.stop()` in the first batch. Otherwise, it's possible that the main
+      // thread is calling `ssc.stop()`, while StreamingContextStoppingCollector is also calling
+      // `ssc.stop()` in the listener thread, which becomes a dead-lock.
+      isFirstBatch = false
+      try {
+        ssc.stop()
+      } catch {
+        case se: SparkException =>
+          sparkExSeen = true
       }
     }
   }

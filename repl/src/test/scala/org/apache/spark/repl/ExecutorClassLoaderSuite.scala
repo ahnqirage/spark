@@ -35,7 +35,6 @@ import java.util
 import com.google.common.io.Files
 
 import scala.concurrent.duration._
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import scala.io.Source
 import scala.language.implicitConversions
 
@@ -167,62 +166,16 @@ class ExecutorClassLoaderSuite
 
   test("resource from parent") {
     val parentLoader = new URLClassLoader(urls2, null)
-<<<<<<< HEAD
-    val classLoader = new ExecutorClassLoader(new SparkConf(), null, url1, parentLoader, true)
-    val resourceName: String = parentResourceNames.head
-    val is = classLoader.getResourceAsStream(resourceName)
-    assert(is != null, s"Resource $resourceName not found")
-
-    val bufferedSource = Source.fromInputStream(is, "UTF-8")
-    Utils.tryWithSafeFinally {
-      val content = bufferedSource.getLines().next()
-      assert(content.contains("resource"), "File doesn't contain 'resource'")
-    } {
-      bufferedSource.close()
-    }
-=======
     val classLoader = new ExecutorClassLoader(new SparkConf(), url1, parentLoader, true)
     val resourceName: String = parentResourceNames.head
     val is = classLoader.getResourceAsStream(resourceName)
     assert(is != null, s"Resource $resourceName not found")
     val content = Source.fromInputStream(is, "UTF-8").getLines().next()
     assert(content.contains("resource"), "File doesn't contain 'resource'")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("resources from parent") {
     val parentLoader = new URLClassLoader(urls2, null)
-<<<<<<< HEAD
-    val classLoader = new ExecutorClassLoader(new SparkConf(), null, url1, parentLoader, true)
-    val resourceName: String = parentResourceNames.head
-    val resources: util.Enumeration[URL] = classLoader.getResources(resourceName)
-    assert(resources.hasMoreElements, s"Resource $resourceName not found")
-
-    val bufferedSource = Source.fromInputStream(resources.nextElement().openStream())
-    Utils.tryWithSafeFinally {
-      val fileReader = bufferedSource.bufferedReader()
-      assert(fileReader.readLine().contains("resource"), "File doesn't contain 'resource'")
-    } {
-      bufferedSource.close()
-    }
-  }
-
-  test("fetch classes using Spark's RpcEnv") {
-    val env = mock[SparkEnv]
-    val rpcEnv = mock[RpcEnv]
-    when(env.rpcEnv).thenReturn(rpcEnv)
-    when(rpcEnv.openChannel(anyString())).thenAnswer(new Answer[ReadableByteChannel]() {
-      override def answer(invocation: InvocationOnMock): ReadableByteChannel = {
-        val uri = new URI(invocation.getArguments()(0).asInstanceOf[String])
-        val path = Paths.get(tempDir1.getAbsolutePath(), uri.getPath().stripPrefix("/"))
-        FileChannel.open(path, StandardOpenOption.READ)
-      }
-    })
-
-    val classLoader = new ExecutorClassLoader(new SparkConf(), env, "spark://localhost:1234",
-      getClass().getClassLoader(), false)
-
-=======
     val classLoader = new ExecutorClassLoader(new SparkConf(), url1, parentLoader, true)
     val resourceName: String = parentResourceNames.head
     val resources: util.Enumeration[URL] = classLoader.getResources(resourceName)

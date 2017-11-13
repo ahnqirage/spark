@@ -21,7 +21,6 @@ package org.apache.spark.util.collection.unsafe.sort;
 =======
 import org.apache.spark.memory.TaskMemoryManager;
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 public final class RecordPointerAndKeyPrefix {
   /**
    * A pointer to a record; see {@link org.apache.spark.memory.TaskMemoryManager} for a

@@ -256,9 +256,6 @@ object CreateStruct extends FunctionBuilder {
   }
 
   /**
-<<<<<<< HEAD
-   * Entry to use in the function registry.
-=======
    * Returns Aliased [[Expression]]s that could be used to construct a flattened version of this
    * StructType.
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

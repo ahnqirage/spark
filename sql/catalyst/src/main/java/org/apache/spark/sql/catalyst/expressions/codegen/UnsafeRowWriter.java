@@ -49,7 +49,6 @@ public class UnsafeRowWriter {
 =======
   private int nullBitsSize;
   private UnsafeRow row;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   public UnsafeRowWriter(BufferHolder holder, int numFields) {
     this.holder = holder;
@@ -66,12 +65,8 @@ public class UnsafeRowWriter {
     this.startingOffset = holder.cursor;
 
     // grow the global buffer to make sure it has enough space to write fixed-length data.
-<<<<<<< HEAD
-    holder.grow(fixedSize);
-=======
     final int fixedSize = nullBitsSize + 8 * numFields;
     holder.grow(fixedSize, row);
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     holder.cursor += fixedSize;
 
     zeroOutNullBytes();

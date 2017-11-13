@@ -224,9 +224,6 @@ class JobGenerator(jobScheduler: JobScheduler) extends Logging {
     // Reschedule jobs for these times
     val timesToReschedule = (pendingTimes ++ downTimes).filter { _ < restartTime }
       .distinct.sorted(Time.ordering)
-<<<<<<< HEAD
-    logInfo("Batches to reschedule (" + timesToReschedule.length + " batches): " +
-=======
     logInfo("Batches to reschedule (" + timesToReschedule.size + " batches): " +
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       timesToReschedule.mkString(", "))

@@ -498,8 +498,6 @@ docs = Module(
 
 build = Module(
     name="build",
-<<<<<<< HEAD
-=======
     dependencies=[],
     source_file_regexes=[
         ".*pom.xml",

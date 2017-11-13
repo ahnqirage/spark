@@ -29,11 +29,6 @@ import org.apache.spark.ui.JettyUtils._
 private[master]
 class MasterWebUI(
     val master: Master,
-<<<<<<< HEAD
-    requestedPort: Int)
-  extends WebUI(master.securityMgr, master.securityMgr.getSSLOptions("standalone"),
-    requestedPort, master.conf, name = "MasterUI") with Logging {
-=======
     requestedPort: Int,
     customMasterPage: Option[MasterPage] = None)
   extends WebUI(master.securityMgr, requestedPort, master.conf, name = "MasterUI") with Logging
@@ -43,8 +38,6 @@ class MasterWebUI(
   val masterEndpointRef = master.self
   val killEnabled = master.conf.getBoolean("spark.ui.killEnabled", true)
 
-<<<<<<< HEAD
-=======
   val masterPage = customMasterPage.getOrElse(new MasterPage(this))
 
 >>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

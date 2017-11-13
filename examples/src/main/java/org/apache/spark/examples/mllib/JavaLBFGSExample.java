@@ -23,10 +23,7 @@ import java.util.Arrays;
 import scala.Tuple2;
 
 import org.apache.spark.api.java.*;
-<<<<<<< HEAD
-=======
 import org.apache.spark.api.java.function.Function;
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.mllib.classification.LogisticRegressionModel;
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics;
 import org.apache.spark.mllib.linalg.Vector;
@@ -53,17 +50,12 @@ public class JavaLBFGSExample {
     JavaRDD<LabeledPoint> test = data.subtract(trainingInit);
 
     // Append 1 into the training data as intercept.
-<<<<<<< HEAD
-    JavaPairRDD<Object, Vector> training = data.mapToPair(p ->
-      new Tuple2<>(p.label(), MLUtils.appendBias(p.features())));
-=======
     JavaRDD<Tuple2<Object, Vector>> training = data.map(
       new Function<LabeledPoint, Tuple2<Object, Vector>>() {
         public Tuple2<Object, Vector> call(LabeledPoint p) {
           return new Tuple2<Object, Vector>(p.label(), MLUtils.appendBias(p.features()));
         }
       });
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     training.cache();
 
     // Run training algorithm to build the model.
@@ -85,11 +77,7 @@ public class JavaLBFGSExample {
     Vector weightsWithIntercept = result._1();
     double[] loss = result._2();
 
-<<<<<<< HEAD
-    LogisticRegressionModel model = new LogisticRegressionModel(
-=======
     final LogisticRegressionModel model = new LogisticRegressionModel(
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       Vectors.dense(Arrays.copyOf(weightsWithIntercept.toArray(), weightsWithIntercept.size() - 1)),
       (weightsWithIntercept.toArray())[weightsWithIntercept.size() - 1]);
 
@@ -97,10 +85,6 @@ public class JavaLBFGSExample {
     model.clearThreshold();
 
     // Compute raw scores on the test set.
-<<<<<<< HEAD
-    JavaPairRDD<Object, Object> scoreAndLabels = test.mapToPair(p ->
-      new Tuple2<>(model.predict(p.features()), p.label()));
-=======
     JavaRDD<Tuple2<Object, Object>> scoreAndLabels = test.map(
       new Function<LabeledPoint, Tuple2<Object, Object>>() {
         public Tuple2<Object, Object> call(LabeledPoint p) {
@@ -108,7 +92,6 @@ public class JavaLBFGSExample {
           return new Tuple2<Object, Object>(score, p.label());
         }
       });
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Get evaluation metrics.
     BinaryClassificationMetrics metrics =
@@ -116,20 +99,10 @@ public class JavaLBFGSExample {
     double auROC = metrics.areaUnderROC();
 
     System.out.println("Loss of each step in training process");
-<<<<<<< HEAD
-    for (double l : loss) {
-      System.out.println(l);
-    }
-    System.out.println("Area under ROC = " + auROC);
-    // $example off$
-
-    sc.stop();
-=======
     for (double l : loss)
       System.out.println(l);
     System.out.println("Area under ROC = " + auROC);
     // $example off$
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
 

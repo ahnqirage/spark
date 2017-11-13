@@ -1,12 +1,7 @@
 ---
 layout: global
-<<<<<<< HEAD
-title: Decision Trees - RDD-based API
-displayTitle: Decision Trees - RDD-based API
-=======
 title: Decision Trees - spark.mllib
 displayTitle: Decision Trees - spark.mllib
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 ---
 
 * Table of contents

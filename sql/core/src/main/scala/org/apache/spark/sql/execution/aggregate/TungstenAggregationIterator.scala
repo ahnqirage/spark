@@ -93,10 +93,6 @@ import org.apache.spark.unsafe.KVIterator
 class TungstenAggregationIterator(
     partIndex: Int,
     groupingExpressions: Seq[NamedExpression],
-<<<<<<< HEAD
-    aggregateExpressions: Seq[AggregateExpression],
-    aggregateAttributes: Seq[Attribute],
-=======
     nonCompleteAggregateExpressions: Seq[AggregateExpression],
     nonCompleteAggregateAttributes: Seq[Attribute],
     completeAggregateExpressions: Seq[AggregateExpression],

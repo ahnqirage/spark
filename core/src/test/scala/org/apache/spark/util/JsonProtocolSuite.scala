@@ -181,10 +181,6 @@ class JsonProtocolSuite extends SparkFunSuite {
    |  Backward compatibility tests  |
    * ============================== */
 
-<<<<<<< HEAD
-  test("ExceptionFailure backward compatibility: full stack trace") {
-    val exceptionFailure = ExceptionFailure("To be", "or not to be", stackTrace, null, None)
-=======
   test("ExceptionFailure backward compatibility") {
     val exceptionFailure = ExceptionFailure("To be", "or not to be", stackTrace, null,
       None, None)

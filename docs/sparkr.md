@@ -175,7 +175,6 @@ to a Parquet file using `write.df`.
 =======
 The data sources API can also be used to save out DataFrames into multiple file formats. For example we can save the DataFrame from the previous example
 to a Parquet file using `write.df` (Until Spark 1.6, the default mode for writes was `append`. It was changed in Spark 1.7 to `error` to match the Scala API)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 <div data-lang="r"  markdown="1">
 {% highlight r %}
@@ -478,132 +477,6 @@ head(teenagers)
 
 # Machine Learning
 
-<<<<<<< HEAD
-## Algorithms
-
-SparkR supports the following machine learning algorithms currently:
-
-#### Classification
-
-* [`spark.logit`](api/R/spark.logit.html): [`Logistic Regression`](ml-classification-regression.html#logistic-regression)
-* [`spark.mlp`](api/R/spark.mlp.html): [`Multilayer Perceptron (MLP)`](ml-classification-regression.html#multilayer-perceptron-classifier)
-* [`spark.naiveBayes`](api/R/spark.naiveBayes.html): [`Naive Bayes`](ml-classification-regression.html#naive-bayes)
-* [`spark.svmLinear`](api/R/spark.svmLinear.html): [`Linear Support Vector Machine`](ml-classification-regression.html#linear-support-vector-machine)
-
-#### Regression
-
-* [`spark.survreg`](api/R/spark.survreg.html): [`Accelerated Failure Time (AFT) Survival  Model`](ml-classification-regression.html#survival-regression)
-* [`spark.glm`](api/R/spark.glm.html) or [`glm`](api/R/glm.html): [`Generalized Linear Model (GLM)`](ml-classification-regression.html#generalized-linear-regression)
-* [`spark.isoreg`](api/R/spark.isoreg.html): [`Isotonic Regression`](ml-classification-regression.html#isotonic-regression)
-
-#### Tree
-
-* [`spark.decisionTree`](api/R/spark.decisionTree.html): `Decision Tree for` [`Regression`](ml-classification-regression.html#decision-tree-regression) `and` [`Classification`](ml-classification-regression.html#decision-tree-classifier)
-* [`spark.gbt`](api/R/spark.gbt.html): `Gradient Boosted Trees for` [`Regression`](ml-classification-regression.html#gradient-boosted-tree-regression) `and` [`Classification`](ml-classification-regression.html#gradient-boosted-tree-classifier)
-* [`spark.randomForest`](api/R/spark.randomForest.html): `Random Forest for` [`Regression`](ml-classification-regression.html#random-forest-regression) `and` [`Classification`](ml-classification-regression.html#random-forest-classifier)
-
-#### Clustering
-
-* [`spark.bisectingKmeans`](api/R/spark.bisectingKmeans.html): [`Bisecting k-means`](ml-clustering.html#bisecting-k-means)
-* [`spark.gaussianMixture`](api/R/spark.gaussianMixture.html): [`Gaussian Mixture Model (GMM)`](ml-clustering.html#gaussian-mixture-model-gmm)
-* [`spark.kmeans`](api/R/spark.kmeans.html): [`K-Means`](ml-clustering.html#k-means)
-* [`spark.lda`](api/R/spark.lda.html): [`Latent Dirichlet Allocation (LDA)`](ml-clustering.html#latent-dirichlet-allocation-lda)
-
-#### Collaborative Filtering
-
-* [`spark.als`](api/R/spark.als.html): [`Alternating Least Squares (ALS)`](ml-collaborative-filtering.html#collaborative-filtering)
-
-#### Frequent Pattern Mining
-
-* [`spark.fpGrowth`](api/R/spark.fpGrowth.html) : [`FP-growth`](ml-frequent-pattern-mining.html#fp-growth)
-
-#### Statistics
-
-* [`spark.kstest`](api/R/spark.kstest.html): `Kolmogorov-Smirnov Test`
-
-Under the hood, SparkR uses MLlib to train the model. Please refer to the corresponding section of MLlib user guide for example code.
-Users can call `summary` to print a summary of the fitted model, [predict](api/R/predict.html) to make predictions on new data, and [write.ml](api/R/write.ml.html)/[read.ml](api/R/read.ml.html) to save/load fitted models.
-SparkR supports a subset of the available R formula operators for model fitting, including ‘~’, ‘.’, ‘:’, ‘+’, and ‘-‘.
-
-
-## Model persistence
-
-The following example shows how to save/load a MLlib model by SparkR.
-{% include_example read_write r/ml/ml.R %}
-
-# Data type mapping between R and Spark
-<table class="table">
-<tr><th>R</th><th>Spark</th></tr>
-<tr>
-  <td>byte</td>
-  <td>byte</td>
-</tr>
-<tr>
-  <td>integer</td>
-  <td>integer</td>
-</tr>
-<tr>
-  <td>float</td>
-  <td>float</td>
-</tr>
-<tr>
-  <td>double</td>
-  <td>double</td>
-</tr>
-<tr>
-  <td>numeric</td>
-  <td>double</td>
-</tr>
-<tr>
-  <td>character</td>
-  <td>string</td>
-</tr>
-<tr>
-  <td>string</td>
-  <td>string</td>
-</tr>
-<tr>
-  <td>binary</td>
-  <td>binary</td>
-</tr>
-<tr>
-  <td>raw</td>
-  <td>binary</td>
-</tr>
-<tr>
-  <td>logical</td>
-  <td>boolean</td>
-</tr>
-<tr>
-  <td><a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html">POSIXct</a></td>
-  <td>timestamp</td>
-</tr>
-<tr>
-  <td><a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html">POSIXlt</a></td>
-  <td>timestamp</td>
-</tr>
-<tr>
-  <td><a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/Dates.html">Date</a></td>
-  <td>date</td>
-</tr>
-<tr>
-  <td>array</td>
-  <td>array</td>
-</tr>
-<tr>
-  <td>list</td>
-  <td>array</td>
-</tr>
-<tr>
-  <td>env</td>
-  <td>map</td>
-</tr>
-</table>
-
-# Structured Streaming
-
-SparkR supports the Structured Streaming API (experimental). Structured Streaming is a scalable and fault-tolerant stream processing engine built on the Spark SQL engine. For more information see the R API on the [Structured Streaming Programming Guide](structured-streaming-programming-guide.html)
-=======
 SparkR allows the fitting of generalized linear models over DataFrames using the [glm()](api/R/glm.html) function. Under the hood, SparkR uses MLlib to train a model of the specified family. Currently the gaussian and binomial families are supported. We support a subset of the available R formula operators for model fitting, including '~', '.', ':', '+', and '-'.
 
 The [summary()](api/R/summary.html) function gives the summary of a model produced by [glm()](api/R/glm.html).
@@ -669,7 +542,6 @@ summary(model)
 ##Sepal_Width    0.404655
 {% endhighlight %}
 </div>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 # R Function Name Conflicts
 
@@ -694,8 +566,6 @@ The following functions are masked by the SparkR package:
     <td><code>sample</code> in <code>package:base</code></td>
     <td><code>base::sample(x, size, replace = FALSE, prob = NULL)</code></td>
   </tr>
-<<<<<<< HEAD
-=======
   <tr>
     <td><code>table</code> in <code>package:base</code></td>
     <td><code><pre>base::table(...,
@@ -703,7 +573,6 @@ The following functions are masked by the SparkR package:
             useNA = c("no", "ifany", "always"),
             dnn = list.names(...), deparse.level = 1)</pre></code></td>
   </tr>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 </table>
 
 Since part of SparkR is modeled on the `dplyr` package, certain functions in SparkR share the same names with those in `dplyr`. Depending on the load order of the two packages, some functions from the package loaded first are masked by those in the package loaded after. In such case, prefix such calls with the package name, for instance, `SparkR::cume_dist(x)` or `dplyr::cume_dist(x)`.
@@ -713,36 +582,6 @@ You can inspect the search path in R with [`search()`](https://stat.ethz.ch/R-ma
 
 # Migration Guide
 
-<<<<<<< HEAD
-## Upgrading From SparkR 1.5.x to 1.6.x
-
- - Before Spark 1.6.0, the default mode for writes was `append`. It was changed in Spark 1.6.0 to `error` to match the Scala API.
- - SparkSQL converts `NA` in R to `null` and vice-versa.
-
-## Upgrading From SparkR 1.6.x to 2.0
-
- - The method `table` has been removed and replaced by `tableToDF`.
- - The class `DataFrame` has been renamed to `SparkDataFrame` to avoid name conflicts.
- - Spark's `SQLContext` and `HiveContext` have been deprecated to be replaced by `SparkSession`. Instead of `sparkR.init()`, call `sparkR.session()` in its place to instantiate the SparkSession. Once that is done, that currently active SparkSession will be used for SparkDataFrame operations.
- - The parameter `sparkExecutorEnv` is not supported by `sparkR.session`. To set environment for the executors, set Spark config properties with the prefix "spark.executorEnv.VAR_NAME", for example, "spark.executorEnv.PATH"
- - The `sqlContext` parameter is no longer required for these functions: `createDataFrame`, `as.DataFrame`, `read.json`, `jsonFile`, `read.parquet`, `parquetFile`, `read.text`, `sql`, `tables`, `tableNames`, `cacheTable`, `uncacheTable`, `clearCache`, `dropTempTable`, `read.df`, `loadDF`, `createExternalTable`.
- - The method `registerTempTable` has been deprecated to be replaced by `createOrReplaceTempView`.
- - The method `dropTempTable` has been deprecated to be replaced by `dropTempView`.
- - The `sc` SparkContext parameter is no longer required for these functions: `setJobGroup`, `clearJobGroup`, `cancelJobGroup`
-
-## Upgrading to SparkR 2.1.0
-
- - `join` no longer performs Cartesian Product by default, use `crossJoin` instead.
-
-## Upgrading to SparkR 2.2.0
-
- - A `numPartitions` parameter has been added to `createDataFrame` and `as.DataFrame`. When splitting the data, the partition position calculation has been made to match the one in Scala.
- - The method `createExternalTable` has been deprecated to be replaced by `createTable`. Either methods can be called to create external or managed table. Additional catalog methods have also been added.
- - By default, derby.log is now saved to `tempdir()`. This will be created when instantiating the SparkSession with `enableHiveSupport` set to `TRUE`.
- - `spark.lda` was not setting the optimizer correctly. It has been corrected.
- - Several model summary outputs are updated to have `coefficients` as `matrix`. This includes `spark.logit`, `spark.kmeans`, `spark.glm`. Model summary outputs for `spark.gaussianMixture` have added log-likelihood as `loglik`.
-=======
 ## Upgrading From SparkR 1.5.x to 1.6
 
  - Before Spark 1.6, the default mode for writes was `append`. It was changed in Spark 1.6.0 to `error` to match the Scala API.
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

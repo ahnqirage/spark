@@ -22,15 +22,6 @@ package org.apache.spark.sql
  * structs, arrays and maps.
  */
 package object types {
-<<<<<<< HEAD
-  /**
-   * Metadata key used to store the raw hive type string in the metadata of StructField. This
-   * is relevant for datatypes that do not have a direct Spark SQL counterpart, such as CHAR and
-   * VARCHAR. We need to preserve the original type in order to invoke the correct object
-   * inspector in Hive.
-   */
-  val HIVE_TYPE_STRING = "HIVE_TYPE_STRING"
-=======
 
   /* Aliases for backwards compatibility. See SPARK-11780. */
   @deprecated("Moved to org.apache.spark.sql.catalyst.util.ArrayBasedMapData", since = "1.6.0")
@@ -50,5 +41,4 @@ package object types {
   @deprecated("Moved to org.apache.spark.sql.catalyst.util.MapData", since = "1.6.0")
   type MapData = org.apache.spark.sql.catalyst.util.MapData
 
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

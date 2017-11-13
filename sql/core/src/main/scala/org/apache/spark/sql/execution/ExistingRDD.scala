@@ -18,15 +18,6 @@
 package org.apache.spark.sql.execution
 
 import org.apache.spark.rdd.RDD
-<<<<<<< HEAD
-import org.apache.spark.sql.{Encoder, Row, SparkSession}
-import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
-import org.apache.spark.sql.catalyst.analysis.MultiInstanceRelation
-import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
-import org.apache.spark.sql.execution.metric.SQLMetrics
-=======
 import org.apache.spark.sql.catalyst.{InternalRow, CatalystTypeConverters}
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubQueries, MultiInstanceRelation}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericMutableRow}
@@ -99,6 +90,8 @@ case class ExternalRDD[T](
 =======
   override protected final def otherCopyArgs: Seq[AnyRef] = sqlContext :: Nil
 
+  override protected final def otherCopyArgs: Seq[AnyRef] = sqlContext :: Nil
+
   override def newInstance(): LogicalRDD.this.type =
     LogicalRDD(output.map(_.newInstance()), rdd)(sqlContext).asInstanceOf[this.type]
 
@@ -146,12 +139,6 @@ case class ExternalRDDScanExec[T](
 case class LogicalRDD(
     output: Seq[Attribute],
     rdd: RDD[InternalRow],
-<<<<<<< HEAD
-    outputPartitioning: Partitioning = UnknownPartitioning(0),
-    outputOrdering: Seq[SortOrder] = Nil,
-    override val isStreaming: Boolean = false)(session: SparkSession)
-  extends LeafNode with MultiInstanceRelation {
-=======
     override val nodeName: String,
     override val metadata: Map[String, String] = Map.empty,
     override val outputsUnsafeRows: Boolean = false)
@@ -160,68 +147,6 @@ case class LogicalRDD(
 
   override protected final def otherCopyArgs: Seq[AnyRef] = session :: Nil
 
-<<<<<<< HEAD
-  override def newInstance(): LogicalRDD.this.type = {
-    val rewrite = output.zip(output.map(_.newInstance())).toMap
-
-    val rewrittenPartitioning = outputPartitioning match {
-      case p: Expression =>
-        p.transform {
-          case e: Attribute => rewrite.getOrElse(e, e)
-        }.asInstanceOf[Partitioning]
-
-      case p => p
-    }
-
-    val rewrittenOrdering = outputOrdering.map(_.transform {
-      case e: Attribute => rewrite.getOrElse(e, e)
-    }.asInstanceOf[SortOrder])
-
-    LogicalRDD(
-      output.map(rewrite),
-      rdd,
-      rewrittenPartitioning,
-      rewrittenOrdering,
-      isStreaming
-    )(session).asInstanceOf[this.type]
-  }
-
-  override protected def stringArgs: Iterator[Any] = Iterator(output, isStreaming)
-
-  override def computeStats(): Statistics = Statistics(
-    // TODO: Instead of returning a default value here, find a way to return a meaningful size
-    // estimate for RDDs. See PR 1238 for more discussions.
-    sizeInBytes = BigInt(session.sessionState.conf.defaultSizeInBytes)
-  )
-}
-
-/** Physical plan node for scanning data from an RDD of InternalRow. */
-case class RDDScanExec(
-    output: Seq[Attribute],
-    rdd: RDD[InternalRow],
-    override val nodeName: String,
-    override val outputPartitioning: Partitioning = UnknownPartitioning(0),
-    override val outputOrdering: Seq[SortOrder] = Nil) extends LeafExecNode {
-
-  override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
-
-  protected override def doExecute(): RDD[InternalRow] = {
-    val numOutputRows = longMetric("numOutputRows")
-    rdd.mapPartitionsWithIndexInternal { (index, iter) =>
-      val proj = UnsafeProjection.create(schema)
-      proj.initialize(index)
-      iter.map { r =>
-        numOutputRows += 1
-        proj(r)
-      }
-    }
-  }
-
-  override def simpleString: String = {
-    s"Scan $nodeName${Utils.truncatedString(output, "[", ",", "]")}"
-  }
-=======
   override def simpleString: String = {
     val metadataEntries = for ((key, value) <- metadata.toSeq.sorted) yield s"$key: $value"
     s"Scan $nodeName${output.mkString("[", ",", "]")}${metadataEntries.mkString(" ", ", ", "")}"
@@ -242,5 +167,4 @@ private[sql] object PhysicalRDD {
     val outputUnsafeRows = relation.isInstanceOf[HadoopFsRelation]
     PhysicalRDD(output, rdd, relation.toString, metadata, outputUnsafeRows)
   }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 }

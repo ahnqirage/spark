@@ -17,12 +17,7 @@
 
 package org.apache.spark.util
 
-<<<<<<< HEAD
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataOutput, DataOutputStream, File,
-  FileOutputStream, PrintStream}
-=======
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, FileOutputStream, PrintStream}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import java.lang.{Double => JDouble, Float => JFloat}
 import java.net.{BindException, ServerSocket, URI}
 import java.nio.{ByteBuffer, ByteOrder}
@@ -30,32 +25,16 @@ import java.nio.charset.StandardCharsets
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-<<<<<<< HEAD
-import java.util.zip.GZIPOutputStream
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 import com.google.common.io.Files
-<<<<<<< HEAD
-import org.apache.commons.io.IOUtils
-import org.apache.commons.lang3.SystemUtils
-import org.apache.commons.math3.stat.inference.ChiSquareTest
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.Path
-
-import org.apache.spark.{SparkConf, SparkFunSuite, TaskContext}
-import org.apache.spark.internal.Logging
-import org.apache.spark.network.util.ByteUnit
-=======
 import org.apache.commons.lang3.SystemUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.network.util.ByteUnit
 import org.apache.spark.{Logging, SparkConf, SparkFunSuite}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 class UtilsSuite extends SparkFunSuite with ResetSystemProperties with Logging {
 
@@ -936,238 +915,6 @@ class UtilsSuite extends SparkFunSuite with ResetSystemProperties with Logging {
         assert(pidExists(pid))
         val terminated = Utils.terminateProcess(process, 5000)
         assert(terminated.isDefined)
-        process.waitFor(5, TimeUnit.SECONDS)
-        val durationMs = System.currentTimeMillis() - startTimeMs
-        assert(durationMs < 5000)
-        assert(!pidExists(pid))
-      } finally {
-        // Forcibly kill the test process just in case.
-        signal(pid, "SIGKILL")
-      }
-
-      val versionParts = System.getProperty("java.version").split("[+.\\-]+", 3)
-      var majorVersion = versionParts(0).toInt
-      if (majorVersion == 1) majorVersion = versionParts(1).toInt
-      if (majorVersion >= 8) {
-        // We'll make sure that forcibly terminating a process works by
-        // creating a very misbehaving process. It ignores SIGTERM and has been SIGSTOPed. On
-        // older versions of java, this will *not* terminate.
-        val file = File.createTempFile("temp-file-name", ".tmp")
-        file.deleteOnExit()
-        val cmd =
-          s"""
-             |#!/bin/bash
-             |trap "" SIGTERM
-             |sleep 10
-           """.stripMargin
-        Files.write(cmd.getBytes(StandardCharsets.UTF_8), file)
-        file.getAbsoluteFile.setExecutable(true)
-
-        val process = new ProcessBuilder(file.getAbsolutePath).start()
-        val pid = getPid(process)
-        assert(pidExists(pid))
-        try {
-          signal(pid, "SIGSTOP")
-          val start = System.currentTimeMillis()
-          val terminated = Utils.terminateProcess(process, 5000)
-          assert(terminated.isDefined)
-          process.waitFor(5, TimeUnit.SECONDS)
-          val duration = System.currentTimeMillis() - start
-          assert(duration < 6000) // add a little extra time to allow a force kill to finish
-          assert(!pidExists(pid))
-        } finally {
-          signal(pid, "SIGKILL")
-        }
-      }
-    }
-  }
-
-<<<<<<< HEAD
-  test("chi square test of randomizeInPlace") {
-    // Parameters
-    val arraySize = 10
-    val numTrials = 1000
-    val threshold = 0.05
-    val seed = 1L
-
-    // results(i)(j): how many times Utils.randomize moves an element from position j to position i
-    val results = Array.ofDim[Long](arraySize, arraySize)
-
-    // This must be seeded because even a fair random process will fail this test with
-    // probability equal to the value of `threshold`, which is inconvenient for a unit test.
-    val rand = new java.util.Random(seed)
-    val range = 0 until arraySize
-
-    for {
-      _ <- 0 until numTrials
-      trial = Utils.randomizeInPlace(range.toArray, rand)
-      i <- range
-    } results(i)(trial(i)) += 1L
-
-    val chi = new ChiSquareTest()
-
-    // We expect an even distribution; this array will be rescaled by `chiSquareTest`
-    val expected = Array.fill(arraySize * arraySize)(1.0)
-    val observed = results.flatten
-
-    // Performs Pearson's chi-squared test. Using the sum-of-squares as the test statistic, gives
-    // the probability of a uniform distribution producing results as extreme as `observed`
-    val pValue = chi.chiSquareTest(expected, observed)
-
-    assert(pValue > threshold)
-  }
-
-  test("redact sensitive information") {
-    val sparkConf = new SparkConf
-
-    // Set some secret keys
-    val secretKeys = Seq(
-      "spark.executorEnv.HADOOP_CREDSTORE_PASSWORD",
-      "spark.my.password",
-      "spark.my.sECreT")
-    secretKeys.foreach { key => sparkConf.set(key, "sensitive_value") }
-    // Set a non-secret key
-    sparkConf.set("spark.regular.property", "regular_value")
-    // Set a property with a regular key but secret in the value
-    sparkConf.set("spark.sensitive.property", "has_secret_in_value")
-
-    // Redact sensitive information
-    val redactedConf = Utils.redact(sparkConf, sparkConf.getAll).toMap
-
-    // Assert that secret information got redacted while the regular property remained the same
-    secretKeys.foreach { key => assert(redactedConf(key) === Utils.REDACTION_REPLACEMENT_TEXT) }
-    assert(redactedConf("spark.regular.property") === "regular_value")
-    assert(redactedConf("spark.sensitive.property") === Utils.REDACTION_REPLACEMENT_TEXT)
-
-  }
-
-  test("tryWithSafeFinally") {
-    var e = new Error("Block0")
-    val finallyBlockError = new Error("Finally Block")
-    var isErrorOccurred = false
-    // if the try and finally blocks throw different exception instances
-    try {
-      Utils.tryWithSafeFinally { throw e }(finallyBlock = { throw finallyBlockError })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.head == finallyBlockError)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try and finally blocks throw the same exception instance then it should not
-    // try to add to suppressed and get IllegalArgumentException
-    e = new Error("Block1")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinally { throw e }(finallyBlock = { throw e })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try throws the exception and finally doesn't throw exception
-    e = new Error("Block2")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinally { throw e }(finallyBlock = {})
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try and finally block don't throw exception
-    Utils.tryWithSafeFinally {}(finallyBlock = {})
-  }
-
-  test("tryWithSafeFinallyAndFailureCallbacks") {
-    var e = new Error("Block0")
-    val catchBlockError = new Error("Catch Block")
-    val finallyBlockError = new Error("Finally Block")
-    var isErrorOccurred = false
-    TaskContext.setTaskContext(TaskContext.empty())
-    // if the try, catch and finally blocks throw different exception instances
-    try {
-      Utils.tryWithSafeFinallyAndFailureCallbacks { throw e }(
-        catchBlock = { throw catchBlockError }, finallyBlock = { throw finallyBlockError })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.head == catchBlockError)
-        assert(t.getSuppressed.last == finallyBlockError)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try, catch and finally blocks throw the same exception instance then it should not
-    // try to add to suppressed and get IllegalArgumentException
-    e = new Error("Block1")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinallyAndFailureCallbacks { throw e }(catchBlock = { throw e },
-        finallyBlock = { throw e })
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try throws the exception, catch and finally don't throw exceptions
-    e = new Error("Block2")
-    isErrorOccurred = false
-    try {
-      Utils.tryWithSafeFinallyAndFailureCallbacks { throw e }(catchBlock = {}, finallyBlock = {})
-    } catch {
-      case t: Error =>
-        assert(t.getSuppressed.length == 0)
-        isErrorOccurred = true
-    }
-    assert(isErrorOccurred)
-    // if the try, catch and finally blocks don't throw exceptions
-    Utils.tryWithSafeFinallyAndFailureCallbacks {}(catchBlock = {}, finallyBlock = {})
-    TaskContext.unset
-=======
-  test("encodeFileNameToURIRawPath") {
-    assert(Utils.encodeFileNameToURIRawPath("abc") === "abc")
-    assert(Utils.encodeFileNameToURIRawPath("abc xyz") === "abc%20xyz")
-    assert(Utils.encodeFileNameToURIRawPath("abc:xyz") === "abc:xyz")
-  }
-
-  test("decodeFileNameInURI") {
-    assert(Utils.decodeFileNameInURI(new URI("files:///abc/xyz")) === "xyz")
-    assert(Utils.decodeFileNameInURI(new URI("files:///abc")) === "abc")
-    assert(Utils.decodeFileNameInURI(new URI("files:///abc%20xyz")) === "abc xyz")
-  }
-
-  test("Kill process") {
-    // Verify that we can terminate a process even if it is in a bad state. This is only run
-    // on UNIX since it does some OS specific things to verify the correct behavior.
-    if (SystemUtils.IS_OS_UNIX) {
-      def getPid(p: Process): Int = {
-        val f = p.getClass().getDeclaredField("pid")
-        f.setAccessible(true)
-        f.get(p).asInstanceOf[Int]
-      }
-
-      def pidExists(pid: Int): Boolean = {
-        val p = Runtime.getRuntime.exec(s"kill -0 $pid")
-        p.waitFor()
-        p.exitValue() == 0
-      }
-
-      def signal(pid: Int, s: String): Unit = {
-        val p = Runtime.getRuntime.exec(s"kill -$s $pid")
-        p.waitFor()
-      }
-
-      // Start up a process that runs 'sleep 10'. Terminate the process and assert it takes
-      // less time and the process is no longer there.
-      val startTimeMs = System.currentTimeMillis()
-      val process = new ProcessBuilder("sleep", "10").start()
-      val pid = getPid(process)
-      try {
-        assert(pidExists(pid))
-        val terminated = Utils.terminateProcess(process, 5000)
-        assert(terminated.isDefined)
         Utils.waitForProcess(process, 5000)
         val durationMs = System.currentTimeMillis() - startTimeMs
         assert(durationMs < 5000)
@@ -1209,6 +956,5 @@ class UtilsSuite extends SparkFunSuite with ResetSystemProperties with Logging {
         }
       }
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }

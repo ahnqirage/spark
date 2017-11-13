@@ -93,21 +93,7 @@ TempStatsStore/
 metastore/
 metastore_db/
 sql/hive-thriftserver/test_warehouses
-<<<<<<< HEAD
-warehouse/
-spark-warehouse/
-
-# For R session data
-.RData
-.RHistory
-.Rhistory
-*.Rproj
-*.Rproj.*
-
-.Rproj.user
-=======
 
 # For R session data
 .RHistory
 .RData
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284

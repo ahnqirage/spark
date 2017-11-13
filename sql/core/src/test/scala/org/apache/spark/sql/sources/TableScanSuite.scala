@@ -228,7 +228,6 @@ class TableScanSuite extends DataSourceTest with SharedSQLContext {
 =======
       StructField("varcharField", StringType, true) ::
       StructField("charField", StringType, true) ::
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       StructField("arrayFieldSimple", ArrayType(IntegerType), true) ::
       StructField("arrayFieldComplex",
         ArrayType(

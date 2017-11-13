@@ -141,20 +141,6 @@ object DecisionTreeExample {
 
   /** Load a dataset from the given path, using the given format */
   private[ml] def loadData(
-<<<<<<< HEAD
-      spark: SparkSession,
-      path: String,
-      format: String,
-      expectedNumFeatures: Option[Int] = None): DataFrame = {
-    import spark.implicits._
-
-    format match {
-      case "dense" => MLUtils.loadLabeledPoints(spark.sparkContext, path).toDF()
-      case "libsvm" => expectedNumFeatures match {
-        case Some(numFeatures) => spark.read.option("numFeatures", numFeatures.toString)
-          .format("libsvm").load(path)
-        case None => spark.read.format("libsvm").load(path)
-=======
       sqlContext: SQLContext,
       path: String,
       format: String,
@@ -167,7 +153,6 @@ object DecisionTreeExample {
         case Some(numFeatures) => sqlContext.read.option("numFeatures", numFeatures.toString)
           .format("libsvm").load(path)
         case None => sqlContext.read.format("libsvm").load(path)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       }
       case _ => throw new IllegalArgumentException(s"Bad data format: $format")
     }
@@ -200,18 +185,13 @@ object DecisionTreeExample {
 
     // Load training data
     val origExamples: DataFrame = loadData(sqlContext, input, dataFormat)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     // Load or create test set
     val dataframes: Array[DataFrame] = if (testInput != "") {
       // Load testInput.
       val numFeatures = origExamples.first().getAs[Vector](1).size
       val origTestExamples: DataFrame =
-<<<<<<< HEAD
-        loadData(spark, testInput, dataFormat, Some(numFeatures))
-=======
         loadData(sqlContext, testInput, dataFormat, Some(numFeatures))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       Array(origExamples, origTestExamples)
     } else {
       // Split input into training, test.

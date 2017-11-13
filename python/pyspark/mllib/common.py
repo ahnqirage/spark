@@ -105,7 +105,6 @@ def _java2py(sc, r, encoding="bytes"):
         if clsName == 'Dataset':
 =======
         if clsName == 'DataFrame':
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
             return DataFrame(r, SQLContext.getOrCreate(sc))
 
         if clsName in _picklable_classes:

@@ -19,13 +19,8 @@ package org.apache.spark.streaming.util
 import java.io._
 import java.nio.ByteBuffer
 import java.util.{Iterator => JIterator}
-<<<<<<< HEAD
-import java.util.concurrent.{CountDownLatch, RejectedExecutionException, ThreadPoolExecutor, TimeUnit}
-import java.util.concurrent.atomic.AtomicInteger
-=======
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{RejectedExecutionException, TimeUnit, CountDownLatch, ThreadPoolExecutor}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -36,18 +31,6 @@ import scala.language.{implicitConversions, postfixOps}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.mockito.ArgumentCaptor
-<<<<<<< HEAD
-import org.mockito.Matchers.{eq => meq, _}
-import org.mockito.Mockito._
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterEach, PrivateMethodTester}
-import org.scalatest.concurrent.Eventually
-import org.scalatest.concurrent.Eventually._
-import org.scalatest.mockito.MockitoSugar
-
-import org.apache.spark.{SparkConf, SparkException, SparkFunSuite}
-import org.apache.spark.streaming.scheduler._
-import org.apache.spark.util.{CompletionIterator, ManualClock, ThreadUtils, Utils}
-=======
 import org.mockito.Matchers.{eq => meq}
 import org.mockito.Matchers._
 import org.mockito.Mockito._
@@ -59,7 +42,6 @@ import org.scalatest.mock.MockitoSugar
 import org.apache.spark.streaming.scheduler._
 import org.apache.spark.util.{CompletionIterator, ThreadUtils, ManualClock, Utils}
 import org.apache.spark.{SparkConf, SparkFunSuite}
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 /** Common tests for WriteAheadLogs that we would like to test with different configurations. */
 abstract class CommonWriteAheadLogTests(
@@ -93,20 +75,12 @@ abstract class CommonWriteAheadLogTests(
 
   test(testPrefix + "read all logs") {
     // Write data manually for testing reading through WriteAheadLog
-<<<<<<< HEAD
-    val writtenData = (1 to 10).flatMap { i =>
-=======
     val writtenData = (1 to 10).map { i =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val data = generateRandomData()
       val file = testDir + s"/log-$i-$i"
       writeDataManually(data, file, allowBatching)
       data
-<<<<<<< HEAD
-    }
-=======
     }.flatten
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val logDirectoryPath = new Path(testDir)
     val fileSystem = HdfsUtils.getFileSystemForPath(logDirectoryPath, hadoopConf)
@@ -139,7 +113,6 @@ abstract class CommonWriteAheadLogTests(
     val readData = readDataUsingWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
     assert(dataToWrite === readData)
   }
-<<<<<<< HEAD
 
   test(testPrefix + "clean old logs") {
     logCleanUpTest(waitForCompletion = false)
@@ -167,88 +140,8 @@ abstract class CommonWriteAheadLogTests(
         assert(getLogFilesInDirectory(testDir).size < logFiles.size)
       }
     }
-    writeAheadLog.close()
-    // Make sure it is idempotent.
-    writeAheadLog.close()
   }
 
-  test(testPrefix + "handling file errors while reading rotating logs") {
-    // Generate a set of log files
-    val manualClock = new ManualClock
-    val dataToWrite1 = generateRandomData()
-    writeDataUsingWriteAheadLog(testDir, dataToWrite1, closeFileAfterWrite, allowBatching,
-      manualClock)
-    val logFiles1 = getLogFilesInDirectory(testDir)
-    assert(logFiles1.size > 1)
-
-
-    // Recover old files and generate a second set of log files
-    val dataToWrite2 = generateRandomData()
-    manualClock.advance(100000)
-    writeDataUsingWriteAheadLog(testDir, dataToWrite2, closeFileAfterWrite, allowBatching,
-      manualClock)
-    val logFiles2 = getLogFilesInDirectory(testDir)
-    assert(logFiles2.size > logFiles1.size)
-
-    // Read the files and verify that all the written data can be read
-    val readData1 = readDataUsingWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
-    assert(readData1 === (dataToWrite1 ++ dataToWrite2))
-
-    // Corrupt the first set of files so that they are basically unreadable
-    logFiles1.foreach { f =>
-      val raf = new FileOutputStream(f, true).getChannel()
-      raf.truncate(1)
-      raf.close()
-=======
-
-  test(testPrefix + "clean old logs") {
-    logCleanUpTest(waitForCompletion = false)
-  }
-
-  test(testPrefix + "clean old logs synchronously") {
-    logCleanUpTest(waitForCompletion = true)
-  }
-
-  private def logCleanUpTest(waitForCompletion: Boolean): Unit = {
-    // Write data with manager, recover with new manager and verify
-    val manualClock = new ManualClock
-    val dataToWrite = generateRandomData()
-    writeAheadLog = writeDataUsingWriteAheadLog(testDir, dataToWrite, closeFileAfterWrite,
-      allowBatching, manualClock, closeLog = false)
-    val logFiles = getLogFilesInDirectory(testDir)
-    assert(logFiles.size > 1)
-
-    writeAheadLog.clean(manualClock.getTimeMillis() / 2, waitForCompletion)
-
-    if (waitForCompletion) {
-      assert(getLogFilesInDirectory(testDir).size < logFiles.size)
-    } else {
-      eventually(Eventually.timeout(1 second), interval(10 milliseconds)) {
-        assert(getLogFilesInDirectory(testDir).size < logFiles.size)
-      }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
-    }
-  }
-
-<<<<<<< HEAD
-    // Verify that the corrupted files do not prevent reading of the second set of data
-    val readData = readDataUsingWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
-    assert(readData === dataToWrite2)
-  }
-
-  test(testPrefix + "do not create directories or files unless write") {
-    val nonexistentTempPath = File.createTempFile("test", "")
-    nonexistentTempPath.delete()
-    assert(!nonexistentTempPath.exists())
-
-    val writtenSegment = writeDataManually(generateRandomData(), testFile, allowBatching)
-    val wal = createWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
-    assert(!nonexistentTempPath.exists(), "Directory created just by creating log object")
-    if (allowBatching) {
-      intercept[UnsupportedOperationException](wal.read(writtenSegment.head))
-    } else {
-      wal.read(writtenSegment.head)
-=======
   test(testPrefix + "handling file errors while reading rotating logs") {
     // Generate a set of log files
     val manualClock = new ManualClock
@@ -276,16 +169,38 @@ abstract class CommonWriteAheadLogTests(
       val raf = new FileOutputStream(f, true).getChannel()
       raf.truncate(1)
       raf.close()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
-    assert(!nonexistentTempPath.exists(), "Directory created just by attempting to read segment")
   }
 
 <<<<<<< HEAD
-  test(testPrefix + "parallel recovery not enabled if closeFileAfterWrite = false") {
-    // write some data
-    val writtenData = (1 to 10).flatMap { i =>
+    // Verify that the corrupted files do not prevent reading of the second set of data
+    val readData = readDataUsingWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
+    assert(readData === dataToWrite2)
+  }
+
+  test(testPrefix + "do not create directories or files unless write") {
+    val nonexistentTempPath = File.createTempFile("test", "")
+    nonexistentTempPath.delete()
+    assert(!nonexistentTempPath.exists())
+
+    val writtenSegment = writeDataManually(generateRandomData(), testFile, allowBatching)
+    val wal = createWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
+    assert(!nonexistentTempPath.exists(), "Directory created just by creating log object")
+    if (allowBatching) {
+      intercept[UnsupportedOperationException](wal.read(writtenSegment.head))
+    } else {
+      wal.read(writtenSegment.head)
 =======
+  test(testPrefix + "handling file errors while reading rotating logs") {
+    // Generate a set of log files
+    val manualClock = new ManualClock
+    val dataToWrite1 = generateRandomData()
+    writeDataUsingWriteAheadLog(testDir, dataToWrite1, closeFileAfterWrite, allowBatching,
+      manualClock)
+    val logFiles1 = getLogFilesInDirectory(testDir)
+    assert(logFiles1.size > 1)
+
+
     // Verify that the corrupted files do not prevent reading of the second set of data
     val readData = readDataUsingWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
     assert(readData === dataToWrite2)
@@ -310,16 +225,11 @@ abstract class CommonWriteAheadLogTests(
   test(testPrefix + "parallel recovery not enabled if closeFileAfterWrite = false") {
     // write some data
     val writtenData = (1 to 10).map { i =>
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val data = generateRandomData()
       val file = testDir + s"/log-$i-$i"
       writeDataManually(data, file, allowBatching)
       data
-<<<<<<< HEAD
-    }
-=======
     }.flatten
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
     val wal = createWriteAheadLog(testDir, closeFileAfterWrite, allowBatching)
     // create iterator but don't materialize it
@@ -349,13 +259,7 @@ class FileBasedWriteAheadLogSuite
      the list of files.
      */
     val numThreads = 8
-<<<<<<< HEAD
-    val fpool = ThreadUtils.newForkJoinPool("wal-test-thread-pool", numThreads)
-    val executionContext = ExecutionContext.fromExecutorService(fpool)
-
-=======
     val tpool = ThreadUtils.newDaemonFixedThreadPool(numThreads, "wal-test-thread-pool")
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     class GetMaxCounter {
       private val value = new AtomicInteger()
       @volatile private var max: Int = 0
@@ -385,12 +289,7 @@ class FileBasedWriteAheadLogSuite
       val t = new Thread() {
         override def run() {
           // run the calculation on a separate thread so that we can release the latch
-<<<<<<< HEAD
-          val iterator = FileBasedWriteAheadLog.seqToParIterator[Int, Int](executionContext,
-            testSeq, handle)
-=======
           val iterator = FileBasedWriteAheadLog.seqToParIterator[Int, Int](tpool, testSeq, handle)
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
           collected = iterator.toSeq
         }
       }
@@ -405,11 +304,7 @@ class FileBasedWriteAheadLogSuite
       // make sure we didn't open too many Iterators
       assert(counter.getMax() <= numThreads)
     } finally {
-<<<<<<< HEAD
-      fpool.shutdownNow()
-=======
       tpool.shutdownNow()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
   }
 
@@ -567,10 +462,6 @@ class BatchedWriteAheadLogSuite extends CommonWriteAheadLogTests(
   private val queueLength = PrivateMethod[Int]('getQueueLength)
 
   override def beforeEach(): Unit = {
-<<<<<<< HEAD
-    super.beforeEach()
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     wal = mock[WriteAheadLog]
     walHandle = mock[WriteAheadLogRecordHandle]
     walBatchingThreadPool = ThreadUtils.newDaemonFixedThreadPool(8, "wal-test-thread-pool")
@@ -578,18 +469,16 @@ class BatchedWriteAheadLogSuite extends CommonWriteAheadLogTests(
   }
 
   override def afterEach(): Unit = {
-<<<<<<< HEAD
-    try {
-      if (walBatchingExecutionContext != null) {
-        walBatchingExecutionContext.shutdownNow()
-      }
-    } finally {
-      super.afterEach()
-=======
     if (walBatchingExecutionContext != null) {
       walBatchingExecutionContext.shutdownNow()
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     }
+    assert(e.getCause.getMessage === "Hello!")
+=======
+    intercept[RuntimeException] {
+      val buffer = mock[ByteBuffer]
+      batchedWal.write(buffer, 2L)
+    }
+>>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("BatchedWriteAheadLog - serializing and deserializing batched records") {
@@ -612,28 +501,16 @@ class BatchedWriteAheadLogSuite extends CommonWriteAheadLogTests(
     // the BatchedWriteAheadLog should bubble up any exceptions that may have happened during writes
     val batchedWal = new BatchedWriteAheadLog(wal, sparkConf)
 
-<<<<<<< HEAD
-    val e = intercept[SparkException] {
-      val buffer = mock[ByteBuffer]
-      batchedWal.write(buffer, 2L)
-    }
-    assert(e.getCause.getMessage === "Hello!")
-=======
     intercept[RuntimeException] {
       val buffer = mock[ByteBuffer]
       batchedWal.write(buffer, 2L)
     }
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   // we make the write requests in separate threads so that we don't block the test thread
   private def writeAsync(wal: WriteAheadLog, event: String, time: Long): Promise[Unit] = {
     val p = Promise[Unit]()
-<<<<<<< HEAD
-    p.completeWith(Future[Unit] {
-=======
     p.completeWith(Future {
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
       val v = wal.write(event, time)
       assert(v === walHandle)
     }(walBatchingExecutionContext))
@@ -700,7 +577,6 @@ class BatchedWriteAheadLogSuite extends CommonWriteAheadLogTests(
   test("BatchedWriteAheadLog - fail everything in queue during shutdown") {
     val blockingWal = new BlockingWriteAheadLog(wal, walHandle)
     val batchedWal = new BatchedWriteAheadLog(blockingWal, sparkConf)
-<<<<<<< HEAD
 
     val event1 = "hello"
     val event2 = "world"
@@ -736,43 +612,6 @@ class BatchedWriteAheadLogSuite extends CommonWriteAheadLogTests(
 class BatchedWriteAheadLogWithCloseFileAfterWriteSuite
   extends CloseFileAfterWriteTests(allowBatching = true, "BatchedWriteAheadLog")
 
-=======
-
-    val event1 = "hello"
-    val event2 = "world"
-    val event3 = "this"
-
-    // The queue.take() immediately takes the 3, and there is nothing left in the queue at that
-    // moment. Then the promise blocks the writing of 3. The rest get queued.
-    val promise1 = writeAsync(batchedWal, event1, 3L)
-    eventually(timeout(1 second)) {
-      assert(blockingWal.isBlocked)
-      assert(batchedWal.invokePrivate(queueLength()) === 0)
-    }
-    // rest of the records will be batched while it takes time for 3 to get written
-    val promise2 = writeAsync(batchedWal, event2, 5L)
-    val promise3 = writeAsync(batchedWal, event3, 8L)
-
-    eventually(timeout(1 second)) {
-      assert(walBatchingThreadPool.getActiveCount === 3)
-      assert(blockingWal.isBlocked)
-      assert(batchedWal.invokePrivate(queueLength()) === 2) // event1 is being written
-    }
-
-    val writePromises = Seq(promise1, promise2, promise3)
-
-    batchedWal.close()
-    eventually(timeout(1 second)) {
-      assert(writePromises.forall(_.isCompleted))
-      assert(writePromises.forall(_.future.value.get.isFailure)) // all should have failed
-    }
-  }
-}
-
-class BatchedWriteAheadLogWithCloseFileAfterWriteSuite
-  extends CloseFileAfterWriteTests(allowBatching = true, "BatchedWriteAheadLog")
-
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 object WriteAheadLogSuite {
 
   private val hadoopConf = new Configuration()

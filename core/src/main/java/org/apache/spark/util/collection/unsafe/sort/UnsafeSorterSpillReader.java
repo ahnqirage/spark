@@ -19,18 +19,6 @@ package org.apache.spark.util.collection.unsafe.sort;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-<<<<<<< HEAD
-import org.apache.spark.SparkEnv;
-import org.apache.spark.TaskContext;
-import org.apache.spark.io.NioBufferedFileInputStream;
-import org.apache.spark.io.ReadAheadInputStream;
-import org.apache.spark.serializer.SerializerManager;
-import org.apache.spark.storage.BlockId;
-import org.apache.spark.unsafe.Platform;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
 import java.io.*;
 
@@ -39,12 +27,6 @@ import java.io.*;
  * of the file format).
  */
 public final class UnsafeSorterSpillReader extends UnsafeSorterIterator implements Closeable {
-<<<<<<< HEAD
-  private static final Logger logger = LoggerFactory.getLogger(UnsafeSorterSpillReader.class);
-  private static final int DEFAULT_BUFFER_SIZE_BYTES = 1024 * 1024; // 1 MB
-  private static final int MAX_BUFFER_SIZE_BYTES = 16777216; // 16 mb
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 
   private InputStream in;
   private DataInputStream din;
@@ -65,57 +47,15 @@ public final class UnsafeSorterSpillReader extends UnsafeSorterIterator implemen
       File file,
       BlockId blockId) throws IOException {
     assert (file.length() > 0);
-<<<<<<< HEAD
-    long bufferSizeBytes =
-        SparkEnv.get() == null ?
-            DEFAULT_BUFFER_SIZE_BYTES:
-            SparkEnv.get().conf().getSizeAsBytes("spark.unsafe.sorter.spill.reader.buffer.size",
-                                                 DEFAULT_BUFFER_SIZE_BYTES);
-    if (bufferSizeBytes > MAX_BUFFER_SIZE_BYTES || bufferSizeBytes < DEFAULT_BUFFER_SIZE_BYTES) {
-      // fall back to a sane default value
-      logger.warn("Value of config \"spark.unsafe.sorter.spill.reader.buffer.size\" = {} not in " +
-        "allowed range [{}, {}). Falling back to default value : {} bytes", bufferSizeBytes,
-        DEFAULT_BUFFER_SIZE_BYTES, MAX_BUFFER_SIZE_BYTES, DEFAULT_BUFFER_SIZE_BYTES);
-      bufferSizeBytes = DEFAULT_BUFFER_SIZE_BYTES;
-    }
-
-    final double readAheadFraction =
-        SparkEnv.get() == null ? 0.5 :
-             SparkEnv.get().conf().getDouble("spark.unsafe.sorter.spill.read.ahead.fraction", 0.5);
-
-    final boolean readAheadEnabled = SparkEnv.get() != null &&
-        SparkEnv.get().conf().getBoolean("spark.unsafe.sorter.spill.read.ahead.enabled", true);
-
-    final InputStream bs =
-        new NioBufferedFileInputStream(file, (int) bufferSizeBytes);
-    try {
-      if (readAheadEnabled) {
-        this.in = new ReadAheadInputStream(serializerManager.wrapStream(blockId, bs),
-                (int) bufferSizeBytes, (int) (bufferSizeBytes * readAheadFraction));
-      } else {
-        this.in = serializerManager.wrapStream(blockId, bs);
-      }
-      this.din = new DataInputStream(this.in);
-      numRecords = numRecordsRemaining = din.readInt();
-=======
     final BufferedInputStream bs = new BufferedInputStream(new FileInputStream(file));
     try {
       this.in = blockManager.wrapForCompression(blockId, bs);
       this.din = new DataInputStream(this.in);
       numRecordsRemaining = din.readInt();
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
     } catch (IOException e) {
       Closeables.close(bs, /* swallowIOException = */ true);
       throw e;
     }
-<<<<<<< HEAD
-  }
-
-  @Override
-  public int getNumRecords() {
-    return numRecords;
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   @Override

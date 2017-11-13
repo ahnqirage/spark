@@ -17,11 +17,6 @@
 
 package org.apache.spark.sql.catalyst.expressions
 
-<<<<<<< HEAD
-import java.sql.Timestamp
-
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.metrics.source.CodegenMetrics
 import org.apache.spark.sql.Row
@@ -54,21 +49,6 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
 
 <<<<<<< HEAD
     futures.foreach(ThreadUtils.awaitResult(_, 10.seconds))
-  }
-
-  test("metrics are recorded on compile") {
-    val startCount1 = CodegenMetrics.METRIC_COMPILATION_TIME.getCount()
-    val startCount2 = CodegenMetrics.METRIC_SOURCE_CODE_SIZE.getCount()
-    val startCount3 = CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE.getCount()
-    val startCount4 = CodegenMetrics.METRIC_GENERATED_METHOD_BYTECODE_SIZE.getCount()
-    GenerateOrdering.generate(Add(Literal(123), Literal(1)).asc :: Nil)
-    assert(CodegenMetrics.METRIC_COMPILATION_TIME.getCount() == startCount1 + 1)
-    assert(CodegenMetrics.METRIC_SOURCE_CODE_SIZE.getCount() == startCount2 + 1)
-    assert(CodegenMetrics.METRIC_GENERATED_CLASS_BYTECODE_SIZE.getCount() > startCount3)
-    assert(CodegenMetrics.METRIC_GENERATED_METHOD_BYTECODE_SIZE.getCount() > startCount4)
-=======
-    futures.foreach(Await.result(_, 10.seconds))
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 
   test("SPARK-8443: split wide projections into blocks due to JVM code size limit") {
@@ -146,64 +126,6 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
     val expected = ArrayBasedMapData((0 until length).toArray, Array.fill(length)(true))
 
     if (!checkResult(actual.head, expected, expressions.head.dataType)) {
-      fail(s"Incorrect Evaluation: expressions: $expressions, actual: $actual, expected: $expected")
-    }
-  }
-
-  test("SPARK-14793: split wide struct creation into blocks due to JVM code size limit") {
-    val length = 5000
-    val expressions = Seq(CreateStruct(List.fill(length)(EqualTo(Literal(1), Literal(1)))))
-    val plan = GenerateMutableProjection.generate(expressions)
-    val actual = plan(new GenericInternalRow(length)).toSeq(expressions.map(_.dataType))
-    val expected = Seq(InternalRow(Seq.fill(length)(true): _*))
-
-    if (!checkResult(actual, expected, expressions.head.dataType)) {
-      fail(s"Incorrect Evaluation: expressions: $expressions, actual: $actual, expected: $expected")
-    }
-  }
-
-  test("SPARK-14793: split wide named struct creation into blocks due to JVM code size limit") {
-    val length = 5000
-    val expressions = Seq(CreateNamedStruct(
-      List.fill(length)(EqualTo(Literal(1), Literal(1))).flatMap {
-        expr => Seq(Literal(expr.toString), expr)
-      }))
-    val plan = GenerateMutableProjection.generate(expressions)
-    val actual = plan(new GenericInternalRow(length)).toSeq(expressions.map(_.dataType))
-    assert(actual.length == 1)
-    val expected = InternalRow(Seq.fill(length)(true): _*)
-
-    if (!checkResult(actual.head, expected, expressions.head.dataType)) {
-      fail(s"Incorrect Evaluation: expressions: $expressions, actual: $actual, expected: $expected")
-    }
-  }
-
-  test("SPARK-14224: split wide external row creation into blocks due to JVM code size limit") {
-    val length = 5000
-    val schema = StructType(Seq.fill(length)(StructField("int", IntegerType)))
-    val expressions = Seq(CreateExternalRow(Seq.fill(length)(Literal(1)), schema))
-    val plan = GenerateMutableProjection.generate(expressions)
-    val actual = plan(new GenericInternalRow(length)).toSeq(expressions.map(_.dataType))
-    val expected = Seq(Row.fromSeq(Seq.fill(length)(1)))
-
-    if (actual != expected) {
-      fail(s"Incorrect Evaluation: expressions: $expressions, actual: $actual, expected: $expected")
-    }
-  }
-
-  test("SPARK-17702: split wide constructor into blocks due to JVM code size limit") {
-    val length = 5000
-    val expressions = Seq.fill(length) {
-      ToUTCTimestamp(
-        Literal.create(Timestamp.valueOf("2015-07-24 00:00:00"), TimestampType),
-        Literal.create("PST", StringType))
-    }
-    val plan = GenerateMutableProjection.generate(expressions)
-    val actual = plan(new GenericInternalRow(length)).toSeq(expressions.map(_.dataType))
-    val expected = Seq.fill(length)(
-      DateTimeUtils.fromJavaTimestamp(Timestamp.valueOf("2015-07-24 07:00:00")))
-
-    if (actual != expected) {
       fail(s"Incorrect Evaluation: expressions: $expressions, actual: $actual, expected: $expected")
     }
   }
@@ -329,31 +251,5 @@ class CodeGenerationSuite extends SparkFunSuite with ExpressionEvalHelper {
       Literal.create("\\u001/Compilation error occurs", StringType) :: Nil)
     GenerateUnsafeProjection.generate(
       Literal.create("\\\\u001/Compilation error occurs", StringType) :: Nil)
-<<<<<<< HEAD
-
-  }
-
-  test("SPARK-17160: field names are properly escaped by GetExternalRowField") {
-    val inputObject = BoundReference(0, ObjectType(classOf[Row]), nullable = true)
-    GenerateUnsafeProjection.generate(
-      ValidateExternalType(
-        GetExternalRowField(inputObject, index = 0, fieldName = "\"quote"), IntegerType) :: Nil)
-  }
-
-  test("SPARK-17160: field names are properly escaped by AssertTrue") {
-    GenerateUnsafeProjection.generate(AssertTrue(Cast(Literal("\""), BooleanType)) :: Nil)
-  }
-
-  test("should not apply common subexpression elimination on conditional expressions") {
-    val row = InternalRow(null)
-    val bound = BoundReference(0, IntegerType, true)
-    val assertNotNull = AssertNotNull(bound, Nil)
-    val expr = If(IsNull(bound), Literal(1), Add(assertNotNull, assertNotNull))
-    val projection = GenerateUnsafeProjection.generate(
-      Seq(expr), subexpressionEliminationEnabled = true)
-    // should not throw exception
-    projection(row)
-=======
->>>>>>> a233fac0b8bf8229d938a24f2ede2d9d8861c284
   }
 }
