@@ -579,6 +579,18 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
   }
 
   /**
+   * An extractor that matches all binary comparison operators except null-safe equality.
+   *
+   * Null-safe equality is not supported by Hive metastore partition predicate pushdown
+   */
+  object SpecialBinaryComparison {
+    def unapply(e: BinaryComparison): Option[(Expression, Expression)] = e match {
+      case _: EqualNullSafe => None
+      case _ => Some((e.left, e.right))
+    }
+  }
+
+  /**
    * Converts catalyst expression to the format that Hive's getPartitionsByFilter() expects, i.e.
    * a string that represents partition predicates like "str_key=\"value\" and int_key=1 ...".
    *
@@ -591,56 +603,15 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
         col.getType.startsWith(serdeConstants.CHAR_TYPE_NAME))
       .map(col => col.getName).toSet
 
-    object ExtractableLiteral {
-      def unapply(expr: Expression): Option[String] = expr match {
-        case Literal(value, _: IntegralType) => Some(value.toString)
-        case Literal(value, _: StringType) => Some(quoteStringLiteral(value.toString))
-        case _ => None
-      }
-    }
-
-    object ExtractableLiterals {
-      def unapply(exprs: Seq[Expression]): Option[Seq[String]] = {
-        exprs.map(ExtractableLiteral.unapply).foldLeft(Option(Seq.empty[String])) {
-          case (Some(accum), Some(value)) => Some(accum :+ value)
-          case _ => None
-        }
-      }
-    }
-
-    object ExtractableValues {
-      private lazy val valueToLiteralString: PartialFunction[Any, String] = {
-        case value: Byte => value.toString
-        case value: Short => value.toString
-        case value: Int => value.toString
-        case value: Long => value.toString
-        case value: UTF8String => quoteStringLiteral(value.toString)
-      }
-
-      def unapply(values: Set[Any]): Option[Seq[String]] = {
-        values.toSeq.foldLeft(Option(Seq.empty[String])) {
-          case (Some(accum), value) if valueToLiteralString.isDefinedAt(value) =>
-            Some(accum :+ valueToLiteralString(value))
-          case _ => None
-        }
-      }
-    }
-
-    def convertInToOr(a: Attribute, values: Seq[String]): String = {
-      values.map(value => s"${a.name} = $value").mkString("(", " or ", ")")
-    }
-
-    lazy val convert: PartialFunction[Expression, String] = {
-      case In(a: Attribute, ExtractableLiterals(values))
-          if !varcharKeys.contains(a.name) && values.nonEmpty =>
-        convertInToOr(a, values)
-      case InSet(a: Attribute, ExtractableValues(values))
-          if !varcharKeys.contains(a.name) && values.nonEmpty =>
-        convertInToOr(a, values)
-      case op @ BinaryComparison(a: Attribute, ExtractableLiteral(value))
+    filters.collect {
+      case op @ SpecialBinaryComparison(a: Attribute, Literal(v, _: IntegralType)) =>
+        s"${a.name} ${op.symbol} $v"
+      case op @ SpecialBinaryComparison(Literal(v, _: IntegralType), a: Attribute) =>
+        s"$v ${op.symbol} ${a.name}"
+      case op @ SpecialBinaryComparison(a: Attribute, Literal(v, _: StringType))
           if !varcharKeys.contains(a.name) =>
-        s"${a.name} ${op.symbol} $value"
-      case op @ BinaryComparison(ExtractableLiteral(value), a: Attribute)
+        s"""${a.name} ${op.symbol} ${quoteStringLiteral(v.toString)}"""
+      case op @ SpecialBinaryComparison(Literal(v, _: StringType), a: Attribute)
           if !varcharKeys.contains(a.name) =>
         s"$value ${op.symbol} ${a.name}"
       case op @ And(expr1, expr2)

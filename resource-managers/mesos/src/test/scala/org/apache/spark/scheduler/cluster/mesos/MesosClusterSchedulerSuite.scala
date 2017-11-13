@@ -32,6 +32,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.apache.spark.{LocalSparkContext, SparkConf, SparkFunSuite}
 import org.apache.spark.deploy.Command
 import org.apache.spark.deploy.mesos.MesosDriverDescription
+import org.apache.spark.deploy.mesos.config
 
 class MesosClusterSchedulerSuite extends SparkFunSuite with LocalSparkContext with MockitoSugar {
 
@@ -279,6 +280,53 @@ class MesosClusterSchedulerSuite extends SparkFunSuite with LocalSparkContext wi
     assert(labels.getLabelsCount == 1)
     assert(labels.getLabels(0).getKey == "key")
     assert(labels.getLabels(0).getValue == "value")
+  }
+
+  test("accept/decline offers with driver constraints") {
+    setScheduler()
+
+    val mem = 1000
+    val cpu = 1
+    val s2Attributes = List(Utils.createTextAttribute("c1", "a"))
+    val s3Attributes = List(
+      Utils.createTextAttribute("c1", "a"),
+      Utils.createTextAttribute("c2", "b"))
+    val offers = List(
+      Utils.createOffer("o1", "s1", mem, cpu, None, 0),
+      Utils.createOffer("o2", "s2", mem, cpu, None, 0, s2Attributes),
+      Utils.createOffer("o3", "s3", mem, cpu, None, 0, s3Attributes))
+
+    def submitDriver(driverConstraints: String): Unit = {
+      val response = scheduler.submitDriver(
+        new MesosDriverDescription("d1", "jar", mem, cpu, true,
+          command,
+          Map("spark.mesos.executor.home" -> "test",
+            "spark.app.name" -> "test",
+            config.DRIVER_CONSTRAINTS.key -> driverConstraints),
+          "s1",
+          new Date()))
+      assert(response.success)
+    }
+
+    submitDriver("c1:x")
+    scheduler.resourceOffers(driver, offers.asJava)
+    offers.foreach(o => Utils.verifyTaskNotLaunched(driver, o.getId.getValue))
+
+    submitDriver("c1:y;c2:z")
+    scheduler.resourceOffers(driver, offers.asJava)
+    offers.foreach(o => Utils.verifyTaskNotLaunched(driver, o.getId.getValue))
+
+    submitDriver("")
+    scheduler.resourceOffers(driver, offers.asJava)
+    Utils.verifyTaskLaunched(driver, "o1")
+
+    submitDriver("c1:a")
+    scheduler.resourceOffers(driver, offers.asJava)
+    Utils.verifyTaskLaunched(driver, "o2")
+
+    submitDriver("c1:a;c2:b")
+    scheduler.resourceOffers(driver, offers.asJava)
+    Utils.verifyTaskLaunched(driver, "o3")
   }
 
   test("can kill supervised drivers") {

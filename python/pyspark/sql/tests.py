@@ -2376,178 +2376,20 @@ class SQLTests(ReusedPySparkTestCase):
         df = self.spark.createDataFrame(data, schema=schema)
         df.collect()
 
-    # test for SPARK-16542
-    def test_array_types(self):
-        # This test need to make sure that the Scala type selected is at least
-        # as large as the python's types. This is necessary because python's
-        # array types depend on C implementation on the machine. Therefore there
-        # is no machine independent correspondence between python's array types
-        # and Scala types.
-        # See: https://docs.python.org/2/library/array.html
-
-        def assertCollectSuccess(typecode, value):
-            row = Row(myarray=array.array(typecode, [value]))
-            df = self.spark.createDataFrame([row])
-            self.assertEqual(df.first()["myarray"][0], value)
-
-        # supported string types
-        #
-        # String types in python's array are "u" for Py_UNICODE and "c" for char.
-        # "u" will be removed in python 4, and "c" is not supported in python 3.
-        supported_string_types = []
-        if sys.version_info[0] < 4:
-            supported_string_types += ['u']
-            # test unicode
-            assertCollectSuccess('u', u'a')
-        if sys.version_info[0] < 3:
-            supported_string_types += ['c']
-            # test string
-            assertCollectSuccess('c', 'a')
-
-        # supported float and double
-        #
-        # Test max, min, and precision for float and double, assuming IEEE 754
-        # floating-point format.
-        supported_fractional_types = ['f', 'd']
-        assertCollectSuccess('f', ctypes.c_float(1e+38).value)
-        assertCollectSuccess('f', ctypes.c_float(1e-38).value)
-        assertCollectSuccess('f', ctypes.c_float(1.123456).value)
-        assertCollectSuccess('d', sys.float_info.max)
-        assertCollectSuccess('d', sys.float_info.min)
-        assertCollectSuccess('d', sys.float_info.epsilon)
-
-        # supported signed int types
-        #
-        # The size of C types changes with implementation, we need to make sure
-        # that there is no overflow error on the platform running this test.
-        supported_signed_int_types = list(
-            set(_array_signed_int_typecode_ctype_mappings.keys())
-            .intersection(set(_array_type_mappings.keys())))
-        for t in supported_signed_int_types:
-            ctype = _array_signed_int_typecode_ctype_mappings[t]
-            max_val = 2 ** (ctypes.sizeof(ctype) * 8 - 1)
-            assertCollectSuccess(t, max_val - 1)
-            assertCollectSuccess(t, -max_val)
-
-        # supported unsigned int types
-        #
-        # JVM does not have unsigned types. We need to be very careful to make
-        # sure that there is no overflow error.
-        supported_unsigned_int_types = list(
-            set(_array_unsigned_int_typecode_ctype_mappings.keys())
-            .intersection(set(_array_type_mappings.keys())))
-        for t in supported_unsigned_int_types:
-            ctype = _array_unsigned_int_typecode_ctype_mappings[t]
-            assertCollectSuccess(t, 2 ** (ctypes.sizeof(ctype) * 8) - 1)
-
-        # all supported types
-        #
-        # Make sure the types tested above:
-        # 1. are all supported types
-        # 2. cover all supported types
-        supported_types = (supported_string_types +
-                           supported_fractional_types +
-                           supported_signed_int_types +
-                           supported_unsigned_int_types)
-        self.assertEqual(set(supported_types), set(_array_type_mappings.keys()))
-
-        # all unsupported types
-        #
-        # Keys in _array_type_mappings is a complete list of all supported types,
-        # and types not in _array_type_mappings are considered unsupported.
-        # `array.typecodes` are not supported in python 2.
-        if sys.version_info[0] < 3:
-            all_types = set(['c', 'b', 'B', 'u', 'h', 'H', 'i', 'I', 'l', 'L', 'f', 'd'])
-        else:
-            all_types = set(array.typecodes)
-        unsupported_types = all_types - set(supported_types)
-        # test unsupported types
-        for t in unsupported_types:
-            with self.assertRaises(TypeError):
-                a = array.array(t)
-                self.spark.createDataFrame([Row(myarray=a)]).collect()
-
-    def test_bucketed_write(self):
-        data = [
-            (1, "foo", 3.0), (2, "foo", 5.0),
-            (3, "bar", -1.0), (4, "bar", 6.0),
-        ]
-        df = self.spark.createDataFrame(data, ["x", "y", "z"])
-
-        def count_bucketed_cols(names, table="pyspark_bucket"):
-            """Given a sequence of column names and a table name
-            query the catalog and return number o columns which are
-            used for bucketing
-            """
-            cols = self.spark.catalog.listColumns(table)
-            num = len([c for c in cols if c.name in names and c.isBucket])
-            return num
-
-        # Test write with one bucketing column
-        df.write.bucketBy(3, "x").mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x"]), 1)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write two bucketing columns
-        df.write.bucketBy(3, "x", "y").mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x", "y"]), 2)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with bucket and sort
-        df.write.bucketBy(2, "x").sortBy("z").mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x"]), 1)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with a list of columns
-        df.write.bucketBy(3, ["x", "y"]).mode("overwrite").saveAsTable("pyspark_bucket")
-        self.assertEqual(count_bucketed_cols(["x", "y"]), 2)
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with bucket and sort with a list of columns
-        (df.write.bucketBy(2, "x")
-            .sortBy(["y", "z"])
-            .mode("overwrite").saveAsTable("pyspark_bucket"))
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
-        # Test write with bucket and sort with multiple columns
-        (df.write.bucketBy(2, "x")
-            .sortBy("y", "z")
-            .mode("overwrite").saveAsTable("pyspark_bucket"))
-        self.assertSetEqual(set(data), set(self.spark.table("pyspark_bucket").collect()))
-
     @unittest.skipIf(not _have_pandas, "Pandas not installed")
-    def test_to_pandas(self):
-        import numpy as np
-        schema = StructType().add("a", IntegerType()).add("b", StringType())\
-                             .add("c", BooleanType()).add("d", FloatType())
-        data = [
-            (1, "foo", True, 3.0), (2, "foo", True, 5.0),
-            (3, "bar", False, -1.0), (4, "bar", False, 6.0),
-        ]
-        df = self.spark.createDataFrame(data, schema)
-        types = df.toPandas().dtypes
-        self.assertEquals(types[0], np.int32)
-        self.assertEquals(types[1], np.object)
-        self.assertEquals(types[2], np.bool)
-        self.assertEquals(types[3], np.float32)
-
-    @unittest.skipIf(not _have_pandas, "Pandas not installed")
-    def test_to_pandas_avoid_astype(self):
-        import numpy as np
-        schema = StructType().add("a", IntegerType()).add("b", StringType())\
-                             .add("c", IntegerType())
-        data = [(1, "foo", 16777220), (None, "bar", None)]
-        df = self.spark.createDataFrame(data, schema)
-        types = df.toPandas().dtypes
-        self.assertEquals(types[0], np.float64)  # doesn't convert to np.int32 due to NaN value.
-        self.assertEquals(types[1], np.object)
-        self.assertEquals(types[2], np.float64)
-
-    def test_create_dataframe_from_array_of_long(self):
-        import array
-        data = [Row(longarray=array.array('l', [-9223372036854775808, 0, 9223372036854775807]))]
-        df = self.spark.createDataFrame(data)
-        self.assertEqual(df.first(), Row(longarray=[-9223372036854775808, 0, 9223372036854775807]))
+    def test_create_dataframe_from_pandas_with_timestamp(self):
+        import pandas as pd
+        from datetime import datetime
+        pdf = pd.DataFrame({"ts": [datetime(2017, 10, 31, 1, 1, 1)],
+                            "d": [pd.Timestamp.now().date()]})
+        # test types are inferred correctly without specifying schema
+        df = self.spark.createDataFrame(pdf)
+        self.assertTrue(isinstance(df.schema['ts'].dataType, TimestampType))
+        self.assertTrue(isinstance(df.schema['d'].dataType, DateType))
+        # test with schema will accept pdf as input
+        df = self.spark.createDataFrame(pdf, schema="d: date, ts: timestamp")
+        self.assertTrue(isinstance(df.schema['ts'].dataType, TimestampType))
+        self.assertTrue(isinstance(df.schema['d'].dataType, DateType))
 
 
 class HiveSparkSubmitTests(SparkSubmitTests):

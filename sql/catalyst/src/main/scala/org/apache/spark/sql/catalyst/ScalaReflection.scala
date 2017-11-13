@@ -61,8 +61,8 @@ object ScalaReflection extends ScalaReflection {
    */
   def dataTypeFor[T : TypeTag]: DataType = dataTypeFor(localTypeOf[T])
 
-  private def dataTypeFor(tpe: `Type`): DataType = {
-    tpe.dealias match {
+  private def dataTypeFor(tpe: `Type`): DataType = cleanUpReflectionObjects {
+    tpe match {
       case t if t <:< definitions.IntTpe => IntegerType
       case t if t <:< definitions.LongTpe => LongType
       case t if t <:< definitions.DoubleTpe => DoubleType
@@ -93,8 +93,8 @@ object ScalaReflection extends ScalaReflection {
    * Special handling is performed for primitive types to map them back to their raw
    * JVM form instead of the Scala Array that handles auto boxing.
    */
-  private def arrayClassFor(tpe: `Type`): ObjectType = {
-    val cls = tpe.dealias match {
+  private def arrayClassFor(tpe: `Type`): ObjectType = cleanUpReflectionObjects {
+    val cls = tpe match {
       case t if t <:< definitions.IntTpe => classOf[Array[Int]]
       case t if t <:< definitions.LongTpe => classOf[Array[Long]]
       case t if t <:< definitions.DoubleTpe => classOf[Array[Double]]
@@ -134,19 +134,25 @@ object ScalaReflection extends ScalaReflection {
     val tpe = localTypeOf[T]
     val clsName = getClassNameFromType(tpe)
     val walkedTypePath = s"""- root class: "$clsName"""" :: Nil
-    deserializerFor(tpe, None, walkedTypePath)
+    val expr = deserializerFor(tpe, None, walkedTypePath)
+    val Schema(_, nullable) = schemaFor(tpe)
+    if (nullable) {
+      expr
+    } else {
+      AssertNotNull(expr, walkedTypePath)
+    }
   }
 
   private def deserializerFor(
       tpe: `Type`,
       path: Option[Expression],
-      walkedTypePath: Seq[String]): Expression = {
+      walkedTypePath: Seq[String]): Expression = cleanUpReflectionObjects {
 
     /** Returns the current path with a sub-field extracted. */
     def addToPath(part: String, dataType: DataType, walkedTypePath: Seq[String]): Expression = {
       val newPath = path
         .map(p => UnresolvedExtractValue(p, expressions.Literal(part)))
-        .getOrElse(UnresolvedAttribute(part))
+        .getOrElse(UnresolvedAttribute.quoted(part))
       upCastToExpectedType(newPath, dataType, walkedTypePath)
     }
 
@@ -435,7 +441,7 @@ object ScalaReflection extends ScalaReflection {
       inputObject: Expression,
       tpe: `Type`,
       walkedTypePath: Seq[String],
-      seenTypeSet: Set[`Type`] = Set.empty): Expression = {
+      seenTypeSet: Set[`Type`] = Set.empty): Expression = cleanUpReflectionObjects {
 
     def toCatalystArray(input: Expression, elementType: `Type`): Expression = {
       dataTypeFor(elementType) match {
@@ -642,8 +648,8 @@ object ScalaReflection extends ScalaReflection {
    * Returns true if the given type is option of product type, e.g. `Option[Tuple2]`. Note that,
    * we also treat [[DefinedByConstructorParams]] as product type.
    */
-  def optionOfProductType(tpe: `Type`): Boolean = {
-    tpe.dealias match {
+  def optionOfProductType(tpe: `Type`): Boolean = cleanUpReflectionObjects {
+    tpe match {
       case t if t <:< localTypeOf[Option[_]] =>
         val TypeRef(_, _, Seq(optType)) = t
         definedByConstructorParams(optType)
@@ -675,7 +681,7 @@ object ScalaReflection extends ScalaReflection {
     val m = runtimeMirror(cls.getClassLoader)
     val classSymbol = m.staticClass(cls.getName)
     val t = classSymbol.selfType
-    constructParams(t).map(_.name.toString)
+    constructParams(t).map(_.name.decodedName.toString)
   }
 
   /**
@@ -704,9 +710,9 @@ object ScalaReflection extends ScalaReflection {
   def schemaFor[T: TypeTag]: Schema = schemaFor(localTypeOf[T])
 
   /** Returns a catalyst DataType and its nullability for the given Scala Type using reflection. */
-  def schemaFor(tpe: `Type`): Schema = {
-    tpe.dealias match {
-      case t if t.typeSymbol.annotations.exists(_.tree.tpe =:= typeOf[SQLUserDefinedType]) =>
+  def schemaFor(tpe: `Type`): Schema = cleanUpReflectionObjects {
+    tpe match {
+      case t if t.typeSymbol.annotations.exists(_.tpe =:= typeOf[SQLUserDefinedType]) =>
         val udt = getClassFromType(t).getAnnotation(classOf[SQLUserDefinedType]).udt().newInstance()
         Schema(udt, nullable = true)
       case t if UDTRegistration.exists(getClassNameFromType(t)) =>
@@ -774,8 +780,8 @@ object ScalaReflection extends ScalaReflection {
   /**
    * Whether the fields of the given type is defined entirely by its constructor parameters.
    */
-  def definedByConstructorParams(tpe: Type): Boolean = {
-    tpe.dealias <:< localTypeOf[Product] || tpe.dealias <:< localTypeOf[DefinedByConstructorParams]
+  def definedByConstructorParams(tpe: Type): Boolean = cleanUpReflectionObjects {
+    tpe <:< localTypeOf[Product] || tpe <:< localTypeOf[DefinedByConstructorParams]
   }
 
   private val javaKeywords = Set("abstract", "assert", "boolean", "break", "byte", "case", "catch",
@@ -802,6 +808,20 @@ trait ScalaReflection {
   // The Predef.Map is scala.collection.immutable.Map.
   // Since the map values can be mutable, we explicitly import scala.collection.Map at here.
   import scala.collection.Map
+
+  /**
+   * Any codes calling `scala.reflect.api.Types.TypeApi.<:<` should be wrapped by this method to
+   * clean up the Scala reflection garbage automatically. Otherwise, it will leak some objects to
+   * `scala.reflect.runtime.JavaUniverse.undoLog`.
+   *
+   * This method will also wrap `func` with `ScalaReflectionLock.synchronized` so the caller doesn't
+   * need to call it again.
+   *
+   * @see https://github.com/scala/bug/issues/8302
+   */
+  def cleanUpReflectionObjects[T](func: => T): T = ScalaReflectionLock.synchronized {
+    universe.asInstanceOf[scala.reflect.runtime.JavaUniverse].undoLog.undo(func)
+  }
 
   /**
    * Return the Scala Type for `T` in the current classloader mirror.
@@ -854,11 +874,12 @@ trait ScalaReflection {
     // if there are type variables to fill in, do the substitution (SomeClass[T] -> SomeClass[Int])
     if (actualTypeArgs.nonEmpty) {
       params.map { p =>
-        p.name.toString -> p.typeSignature.substituteTypes(formalTypeArgs, actualTypeArgs)
+        p.name.decodedName.toString ->
+          p.typeSignature.substituteTypes(formalTypeArgs, actualTypeArgs)
       }
     } else {
       params.map { p =>
-        p.name.toString -> p.typeSignature
+        p.name.decodedName.toString -> p.typeSignature
       }
     }
   }

@@ -369,6 +369,25 @@ object SparkSubmit extends CommandLineUtils with Logging {
       }.orNull
     }
 
+    // assure a keytab is available from any place in a JVM
+    if (clusterManager == YARN || clusterManager == LOCAL) {
+      if (args.principal != null) {
+        require(args.keytab != null, "Keytab must be specified when principal is specified")
+        if (!new File(args.keytab).exists()) {
+          throw new SparkException(s"Keytab file: ${args.keytab} does not exist")
+        } else {
+          // Add keytab and principal configurations in sysProps to make them available
+          // for later use; e.g. in spark sql, the isolated class loader used to talk
+          // to HiveMetastore will use these settings. They will be set as Java system
+          // properties and then loaded by SparkConf
+          sysProps.put("spark.yarn.keytab", args.keytab)
+          sysProps.put("spark.yarn.principal", args.principal)
+
+          UserGroupInformation.loginUserFromKeytab(args.principal, args.keytab)
+        }
+      }
+    }
+
     // In client mode, download remote files.
     var localPrimaryResource: String = null
     var localJars: String = null
@@ -649,26 +668,6 @@ object SparkSubmit extends CommandLineUtils with Logging {
       if (args.isPython) {
         sysProps.put("spark.yarn.isPython", "true")
       }
-    }
-
-    // assure a keytab is available from any place in a JVM
-    if (clusterManager == YARN || clusterManager == LOCAL || clusterManager == MESOS) {
-      if (args.principal != null) {
-        if (args.keytab != null) {
-          require(new File(args.keytab).exists(), s"Keytab file: ${args.keytab} does not exist")
-          // Add keytab and principal configurations in sysProps to make them available
-          // for later use; e.g. in spark sql, the isolated class loader used to talk
-          // to HiveMetastore will use these settings. They will be set as Java system
-          // properties and then loaded by SparkConf
-          sysProps.put("spark.yarn.keytab", args.keytab)
-          sysProps.put("spark.yarn.principal", args.principal)
-          UserGroupInformation.loginUserFromKeytab(args.principal, args.keytab)
-        }
-      }
-    }
-
-    if (clusterManager == MESOS && UserGroupInformation.isSecurityEnabled) {
-      setRMPrincipal(sysProps)
     }
 
     // In yarn-cluster mode, use yarn.Client as a wrapper around the user class
