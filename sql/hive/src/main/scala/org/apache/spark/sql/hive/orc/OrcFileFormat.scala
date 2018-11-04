@@ -42,7 +42,7 @@ import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.execution.datasources.orc.OrcOptions
 import org.apache.spark.sql.hive.{HiveInspectors, HiveShim}
 import org.apache.spark.sql.sources.{Filter, _}
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types._
 import org.apache.spark.util.SerializableConfiguration
 
 /**
@@ -59,9 +59,11 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
       sparkSession: SparkSession,
       options: Map[String, String],
       files: Seq[FileStatus]): Option[StructType] = {
+    val ignoreCorruptFiles = sparkSession.sessionState.conf.ignoreCorruptFiles
     OrcFileOperator.readSchema(
       files.map(_.getPath.toString),
-      Some(sparkSession.sessionState.newHadoopConf())
+      Some(sparkSession.sessionState.newHadoopConf()),
+      ignoreCorruptFiles
     )
   }
 
@@ -70,6 +72,7 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
       job: Job,
       options: Map[String, String],
       dataSchema: StructType): OutputWriterFactory = {
+
     val orcOptions = new OrcOptions(options, sparkSession.sessionState.conf)
 
     val configuration = job.getConfiguration
@@ -119,6 +122,7 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
       filters: Seq[Filter],
       options: Map[String, String],
       hadoopConf: Configuration): (PartitionedFile) => Iterator[InternalRow] = {
+
     if (sparkSession.sessionState.conf.orcFilterPushDown) {
       // Sets pushed predicates
       OrcFilters.createFilter(requiredSchema, filters.toArray).foreach { f =>
@@ -129,14 +133,18 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
 
     val broadcastedHadoopConf =
       sparkSession.sparkContext.broadcast(new SerializableConfiguration(hadoopConf))
+    val ignoreCorruptFiles = sparkSession.sessionState.conf.ignoreCorruptFiles
 
     (file: PartitionedFile) => {
       val conf = broadcastedHadoopConf.value.value
 
+      val filePath = new Path(new URI(file.filePath))
+
       // SPARK-8501: Empty ORC files always have an empty schema stored in their footer. In this
       // case, `OrcFileOperator.readSchema` returns `None`, and we can't read the underlying file
       // using the given physical schema. Instead, we simply return an empty iterator.
-      val isEmptyFile = OrcFileOperator.readSchema(Seq(file.filePath), Some(conf)).isEmpty
+      val isEmptyFile =
+        OrcFileOperator.readSchema(Seq(filePath.toString), Some(conf), ignoreCorruptFiles).isEmpty
       if (isEmptyFile) {
         Iterator.empty
       } else {
@@ -146,20 +154,17 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
           val job = Job.getInstance(conf)
           FileInputFormat.setInputPaths(job, file.filePath)
 
-          val fileSplit = new FileSplit(
-            new Path(new URI(file.filePath)), file.start, file.length, Array.empty
-          )
           // Custom OrcRecordReader is used to get
           // ObjectInspector during recordReader creation itself and can
           // avoid NameNode call in unwrapOrcStructs per file.
           // Specifically would be helpful for partitioned datasets.
-          val orcReader = OrcFile.createReader(
-            new Path(new URI(file.filePath)), OrcFile.readerOptions(conf))
-          new SparkOrcNewRecordReader(orcReader, conf, fileSplit.getStart, fileSplit.getLength)
+          val orcReader = OrcFile.createReader(filePath, OrcFile.readerOptions(conf))
+          new SparkOrcNewRecordReader(orcReader, conf, file.start, file.length)
         }
 
         val recordsIterator = new RecordReaderIterator[OrcStruct](orcRecordReader)
-        Option(TaskContext.get()).foreach(_.addTaskCompletionListener(_ => recordsIterator.close()))
+        Option(TaskContext.get())
+          .foreach(_.addTaskCompletionListener[Unit](_ => recordsIterator.close()))
 
         // Unwraps `OrcStruct`s to `UnsafeRow`s
         OrcFileFormat.unwrapOrcStructs(
@@ -170,6 +175,23 @@ class OrcFileFormat extends FileFormat with DataSourceRegister with Serializable
           recordsIterator)
       }
     }
+  }
+
+  override def supportDataType(dataType: DataType, isReadPath: Boolean): Boolean = dataType match {
+    case _: AtomicType => true
+
+    case st: StructType => st.forall { f => supportDataType(f.dataType, isReadPath) }
+
+    case ArrayType(elementType, _) => supportDataType(elementType, isReadPath)
+
+    case MapType(keyType, valueType, _) =>
+      supportDataType(keyType, isReadPath) && supportDataType(valueType, isReadPath)
+
+    case udt: UserDefinedType[_] => supportDataType(udt.sqlType, isReadPath)
+
+    case _: NullType => isReadPath
+
+    case _ => false
   }
 }
 

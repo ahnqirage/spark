@@ -22,16 +22,18 @@ import java.util.{Collections, List => JList}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.locks.ReentrantLock
 
-import org.apache.mesos.Protos.{TaskInfo => MesosTaskInfo, _}
-import org.apache.mesos.SchedulerDriver
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.Future
+
+import org.apache.mesos.Protos.{TaskInfo => MesosTaskInfo, _}
+import org.apache.mesos.SchedulerDriver
 
 import org.apache.spark.{SecurityManager, SparkConf, SparkContext, SparkException, TaskState}
 import org.apache.spark.deploy.mesos.config._
 import org.apache.spark.deploy.security.HadoopDelegationTokenManager
 import org.apache.spark.internal.config
+import org.apache.spark.internal.config.EXECUTOR_HEARTBEAT_INTERVAL
 import org.apache.spark.launcher.{LauncherBackend, SparkAppHandle}
 import org.apache.spark.network.netty.SparkTransportConf
 import org.apache.spark.network.shuffle.mesos.MesosExternalShuffleClient
@@ -57,9 +59,6 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
     securityManager: SecurityManager)
   extends CoarseGrainedSchedulerBackend(scheduler, sc.env.rpcEnv)
     with org.apache.mesos.Scheduler with MesosSchedulerUtils {
-
-  override def hadoopDelegationTokenManager: Option[HadoopDelegationTokenManager] =
-    Some(new HadoopDelegationTokenManager(sc.conf, sc.hadoopConfiguration))
 
   // Blacklist a slave after this many failures
   private val MAX_SLAVE_FAILURES = 2
@@ -91,6 +90,8 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
   private[this] var stopCalled: Boolean = false
 
   private val launcherBackend = new LauncherBackend() {
+    override protected def conf: SparkConf = sc.conf
+
     override protected def onStopRequest(): Unit = {
       stopSchedulerBackend()
       setState(SparkAppHandle.State.KILLED)
@@ -99,7 +100,7 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
 
   // If shuffle service is enabled, the Spark driver will register with the shuffle service.
   // This is for cleaning up shuffle files reliably.
-  private val shuffleServiceEnabled = conf.getBoolean("spark.shuffle.service.enabled", false)
+  private val shuffleServiceEnabled = conf.get(config.SHUFFLE_SERVICE_ENABLED)
 
   // Cores we have acquired with each Mesos task ID
   private val coresByTaskId = new mutable.HashMap[String, Int]
@@ -224,7 +225,9 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
       environment.addVariables(
         Environment.Variable.newBuilder().setName("SPARK_EXECUTOR_CLASSPATH").setValue(cp).build())
     }
-    val extraJavaOpts = conf.get("spark.executor.extraJavaOptions", "")
+    val extraJavaOpts = conf.getOption("spark.executor.extraJavaOptions").map {
+      Utils.substituteAppNExecIds(_, appId, taskId)
+    }.getOrElse("")
 
     // Set the environment variable through a command prefix
     // to append to the existing value of the variable
@@ -399,13 +402,20 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
       val offerMem = getResource(offer.getResourcesList, "mem")
       val offerCpus = getResource(offer.getResourcesList, "cpus")
       val offerPorts = getRangeResource(offer.getResourcesList, "ports")
+      val offerReservationInfo = offer
+        .getResourcesList
+        .asScala
+        .find { r => r.getReservation != null }
       val id = offer.getId.getValue
 
       if (tasks.contains(offer.getId)) { // accept
         val offerTasks = tasks(offer.getId)
 
         logDebug(s"Accepting offer: $id with attributes: $offerAttributes " +
-          s"mem: $offerMem cpu: $offerCpus ports: $offerPorts." +
+          offerReservationInfo.map(resInfo =>
+            s"reservation info: ${resInfo.getReservation.toString}").getOrElse("") +
+          s"mem: $offerMem cpu: $offerCpus ports: $offerPorts " +
+          s"resources: ${offer.getResourcesList.asScala.mkString(",")}." +
           s"  Launching ${offerTasks.size} Mesos tasks.")
 
         for (task <- offerTasks) {
@@ -415,7 +425,7 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
           val ports = getRangeResource(task.getResourcesList, "ports").mkString(",")
 
           logDebug(s"Launching Mesos task: ${taskId.getValue} with mem: $mem cpu: $cpus" +
-            s" ports: $ports")
+            s" ports: $ports" + s" on slave with slave id: ${task.getSlaveId.getValue} ")
         }
 
         driver.launchTasks(
@@ -430,7 +440,8 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
       } else {
         declineOffer(
           driver,
-          offer)
+          offer,
+          Some("Offer was declined due to unmet task launch constraints."))
       }
     }
   }
@@ -512,6 +523,9 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
             totalGpusAcquired += taskGPUs
             gpusByTaskId(taskId) = taskGPUs
           }
+        } else {
+          logDebug(s"Cannot launch a task for offer with id: $offerId on slave " +
+            s"with id: $slaveId. Requirements were not met for this offer.")
         }
       }
     }
@@ -608,7 +622,7 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
           "External shuffle client was not instantiated even though shuffle service is enabled.")
         // TODO: Remove this and allow the MesosExternalShuffleService to detect
         // framework termination when new Mesos Framework HTTP API is available.
-        val externalShufflePort = conf.getInt("spark.shuffle.service.port", 7337)
+        val externalShufflePort = conf.get(config.SHUFFLE_SERVICE_PORT)
 
         logDebug(s"Connecting to shuffle service on slave $slaveId, " +
             s"host ${slave.hostname}, port $externalShufflePort for app ${conf.getAppId}")
@@ -618,8 +632,8 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
             slave.hostname,
             externalShufflePort,
             sc.conf.getTimeAsMs("spark.storage.blockManagerSlaveTimeoutMs",
-              s"${sc.conf.getTimeAsMs("spark.network.timeout", "120s")}ms"),
-            sc.conf.getTimeAsMs("spark.executor.heartbeatInterval", "10s"))
+              s"${sc.conf.getTimeAsSeconds("spark.network.timeout", "120s")}s"),
+            sc.conf.get(EXECUTOR_HEARTBEAT_INTERVAL))
         slave.shuffleRegistered = true
       }
 
@@ -661,7 +675,7 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
     launcherBackend.close()
   }
 
-  private def stopSchedulerBackend() {
+  private def stopSchedulerBackend(): Unit = {
     // Make sure we're not launching tasks during shutdown
     stateLock.synchronized {
       if (stopCalled) {
@@ -758,6 +772,10 @@ private[spark] class MesosCoarseGrainedSchedulerBackend(
       // See [[o.a.s.scheduler.cluster.CoarseGrainedSchedulerBackend.killExecutors]]
       true
     }
+  }
+
+  override protected def createTokenManager(): Option[HadoopDelegationTokenManager] = {
+    Some(new HadoopDelegationTokenManager(conf, sc.hadoopConfiguration))
   }
 
   private def numExecutors(): Int = {

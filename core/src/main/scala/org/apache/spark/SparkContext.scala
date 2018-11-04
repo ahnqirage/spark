@@ -18,7 +18,6 @@
 package org.apache.spark
 
 import java.io._
-import java.lang.reflect.Constructor
 import java.net.URI
 import java.util.{Arrays, Locale, Properties, ServiceLoader, UUID}
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
@@ -26,7 +25,6 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicReferenc
 
 import scala.collection.JavaConverters._
 import scala.collection.Map
-import scala.collection.generic.Growable
 import scala.collection.mutable.HashMap
 import scala.language.implicitConversions
 import scala.reflect.{classTag, ClassTag}
@@ -52,13 +50,13 @@ import org.apache.spark.partial.{ApproximateEvaluator, PartialResult}
 import org.apache.spark.rdd._
 import org.apache.spark.rpc.RpcEndpointRef
 import org.apache.spark.scheduler._
-import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, StandaloneSchedulerBackend}
+import org.apache.spark.scheduler.cluster.StandaloneSchedulerBackend
 import org.apache.spark.scheduler.local.LocalSchedulerBackend
-import org.apache.spark.status.AppStatusStore
+import org.apache.spark.status.{AppStatusSource, AppStatusStore}
+import org.apache.spark.status.api.v1.ThreadStackTrace
 import org.apache.spark.storage._
 import org.apache.spark.storage.BlockManagerMessages.TriggerThreadDump
 import org.apache.spark.ui.{ConsoleProgressBar, SparkUI}
-import org.apache.spark.ui.jobs.JobProgressListener
 import org.apache.spark.util._
 
 /**
@@ -195,7 +193,6 @@ class SparkContext(config: SparkConf) extends Logging {
   private var _eventLogCodec: Option[String] = None
   private var _listenerBus: LiveListenerBus = _
   private var _env: SparkEnv = _
-  private var _jobProgressListener: JobProgressListener = _
   private var _statusTracker: SparkStatusTracker = _
   private var _progressBar: Option[ConsoleProgressBar] = None
   private var _ui: Option[SparkUI] = None
@@ -215,6 +212,7 @@ class SparkContext(config: SparkConf) extends Logging {
   private var _files: Seq[String] = _
   private var _shutdownHookRef: AnyRef = _
   private var _statusStore: AppStatusStore = _
+  private var _heartbeater: Heartbeater = _
 
   /* ------------------------------------------------------------------------------------- *
    | Accessors and public fields. These provide access to the internal state of the        |
@@ -246,6 +244,8 @@ class SparkContext(config: SparkConf) extends Logging {
    */
   def isStopped: Boolean = stopped.get()
 
+  private[spark] def statusStore: AppStatusStore = _statusStore
+
   // An asynchronous listener bus for Spark events
   private[spark] def listenerBus: LiveListenerBus = _listenerBus
 
@@ -254,7 +254,7 @@ class SparkContext(config: SparkConf) extends Logging {
       conf: SparkConf,
       isLocal: Boolean,
       listenerBus: LiveListenerBus): SparkEnv = {
-    SparkEnv.createDriverEnv(conf, isLocal, listenerBus, SparkContext.numDriverCores(master))
+    SparkEnv.createDriverEnv(conf, isLocal, listenerBus, SparkContext.numDriverCores(master, conf))
   }
 
   private[spark] def env: SparkEnv = _env
@@ -268,8 +268,6 @@ class SparkContext(config: SparkConf) extends Logging {
     val map: ConcurrentMap[Int, RDD[_]] = new MapMaker().weakValues().makeMap[Int, RDD[_]]()
     map.asScala
   }
-  private[spark] def jobProgressListener: JobProgressListener = _jobProgressListener
-
   def statusTracker: SparkStatusTracker = _statusTracker
 
   private[spark] def progressBar: Option[ConsoleProgressBar] = _progressBar
@@ -415,18 +413,13 @@ class SparkContext(config: SparkConf) extends Logging {
       }
     }
 
-    if (master == "yarn" && deployMode == "client") System.setProperty("SPARK_YARN_MODE", "true")
-
     _listenerBus = new LiveListenerBus(_conf)
-
-    // "_jobProgressListener" should be set up before creating SparkEnv because when creating
-    // "SparkEnv", some messages will be posted to "listenerBus" and we should not miss them.
-    _jobProgressListener = new JobProgressListener(_conf)
-    listenerBus.addToStatusQueue(jobProgressListener)
 
     // Initialize the app status store and listener before SparkEnv is created so that it gets
     // all events.
-    _statusStore = AppStatusStore.createLiveStore(conf, listenerBus)
+    val appStatusSource = AppStatusSource.createSource(conf)
+    _statusStore = AppStatusStore.createLiveStore(conf, appStatusSource)
+    listenerBus.addToStatusQueue(_statusStore.listener.get)
 
     // Create the Spark execution environment (cache, map output tracker, etc)
     _env = createSparkEnv(_conf, isLocal, listenerBus)
@@ -438,7 +431,7 @@ class SparkContext(config: SparkConf) extends Logging {
       _conf.set("spark.repl.class.uri", replUri)
     }
 
-    _statusTracker = new SparkStatusTracker(this)
+    _statusTracker = new SparkStatusTracker(this, _statusStore)
 
     _progressBar =
       if (_conf.get(UI_SHOW_CONSOLE_PROGRESS) && !log.isInfoEnabled) {
@@ -449,11 +442,7 @@ class SparkContext(config: SparkConf) extends Logging {
 
     _ui =
       if (conf.getBoolean("spark.ui.enabled", true)) {
-        Some(SparkUI.create(Some(this), _statusStore, _conf,
-          l => listenerBus.addToStatusQueue(l),
-          _env.securityManager,
-          appName,
-          "",
+        Some(SparkUI.create(Some(this), _statusStore, _conf, _env.securityManager, appName, "",
           startTime))
       } else {
         // For tests, do not enable the UI
@@ -508,6 +497,11 @@ class SparkContext(config: SparkConf) extends Logging {
     _dagScheduler = new DAGScheduler(this)
     _heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
 
+    // create and start the heartbeater for collecting memory metrics
+    _heartbeater = new Heartbeater(env.memoryManager, reportHeartBeat, "driver-heartbeater",
+      conf.get(EXECUTOR_HEARTBEAT_INTERVAL))
+    _heartbeater.start()
+
     // start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
     // constructor
     _taskScheduler.start()
@@ -546,7 +540,8 @@ class SparkContext(config: SparkConf) extends Logging {
         schedulerBackend match {
           case b: ExecutorAllocationClient =>
             Some(new ExecutorAllocationManager(
-              schedulerBackend.asInstanceOf[ExecutorAllocationClient], listenerBus, _conf))
+              schedulerBackend.asInstanceOf[ExecutorAllocationClient], listenerBus, _conf,
+              _env.blockManager.master))
           case _ =>
             None
         }
@@ -574,7 +569,7 @@ class SparkContext(config: SparkConf) extends Logging {
     _executorAllocationManager.foreach { e =>
       _env.metricsSystem.registerSource(e.executorAllocationManagerSource)
     }
-
+    appStatusSource.foreach(_env.metricsSystem.registerSource(_))
     // Make sure the context is stopped if the user forgets about it. This avoids leaving
     // unfinished event logs around after the JVM exits cleanly. It doesn't help if the JVM
     // is killed, though.
@@ -582,7 +577,12 @@ class SparkContext(config: SparkConf) extends Logging {
     _shutdownHookRef = ShutdownHookManager.addShutdownHook(
       ShutdownHookManager.SPARK_CONTEXT_SHUTDOWN_PRIORITY) { () =>
       logInfo("Invoking stop() from shutdown hook")
-      stop()
+      try {
+        stop()
+      } catch {
+        case e: Throwable =>
+          logWarning("Ignoring Exception while stopping SparkContext from shutdown hook", e)
+      }
     }
   } catch {
     case NonFatal(e) =>
@@ -1317,11 +1317,12 @@ class SparkContext(config: SparkConf) extends Logging {
 
   /** Build the union of a list of RDDs. */
   def union[T: ClassTag](rdds: Seq[RDD[T]]): RDD[T] = withScope {
-    val partitioners = rdds.flatMap(_.partitioner).toSet
-    if (rdds.forall(_.partitioner.isDefined) && partitioners.size == 1) {
-      new PartitionerAwareUnionRDD(this, rdds)
+    val nonEmptyRdds = rdds.filter(!_.partitions.isEmpty)
+    val partitioners = nonEmptyRdds.flatMap(_.partitioner).toSet
+    if (nonEmptyRdds.forall(_.partitioner.isDefined) && partitioners.size == 1) {
+      new PartitionerAwareUnionRDD(this, nonEmptyRdds)
     } else {
-      new UnionRDD(this, rdds)
+      new UnionRDD(this, nonEmptyRdds)
     }
   }
 
@@ -1334,76 +1335,6 @@ class SparkContext(config: SparkConf) extends Logging {
   def emptyRDD[T: ClassTag]: RDD[T] = new EmptyRDD[T](this)
 
   // Methods for creating shared variables
-
-  /**
-   * Create an [[org.apache.spark.Accumulator]] variable of a given type, which tasks can "add"
-   * values to using the `+=` method. Only the driver can access the accumulator's `value`.
-   */
-  @deprecated("use AccumulatorV2", "2.0.0")
-  def accumulator[T](initialValue: T)(implicit param: AccumulatorParam[T]): Accumulator[T] = {
-    val acc = new Accumulator(initialValue, param)
-    cleaner.foreach(_.registerAccumulatorForCleanup(acc.newAcc))
-    acc
-  }
-
-  /**
-   * Create an [[org.apache.spark.Accumulator]] variable of a given type, with a name for display
-   * in the Spark UI. Tasks can "add" values to the accumulator using the `+=` method. Only the
-   * driver can access the accumulator's `value`.
-   */
-  @deprecated("use AccumulatorV2", "2.0.0")
-  def accumulator[T](initialValue: T, name: String)(implicit param: AccumulatorParam[T])
-    : Accumulator[T] = {
-    val acc = new Accumulator(initialValue, param, Option(name))
-    cleaner.foreach(_.registerAccumulatorForCleanup(acc.newAcc))
-    acc
-  }
-
-  /**
-   * Create an [[org.apache.spark.Accumulable]] shared variable, to which tasks can add values
-   * with `+=`. Only the driver can access the accumulable's `value`.
-   * @tparam R accumulator result type
-   * @tparam T type that can be added to the accumulator
-   */
-  @deprecated("use AccumulatorV2", "2.0.0")
-  def accumulable[R, T](initialValue: R)(implicit param: AccumulableParam[R, T])
-    : Accumulable[R, T] = {
-    val acc = new Accumulable(initialValue, param)
-    cleaner.foreach(_.registerAccumulatorForCleanup(acc.newAcc))
-    acc
-  }
-
-  /**
-   * Create an [[org.apache.spark.Accumulable]] shared variable, with a name for display in the
-   * Spark UI. Tasks can add values to the accumulable using the `+=` operator. Only the driver can
-   * access the accumulable's `value`.
-   * @tparam R accumulator result type
-   * @tparam T type that can be added to the accumulator
-   */
-  @deprecated("use AccumulatorV2", "2.0.0")
-  def accumulable[R, T](initialValue: R, name: String)(implicit param: AccumulableParam[R, T])
-    : Accumulable[R, T] = {
-    val acc = new Accumulable(initialValue, param, Option(name))
-    cleaner.foreach(_.registerAccumulatorForCleanup(acc.newAcc))
-    acc
-  }
-
-  /**
-   * Create an accumulator from a "mutable collection" type.
-   *
-   * Growable and TraversableOnce are the standard APIs that guarantee += and ++=, implemented by
-   * standard mutable collections. So you can use this with mutable Map, Set, etc.
-   */
-  @deprecated("use AccumulatorV2", "2.0.0")
-  def accumulableCollection[R <% Growable[T] with TraversableOnce[T] with Serializable: ClassTag, T]
-      (initialValue: R): Accumulable[R, T] = {
-    // TODO the context bound (<%) above should be replaced with simple type bound and implicit
-    // conversion but is a breaking change. This should be fixed in Spark 3.x.
-    val param = new GrowableAccumulableParam[R, T]
-    val acc = new Accumulable(initialValue, param)
-    cleaner.foreach(_.registerAccumulatorForCleanup(acc.newAcc))
-    acc
-  }
 
   /**
    * Register the given accumulator.
@@ -1506,6 +1437,8 @@ class SparkContext(config: SparkConf) extends Logging {
    * @param path can be either a local file, a file in HDFS (or other Hadoop-supported
    * filesystems), or an HTTP, HTTPS or FTP URI. To access the file in Spark jobs,
    * use `SparkFiles.get(fileName)` to find its download location.
+   *
+   * @note A path can be added only once. Subsequent additions of the same path are ignored.
    */
   def addFile(path: String): Unit = {
     addFile(path, false)
@@ -1526,11 +1459,17 @@ class SparkContext(config: SparkConf) extends Logging {
    * use `SparkFiles.get(fileName)` to find its download location.
    * @param recursive if true, a directory can be given in `path`. Currently directories are
    * only supported for Hadoop-supported filesystems.
+   *
+   * @note A path can be added only once. Subsequent additions of the same path are ignored.
    */
   def addFile(path: String, recursive: Boolean): Unit = {
     val uri = new Path(path).toUri
     val schemeCorrectedPath = uri.getScheme match {
-      case null | "local" => new File(path).getCanonicalFile.toURI.toString
+      case null => new File(path).getCanonicalFile.toURI.toString
+      case "local" =>
+        logWarning("File with 'local' scheme is not supported to add to file server, since " +
+          "it is already available on every node.")
+        return
       case _ => path
     }
 
@@ -1565,6 +1504,9 @@ class SparkContext(config: SparkConf) extends Logging {
       Utils.fetchFile(uri.toString, new File(SparkFiles.getRootDirectory()), conf,
         env.securityManager, hadoopConfiguration, timestamp, useCache = false)
       postEnvironmentUpdate()
+    } else {
+      logWarning(s"The path $path has been added already. Overwriting of added paths " +
+       "is not supported in the current version.")
     }
   }
 
@@ -1588,13 +1530,22 @@ class SparkContext(config: SparkConf) extends Logging {
 
   private[spark] def getExecutorIds(): Seq[String] = {
     schedulerBackend match {
-      case b: CoarseGrainedSchedulerBackend =>
+      case b: ExecutorAllocationClient =>
         b.getExecutorIds()
       case _ =>
-        logWarning("Requesting executors is only supported in coarse-grained mode")
+        logWarning("Requesting executors is not supported by current scheduler.")
         Nil
     }
   }
+
+  /**
+   * Get the max number of tasks that can be concurrent launched currently.
+   * Note that please don't cache the value returned by this method, because the number can change
+   * due to add/remove executors.
+   *
+   * @return The max number of tasks that can be concurrent launched currently.
+   */
+  private[spark] def maxNumConcurrentTasks(): Int = schedulerBackend.maxNumConcurrentTasks()
 
   /**
    * Update the cluster manager on our scheduling needs. Three bits of information are included
@@ -1617,10 +1568,10 @@ class SparkContext(config: SparkConf) extends Logging {
       hostToLocalTaskCount: scala.collection.immutable.Map[String, Int]
     ): Boolean = {
     schedulerBackend match {
-      case b: CoarseGrainedSchedulerBackend =>
+      case b: ExecutorAllocationClient =>
         b.requestTotalExecutors(numExecutors, localityAwareTasks, hostToLocalTaskCount)
       case _ =>
-        logWarning("Requesting executors is only supported in coarse-grained mode")
+        logWarning("Requesting executors is not supported by current scheduler.")
         false
     }
   }
@@ -1633,10 +1584,10 @@ class SparkContext(config: SparkConf) extends Logging {
   @DeveloperApi
   def requestExecutors(numAdditionalExecutors: Int): Boolean = {
     schedulerBackend match {
-      case b: CoarseGrainedSchedulerBackend =>
+      case b: ExecutorAllocationClient =>
         b.requestExecutors(numAdditionalExecutors)
       case _ =>
-        logWarning("Requesting executors is only supported in coarse-grained mode")
+        logWarning("Requesting executors is not supported by current scheduler.")
         false
     }
   }
@@ -1644,6 +1595,8 @@ class SparkContext(config: SparkConf) extends Logging {
   /**
    * :: DeveloperApi ::
    * Request that the cluster manager kill the specified executors.
+   *
+   * This is not supported when dynamic allocation is turned on.
    *
    * @note This is an indication to the cluster manager that the application wishes to adjust
    * its resource usage downwards. If the application wishes to replace the executors it kills
@@ -1655,10 +1608,13 @@ class SparkContext(config: SparkConf) extends Logging {
   @DeveloperApi
   def killExecutors(executorIds: Seq[String]): Boolean = {
     schedulerBackend match {
-      case b: CoarseGrainedSchedulerBackend =>
-        b.killExecutors(executorIds, replace = false, force = true).nonEmpty
+      case b: ExecutorAllocationClient =>
+        require(executorAllocationManager.isEmpty,
+          "killExecutors() unsupported with Dynamic Allocation turned on")
+        b.killExecutors(executorIds, adjustTargetNumExecutors = true, countFailures = false,
+          force = true).nonEmpty
       case _ =>
-        logWarning("Killing executors is only supported in coarse-grained mode")
+        logWarning("Killing executors is not supported by current scheduler.")
         false
     }
   }
@@ -1693,10 +1649,11 @@ class SparkContext(config: SparkConf) extends Logging {
    */
   private[spark] def killAndReplaceExecutor(executorId: String): Boolean = {
     schedulerBackend match {
-      case b: CoarseGrainedSchedulerBackend =>
-        b.killExecutors(Seq(executorId), replace = true, force = true).nonEmpty
+      case b: ExecutorAllocationClient =>
+        b.killExecutors(Seq(executorId), adjustTargetNumExecutors = false, countFailures = true,
+          force = true).nonEmpty
       case _ =>
-        logWarning("Killing executors is only supported in coarse-grained mode")
+        logWarning("Killing executors is not supported by current scheduler.")
         false
     }
   }
@@ -1728,7 +1685,13 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def getRDDStorageInfo(filter: RDD[_] => Boolean): Array[RDDInfo] = {
     assertNotStopped()
     val rddInfos = persistentRdds.values.filter(filter).map(RDDInfo.fromRdd).toArray
-    StorageUtils.updateRddInfo(rddInfos, getExecutorStorageStatus)
+    rddInfos.foreach { rddInfo =>
+      val rddId = rddInfo.id
+      val rddStorageInfo = statusStore.asOption(statusStore.rdd(rddId))
+      rddInfo.numCachedPartitions = rddStorageInfo.map(_.numCachedPartitions).getOrElse(0)
+      rddInfo.memSize = rddStorageInfo.map(_.memoryUsed).getOrElse(0L)
+      rddInfo.diskSize = rddStorageInfo.map(_.diskUsed).getOrElse(0L)
+    }
     rddInfos.filter(_.isCached)
   }
 
@@ -1738,17 +1701,6 @@ class SparkContext(config: SparkConf) extends Logging {
    * @note This does not necessarily mean the caching or computation was successful.
    */
   def getPersistentRDDs: Map[Int, RDD[_]] = persistentRdds.toMap
-
-  /**
-   * :: DeveloperApi ::
-   * Return information about blocks stored in all of the slaves
-   */
-  @DeveloperApi
-  @deprecated("This method may change or be removed in a future release.", "2.2.0")
-  def getExecutorStorageStatus: Array[StorageStatus] = {
-    assertNotStopped()
-    env.blockManager.master.getStorageStatus
-  }
 
   /**
    * :: DeveloperApi ::
@@ -1812,6 +1764,8 @@ class SparkContext(config: SparkConf) extends Logging {
    *
    * @param path can be either a local file, a file in HDFS (or other Hadoop-supported filesystems),
    * an HTTP, HTTPS or FTP URI, or local:/path for a file on every worker node.
+   *
+   * @note A path can be added only once. Subsequent additions of the same path are ignored.
    */
   def addJar(path: String) {
     def addJarFile(file: File): String = {
@@ -1843,7 +1797,11 @@ class SparkContext(config: SparkConf) extends Logging {
         Utils.validateURL(uri)
         uri.getScheme match {
           // A JAR file which exists only on the driver node
-          case null | "file" => addJarFile(new File(uri.getPath))
+          case null =>
+            // SPARK-22585 path without schema is not url encoded
+            addJarFile(new File(uri.getRawPath))
+          // A JAR file which exists only on the driver node
+          case "file" => addJarFile(new File(uri.getPath))
           // A JAR file which exists locally on every worker node
           case "local" => "file:" + uri.getPath
           case _ => path
@@ -1854,6 +1812,9 @@ class SparkContext(config: SparkConf) extends Logging {
         if (addedJars.putIfAbsent(key, timestamp).isEmpty) {
           logInfo(s"Added JAR $path at $key with timestamp $timestamp")
           postEnvironmentUpdate()
+        } else {
+          logWarning(s"The jar $path has been added already. Overwriting of added jars " +
+            "is not supported in the current version.")
         }
       }
     }
@@ -1919,6 +1880,12 @@ class SparkContext(config: SparkConf) extends Logging {
     Utils.tryLogNonFatalError {
       _executorAllocationManager.foreach(_.stop())
     }
+    if (_dagScheduler != null) {
+      Utils.tryLogNonFatalError {
+        _dagScheduler.stop()
+      }
+      _dagScheduler = null
+    }
     if (_listenerBusStarted) {
       Utils.tryLogNonFatalError {
         listenerBus.stop()
@@ -1928,11 +1895,11 @@ class SparkContext(config: SparkConf) extends Logging {
     Utils.tryLogNonFatalError {
       _eventLogger.foreach(_.stop())
     }
-    if (_dagScheduler != null) {
+    if (_heartbeater != null) {
       Utils.tryLogNonFatalError {
-        _dagScheduler.stop()
+        _heartbeater.stop()
       }
-      _dagScheduler = null
+      _heartbeater = null
     }
     if (env != null && _heartbeatReceiver != null) {
       Utils.tryLogNonFatalError {
@@ -1957,7 +1924,6 @@ class SparkContext(config: SparkConf) extends Logging {
     // `SparkContext` is stopped.
     localProperties.remove()
     // Unset YARN mode system env variable, to allow switching between cluster types.
-    System.clearProperty("SPARK_YARN_MODE")
     SparkContext.clearActiveContext()
     logInfo("Successfully stopped SparkContext")
   }
@@ -2286,7 +2252,7 @@ class SparkContext(config: SparkConf) extends Logging {
   }
 
   /**
-   * Clean a closure to make it ready to serialized and send to tasks
+   * Clean a closure to make it ready to be serialized and sent to tasks
    * (removes unreferenced variables in $outer's, updates REPL variables)
    * If <tt>checkSerializable</tt> is set, <tt>clean</tt> will also proactively
    * check to see if <tt>f</tt> is serializable and throw a <tt>SparkException</tt>
@@ -2403,6 +2369,14 @@ class SparkContext(config: SparkConf) extends Logging {
       val environmentUpdate = SparkListenerEnvironmentUpdate(environmentDetails)
       listenerBus.post(environmentUpdate)
     }
+  }
+
+  /** Reports heartbeat metrics for the driver. */
+  private def reportHeartBeat(): Unit = {
+    val driverUpdates = _heartbeater.getCurrentMetrics()
+    val accumUpdates = new Array[(Long, Int, Int, Seq[AccumulableInfo])](0)
+    listenerBus.post(SparkListenerExecutorMetricsUpdate("driver", accumUpdates,
+      Some(driverUpdates)))
   }
 
   // In order to prevent multiple SparkContexts from being active at the same time, mark this
@@ -2658,9 +2632,16 @@ object SparkContext extends Logging {
   }
 
   /**
-   * The number of driver cores to use for execution in local mode, 0 otherwise.
+   * The number of cores available to the driver to use for tasks such as I/O with Netty
    */
   private[spark] def numDriverCores(master: String): Int = {
+    numDriverCores(master, null)
+  }
+
+  /**
+   * The number of cores available to the driver to use for tasks such as I/O with Netty
+   */
+  private[spark] def numDriverCores(master: String, conf: SparkConf): Int = {
     def convertToInt(threads: String): Int = {
       if (threads == "*") Runtime.getRuntime.availableProcessors() else threads.toInt
     }
@@ -2668,7 +2649,13 @@ object SparkContext extends Logging {
       case "local" => 1
       case SparkMasterRegex.LOCAL_N_REGEX(threads) => convertToInt(threads)
       case SparkMasterRegex.LOCAL_N_FAILURES_REGEX(threads, _) => convertToInt(threads)
-      case _ => 0 // driver is not used for execution
+      case "yarn" =>
+        if (conf != null && conf.getOption("spark.submit.deployMode").contains("cluster")) {
+          conf.getInt("spark.driver.cores", 0)
+        } else {
+          0
+        }
+      case _ => 0 // Either driver is not being used, or its core count will be interpolated later
     }
   }
 

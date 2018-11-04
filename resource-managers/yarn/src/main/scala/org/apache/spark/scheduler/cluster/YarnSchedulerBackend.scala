@@ -19,7 +19,8 @@ package org.apache.spark.scheduler.cluster
 
 import java.util.concurrent.atomic.{AtomicBoolean}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
@@ -68,6 +69,7 @@ private[spark] abstract class YarnSchedulerBackend(
 
   /** Scheduler extension services. */
   private val services: SchedulerExtensionServices = new SchedulerExtensionServices()
+
 
   /**
    * Bind to YARN. This *must* be done before calling [[start()]].
@@ -245,14 +247,7 @@ private[spark] abstract class YarnSchedulerBackend(
           Future.successful(RemoveExecutor(executorId, SlaveLost("AM is not yet registered.")))
       }
 
-      removeExecutorMessage
-        .flatMap { message =>
-          driverEndpoint.ask[Boolean](message)
-        }(ThreadUtils.sameThread)
-        .onFailure {
-          case NonFatal(e) => logError(
-            s"Error requesting driver to remove executor $executorId after disconnection.", e)
-        }(ThreadUtils.sameThread)
+      removeExecutorMessage.foreach { message => driverEndpoint.send(message) }
     }
 
     override def receive: PartialFunction[Any, Unit] = {
@@ -265,14 +260,16 @@ private[spark] abstract class YarnSchedulerBackend(
         addWebUIFilter(filterName, filterParams, proxyBase)
 
       case r @ RemoveExecutor(executorId, reason) =>
-        logWarning(reason.toString)
-        driverEndpoint.ask[Boolean](r).onFailure {
-          case e =>
-            logError("Error requesting driver to remove executor" +
-              s" $executorId for reason $reason", e)
-        }(ThreadUtils.sameThread)
-    }
+        if (!stopped.get) {
+          logWarning(s"Requesting driver to remove executor $executorId for reason $reason")
+          driverEndpoint.send(r)
+        }
 
+      case u @ UpdateDelegationTokens(tokens) =>
+        // Add the tokens to the current user and send a message to the scheduler so that it
+        // notifies all registered executors of the new tokens.
+        driverEndpoint.send(u)
+    }
 
     override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
       case r: RequestExecutors =>

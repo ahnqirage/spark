@@ -50,6 +50,7 @@ case class FlatMapGroupsWithStateExec(
     outputObjAttr: Attribute,
     stateInfo: Option[StatefulOperatorStateInfo],
     stateEncoder: ExpressionEncoder[Any],
+    stateFormatVersion: Int,
     outputMode: OutputMode,
     timeoutConf: GroupStateTimeout,
     batchTimestampMs: Option[Long],
@@ -58,13 +59,15 @@ case class FlatMapGroupsWithStateExec(
   ) extends UnaryExecNode with ObjectProducerExec with StateStoreWriter with WatermarkSupport {
 
   import GroupStateImpl._
+  import FlatMapGroupsWithStateExecHelper._
 
   private val isTimeoutEnabled = timeoutConf != NoTimeout
-  val stateManager = new FlatMapGroupsWithState_StateManager(stateEncoder, isTimeoutEnabled)
-  val watermarkPresent = child.output.exists {
+  private val watermarkPresent = child.output.exists {
     case a: Attribute if a.metadata.contains(EventTimeWatermark.delayKey) => true
     case _ => false
   }
+  private[sql] val stateManager =
+    createStateManager(stateEncoder, isTimeoutEnabled, stateFormatVersion)
 
   /** Distribute by grouping attributes */
   override def requiredChildDistribution: Seq[Distribution] =
@@ -75,6 +78,18 @@ case class FlatMapGroupsWithStateExec(
     Seq(groupingAttributes.map(SortOrder(_, Ascending)))
 
   override def keyExpressions: Seq[Attribute] = groupingAttributes
+
+  override def shouldRunAnotherBatch(newMetadata: OffsetSeqMetadata): Boolean = {
+    timeoutConf match {
+      case ProcessingTimeTimeout =>
+        true  // Always run batches to process timeouts
+      case EventTimeTimeout =>
+        // Process another non-data batch only if the watermark has changed in this executed plan
+        eventTimeWatermark.isDefined && newMetadata.batchWatermarkMs > eventTimeWatermark.get
+      case _ =>
+        false
+    }
+  }
 
   override protected def doExecute(): RDD[InternalRow] = {
     metrics // force lazy init at driver
@@ -105,7 +120,6 @@ case class FlatMapGroupsWithStateExec(
           case _ =>
             iter
         }
-
         // Generate a iterator that returns the rows grouped by the grouping function
         // Note that this code ensures that the filtering for timeout occurs only after
         // all the data has been processed. This is to ensure that the timeout information of all
@@ -164,10 +178,10 @@ case class FlatMapGroupsWithStateExec(
             throw new IllegalStateException(
               s"Cannot filter timed out keys for $timeoutConf")
         }
-        val timingOutKeys = stateManager.getAllState(store).filter { state =>
+        val timingOutPairs = stateManager.getAllState(store).filter { state =>
           state.timeoutTimestamp != NO_TIMESTAMP && state.timeoutTimestamp < timeoutThreshold
         }
-        timingOutKeys.flatMap { stateData =>
+        timingOutPairs.flatMap { stateData =>
           callFunctionAndUpdateState(stateData, Iterator.empty, hasTimedOut = true)
         }
       } else Iterator.empty
@@ -183,7 +197,7 @@ case class FlatMapGroupsWithStateExec(
      * @param hasTimedOut Whether this function is being called for a key timeout
      */
     private def callFunctionAndUpdateState(
-        stateData: FlatMapGroupsWithState_StateData,
+        stateData: StateData,
         valueRowIter: Iterator[InternalRow],
         hasTimedOut: Boolean): Iterator[InternalRow] = {
 

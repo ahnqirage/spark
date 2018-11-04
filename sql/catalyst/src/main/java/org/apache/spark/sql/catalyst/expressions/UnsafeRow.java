@@ -61,16 +61,14 @@ import static org.apache.spark.unsafe.Platform.BYTE_ARRAY_OFFSET;
  */
 public final class UnsafeRow extends InternalRow implements Externalizable, KryoSerializable {
 
+  public static final int WORD_SIZE = 8;
+
   //////////////////////////////////////////////////////////////////////////////
   // Static methods
   //////////////////////////////////////////////////////////////////////////////
 
   public static int calculateBitSetWidthInBytes(int numFields) {
     return ((numFields + 63)/ 64) * 8;
-  }
-
-  public static int calculateFixedPortionByteSize(int numFields) {
-    return 8 * numFields + calculateBitSetWidthInBytes(numFields);
   }
 
   /**

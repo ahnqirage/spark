@@ -290,6 +290,16 @@ object QueryTest {
     Row.fromSeq(row.toSeq.map {
       case null => null
       case d: java.math.BigDecimal => BigDecimal(d)
+      // Equality of WrappedArray differs for AnyVal and AnyRef in Scala 2.12.2+
+      case seq: Seq[_] => seq.map {
+        case b: java.lang.Byte => b.byteValue
+        case s: java.lang.Short => s.shortValue
+        case i: java.lang.Integer => i.intValue
+        case l: java.lang.Long => l.longValue
+        case f: java.lang.Float => f.floatValue
+        case d: java.lang.Double => d.doubleValue
+        case x => x
+      }
       // Convert array to Seq for easy equality check.
       case b: Array[_] => b.toSeq
       case r: Row => prepareRow(r)
@@ -297,31 +307,47 @@ object QueryTest {
     })
   }
 
+  private def genError(
+      expectedAnswer: Seq[Row],
+      sparkAnswer: Seq[Row],
+      isSorted: Boolean = false): String = {
+    val getRowType: Option[Row] => String = row =>
+      row.map(row =>
+        if (row.schema == null) {
+          "struct<>"
+        } else {
+          s"${row.schema.catalogString}"
+        }).getOrElse("struct<>")
+
+    s"""
+       |== Results ==
+       |${
+      sideBySide(
+        s"== Correct Answer - ${expectedAnswer.size} ==" +:
+          getRowType(expectedAnswer.headOption) +:
+          prepareAnswer(expectedAnswer, isSorted).map(_.toString()),
+        s"== Spark Answer - ${sparkAnswer.size} ==" +:
+          getRowType(sparkAnswer.headOption) +:
+          prepareAnswer(sparkAnswer, isSorted).map(_.toString())).mkString("\n")
+    }
+    """.stripMargin
+  }
+
+  def includesRows(
+      expectedRows: Seq[Row],
+      sparkAnswer: Seq[Row]): Option[String] = {
+    if (!prepareAnswer(expectedRows, true).toSet.subsetOf(prepareAnswer(sparkAnswer, true).toSet)) {
+      return Some(genError(expectedRows, sparkAnswer, true))
+    }
+    None
+  }
+
   def sameRows(
       expectedAnswer: Seq[Row],
       sparkAnswer: Seq[Row],
       isSorted: Boolean = false): Option[String] = {
     if (prepareAnswer(expectedAnswer, isSorted) != prepareAnswer(sparkAnswer, isSorted)) {
-      val getRowType: Option[Row] => String = row =>
-        row.map(row =>
-            if (row.schema == null) {
-              "struct<>"
-            } else {
-                s"${row.schema.catalogString}"
-            }).getOrElse("struct<>")
-
-      val errorMessage =
-        s"""
-         |== Results ==
-         |${sideBySide(
-        s"== Correct Answer - ${expectedAnswer.size} ==" +:
-         getRowType(expectedAnswer.headOption) +:
-         prepareAnswer(expectedAnswer, isSorted).map(_.toString()),
-        s"== Spark Answer - ${sparkAnswer.size} ==" +:
-         getRowType(sparkAnswer.headOption) +:
-         prepareAnswer(sparkAnswer, isSorted).map(_.toString())).mkString("\n")}
-        """.stripMargin
-      return Some(errorMessage)
+      return Some(genError(expectedAnswer, sparkAnswer, isSorted))
     }
     None
   }
