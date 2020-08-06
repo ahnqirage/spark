@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.csv._
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.catalyst.util._
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -39,9 +40,9 @@ import org.apache.spark.unsafe.types.UTF8String
   examples = """
     Examples:
       > SELECT _FUNC_('1, 0.8', 'a INT, b DOUBLE');
-       {"a":1, "b":0.8}
-      > SELECT _FUNC_('26/08/2015', 'time Timestamp', map('timestampFormat', 'dd/MM/yyyy'))
-       {"time":2015-08-26 00:00:00.0}
+       {"a":1,"b":0.8}
+      > SELECT _FUNC_('26/08/2015', 'time Timestamp', map('timestampFormat', 'dd/MM/yyyy'));
+       {"time":2015-08-26 00:00:00}
   """,
   since = "3.0.0")
 // scalastyle:on line.size.limit
@@ -92,22 +93,31 @@ case class CsvToStructs(
     }
   }
 
+  val nameOfCorruptRecord = SQLConf.get.getConf(SQLConf.COLUMN_NAME_OF_CORRUPT_RECORD)
+
   @transient lazy val parser = {
-    val parsedOptions = new CSVOptions(options, columnPruning = true, timeZoneId.get)
+    val parsedOptions = new CSVOptions(
+      options,
+      columnPruning = true,
+      defaultTimeZoneId = timeZoneId.get,
+      defaultColumnNameOfCorruptRecord = nameOfCorruptRecord)
     val mode = parsedOptions.parseMode
     if (mode != PermissiveMode && mode != FailFastMode) {
       throw new AnalysisException(s"from_csv() doesn't support the ${mode.name} mode. " +
         s"Acceptable modes are ${PermissiveMode.name} and ${FailFastMode.name}.")
     }
+    ExprUtils.verifyColumnNameOfCorruptRecord(
+      nullableSchema,
+      parsedOptions.columnNameOfCorruptRecord)
+
     val actualSchema =
       StructType(nullableSchema.filterNot(_.name == parsedOptions.columnNameOfCorruptRecord))
     val rawParser = new UnivocityParser(actualSchema, actualSchema, parsedOptions)
     new FailureSafeParser[String](
-      input => Seq(rawParser.parse(input)),
+      input => rawParser.parse(input),
       mode,
       nullableSchema,
-      parsedOptions.columnNameOfCorruptRecord,
-      parsedOptions.multiLine)
+      parsedOptions.columnNameOfCorruptRecord)
   }
 
   override def dataType: DataType = nullableSchema
@@ -155,10 +165,14 @@ case class SchemaOfCsv(
   @transient
   private lazy val csv = child.eval().asInstanceOf[UTF8String]
 
-  override def checkInputDataTypes(): TypeCheckResult = child match {
-    case Literal(s, StringType) if s != null => super.checkInputDataTypes()
-    case _ => TypeCheckResult.TypeCheckFailure(
-      s"The input csv should be a string literal and not null; however, got ${child.sql}.")
+  override def checkInputDataTypes(): TypeCheckResult = {
+    if (child.foldable && csv != null) {
+      super.checkInputDataTypes()
+    } else {
+      TypeCheckResult.TypeCheckFailure(
+        "The input csv should be a foldable string expression and not null; " +
+        s"however, got ${child.sql}.")
+    }
   }
 
   override def eval(v: InternalRow): Any = {
@@ -169,8 +183,9 @@ case class SchemaOfCsv(
 
     val header = row.zipWithIndex.map { case (_, index) => s"_c$index" }
     val startType: Array[DataType] = Array.fill[DataType](header.length)(NullType)
-    val fieldTypes = CSVInferSchema.inferRowType(parsedOptions)(startType, row)
-    val st = StructType(CSVInferSchema.toStructFields(fieldTypes, header, parsedOptions))
+    val inferSchema = new CSVInferSchema(parsedOptions)
+    val fieldTypes = inferSchema.inferRowType(startType, row)
+    val st = StructType(inferSchema.toStructFields(fieldTypes, header))
     UTF8String.fromString(st.catalogString)
   }
 
@@ -188,7 +203,7 @@ case class SchemaOfCsv(
       > SELECT _FUNC_(named_struct('a', 1, 'b', 2));
        1,2
       > SELECT _FUNC_(named_struct('time', to_timestamp('2015-08-26', 'yyyy-MM-dd')), map('timestampFormat', 'dd/MM/yyyy'));
-       "26/08/2015"
+       26/08/2015
   """,
   since = "3.0.0")
 // scalastyle:on line.size.limit
@@ -196,7 +211,8 @@ case class StructsToCsv(
      options: Map[String, String],
      child: Expression,
      timeZoneId: Option[String] = None)
-  extends UnaryExpression with TimeZoneAwareExpression with CodegenFallback with ExpectsInputTypes {
+  extends UnaryExpression with TimeZoneAwareExpression with CodegenFallback with ExpectsInputTypes
+    with NullIntolerant {
   override def nullable: Boolean = true
 
   def this(options: Map[String, String], child: Expression) = this(options, child, None)

@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.catalyst.optimizer
 
-import org.apache.spark.sql.catalyst.analysis
+import org.apache.spark.api.python.PythonEvalType
 import org.apache.spark.sql.catalyst.analysis.EliminateSubqueryAliases
 import org.apache.spark.sql.catalyst.dsl.expressions._
 import org.apache.spark.sql.catalyst.dsl.plans._
@@ -25,26 +25,45 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules._
-import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.types.{BooleanType, IntegerType}
 import org.apache.spark.unsafe.types.CalendarInterval
 
 class FilterPushdownSuite extends PlanTest {
 
   object Optimize extends RuleExecutor[LogicalPlan] {
+
     val batches =
       Batch("Subqueries", Once,
         EliminateSubqueryAliases) ::
       Batch("Filter Pushdown", FixedPoint(10),
         CombineFilters,
-        PushDownPredicate,
+        PushPredicateThroughNonJoin,
         BooleanSimplification,
         PushPredicateThroughJoin,
-        CollapseProject) :: Nil
+        CollapseProject) ::
+      Batch("Push extra predicate through join", FixedPoint(10),
+        PushExtraPredicateThroughJoin,
+        PushDownPredicates) :: Nil
   }
 
-  val testRelation = LocalRelation('a.int, 'b.int, 'c.int)
+  val attrA = 'a.int
+  val attrB = 'b.int
+  val attrC = 'c.int
+  val attrD = 'd.int
 
-  val testRelation1 = LocalRelation('d.int)
+  val testRelation = LocalRelation(attrA, attrB, attrC)
+
+  val testRelation1 = LocalRelation(attrD)
+
+  val simpleDisjunctivePredicate =
+    ("x.a".attr > 3) && ("y.a".attr > 13) || ("x.a".attr > 1) && ("y.a".attr > 11)
+  val expectedPredicatePushDownResult = {
+    val left = testRelation.where(('a > 3 || 'a > 1)).subquery('x)
+    val right = testRelation.where('a > 13 || 'a > 11).subquery('y)
+    left.join(right, condition = Some("x.b".attr === "y.b".attr
+      && (("x.a".attr > 3) && ("y.a".attr > 13) || ("x.a".attr > 1) && ("y.a".attr > 11)))).analyze
+  }
 
   // This test already passes.
   test("eliminate subqueries") {
@@ -822,19 +841,6 @@ class FilterPushdownSuite extends PlanTest {
     comparePlans(optimized, correctAnswer)
   }
 
-  test("broadcast hint") {
-    val originalQuery = ResolvedHint(testRelation)
-      .where('a === 2L && 'b + Rand(10).as("rnd") === 3)
-
-    val optimized = Optimize.execute(originalQuery.analyze)
-
-    val correctAnswer = ResolvedHint(testRelation.where('a === 2L))
-      .where('b + Rand(10).as("rnd") === 3)
-      .analyze
-
-    comparePlans(optimized, correctAnswer)
-  }
-
   test("union") {
     val testRelation2 = LocalRelation('d.int, 'e.int, 'f.int)
 
@@ -1162,7 +1168,7 @@ class FilterPushdownSuite extends PlanTest {
   }
 
   test("watermark pushdown: no pushdown on watermark attribute #1") {
-    val interval = new CalendarInterval(2, 2000L)
+    val interval = new CalendarInterval(2, 2, 2000L)
 
     // Verify that all conditions except the watermark touching condition are pushed down
     // by the optimizer and others are not.
@@ -1177,7 +1183,7 @@ class FilterPushdownSuite extends PlanTest {
   }
 
   test("watermark pushdown: no pushdown for nondeterministic filter") {
-    val interval = new CalendarInterval(2, 2000L)
+    val interval = new CalendarInterval(2, 2, 2000L)
 
     // Verify that all conditions except the watermark touching condition are pushed down
     // by the optimizer and others are not.
@@ -1192,7 +1198,7 @@ class FilterPushdownSuite extends PlanTest {
   }
 
   test("watermark pushdown: full pushdown") {
-    val interval = new CalendarInterval(2, 2000L)
+    val interval = new CalendarInterval(2, 2, 2000L)
 
     // Verify that all conditions except the watermark touching condition are pushed down
     // by the optimizer and others are not.
@@ -1206,7 +1212,7 @@ class FilterPushdownSuite extends PlanTest {
   }
 
   test("watermark pushdown: no pushdown on watermark attribute #2") {
-    val interval = new CalendarInterval(2, 2000L)
+    val interval = new CalendarInterval(2, 2, 2000L)
 
     val originalQuery = EventTimeWatermark('a, interval, testRelation)
       .where('a === 5 && 'b === 10)
@@ -1215,5 +1221,161 @@ class FilterPushdownSuite extends PlanTest {
 
     comparePlans(Optimize.execute(originalQuery.analyze), correctAnswer.analyze,
       checkAnalysis = false)
+  }
+
+  test("SPARK-28345: PythonUDF predicate should be able to pushdown to join") {
+    val pythonUDFJoinCond = {
+      val pythonUDF = PythonUDF("pythonUDF", null,
+        IntegerType,
+        Seq(attrA),
+        PythonEvalType.SQL_BATCHED_UDF,
+        udfDeterministic = true)
+      pythonUDF === attrD
+    }
+
+    val query = testRelation.join(
+      testRelation1,
+      joinType = Cross).where(pythonUDFJoinCond)
+
+    val expected = testRelation.join(
+      testRelation1,
+      joinType = Cross,
+      condition = Some(pythonUDFJoinCond)).analyze
+
+    comparePlans(Optimize.execute(query.analyze), expected)
+  }
+
+  test("push down filter predicates through inner join") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+
+    val originalQuery = x.join(y).where(("x.b".attr === "y.b".attr) && (simpleDisjunctivePredicate))
+
+    val optimized = Optimize.execute(originalQuery.analyze)
+    comparePlans(optimized, expectedPredicatePushDownResult)
+  }
+
+  test("push down join predicates through inner join") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+
+    val originalQuery =
+      x.join(y, condition = Some(("x.b".attr === "y.b".attr) && (simpleDisjunctivePredicate)))
+
+    val optimized = Optimize.execute(originalQuery.analyze)
+    comparePlans(optimized, expectedPredicatePushDownResult)
+  }
+
+  test("push down complex predicates through inner join") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+
+    val joinCondition = (("x.b".attr === "y.b".attr)
+      && ((("x.a".attr === 5) && ("y.a".attr >= 2) && ("y.a".attr <= 3))
+      || (("x.a".attr === 2) && ("y.a".attr >= 1) && ("y.a".attr <= 14))
+      || (("x.a".attr === 1) && ("y.a".attr >= 9) && ("y.a".attr <= 27))))
+
+    val originalQuery = x.join(y, condition = Some(joinCondition))
+    val optimized = Optimize.execute(originalQuery.analyze)
+    val left = testRelation.where(
+      ('a === 5 || 'a === 2 || 'a === 1)).subquery('x)
+    val right = testRelation.where(
+      ('a >= 2 && 'a <= 3) || ('a >= 1 && 'a <= 14) || ('a >= 9 && 'a <= 27)).subquery('y)
+    val correctAnswer = left.join(right, condition = Some(joinCondition)).analyze
+
+    comparePlans(optimized, correctAnswer)
+  }
+
+  test("push down predicates(with NOT predicate) through inner join") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+
+    val originalQuery =
+      x.join(y, condition = Some(("x.b".attr === "y.b".attr)
+        && Not(("x.a".attr > 3)
+        && ("x.a".attr < 2 || ("y.a".attr > 13)) || ("x.a".attr > 1) && ("y.a".attr > 11))))
+
+    val optimized = Optimize.execute(originalQuery.analyze)
+    val left = testRelation.where('a <= 3 || 'a >= 2).subquery('x)
+    val right = testRelation.subquery('y)
+    val correctAnswer =
+      left.join(right, condition = Some("x.b".attr === "y.b".attr
+        && (("x.a".attr <= 3) || (("x.a".attr >= 2) && ("y.a".attr <= 13)))
+        && (("x.a".attr <= 1) || ("y.a".attr <= 11))))
+        .analyze
+    comparePlans(optimized, correctAnswer)
+  }
+
+  test("push down predicates through left join") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+
+    val originalQuery =
+      x.join(y, joinType = LeftOuter, condition = Some(("x.b".attr === "y.b".attr)
+        && simpleDisjunctivePredicate))
+
+    val optimized = Optimize.execute(originalQuery.analyze)
+    val left = testRelation.subquery('x)
+    val right = testRelation.where('a > 13 || 'a > 11).subquery('y)
+    val correctAnswer =
+      left.join(right, joinType = LeftOuter, condition = Some("x.b".attr === "y.b".attr
+        && (("x.a".attr > 3) && ("y.a".attr > 13) || ("x.a".attr > 1) && ("y.a".attr > 11))))
+        .analyze
+
+    comparePlans(optimized, correctAnswer)
+  }
+
+  test("push down predicates through right join") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+
+    val originalQuery =
+      x.join(y, joinType = RightOuter, condition = Some(("x.b".attr === "y.b".attr)
+        && simpleDisjunctivePredicate))
+
+    val optimized = Optimize.execute(originalQuery.analyze)
+    val left = testRelation.where('a > 3 || 'a > 1).subquery('x)
+    val right = testRelation.subquery('y)
+    val correctAnswer =
+      left.join(right, joinType = RightOuter, condition = Some("x.b".attr === "y.b".attr
+        && (("x.a".attr > 3) && ("y.a".attr > 13) || ("x.a".attr > 1) && ("y.a".attr > 11))))
+        .analyze
+
+    comparePlans(optimized, correctAnswer)
+  }
+
+  test("SPARK-32302: avoid generating too many predicates") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+
+    val originalQuery =
+      x.join(y, condition = Some(("x.b".attr === "y.b".attr) && ((("x.a".attr > 3) &&
+        ("x.a".attr < 13) && ("y.c".attr <= 5)) || (("y.a".attr > 2) && ("y.c".attr < 1)))))
+
+    val optimized = Optimize.execute(originalQuery.analyze)
+    val left = testRelation.subquery('x)
+    val right = testRelation.where('c <= 5 || ('a > 2 && 'c < 1)).subquery('y)
+    val correctAnswer = left.join(right, condition = Some("x.b".attr === "y.b".attr &&
+      ((("x.a".attr > 3) && ("x.a".attr < 13) && ("y.c".attr <= 5)) ||
+        (("y.a".attr > 2) && ("y.c".attr < 1))))).analyze
+
+    comparePlans(optimized, correctAnswer)
+  }
+
+  test("push down predicate through multiple joins") {
+    val x = testRelation.subquery('x)
+    val y = testRelation.subquery('y)
+    val z = testRelation.subquery('z)
+    val xJoinY = x.join(y, condition = Some("x.b".attr === "y.b".attr))
+    val originalQuery = z.join(xJoinY,
+      condition = Some("x.a".attr === "z.a".attr && simpleDisjunctivePredicate))
+
+    val optimized = Optimize.execute(originalQuery.analyze)
+    val left = x.where('a > 3 || 'a > 1)
+    val right = y.where('a > 13 || 'a > 11)
+    val correctAnswer = z.join(left.join(right,
+      condition = Some("x.b".attr === "y.b".attr && simpleDisjunctivePredicate)),
+      condition = Some("x.a".attr === "z.a".attr)).analyze
+    comparePlans(optimized, correctAnswer)
   }
 }

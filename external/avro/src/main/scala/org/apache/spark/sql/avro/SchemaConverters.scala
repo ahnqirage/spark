@@ -70,6 +70,8 @@ object SchemaConverters {
 
       case ENUM => SchemaType(StringType, nullable = false)
 
+      case NULL => SchemaType(NullType, nullable = true)
+
       case RECORD =>
         if (existingRecordNames.contains(avroSchema.getFullName)) {
           throw new IncompatibleSchemaException(s"""
@@ -83,7 +85,7 @@ object SchemaConverters {
           StructField(f.name, schemaType.dataType, schemaType.nullable)
         }
 
-        SchemaType(StructType(fields), nullable = false)
+        SchemaType(StructType(fields.toSeq), nullable = false)
 
       case ARRAY =>
         val schemaType = toSqlTypeHelper(avroSchema.getElementType, existingRecordNames)
@@ -124,7 +126,7 @@ object SchemaConverters {
                 StructField(s"member$i", schemaType.dataType, nullable = true)
             }
 
-            SchemaType(StructType(fields), nullable = false)
+            SchemaType(StructType(fields.toSeq), nullable = false)
         }
 
       case other => throw new IncompatibleSchemaException(s"Unsupported type $other")
@@ -151,6 +153,7 @@ object SchemaConverters {
       case FloatType => builder.floatType()
       case DoubleType => builder.doubleType()
       case StringType => builder.stringType()
+      case NullType => builder.nullType()
       case d: DecimalType =>
         val avroType = LogicalTypes.decimal(d.precision, d.scale)
         val fixedSize = minBytesForPrecision(d.precision)
@@ -181,7 +184,7 @@ object SchemaConverters {
       // This should never happen.
       case other => throw new IncompatibleSchemaException(s"Unexpected type $other.")
     }
-    if (nullable) {
+    if (nullable && catalystType != NullType) {
       Schema.createUnion(schema, nullSchema)
     } else {
       schema

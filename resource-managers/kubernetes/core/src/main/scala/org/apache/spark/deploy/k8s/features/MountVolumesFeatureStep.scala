@@ -20,12 +20,11 @@ import io.fabric8.kubernetes.api.model._
 
 import org.apache.spark.deploy.k8s._
 
-private[spark] class MountVolumesFeatureStep(
-    kubernetesConf: KubernetesConf[_ <: KubernetesRoleSpecificConf])
+private[spark] class MountVolumesFeatureStep(conf: KubernetesConf)
   extends KubernetesFeatureConfigStep {
 
   override def configurePod(pod: SparkPod): SparkPod = {
-    val (volumeMounts, volumes) = constructVolumes(kubernetesConf.roleVolumes).unzip
+    val (volumeMounts, volumes) = constructVolumes(conf.volumes).unzip
 
     val podWithVolumes = new PodBuilder(pod.pod)
       .editSpec()
@@ -40,17 +39,14 @@ private[spark] class MountVolumesFeatureStep(
     SparkPod(podWithVolumes, containerWithVolumeMounts)
   }
 
-  override def getAdditionalPodSystemProperties(): Map[String, String] = Map.empty
-
-  override def getAdditionalKubernetesResources(): Seq[HasMetadata] = Seq.empty
-
   private def constructVolumes(
-    volumeSpecs: Iterable[KubernetesVolumeSpec[_ <: KubernetesVolumeSpecificConf]]
+    volumeSpecs: Iterable[KubernetesVolumeSpec]
   ): Iterable[(VolumeMount, Volume)] = {
     volumeSpecs.map { spec =>
       val volumeMount = new VolumeMountBuilder()
         .withMountPath(spec.mountPath)
         .withReadOnly(spec.mountReadOnly)
+        .withSubPath(spec.mountSubPath)
         .withName(spec.volumeName)
         .build()
 
@@ -69,7 +65,11 @@ private[spark] class MountVolumesFeatureStep(
           new VolumeBuilder()
             .withEmptyDir(
               new EmptyDirVolumeSource(medium.getOrElse(""),
-              new Quantity(sizeLimit.orNull)))
+                sizeLimit.map(new Quantity(_)).orNull))
+
+        case KubernetesNFSVolumeConf(path, server) =>
+          new VolumeBuilder()
+            .withNfs(new NFSVolumeSource(path, null, server))
       }
 
       val volume = volumeBuilder.withName(spec.volumeName).build()
